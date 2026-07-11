@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "gameface": {
+      "command": "${CS2_MCP_RUNTIME:-bun}",
+      "args": ["${CLAUDE_PLUGIN_ROOT:-.}/server/dist/server.mjs"],
+      "env": {
+        "CS2_GAMEFACE_HOST": "${CS2_GAMEFACE_HOST:-localhost}",
+        "CS2_GAMEFACE_PORT": "${CS2_GAMEFACE_PORT:-9444}"
+      }
+    }
+  }
+}

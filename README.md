@@ -37,13 +37,40 @@ it connected, then ask Claude to use the `game_*` tools.
 |---|---|---|
 | `game_status` | Reachability + page target + engine info. Run first when things fail. | `/json/list` + `/json/version` |
 | `game_eval` | Evaluate a JS expression in the mod UI, returns the value as JSON. | `Runtime.evaluate` (returnByValue) |
-| `game_screenshot` | Screenshot the viewport as an inline image (png, or jpeg+quality). | `Page.enable` + `Page.captureScreenshot` |
+| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image. | `Page.captureScreenshot` (+ `clip`) |
 | `game_dom` | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector. | `Runtime.evaluate` |
+| `game_wait` | Wait until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate` |
 | `game_click` | Click an element by dispatching real bubbling DOM events. | `Runtime.evaluate` (see note) |
+| `game_fill` | Set an input/textarea/contenteditable value (fires input/change for React). | `Runtime.evaluate` (see note) |
+| `game_type` | Type text key by key (real KeyboardEvents + value sync). | `Runtime.evaluate` (see note) |
+| `game_hover` | Hover an element (over/enter/move sequence) to trigger tooltips/hover state. | `Runtime.evaluate` (see note) |
+| `game_console` | Recent console.*, log entries, and uncaught exceptions from the mod UI. | `Log` + `Runtime.consoleAPICalled` |
 
-> `game_click` does NOT use CDP `Input.dispatchMouseEvent`: Gameface accepts that command but never
-> delivers it to the UI. Instead it dispatches a real pointer/mouse/click sequence on the element,
-> which React's delegated `onClick` handlers receive.
+> **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
+> `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,
+> and `game_hover` dispatch real DOM events in the page, which React's delegated handlers receive.
+> Caveat: these target native `<input>`/`<textarea>`/`contenteditable` and standard React handlers;
+> fully custom widgets may need a tailored `game_eval`.
+
+### JS debugger tools
+
+The mod UI's V8 `Debugger` domain is fully supported, so these drive a real source-level debugger.
+
+| Tool | What it does |
+|---|---|
+| `game_debug_status` | Debugger state: paused?/where, pause-on-exceptions, breakpoints, script count. Also sets pause-on-exceptions. |
+| `game_debug_scripts` | List parsed UI scripts (scriptId + url), filterable by url substring. |
+| `game_debug_source` | Get a script's source (by scriptId) with line numbers, optionally a line range. |
+| `game_debug_set_breakpoint` | Break at url-substring + line (1-based), with an optional JS condition. |
+| `game_debug_remove_breakpoint` | Remove a breakpoint by id, or `all`. |
+| `game_debug_pause_state` | When paused: the call stack, optionally with each frame's local/closure variables. |
+| `game_debug_evaluate` | Evaluate in the paused frame's scope (read locals), or globally when running. |
+| `game_debug_step` | `resume` / `over` / `into` / `out` / `pause`. |
+
+> ⚠️ **Hitting a breakpoint or pausing FREEZES the UI thread until you resume** (`game_debug_step`
+> with `resume`). Prefer conditional breakpoints to limit freezes, and while paused inspect with
+> `game_debug_evaluate` rather than `game_eval`. Safety net: if the server's connection drops while
+> paused, the engine auto-resumes.
 
 ## Configuration
 
@@ -76,3 +103,11 @@ CDP quirks.
   or the debug port is not reachable. Check `curl http://localhost:9444/json/list`. Use `game_status`
   for a structured diagnosis.
 - **Runtime not found**: ensure `bun` (or `node`, with `CS2_MCP_RUNTIME=node`) is on your `PATH`.
+- **Read the MCP server logs**: Claude Code records each server's connection attempts and captured
+  stderr to per-project JSONL files, the fastest way to see why a launch failed (e.g. a
+  `-32000 Connection closed` from a bad command/path before any `game_*` tool runs). They live under
+  the Claude CLI cache, in an `mcp-logs-gameface/` folder keyed by the project path (separators
+  replaced with `-`); newest `.jsonl` first, and each `Server stderr: ...` line is what the server
+  printed:
+  - Windows: `%LocalAppData%\claude-cli-nodejs\Cache\<project-path>\mcp-logs-gameface\`
+  - macOS / Linux: `~/.cache/claude-cli-nodejs/Cache/<project-path>/mcp-logs-gameface/`
