@@ -1,0 +1,19 @@
+post-checkout:
+  commands:
+    configure-git:
+      run: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+pre-commit:
+  parallel: true
+  commands:
+    tsc:
+      # The only tsconfig lives in server/; only staged files under it trigger the check.
+      root: "server/"
+      glob: "*.{ts,tsx,js,json}"
+      run: mise exec bun -- bun --bun tsc --noEmit
+    oxlint:
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
+      run: mise exec bun -- bun --bun oxlint --deny-warnings --no-error-on-unmatched-pattern {staged_files}
+    oxfmt:
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,md}"
+      run: mise exec bun -- bun --bun oxfmt --check --no-error-on-unmatched-pattern {staged_files}

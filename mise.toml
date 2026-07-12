@@ -3,14 +3,84 @@
 # own bun or node (see .mcp.json / README).
 [tools]
 bun = "1.3.14"
-node = "22"
+node = "24.7.0"
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+# Use "mise t" to list tasks or "mise r" to interactively select one to run!
+
+# DEVELOPMENT TASKS
+# =================
+
+[tasks."dev:deps-upgrade"]
+description = "Upgrades mise-en-place, proposes upgrades for tools managed by mise, and proposes upgrades for package.json dependencies."
+interactive = true
+run = [
+  "mise self-update",
+  "mise up --interactive --bump",
+  # using `mise exec bun` makes sure bun is found if a bun upgrade was just made
+  "mise exec bun -- bun update --interactive",
+  # make sure transitive dependencies are updated & deduplicated
+  "mise exec bun -- bun update"
+]
+
+# CHECK TASKS
+# ===========
+
+[tasks."check"]
+description = "Run lint checks (typescript and oxfmt/oxlint), with safe auto-fixes."
+# Not using `depends` because we want a sequential run with lint then format.
+run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt"]
+
+[tasks."check:tsc"]
+description = "Type-checks the server with tsc."
+dir = "{{config_root}}/server"
+raw = true
+run = "bun --bun tsc --noEmit"
+
+[tasks."check:oxfmt"]
+description = "Formats code with oxfmt."
+raw = true
+run = "bun --bun oxfmt"
+
+[tasks."check:oxlint"]
+description = "Lints code with oxlint."
+raw = true
+run = "bun --bun oxlint --fix"
+
+# CHECK TASKS (AGENTS)
+# ====================
+
+[tasks."check:agents"]
+description = "Run lint checks (typescript and oxfmt/oxlint), with safe auto-fixes, output optimized for AI agents."
+# Not using `depends` because we want a sequential run with lint then format.
+run = ["mise check:agents:tsc", "mise check:agents:oxlint", "mise check:oxfmt"]
+
+[tasks."check:agents:tsc"]
+description = "Type-checks the server with tsc, output optimized for AI agents."
+dir = "{{config_root}}/server"
+raw = true
+run = "bun --bun tsc --noEmit --pretty false"
+
+[tasks."check:agents:oxlint"]
+description = "Lints code with oxlint, output optimized for AI agents."
+run = "bun --bun oxlint --fix --format agent"
+
+# BUILD TASKS
+# ===========
 
 [tasks.build]
-description = "Install deps and bundle the Gameface MCP server into server/dist/server.mjs."
-dir = "server"
-run = ["bun install", "bun run build"]
+description = "Rebuild the shipped server bundle (server/dist/server.mjs); commit the result."
+dir = "{{config_root}}/server"
+raw = true
+run = "bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs"
 
-[tasks.typecheck]
-description = "Type-check the Gameface MCP server."
-dir = "server"
-run = "bun run typecheck"
+# RUN TASKS
+# =========
+
+[tasks."run:server"]
+description = "Run the MCP server from sources (stdio transport, for quick smoke tests)."
+dir = "{{config_root}}/server"
+raw = true
+run = "bun run src/server.ts"

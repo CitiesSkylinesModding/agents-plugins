@@ -1,18 +1,18 @@
 {
-  "name": "coherent-gameface-mcp",
+  "name": "@coherent-gameface-mcp/server",
   "version": "0.1.0",
   "private": true,
   "description": "Direct-CDP MCP server that drives a Coherent Gameface application UI",
   "type": "module",
   "scripts": {
-    "build": "bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs",
-    "start": "bun run src/server.ts",
-    "typecheck": "tsc --noEmit"
+    "// We use mise-en-place to manage tasks. See mise.toml for more info.": ""
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.20.0",
-    "@types/node": "^22.0.0",
-    "typescript": "^5.6.0",
-    "zod": "^3.23.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/common-tags": "^1.8.4",
+    "@types/node": "^24.13.3",
+    "common-tags": "^1.8.2",
+    "typescript": "^7.0.2",
+    "zod": "^4.4.3"
   }
 }

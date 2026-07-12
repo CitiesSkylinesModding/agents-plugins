@@ -1,9 +1,12 @@
 /**
- * Tool implementations for the Gameface MCP server. Each maps to one or more
- * CDP commands via the shared CdpClient and returns an MCP CallToolResult.
+ * Tool implementations for the Gameface MCP server. Each maps to one or more CDP commands via
+ * the shared CdpClient and returns an MCP CallToolResult.
  */
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { CdpClient } from "./cdp";
+
+import { setTimeout as sleep } from 'node:timers/promises';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { oneLine } from 'common-tags';
+import type { CdpClient } from './cdp';
 import {
   type EvaluateResult,
   type RemoteObject,
@@ -12,214 +15,373 @@ import {
   formatException,
   text,
   toErrorResult,
-  valToStr,
-} from "./shared";
+  valToStr
+} from './shared';
 
-// --- Page-context functions ------------------------------------------------
-// These run inside the Gameface UI (never in this process); they are serialised
-// with .toString() and injected into Runtime.evaluate. Keep them as plain,
-// self-contained browser JS with no references to anything outside their body.
+// Page-context functions.
+// These run inside the Gameface UI (never in this process); they are serialised with
+// .toString() and injected into Runtime.evaluate. Keep them as plain, self-contained browser
+// JS with no references to anything outside their body. Type annotations are fine: the build
+// erases them before serialization.
 
-const collectDomFn = (sel: string, all: boolean, maxHtml: number) => {
+// Result shapes returned by the page functions below, reused by the server-side callers to
+// cast Runtime.evaluate results.
+interface DomElementInfo {
+  tagName: string | null;
+  id: string | null;
+  classes: string | null;
+  rect: { x: number; y: number; width: number; height: number };
+  attributes: Record<string, string>;
+  outerHTML: string;
+  truncated: boolean;
+}
+
+interface CollectDomResult {
+  count: number;
+  elements: DomElementInfo[];
+}
+
+type ClickResult =
+  | { found: true; count: number; x: number; y: number; fired: string[] }
+  | { found: false; count: number; fired: string[] };
+
+type FillResult = { found: true; mode: string; value: string } | { found: false };
+
+type TypeResult = { found: true; typed: number; value: string } | { found: false; typed: 0 };
+
+type HoverResult = { found: true; x: number; y: number; fired: string[] } | { found: false };
+
+type RectResult =
+  | { found: true; x: number; y: number; width: number; height: number }
+  | { found: false };
+
+const collectDomFn = (sel: string, all: boolean, maxHtml: number): CollectDomResult => {
   const matches = document.querySelectorAll(sel);
-  const chosen = all ? Array.from(matches) : matches[0] ? [matches[0]] : [];
-  const describe = (el: Element) => {
-    const r = el.getBoundingClientRect();
+  const first = matches.item(0);
+  const chosen = all ? Array.from(matches) : first ? [first] : [];
+
+  const describe = (el: Element): DomElementInfo => {
+    const rect = el.getBoundingClientRect();
     const attributes: Record<string, string> = {};
-    for (const a of Array.from(el.attributes)) attributes[a.name] = a.value;
-    let html = el.outerHTML || "";
+
+    for (const attr of Array.from(el.attributes)) {
+      attributes[attr.name] = attr.value;
+    }
+
+    const classAttr = el.getAttribute('class');
+    let html = el.outerHTML || '';
     const truncated = html.length > maxHtml;
-    if (truncated) html = html.slice(0, maxHtml);
+
+    if (truncated) {
+      html = html.slice(0, maxHtml);
+    }
+
     return {
       tagName: el.tagName ? el.tagName.toLowerCase() : null,
       id: el.id || null,
-      classes: el.getAttribute("class") || null,
-      rect: { x: r.x, y: r.y, width: r.width, height: r.height },
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       attributes,
       outerHTML: html,
-      truncated,
+      truncated
     };
   };
-  return { count: matches.length, elements: chosen.map(describe) };
+
+  return { count: matches.length, elements: chosen.map(el => describe(el)) };
 };
 
-// Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the
-// Cohtml/React DOM event system (verified: handlers never fire). So we click by
-// dispatching real, bubbling DOM events on the element, which React's delegated
-// listeners pick up. Note: HTMLElement.click() does not exist in Cohtml either.
-const clickFn = (sel: string, index: number) => {
+// Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml/React
+// DOM event system (verified: handlers never fire). So we click by dispatching real, bubbling
+// DOM events on the element, which React's delegated listeners pick up. Note:
+// HTMLElement.click() does not exist in Cohtml either.
+const clickFn = (sel: string, index: number): ClickResult => {
   const nodes = document.querySelectorAll(sel);
-  if (nodes.length === 0) return { found: false, count: 0, fired: [] as string[] };
+
+  if (nodes.length == 0) {
+    return { found: false, count: 0, fired: [] };
+  }
+
   const el = nodes[index] as HTMLElement | undefined;
-  if (!el) return { found: false, count: nodes.length, fired: [] as string[] };
-  const r = el.getBoundingClientRect();
-  const cx = r.x + r.width / 2;
-  const cy = r.y + r.height / 2;
-  const base = { bubbles: true, cancelable: true, view: window, button: 0, clientX: cx, clientY: cy };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- serialised page code
-  type EventCtor = new (type: string, init?: any) => Event;
-  const Pointer: EventCtor = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+
+  if (!el) {
+    return { found: false, count: nodes.length, fired: [] };
+  }
+
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+
+  const base: MouseEventInit = {
+    bubbles: true,
+    cancelable: true,
+    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
+    view: window,
+    button: 0,
+    clientX: cx,
+    clientY: cy
+  };
+
+  type EventCtor = new (type: string, init?: PointerEventInit) => Event;
+
+  // PointerEvent does not exist in Cohtml; dispatch pointer* as MouseEvents (React keys off
+  // the event type string, not the constructor).
+  const Pointer: EventCtor = typeof PointerEvent == 'function' ? PointerEvent : MouseEvent;
   const fired: string[] = [];
-  const fire = (Ctor: EventCtor, type: string, extra?: object) => {
+
+  const fire = (Ctor: EventCtor, type: string, extra?: PointerEventInit): void => {
     try {
-      el.dispatchEvent(new Ctor(type, Object.assign({}, base, extra)));
+      el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
       fired.push(type);
     } catch {
-      /* event type unsupported in this engine */
+      /* Event type unsupported in this engine. */
     }
   };
-  fire(Pointer, "pointerdown", { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, "mousedown");
-  fire(Pointer, "pointerup", { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, "mouseup");
-  fire(MouseEvent, "click");
+
+  fire(Pointer, 'pointerdown', { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, 'mousedown');
+  fire(Pointer, 'pointerup', { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, 'mouseup');
+  fire(MouseEvent, 'click');
+
   return { found: true, count: nodes.length, x: cx, y: cy, fired };
 };
 
 // Returns true once the selector matches (and, if `visible`, has a non-zero box).
-const waitCheckFn = (sel: string, visible: boolean) => {
+const waitCheckFn = (sel: string, visible: boolean): boolean => {
   const el = document.querySelector(sel);
-  if (!el) return false;
-  if (!visible) return true;
-  const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0;
+
+  if (!el) {
+    return false;
+  }
+
+  if (!visible) {
+    return true;
+  }
+
+  const rect = el.getBoundingClientRect();
+
+  return rect.width > 0 && rect.height > 0;
 };
 
-// Sets an input/textarea/contenteditable value so React's onChange fires. We use the
-// native value setter (verified present in Cohtml) so React's value tracker notices.
-// InputEvent is missing in Cohtml, so we dispatch a plain bubbling Event('input').
-const fillFn = (sel: string, value: string) => {
-  const el: any = document.querySelector(sel);
-  if (!el) return { found: false };
+// Sets an input/textarea/contenteditable value so React's onChange fires. We use the native
+// value setter (verified present in Cohtml) so React's value tracker notices. InputEvent is
+// missing in Cohtml, so we dispatch a plain bubbling Event('input').
+const fillFn = (sel: string, value: string): FillResult => {
+  const el = document.querySelector<HTMLElement>(sel);
+
+  if (!el) {
+    return { found: false };
+  }
+
   try {
     el.focus();
   } catch {
-    /* not focusable */
+    /* Not focusable. */
   }
-  const tag = (el.tagName || "").toLowerCase();
+
+  const tag = (el.tagName || '').toLowerCase();
+
   if (el.isContentEditable) {
     el.textContent = value;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    return { found: true, mode: "contenteditable", value: el.textContent };
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+
+    return { found: true, mode: 'contenteditable', value: el.textContent ?? '' };
   }
-  const proto: any = tag === "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = (Object.getOwnPropertyDescriptor(proto, "value") || {}).set;
-  if (setter) setter.call(el, value);
-  else el.value = value;
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, mode: tag || "input", value: el.value };
+
+  const field = el as HTMLInputElement | HTMLTextAreaElement;
+  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+  if (setter) {
+    setter.call(el, value);
+  } else {
+    field.value = value;
+  }
+
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return { found: true, mode: tag || 'input', value: field.value };
 };
 
-// Types text character by character, firing real KeyboardEvents (present in Cohtml)
-// plus keeping the value in sync and dispatching input/change for React.
-const typeFn = (sel: string, textToType: string) => {
-  const el: any = document.querySelector(sel);
-  if (!el) return { found: false, typed: 0 };
+// Types text character by character, firing real KeyboardEvents (present in Cohtml) plus
+// keeping the value in sync and dispatching input/change for React.
+const typeFn = (sel: string, textToType: string): TypeResult => {
+  const el = document.querySelector<HTMLElement>(sel);
+
+  if (!el) {
+    return { found: false, typed: 0 };
+  }
+
   try {
     el.focus();
   } catch {
-    /* not focusable */
+    /* Not focusable. */
   }
-  const tag = (el.tagName || "").toLowerCase();
-  const isCE = !!el.isContentEditable;
-  const proto: any = tag === "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = (Object.getOwnPropertyDescriptor(proto, "value") || {}).set;
-  const cur = () => (isCE ? el.textContent || "" : el.value || "");
-  const setVal = (v: string) => {
-    if (isCE) el.textContent = v;
-    else if (setter) setter.call(el, v);
-    else el.value = v;
+
+  const tag = (el.tagName || '').toLowerCase();
+  const editable = el.isContentEditable;
+  const field = el as HTMLInputElement | HTMLTextAreaElement;
+  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+  const current = (): string => {
+    if (editable) {
+      return el.textContent ?? '';
+    }
+
+    return field.value || '';
   };
+
+  const setValue = (next: string): void => {
+    if (editable) {
+      el.textContent = next;
+    } else if (setter) {
+      setter.call(el, next);
+    } else {
+      field.value = next;
+    }
+  };
+
   let typed = 0;
-  for (const ch of String(textToType)) {
-    const opts: any = { bubbles: true, cancelable: true, key: ch, view: window };
+
+  for (const ch of textToType) {
+    const opts: KeyboardEventInit = {
+      bubbles: true,
+      cancelable: true,
+      key: ch,
+      // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; KeyboardEventInit.view wants the Window.
+      view: window
+    };
+
     try {
-      el.dispatchEvent(new KeyboardEvent("keydown", opts));
+      el.dispatchEvent(new KeyboardEvent('keydown', opts));
     } catch {
-      /* no KeyboardEvent */
+      /* No KeyboardEvent in this engine. */
     }
-    setVal(cur() + ch);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
+
+    setValue(current() + ch);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+
     try {
-      el.dispatchEvent(new KeyboardEvent("keyup", opts));
+      el.dispatchEvent(new KeyboardEvent('keyup', opts));
     } catch {
-      /* no KeyboardEvent */
+      /* No KeyboardEvent in this engine. */
     }
+
     typed++;
   }
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, typed, value: cur() };
+
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return { found: true, typed, value: current() };
 };
 
-// Hovers an element by dispatching the over/enter/move sequence. PointerEvent is
-// missing in Cohtml, so pointer* are dispatched as MouseEvents (the type string is
-// what React keys off). enter/leave do not bubble.
-const hoverFn = (sel: string) => {
-  const el: any = document.querySelector(sel);
-  if (!el) return { found: false };
-  const r = el.getBoundingClientRect();
-  const cx = r.x + r.width / 2;
-  const cy = r.y + r.height / 2;
-  const base: any = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
-  const noBubble: any = Object.assign({}, base, { bubbles: false });
+// Hovers an element by dispatching the over/enter/move sequence. PointerEvent is missing in
+// Cohtml, so `pointer*` are dispatched as MouseEvents (the type string is what React keys off).
+// enter/leave do not bubble.
+const hoverFn = (sel: string): HoverResult => {
+  const el = document.querySelector<HTMLElement>(sel);
+
+  if (!el) {
+    return { found: false };
+  }
+
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+
+  const base: MouseEventInit = {
+    bubbles: true,
+    cancelable: true,
+    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
+    view: window,
+    clientX: cx,
+    clientY: cy
+  };
+  const noBubble: MouseEventInit = { ...base, bubbles: false };
   const fired: string[] = [];
-  const fire = (type: string, init: any) => {
+
+  const fire = (type: string, init: MouseEventInit): void => {
     try {
       el.dispatchEvent(new MouseEvent(type, init));
       fired.push(type);
     } catch {
-      /* unsupported event type */
+      /* Unsupported event type. */
     }
   };
-  fire("pointerover", base);
-  fire("mouseover", base);
-  fire("pointerenter", noBubble);
-  fire("mouseenter", noBubble);
-  fire("mousemove", base);
+
+  fire('pointerover', base);
+  fire('mouseover', base);
+  fire('pointerenter', noBubble);
+  fire('mouseenter', noBubble);
+  fire('mousemove', base);
+
   return { found: true, x: cx, y: cy, fired };
 };
 
 // Returns an element's viewport box, for clipping a screenshot to it.
-const rectFn = (sel: string) => {
+const rectFn = (sel: string): RectResult => {
   const el = document.querySelector(sel);
-  if (!el) return { found: false };
-  const r = el.getBoundingClientRect();
-  return { found: true, x: r.x, y: r.y, width: r.width, height: r.height };
+
+  if (!el) {
+    return { found: false };
+  }
+
+  const rect = el.getBoundingClientRect();
+
+  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 };
 
+/**
+ * Serializes a page-context function and its JSON-safe args into one self-invoking expression
+ * for Runtime.evaluate.
+ */
 function callPageFn(fn: (...args: never[]) => unknown, ...args: unknown[]): string {
-  const serialisedArgs = args.map((a) => JSON.stringify(a)).join(", ");
+  const serialisedArgs = args.map(arg => JSON.stringify(arg)).join(', ');
+
   return `(${fn.toString()})(${serialisedArgs})`;
 }
 
+// Server-side polling interval for game_wait.
 const POLL_INTERVAL_MS = 150;
-const MAX_WAIT_MS = 60000;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Hard ceiling on game_wait budgets, so a huge timeoutMs cannot hang a tool call for minutes.
+const MAX_WAIT_MS = 60_000;
 
-// --- Tools ------------------------------------------------------------------
+const DEFAULT_WAIT_TIMEOUT_MS = 8000;
+const DEFAULT_JPEG_QUALITY = 80;
+const DEFAULT_CONSOLE_LIMIT = 50;
 
-/** Reports reachability + page target + engine info. Never throws. */
+/**
+ * Reports reachability + page target + engine info. Never throws.
+ */
 export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
   const { host, port } = client.config;
+
   try {
     const target = await client.discover();
     let browser: string | undefined;
     let protocol: string | undefined;
+
     try {
+      // noinspection HttpUrlsUsage
       const res = await fetch(`http://${host}:${port}/json/version`);
+
       if (res.ok) {
-        const v = (await res.json()) as Record<string, string>;
-        browser = v.Browser;
-        protocol = v["Protocol-Version"];
+        const versionInfo = (await res.json()) as Record<string, string>;
+
+        browser = versionInfo.Browser;
+        protocol = versionInfo['Protocol-Version'];
       }
     } catch {
-      /* version is best-effort */
+      /* Version info is best-effort. */
     }
+
+    // noinspection HttpUrlsUsage
     return text(
       JSON.stringify(
         {
@@ -227,365 +389,465 @@ export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
           endpoint: `http://${host}:${port}`,
           target: { id: target.id, url: target.url, title: target.title, wsUrl: target.wsUrl },
           browser,
-          cdpProtocol: protocol,
+          cdpProtocol: protocol
         },
         null,
-        2,
-      ),
+        2
+      )
     );
-  } catch (err) {
+  } catch (error) {
+    // noinspection HttpUrlsUsage
     return text(
       JSON.stringify(
         {
           reachable: false,
           endpoint: `http://${host}:${port}`,
-          error: err instanceof Error ? err.message : String(err),
-          hint:
-            "Launch the Gameface application with its CDP debug port open, then retry. " +
-            "Override host/port via GAMEFACE_HOST / GAMEFACE_PORT.",
+          error: error instanceof Error ? error.message : String(error),
+          hint: oneLine`
+            Launch the Gameface application with its CDP debug port open, then retry.
+            Override host/port via GAMEFACE_HOST / GAMEFACE_PORT.
+          `
         },
         null,
-        2,
-      ),
+        2
+      )
     );
   }
 }
 
-/** Evaluates a JS expression in the page and returns its value as JSON. */
+/**
+ * Evaluates a JS expression in the page and returns its value as JSON.
+ */
 export async function gameEval(
   client: CdpClient,
   expression: string,
-  awaitPromise = false,
+  awaitPromise = false
 ): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression,
       returnByValue: true,
-      awaitPromise,
+      awaitPromise
     });
+
     if (res.exceptionDetails) {
       return errorText(`Evaluation threw: ${formatException(res.exceptionDetails)}`);
     }
+
     const value = describeRemoteObject(res.result);
-    return text(typeof value === "string" ? value : JSON.stringify(value, null, 2));
-  } catch (err) {
-    return toErrorResult(err);
+
+    return text(typeof value == 'string' ? value : JSON.stringify(value, null, 2));
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
 /**
- * Captures a screenshot of the Gameface UI and returns it as an inline image. When a
- * selector is given, the capture is clipped to that element's bounding box.
+ * Captures a screenshot of the Gameface UI and returns it as an inline image.
+ * When a selector is given, the capture is clipped to that element's bounding box.
  */
 export async function gameScreenshot(
   client: CdpClient,
-  format: "png" | "jpeg" = "png",
+  format: 'png' | 'jpeg' = 'png',
   quality?: number,
-  selector?: string,
+  selector?: string
 ): Promise<CallToolResult> {
   try {
-    await client.ensureDomain("Page");
+    await client.ensureDomain('Page');
+
     const params: Record<string, unknown> = { format };
-    if (format === "jpeg") params.quality = quality ?? 80;
+
+    if (format == 'jpeg') {
+      params.quality = quality ?? DEFAULT_JPEG_QUALITY;
+    }
+
     if (selector) {
-      const r = await client.call<EvaluateResult>("Runtime.evaluate", {
+      const rectRes = await client.call<EvaluateResult>('Runtime.evaluate', {
         expression: callPageFn(rectFn, selector),
-        returnByValue: true,
+        returnByValue: true
       });
-      const rect = r.result.value as
-        | { found: true; x: number; y: number; width: number; height: number }
-        | { found: false };
+      const rect = rectRes.result.value as RectResult | undefined;
+
       if (!rect?.found) {
         return errorText(`No element matched ${JSON.stringify(selector)} for game_screenshot.`);
       }
+
       if (!(rect.width > 0 && rect.height > 0)) {
-        return errorText(`Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`);
+        return errorText(
+          `Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`
+        );
       }
+
       params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
     }
-    const res = await client.call<{ data?: string }>("Page.captureScreenshot", params);
-    if (!res?.data) return errorText("Page.captureScreenshot returned no image data.");
+
+    const res = await client.call<{ data?: string }>('Page.captureScreenshot', params);
+
+    if (!res?.data) {
+      return errorText('Page.captureScreenshot returned no image data.');
+    }
+
     return {
       content: [
-        { type: "image", data: res.data, mimeType: format === "jpeg" ? "image/jpeg" : "image/png" },
-      ],
+        { type: 'image', data: res.data, mimeType: format == 'jpeg' ? 'image/jpeg' : 'image/png' }
+      ]
     };
-  } catch (err) {
-    return toErrorResult(err);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
-/** Returns DOM info (tag, classes, attributes, rect, outerHTML) for a selector. */
+/**
+ * Returns DOM info (tag, classes, attributes, rect, outerHTML) for a selector.
+ */
 export async function gameDom(
   client: CdpClient,
   selector: string,
   all = false,
-  maxHtml = 4000,
+  maxHtml = 4000
 ): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression: callPageFn(collectDomFn, selector, all, maxHtml),
-      returnByValue: true,
+      returnByValue: true
     });
+
     if (res.exceptionDetails) {
       return errorText(`DOM query failed: ${formatException(res.exceptionDetails)}`);
     }
-    const value = res.result.value as { count: number; elements: unknown[] };
-    if (!value || value.count === 0) {
+
+    const value = res.result.value as CollectDomResult | undefined;
+
+    if (!value || value.count == 0) {
       return text(JSON.stringify({ selector, count: 0, elements: [] }, null, 2));
     }
+
     return text(JSON.stringify({ selector, ...value }, null, 2));
-  } catch (err) {
-    return toErrorResult(err);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
 /**
- * Clicks the element matching `selector` (the `index`-th match) by dispatching a
- * realistic bubbling pointer/mouse/click sequence in the page. We do NOT use CDP
- * Input.dispatchMouseEvent: Gameface accepts it but never delivers it to the UI.
+ * Clicks the element matching `selector` (the `index`-th match) by dispatching a realistic
+ * bubbling pointer/mouse/click sequence in the page.
+ * We do NOT use CDP Input.dispatchMouseEvent: Gameface accepts it but never delivers it.
  */
 export async function gameClick(
   client: CdpClient,
   selector: string,
-  index = 0,
+  index = 0
 ): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression: callPageFn(clickFn, selector, index),
-      returnByValue: true,
+      returnByValue: true
     });
+
     if (res.exceptionDetails) {
       return errorText(`Click failed: ${formatException(res.exceptionDetails)}`);
     }
-    const info = res.result.value as
-      | { found: true; count: number; x: number; y: number; fired: string[] }
-      | { found: false; count: number; fired: string[] };
+
+    const info = res.result.value as ClickResult | undefined;
+
     if (!info?.found) {
-      return errorText(
-        `No element to click for selector ${JSON.stringify(selector)} at index ${index} ` +
-          `(matches found: ${info?.count ?? 0}).`,
-      );
+      return errorText(oneLine`
+        No element to click for selector ${JSON.stringify(selector)} at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
-    return text(
-      `Clicked ${JSON.stringify(selector)} [index ${index}] at ` +
-        `(${info.x.toFixed(0)}, ${info.y.toFixed(0)}). Dispatched: ${info.fired.join(", ")}. ` +
-        `Matches: ${info.count}.`,
-    );
-  } catch (err) {
-    return toErrorResult(err);
+
+    return text(oneLine`
+      Clicked ${JSON.stringify(selector)} [index ${index}] at
+      (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
+      Dispatched: ${info.fired.join(', ')}. Matches: ${info.count}.
+    `);
+  } catch (error) {
+    return toErrorResult(error);
   }
+}
+
+/**
+ * Options for gameWait. Provide exactly one of `selector` / `predicate`.
+ */
+export interface GameWaitOptions {
+  readonly selector?: string | undefined;
+  readonly predicate?: string | undefined;
+  readonly timeoutMs?: number | undefined;
+  readonly visible?: boolean | undefined;
 }
 
 /**
  * Waits (server-side polling) until a selector matches or a JS predicate is truthy.
- * Provide exactly one of `selector` / `predicate`.
  */
 export async function gameWait(
   client: CdpClient,
-  selector?: string,
-  predicate?: string,
-  timeoutMs = 8000,
-  visible = false,
+  options: GameWaitOptions
 ): Promise<CallToolResult> {
+  const { selector, predicate, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, visible = false } = options;
+
   if (!selector && !predicate) {
     return errorText("game_wait needs either 'selector' or 'predicate'.");
   }
+
   const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
   const deadline = Date.now() + budget;
   const start = Date.now();
-  const expression = selector ? callPageFn(waitCheckFn, selector, visible) : `Boolean(${predicate})`;
+  const expression = selector
+    ? callPageFn(waitCheckFn, selector, visible)
+    : `Boolean(${predicate ?? ''})`;
+
+  // Remember the last predicate error so a predicate that consistently throws (e.g., a typo)
+  // surfaces in the timeout message instead of failing silently on every poll.
   let lastError: string | undefined;
+
   try {
     for (;;) {
-      const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+      const res = await client.call<EvaluateResult>('Runtime.evaluate', {
         expression,
-        returnByValue: true,
+        returnByValue: true
       });
+
       if (res.exceptionDetails) {
         lastError = formatException(res.exceptionDetails);
       } else if (res.result.value) {
-        const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
+        const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
+
         return text(`Condition met (${what}) after ${Date.now() - start}ms.`);
       } else {
+        // The expression evaluated cleanly but falsy; clear any stale error.
         lastError = undefined;
       }
+
       if (Date.now() >= deadline) {
-        const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
-        return errorText(
-          `Timed out after ${budget}ms waiting for ${what}.` +
-            (lastError ? ` Last predicate error: ${lastError}` : ""),
-        );
+        const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
+        const errorNote = lastError ? ` Last predicate error: ${lastError}` : '';
+
+        return errorText(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
       }
+
       await sleep(POLL_INTERVAL_MS);
     }
-  } catch (err) {
-    return toErrorResult(err);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
-/** Sets the value of an input/textarea/contenteditable (React-aware). */
+/**
+ * Sets the value of an input/textarea/contenteditable (React-aware).
+ */
 export async function gameFill(
   client: CdpClient,
   selector: string,
-  value: string,
+  value: string
 ): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression: callPageFn(fillFn, selector, value),
-      returnByValue: true,
+      returnByValue: true
     });
+
     if (res.exceptionDetails) {
       return errorText(`Fill failed: ${formatException(res.exceptionDetails)}`);
     }
-    const info = res.result.value as { found: boolean; mode?: string; value?: string };
+
+    const info = res.result.value as FillResult | undefined;
+
     if (!info?.found) {
       return errorText(`No element matched ${JSON.stringify(selector)} for game_fill.`);
     }
-    return text(`Filled ${JSON.stringify(selector)} (${info.mode}). Value is now ${JSON.stringify(info.value)}.`);
-  } catch (err) {
-    return toErrorResult(err);
+
+    return text(oneLine`
+      Filled ${JSON.stringify(selector)} (${info.mode}).
+      Value is now ${JSON.stringify(info.value)}.
+    `);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
-/** Types text into an element key by key (real KeyboardEvents + value sync). */
+/**
+ * Types text into an element key by key (real KeyboardEvents + value sync).
+ */
 export async function gameType(
   client: CdpClient,
   selector: string,
-  textToType: string,
+  textToType: string
 ): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression: callPageFn(typeFn, selector, textToType),
-      returnByValue: true,
+      returnByValue: true
     });
+
     if (res.exceptionDetails) {
       return errorText(`Type failed: ${formatException(res.exceptionDetails)}`);
     }
-    const info = res.result.value as { found: boolean; typed?: number; value?: string };
+
+    const info = res.result.value as TypeResult | undefined;
+
     if (!info?.found) {
       return errorText(`No element matched ${JSON.stringify(selector)} for game_type.`);
     }
-    return text(
-      `Typed ${info.typed} char(s) into ${JSON.stringify(selector)}. ` +
-        `Value is now ${JSON.stringify(info.value)}.`,
-    );
-  } catch (err) {
-    return toErrorResult(err);
+
+    return text(oneLine`
+      Typed ${info.typed} char(s) into ${JSON.stringify(selector)}.
+      Value is now ${JSON.stringify(info.value)}.
+    `);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
-/** Hovers an element by dispatching the over/enter/move event sequence. */
+/**
+ * Hovers an element by dispatching the over/enter/move event sequence.
+ */
 export async function gameHover(client: CdpClient, selector: string): Promise<CallToolResult> {
   try {
-    const res = await client.call<EvaluateResult>("Runtime.evaluate", {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
       expression: callPageFn(hoverFn, selector),
-      returnByValue: true,
+      returnByValue: true
     });
+
     if (res.exceptionDetails) {
       return errorText(`Hover failed: ${formatException(res.exceptionDetails)}`);
     }
-    const info = res.result.value as { found: boolean; x?: number; y?: number; fired?: string[] };
+
+    const info = res.result.value as HoverResult | undefined;
+
     if (!info?.found) {
       return errorText(`No element matched ${JSON.stringify(selector)} for game_hover.`);
     }
-    return text(
-      `Hovered ${JSON.stringify(selector)} at (${info.x!.toFixed(0)}, ${info.y!.toFixed(0)}). ` +
-        `Dispatched: ${info.fired!.join(", ")}.`,
-    );
-  } catch (err) {
-    return toErrorResult(err);
+
+    return text(oneLine`
+      Hovered ${JSON.stringify(selector)} at (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
+      Dispatched: ${info.fired.join(', ')}.
+    `);
+  } catch (error) {
+    return toErrorResult(error);
   }
 }
 
-/** One captured console/log/exception line. */
+/**
+ * One captured console/log/exception line.
+ */
 export interface ConsoleEntry {
-  ts: number;
-  kind: string;
-  level: string;
-  text: string;
+  readonly ts: number;
+  readonly kind: string;
+  readonly level: string;
+  readonly text: string;
 }
 
 /**
  * Buffers console/log/exception events from the Gameface UI into a ring buffer.
- * Subscribes to CDP events and (re)enables Runtime + Log on every connection.
+ * Subscribes to CDP events and (re)enables `Runtime` and `Log` on every connection.
  */
 export class ConsoleBuffer {
   private readonly entries: ConsoleEntry[] = [];
+  private readonly max: number;
 
-  constructor(
-    client: CdpClient,
-    private readonly max = 500,
-  ) {
-    client.onConnect(async (conn) => {
-      await conn.ensureDomain("Runtime");
-      await conn.ensureDomain("Log");
+  public constructor(client: CdpClient, max = 500) {
+    this.max = max;
+
+    client.onConnect(async conn => {
+      await conn.ensureDomain('Runtime');
+      await conn.ensureDomain('Log');
     });
-    client.onEvent((method, params) => this.handle(method, params as Record<string, unknown>));
+
+    client.onEvent((method, params) => {
+      this.handle(method, params as Record<string, unknown>);
+    });
+  }
+
+  public read(limit: number, level?: string, clear?: boolean): ConsoleEntry[] {
+    const filtered = level ? this.entries.filter(entry => entry.level == level) : this.entries;
+
+    // Keep the newest entries when the limit truncates.
+    const out = filtered.slice(-limit);
+
+    if (clear) {
+      this.entries.length = 0;
+    }
+
+    return out;
   }
 
   private push(entry: ConsoleEntry): void {
     this.entries.push(entry);
+
+    // Ring-buffer behavior: drop the oldest entries beyond the cap.
     if (this.entries.length > this.max) {
       this.entries.splice(0, this.entries.length - this.max);
     }
   }
 
   private handle(method: string, params: Record<string, unknown>): void {
-    if (method === "Runtime.consoleAPICalled") {
-      const args = ((params.args as RemoteObject[]) ?? []).map((a) => valToStr(describeRemoteObject(a)));
+    if (method == 'Runtime.consoleAPICalled') {
+      const args = ((params.args as RemoteObject[]) ?? []).map(arg =>
+        valToStr(describeRemoteObject(arg))
+      );
+
       this.push({
         ts: (params.timestamp as number) ?? 0,
-        kind: "console",
-        level: (params.type as string) ?? "log",
-        text: args.join(" "),
+        kind: 'console',
+        level: (params.type as string) ?? 'log',
+        text: args.join(' ')
       });
-    } else if (method === "Log.entryAdded") {
-      const e = (params.entry as Record<string, unknown>) ?? {};
+    } else if (method == 'Log.entryAdded') {
+      const entry = (params.entry as Record<string, unknown>) ?? {};
+
       this.push({
-        ts: (e.timestamp as number) ?? 0,
-        kind: (e.source as string) ?? "log",
-        level: (e.level as string) ?? "info",
-        text: (e.text as string) ?? "",
+        ts: (entry.timestamp as number) ?? 0,
+        kind: (entry.source as string) ?? 'log',
+        level: (entry.level as string) ?? 'info',
+        text: (entry.text as string) ?? ''
       });
-    } else if (method === "Runtime.exceptionThrown") {
+    } else if (method == 'Runtime.exceptionThrown') {
       this.push({
         ts: (params.timestamp as number) ?? 0,
-        kind: "exception",
-        level: "error",
-        text: formatException(params.exceptionDetails as EvaluateResult["exceptionDetails"]),
+        kind: 'exception',
+        level: 'error',
+        text: formatException(params.exceptionDetails as EvaluateResult['exceptionDetails'])
       });
     }
   }
-
-  read(limit: number, level?: string, clear?: boolean): ConsoleEntry[] {
-    const filtered = level ? this.entries.filter((e) => e.level === level) : this.entries;
-    const out = filtered.slice(-limit);
-    if (clear) this.entries.length = 0;
-    return out;
-  }
 }
 
-/** Returns recent console/log/exception lines captured from the Gameface UI. */
+/**
+ * Options for gameConsole.
+ */
+export interface GameConsoleOptions {
+  readonly limit?: number | undefined;
+  readonly level?: string | undefined;
+  readonly clear?: boolean | undefined;
+}
+
+/**
+ * Returns recent console/log/exception lines captured from the Gameface UI.
+ */
 export async function gameConsole(
   client: CdpClient,
   buffer: ConsoleBuffer,
-  limit = 50,
-  level?: string,
-  clear = false,
+  options: GameConsoleOptions
 ): Promise<CallToolResult> {
+  const { limit = DEFAULT_CONSOLE_LIMIT, level, clear = false } = options;
+
   try {
     // Ensure a connection exists so Runtime/Log are enabled and capture is running.
     await client.connection();
-  } catch (err) {
-    return toErrorResult(err);
+  } catch (error) {
+    return toErrorResult(error);
   }
+
   const entries = buffer.read(limit, level, clear);
-  if (entries.length === 0) {
-    return text(
-      "No console entries captured yet. Capture begins once the server connects to the application; " +
-        "trigger some UI activity (or a game_eval console.log) and retry.",
-    );
+
+  if (entries.length == 0) {
+    return text(oneLine`
+      No console entries captured yet.
+      Capture begins once the server connects to the application;
+      trigger some UI activity (or a game_eval console.log) and retry.
+    `);
   }
-  return text(entries.map((e) => `[${e.level}] (${e.kind}) ${e.text}`).join("\n"));
+
+  return text(entries.map(entry => `[${entry.level}] (${entry.kind}) ${entry.text}`).join('\n'));
 }

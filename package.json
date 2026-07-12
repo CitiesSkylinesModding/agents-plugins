@@ -1,0 +1,23 @@
+{
+  "name": "coherent-gameface-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace root: lint/format tooling and git hooks for the Gameface MCP plugin",
+  "workspaces": [
+    "server"
+  ],
+  "type": "module",
+  "scripts": {
+    "// We use mise-en-place to manage tasks. See mise.toml for more info.": ""
+  },
+  "devDependencies": {
+    "@toverux/blanc-hopital": "^3.0.0",
+    "lefthook": "^2.1.6",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "oxlint-tsgolint": "^0.24.0"
+  },
+  "trustedDependencies": [
+    "lefthook"
+  ]
+}

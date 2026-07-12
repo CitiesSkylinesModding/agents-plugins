@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "general-guidelines": {
+      "source": "toverux/skills",
+      "sourceType": "github",
+      "skillPath": "skills/general-guidelines/SKILL.md",
+      "computedHash": "5100b735ee7ee51b303dee0b2ef97e695d9ea0da34f9201b2417218ea084c3a9"
+    }
+  }
+}
