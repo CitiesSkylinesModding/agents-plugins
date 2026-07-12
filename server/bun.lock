@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@cs2-modkit/gameface-mcp",
+      "name": "coherent-gameface-mcp",
       "devDependencies": {
         "@modelcontextprotocol/sdk": "^1.20.0",
         "@types/node": "^22.0.0",

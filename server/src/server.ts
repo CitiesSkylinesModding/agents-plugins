@@ -1,7 +1,7 @@
 /**
  * Gameface MCP server entry point.
  *
- * Exposes tools for driving the Cities: Skylines II mod UI over a direct CDP
+ * Exposes tools for driving a Coherent Gameface application UI over a direct CDP
  * WebSocket. Runs unchanged under Bun or Node 22+ (both provide global
  * WebSocket / fetch). All diagnostics go to stderr; stdout is reserved for the
  * MCP JSON-RPC stream.
@@ -38,10 +38,10 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_status",
     {
-      title: "Game UI status",
+      title: "Gameface UI status",
       description:
-        "Check whether the Cities: Skylines II Gameface UI debug endpoint is reachable and " +
-        "report the live page target and engine info. Run this first when other game_* tools fail.",
+        "Check whether the Gameface UI debug endpoint is reachable and report the live page " +
+        "target and engine info. Run this first when other game_* tools fail.",
     },
     () => gameStatus(client),
   );
@@ -49,9 +49,9 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_eval",
     {
-      title: "Evaluate JS in the game UI",
+      title: "Evaluate JS in the Gameface UI",
       description:
-        "Evaluate a JavaScript expression in the running mod UI (CDP Runtime.evaluate, " +
+        "Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate, " +
         "returnByValue) and return the resulting value as JSON. Use document.querySelector and " +
         "friends to read the live DOM, inspect React state, or call UI APIs.",
       inputSchema: {
@@ -68,9 +68,9 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_screenshot",
     {
-      title: "Screenshot the game UI",
+      title: "Screenshot the Gameface UI",
       description:
-        "Capture a screenshot of the game viewport (CDP Page.captureScreenshot) and return it as " +
+        "Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it as " +
         "an inline image. Pass a selector to clip the capture to one element. Use jpeg with a lower " +
         "quality to reduce payload size.",
       inputSchema: {
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_wait",
     {
-      title: "Wait for a condition in the game UI",
+      title: "Wait for a condition in the Gameface UI",
       description:
         "Wait until a CSS selector matches (optionally visible) or a JS predicate becomes truthy, " +
         "polling the page. Provide exactly one of selector / predicate. Returns when met or times out.",
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_fill",
     {
-      title: "Set an input value in the game UI",
+      title: "Set an input value in the Gameface UI",
       description:
         "Set the value of an input, textarea, or contenteditable element and fire input/change so " +
         "React's onChange runs. Best for setting a field in one shot; use game_type for keystrokes.",
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_type",
     {
-      title: "Type text into the game UI",
+      title: "Type text into the Gameface UI",
       description:
         "Type text into an element character by character, firing real KeyboardEvents plus keeping " +
         "the value in sync. Use when handlers react to individual keystrokes; otherwise game_fill.",
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_hover",
     {
-      title: "Hover an element in the game UI",
+      title: "Hover an element in the Gameface UI",
       description:
         "Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so " +
         "React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.",
@@ -166,10 +166,10 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_console",
     {
-      title: "Read the game UI console",
+      title: "Read the Gameface UI console",
       description:
-        "Return recent console.* calls, log entries, and uncaught exceptions captured from the mod " +
-        "UI. Capture starts when the server first connects to the game.",
+        "Return recent console.* calls, log entries, and uncaught exceptions captured from the " +
+        "Gameface UI. Capture starts when the server first connects to the application.",
       inputSchema: {
         limit: z.number().int().min(1).max(1000).optional().describe("Max entries to return (default 50)"),
         level: z
@@ -185,12 +185,12 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_dom",
     {
-      title: "Inspect game UI DOM",
+      title: "Inspect Gameface UI DOM",
       description:
         "Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements " +
-        "matching a CSS selector in the live mod UI. Set all=true to return every match.",
+        "matching a CSS selector in the live Gameface UI. Set all=true to return every match.",
       inputSchema: {
-        selector: z.string().describe("CSS selector to query in the game UI"),
+        selector: z.string().describe("CSS selector to query in the Gameface UI"),
         all: z
           .boolean()
           .optional()
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
   server.registerTool(
     "game_click",
     {
-      title: "Click an element in the game UI",
+      title: "Click an element in the Gameface UI",
       description:
         "Click the element matching a CSS selector by dispatching a real bubbling " +
         "pointer/mouse/click sequence in the page (NOT CDP Input, which Gameface ignores for the " +
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     {
       title: "List parsed UI scripts",
       description:
-        "List JavaScript scripts parsed in the mod UI (scriptId + url + line count), optionally " +
+        "List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally " +
         "filtered by a url substring. Use the scriptId with game_debug_source.",
       inputSchema: {
         filter: z.string().optional().describe("Only scripts whose url contains this substring"),

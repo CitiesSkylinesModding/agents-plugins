@@ -16,7 +16,7 @@ import {
 } from "./shared";
 
 // --- Page-context functions ------------------------------------------------
-// These run inside the game UI (never in this process); they are serialised
+// These run inside the Gameface UI (never in this process); they are serialised
 // with .toString() and injected into Runtime.evaluate. Keep them as plain,
 // self-contained browser JS with no references to anything outside their body.
 
@@ -241,8 +241,8 @@ export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
           endpoint: `http://${host}:${port}`,
           error: err instanceof Error ? err.message : String(err),
           hint:
-            "Launch Cities: Skylines II with the Gameface debug port open, then retry. " +
-            "Override host/port via CS2_GAMEFACE_HOST / CS2_GAMEFACE_PORT.",
+            "Launch the Gameface application with its CDP debug port open, then retry. " +
+            "Override host/port via GAMEFACE_HOST / GAMEFACE_PORT.",
         },
         null,
         2,
@@ -274,7 +274,7 @@ export async function gameEval(
 }
 
 /**
- * Captures a screenshot of the game UI and returns it as an inline image. When a
+ * Captures a screenshot of the Gameface UI and returns it as an inline image. When a
  * selector is given, the capture is clipped to that element's bounding box.
  */
 export async function gameScreenshot(
@@ -507,7 +507,7 @@ export interface ConsoleEntry {
 }
 
 /**
- * Buffers console/log/exception events from the game UI into a ring buffer.
+ * Buffers console/log/exception events from the Gameface UI into a ring buffer.
  * Subscribes to CDP events and (re)enables Runtime + Log on every connection.
  */
 export class ConsoleBuffer {
@@ -566,7 +566,7 @@ export class ConsoleBuffer {
   }
 }
 
-/** Returns recent console/log/exception lines captured from the game UI. */
+/** Returns recent console/log/exception lines captured from the Gameface UI. */
 export async function gameConsole(
   client: CdpClient,
   buffer: ConsoleBuffer,
@@ -583,7 +583,7 @@ export async function gameConsole(
   const entries = buffer.read(limit, level, clear);
   if (entries.length === 0) {
     return text(
-      "No console entries captured yet. Capture begins once the server connects to the game; " +
+      "No console entries captured yet. Capture begins once the server connects to the application; " +
         "trigger some UI activity (or a game_eval console.log) and retry.",
     );
   }

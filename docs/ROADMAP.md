@@ -1,13 +1,14 @@
 # Roadmap
 
-`cs2-modkit` is a multi-facet toolkit for Cities: Skylines II mod development. The
-Gameface browser-instrumentation MCP server is the first facet; others are planned.
+`coherent-gameface-mcp` is a generic toolkit for driving a running Coherent Gameface UI over CDP.
+The MCP server is the first facet; skills and richer instrumentation are planned. The plugin is
+developed and verified against Cities: Skylines II's Gameface UI, but stays application-agnostic.
 
 ## Shipped
 
 ### Gameface UI instrumentation (MCP server)
 
-Direct Chrome DevTools Protocol control of the running mod UI. Tools: `game_status`,
+Direct Chrome DevTools Protocol control of a running Gameface UI. Tools: `game_status`,
 `game_eval`, `game_screenshot` (with selector clipping), `game_dom`, `game_wait`,
 `game_click`, `game_fill`, `game_type`, `game_hover`, `game_console`. See the README
 and `server/`. Input tools dispatch DOM events (CDP `Input` is ignored by Gameface).
@@ -22,24 +23,21 @@ connection auto-resumes.
 
 ## Planned
 
+### Skills
+
+Skills packaged with the plugin that document how to drive a Gameface UI with the `game_*` tools:
+the CDP quirks (input via DOM events, malformed `webSocketDebuggerUrl`, the Debugger freeze), common
+recipes (find a widget, read React state, wait for a screen), and safe debugging workflows.
+
 ### Richer console object rendering
 
 `game_console` shows console args via their RemoteObject description, so objects
 render as "Object". Use `Runtime.getProperties` / object previews to expand them.
 
-### C# debugging
+### Network inspection
 
-Help attach to / inspect the mod's C# side (the mod runs inside the Unity/CS2
-process). Likely a mix of: a skill documenting how to attach a managed debugger,
-commands to surface mod logs, and helpers around the reflection/proxy layer.
-Design still open.
-
-### Decompiled-source retro-engineering subagent
-
-A subagent that answers "what does the game do here / how is X wired" by reading the
-game's pre-decompiled public DLLs and the decompiled C# (`../DecompiledCitiesSkylines2`)
-plus the minified game UI source. It should know the repo conventions (ask the user
-when the game's internals are ambiguous) and store learnings in memory.
+Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
+missing (no request interception). Surface request/response observation as tools.
 
 When these land they become standard plugin components: `commands/`, `agents/`,
 `skills/` directories auto-discovered by the plugin manifest.

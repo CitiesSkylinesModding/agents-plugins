@@ -2,16 +2,18 @@
 
 ## Project overview
 
-`cs2-modkit` is a Claude Code plugin: a multi-facet toolkit for Cities: Skylines II mod
-development. The first facet is an MCP server that drives the running mod UI (Coherent Gameface)
-over a direct Chrome DevTools Protocol (CDP) WebSocket. Future facets (C# debugging, a
-decompiled-source retro-engineering subagent) are tracked in `docs/ROADMAP.md`.
+`coherent-gameface-mcp` is a Claude Code plugin: a **generic** toolkit for driving a running
+**Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct
+Chrome DevTools Protocol (CDP) WebSocket. It ships an MCP server (evaluate JS, screenshot, inspect
+and drive the DOM, capture the console, set JS breakpoints) plus skills. It targets any Gameface
+application, but is developed and verified against **Cities: Skylines II**'s Gameface UI, which is
+the reference implementation and the source of the CDP quirks documented below.
 
 ## Repository structure
 
 - `.claude-plugin/plugin.json`: plugin manifest.
 - `.mcp.json`: wires the `gameface` MCP server. Launches the committed bundle with
-  `${CS2_MCP_RUNTIME:-bun}` so it runs under bun (default) or node (`CS2_MCP_RUNTIME=node`).
+  `${GAMEFACE_MCP_RUNTIME:-bun}` so it runs under bun (default) or node (`GAMEFACE_MCP_RUNTIME=node`).
 - `server/src/`: the MCP server (TypeScript).
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
@@ -19,7 +21,7 @@ decompiled-source retro-engineering subagent) are tracked in `docs/ROADMAP.md`.
     plus the `ConsoleBuffer`.
   - `debugger.ts`: the `DebuggerSession` (V8 Debugger domain) + `game_debug_*` tools.
   - `shared.ts`: result builders (text/errorText/toErrorResult), RemoteObject/EvaluateResult types.
-  - `config.ts`: `CS2_GAMEFACE_*` env config.
+  - `config.ts`: `GAMEFACE_*` env config.
 - `server/dist/server.mjs`: the shipped, self-contained bundle. COMMITTED on purpose (zero-install).
 - `docs/ROADMAP.md`: planned facets.
 
@@ -39,6 +41,9 @@ single `server/dist/server.mjs` that runs under bun or node 22+ (both provide gl
 build-time `devDependencies` only.
 
 ## Gameface CDP gotchas (verified, do not relearn the hard way)
+
+These were verified against Cities: Skylines II's Gameface UI (Cohtml 1.64.0.7, V8 9.4, CDP 1.3) but
+reflect Gameface/Cohtml behavior in general.
 
 - Discover the page target from `GET /json/list`; build the WS URL yourself as
   `ws://host:port/devtools/page/<id>`. The `webSocketDebuggerUrl` field is malformed.
@@ -60,7 +65,9 @@ build-time `devDependencies` only.
 ## Boundaries and style
 
 - Make the smallest safe change. Ask before adding a runtime dependency or reworking architecture.
+- Keep the server generic: no assumptions about a specific game's DOM, APIs, or ports beyond the
+  defaults. CS2 is the test target, not a hard dependency.
 - 100-character line limit, comments included. NEVER use em dashes in code, comments, or docs.
 - Prefer editing existing files over creating parallel abstractions.
 - After changing `server/src/`, run `mise run typecheck` and `mise run build`.
-- Store hard-won facts about the game's internals in memory.
+- Store hard-won facts about Gameface internals in memory.

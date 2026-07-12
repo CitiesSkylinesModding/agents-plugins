@@ -1,12 +1,16 @@
-# cs2-modkit
+# coherent-gameface-mcp
 
-A Claude Code plugin: a toolkit for **Cities: Skylines II** mod development.
+A Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI.
 
-Its first facet is an MCP server that lets Claude drive the running mod UI (the game's
-**Coherent Gameface** interface) over a **direct Chrome DevTools Protocol (CDP)** connection:
-evaluate JavaScript, take screenshots, inspect the DOM, and click elements. More facets
-(C# debugging, a decompiled-source retro-engineering subagent) are planned, see
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+Coherent Gameface (Cohtml) is the HTML/CSS/JS UI engine many games embed. This plugin ships an MCP
+server that lets Claude drive any Gameface UI over a **direct Chrome DevTools Protocol (CDP)**
+connection: evaluate JavaScript, take screenshots, inspect and drive the DOM, capture the console,
+and set JS breakpoints. Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+> **Generic, but developed against Cities: Skylines II.** The server makes no assumptions about a
+> specific application; it works against any Gameface CDP endpoint. It is developed and verified
+> against Cities: Skylines II's Gameface UI, which is the reference target and the source of the CDP
+> quirks noted below.
 
 > Why direct CDP instead of Puppeteer/Playwright (or chrome-devtools-mcp)? Gameface does not
 > implement the browser-level handshake those tools rely on (`Browser.getVersion` is missing and
@@ -15,12 +19,13 @@ evaluate JavaScript, take screenshots, inspect the DOM, and click elements. More
 
 ## Requirements
 
-- **Cities: Skylines II running** with the Gameface CDP debug endpoint reachable (default
+- **A Gameface application running** with its CDP debug endpoint reachable (default
   `http://localhost:9444`). Verify with:
   ```sh
   curl http://localhost:9444/json/list
   ```
-  You should get back a JSON array containing a `"type": "page"` target.
+  You should get back a JSON array containing a `"type": "page"` target. Set the host/port to match
+  your application if it differs (see Configuration).
 - A JavaScript runtime to launch the server: **Bun** (default) or **Node 22+** (both ship a global
   `WebSocket`). No `npm install` is needed: the server is shipped as a committed, self-contained
   bundle.
@@ -36,7 +41,7 @@ it connected, then ask Claude to use the `game_*` tools.
 | Tool | What it does | Under the hood |
 |---|---|---|
 | `game_status` | Reachability + page target + engine info. Run first when things fail. | `/json/list` + `/json/version` |
-| `game_eval` | Evaluate a JS expression in the mod UI, returns the value as JSON. | `Runtime.evaluate` (returnByValue) |
+| `game_eval` | Evaluate a JS expression in the Gameface UI, returns the value as JSON. | `Runtime.evaluate` (returnByValue) |
 | `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image. | `Page.captureScreenshot` (+ `clip`) |
 | `game_dom` | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector. | `Runtime.evaluate` |
 | `game_wait` | Wait until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate` |
@@ -44,7 +49,7 @@ it connected, then ask Claude to use the `game_*` tools.
 | `game_fill` | Set an input/textarea/contenteditable value (fires input/change for React). | `Runtime.evaluate` (see note) |
 | `game_type` | Type text key by key (real KeyboardEvents + value sync). | `Runtime.evaluate` (see note) |
 | `game_hover` | Hover an element (over/enter/move sequence) to trigger tooltips/hover state. | `Runtime.evaluate` (see note) |
-| `game_console` | Recent console.*, log entries, and uncaught exceptions from the mod UI. | `Log` + `Runtime.consoleAPICalled` |
+| `game_console` | Recent console.*, log entries, and uncaught exceptions from the Gameface UI. | `Log` + `Runtime.consoleAPICalled` |
 
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
 > `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,
@@ -54,7 +59,8 @@ it connected, then ask Claude to use the `game_*` tools.
 
 ### JS debugger tools
 
-The mod UI's V8 `Debugger` domain is fully supported, so these drive a real source-level debugger.
+The Gameface UI's V8 `Debugger` domain is fully supported, so these drive a real source-level
+debugger.
 
 | Tool | What it does |
 |---|---|
@@ -78,11 +84,11 @@ All optional, read by the server (and surfaced in `.mcp.json`):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CS2_MCP_RUNTIME` | `bun` | Runtime used to launch the server. Set to `node` to use Node. |
-| `CS2_GAMEFACE_HOST` | `localhost` | Host of the Gameface CDP endpoint. |
-| `CS2_GAMEFACE_PORT` | `9444` | Port of the Gameface CDP endpoint. |
-| `CS2_GAMEFACE_CONNECT_TIMEOUT_MS` | `5000` | HTTP discovery / WebSocket open timeout. |
-| `CS2_GAMEFACE_CALL_TIMEOUT_MS` | `15000` | Per-command reply timeout. |
+| `GAMEFACE_MCP_RUNTIME` | `bun` | Runtime used to launch the server. Set to `node` to use Node. |
+| `GAMEFACE_HOST` | `localhost` | Host of the Gameface CDP endpoint. |
+| `GAMEFACE_PORT` | `9444` | Port of the Gameface CDP endpoint. |
+| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000` | HTTP discovery / WebSocket open timeout. |
+| `GAMEFACE_CALL_TIMEOUT_MS` | `15000` | Per-command reply timeout. |
 
 ## Development
 
@@ -99,10 +105,11 @@ CDP quirks.
 
 ## Troubleshooting
 
-- **`/mcp` shows the server failed / tools error with "Cannot reach ..."**: the game is not running
-  or the debug port is not reachable. Check `curl http://localhost:9444/json/list`. Use `game_status`
-  for a structured diagnosis.
-- **Runtime not found**: ensure `bun` (or `node`, with `CS2_MCP_RUNTIME=node`) is on your `PATH`.
+- **`/mcp` shows the server failed / tools error with "Cannot reach ..."**: the Gameface application
+  is not running or the debug port is not reachable. Check `curl http://localhost:9444/json/list`.
+  Use `game_status` for a structured diagnosis.
+- **Runtime not found**: ensure `bun` (or `node`, with `GAMEFACE_MCP_RUNTIME=node`) is on your
+  `PATH`.
 - **Read the MCP server logs**: Claude Code records each server's connection attempts and captured
   stderr to per-project JSONL files, the fastest way to see why a launch failed (e.g. a
   `-32000 Connection closed` from a bad command/path before any `game_*` tool runs). They live under

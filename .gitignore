@@ -1,7 +1,4 @@
-node_modules/
-*.log
-.DS_Store
-Thumbs.db
-
 # NOTE: server/dist/server.mjs is intentionally committed so the plugin works
 # with zero install. Do NOT add server/dist/ here.
+
+server/node_modules

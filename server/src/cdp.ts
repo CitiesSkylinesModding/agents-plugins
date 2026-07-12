@@ -1,6 +1,6 @@
 /**
- * Direct Chrome DevTools Protocol (CDP) client for the Cities: Skylines II
- * Coherent Gameface UI engine.
+ * Direct Chrome DevTools Protocol (CDP) client for the Coherent Gameface UI
+ * engine.
  *
  * Gameface speaks CDP 1.3 but does NOT implement the browser-level handshake
  * Puppeteer/Playwright rely on (`Browser.getVersion` is missing, and
@@ -18,13 +18,13 @@ export interface PageTarget {
   wsUrl: string;
 }
 
-/** Raised when the game / debug endpoint cannot be reached at all. */
+/** Raised when the Gameface debug endpoint cannot be reached at all. */
 export class GameUnreachableError extends Error {
   constructor(cfg: Config, cause?: unknown) {
     super(
-      `Cannot reach the Cities: Skylines II Gameface debug endpoint at ` +
-        `http://${cfg.host}:${cfg.port}. Make sure the game is running with the ` +
-        `Gameface debug port open. Override with CS2_GAMEFACE_HOST / CS2_GAMEFACE_PORT.`,
+      `Cannot reach the Gameface debug endpoint at ` +
+        `http://${cfg.host}:${cfg.port}. Make sure the Gameface application is running ` +
+        `with its CDP debug port open. Override with GAMEFACE_HOST / GAMEFACE_PORT.`,
     );
     this.name = "GameUnreachableError";
     if (cause !== undefined) this.cause = cause;
@@ -244,7 +244,8 @@ class CdpConnection {
 
 /**
  * Manages discovery + a single live connection, reconnecting transparently when
- * the game restarts or the socket drops. Tools talk to this, not CdpConnection.
+ * the Gameface application restarts or the socket drops. Tools talk to this, not
+ * CdpConnection.
  */
 export class CdpClient {
   private conn?: CdpConnection;

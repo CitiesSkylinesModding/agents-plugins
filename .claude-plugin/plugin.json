@@ -1,18 +1,18 @@
 {
-  "name": "cs2-modkit",
+  "name": "coherent-gameface-mcp",
   "version": "0.1.0",
-  "description": "Toolkit for Cities: Skylines II mod development. Drives the running Coherent Gameface mod UI over a direct Chrome DevTools Protocol connection (evaluate JS, screenshot, inspect DOM, click), with more facets (C# debugging, decompiled-source retro-engineering) planned.",
+  "description": "Generic MCP server (plus skills) that drives a running Coherent Gameface UI over a direct Chrome DevTools Protocol connection: evaluate JS, screenshot, inspect and drive the DOM, capture the console, and set JS breakpoints.",
   "author": {
     "name": "Morgan Touverey Quilling"
   },
   "keywords": [
-    "cities-skylines-2",
-    "cs2",
-    "modding",
     "coherent-gameface",
+    "gameface",
     "cohtml",
+    "game-ui",
     "chrome-devtools-protocol",
     "cdp",
+    "browser-automation",
     "mcp"
   ]
 }

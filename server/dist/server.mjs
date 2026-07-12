@@ -19576,7 +19576,7 @@ class StdioServerTransport {
 // src/cdp.ts
 class GameUnreachableError extends Error {
   constructor(cfg, cause) {
-    super(`Cannot reach the Cities: Skylines II Gameface debug endpoint at ` + `http://${cfg.host}:${cfg.port}. Make sure the game is running with the ` + `Gameface debug port open. Override with CS2_GAMEFACE_HOST / CS2_GAMEFACE_PORT.`);
+    super(`Cannot reach the Gameface debug endpoint at ` + `http://${cfg.host}:${cfg.port}. Make sure the Gameface application is running ` + `with its CDP debug port open. Override with GAMEFACE_HOST / GAMEFACE_PORT.`);
     this.name = "GameUnreachableError";
     if (cause !== undefined)
       this.cause = cause;
@@ -19823,10 +19823,10 @@ function num(value, fallback) {
 }
 function loadConfig() {
   return {
-    host: process.env.CS2_GAMEFACE_HOST?.trim() || "localhost",
-    port: num(process.env.CS2_GAMEFACE_PORT, 9444),
-    connectTimeoutMs: num(process.env.CS2_GAMEFACE_CONNECT_TIMEOUT_MS, 5000),
-    callTimeoutMs: num(process.env.CS2_GAMEFACE_CALL_TIMEOUT_MS, 15000)
+    host: process.env.GAMEFACE_HOST?.trim() || "localhost",
+    port: num(process.env.GAMEFACE_PORT, 9444),
+    connectTimeoutMs: num(process.env.GAMEFACE_CONNECT_TIMEOUT_MS, 5000),
+    callTimeoutMs: num(process.env.GAMEFACE_CALL_TIMEOUT_MS, 15000)
   };
 }
 
@@ -20362,7 +20362,7 @@ async function gameStatus(client) {
       reachable: false,
       endpoint: `http://${host}:${port}`,
       error: err instanceof Error ? err.message : String(err),
-      hint: "Launch Cities: Skylines II with the Gameface debug port open, then retry. " + "Override host/port via CS2_GAMEFACE_HOST / CS2_GAMEFACE_PORT."
+      hint: "Launch the Gameface application with its CDP debug port open, then retry. " + "Override host/port via GAMEFACE_HOST / GAMEFACE_PORT."
     }, null, 2));
   }
 }
@@ -20597,7 +20597,7 @@ async function gameConsole(client, buffer, limit = 50, level, clear = false) {
   }
   const entries = buffer.read(limit, level, clear);
   if (entries.length === 0) {
-    return text("No console entries captured yet. Capture begins once the server connects to the game; " + "trigger some UI activity (or a game_eval console.log) and retry.");
+    return text("No console entries captured yet. Capture begins once the server connects to the application; " + "trigger some UI activity (or a game_eval console.log) and retry.");
   }
   return text(entries.map((e) => `[${e.level}] (${e.kind}) ${e.text}`).join(`
 `));
@@ -20612,20 +20612,20 @@ async function main() {
   const debug = new DebuggerSession(client);
   const server = new McpServer({ name: "gameface", version: VERSION });
   server.registerTool("game_status", {
-    title: "Game UI status",
-    description: "Check whether the Cities: Skylines II Gameface UI debug endpoint is reachable and " + "report the live page target and engine info. Run this first when other game_* tools fail."
+    title: "Gameface UI status",
+    description: "Check whether the Gameface UI debug endpoint is reachable and report the live page " + "target and engine info. Run this first when other game_* tools fail."
   }, () => gameStatus(client));
   server.registerTool("game_eval", {
-    title: "Evaluate JS in the game UI",
-    description: "Evaluate a JavaScript expression in the running mod UI (CDP Runtime.evaluate, " + "returnByValue) and return the resulting value as JSON. Use document.querySelector and " + "friends to read the live DOM, inspect React state, or call UI APIs.",
+    title: "Evaluate JS in the Gameface UI",
+    description: "Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate, " + "returnByValue) and return the resulting value as JSON. Use document.querySelector and " + "friends to read the live DOM, inspect React state, or call UI APIs.",
     inputSchema: {
       expression: exports_external.string().describe("JavaScript expression to evaluate in the page context"),
       awaitPromise: exports_external.boolean().optional().describe("If the expression returns a Promise, await it before returning")
     }
   }, ({ expression, awaitPromise }) => gameEval(client, expression, awaitPromise));
   server.registerTool("game_screenshot", {
-    title: "Screenshot the game UI",
-    description: "Capture a screenshot of the game viewport (CDP Page.captureScreenshot) and return it as " + "an inline image. Pass a selector to clip the capture to one element. Use jpeg with a lower " + "quality to reduce payload size.",
+    title: "Screenshot the Gameface UI",
+    description: "Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it as " + "an inline image. Pass a selector to clip the capture to one element. Use jpeg with a lower " + "quality to reduce payload size.",
     inputSchema: {
       format: exports_external.enum(["png", "jpeg"]).optional().describe("Image format (default: png)"),
       quality: exports_external.number().min(1).max(100).optional().describe("JPEG quality 1-100 (only used when format is jpeg; default 80)"),
@@ -20633,7 +20633,7 @@ async function main() {
     }
   }, ({ format, quality, selector }) => gameScreenshot(client, format, quality, selector));
   server.registerTool("game_wait", {
-    title: "Wait for a condition in the game UI",
+    title: "Wait for a condition in the Gameface UI",
     description: "Wait until a CSS selector matches (optionally visible) or a JS predicate becomes truthy, " + "polling the page. Provide exactly one of selector / predicate. Returns when met or times out.",
     inputSchema: {
       selector: exports_external.string().optional().describe("CSS selector to wait for"),
@@ -20643,7 +20643,7 @@ async function main() {
     }
   }, ({ selector, predicate, timeoutMs, visible }) => gameWait(client, selector, predicate, timeoutMs, visible));
   server.registerTool("game_fill", {
-    title: "Set an input value in the game UI",
+    title: "Set an input value in the Gameface UI",
     description: "Set the value of an input, textarea, or contenteditable element and fire input/change so " + "React's onChange runs. Best for setting a field in one shot; use game_type for keystrokes.",
     inputSchema: {
       selector: exports_external.string().describe("CSS selector of the field to fill"),
@@ -20651,7 +20651,7 @@ async function main() {
     }
   }, ({ selector, value }) => gameFill(client, selector, value));
   server.registerTool("game_type", {
-    title: "Type text into the game UI",
+    title: "Type text into the Gameface UI",
     description: "Type text into an element character by character, firing real KeyboardEvents plus keeping " + "the value in sync. Use when handlers react to individual keystrokes; otherwise game_fill.",
     inputSchema: {
       selector: exports_external.string().describe("CSS selector of the field to type into"),
@@ -20659,15 +20659,15 @@ async function main() {
     }
   }, ({ selector, text: text2 }) => gameType(client, selector, text2));
   server.registerTool("game_hover", {
-    title: "Hover an element in the game UI",
+    title: "Hover an element in the Gameface UI",
     description: "Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so " + "React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.",
     inputSchema: {
       selector: exports_external.string().describe("CSS selector of the element to hover")
     }
   }, ({ selector }) => gameHover(client, selector));
   server.registerTool("game_console", {
-    title: "Read the game UI console",
-    description: "Return recent console.* calls, log entries, and uncaught exceptions captured from the mod " + "UI. Capture starts when the server first connects to the game.",
+    title: "Read the Gameface UI console",
+    description: "Return recent console.* calls, log entries, and uncaught exceptions captured from the " + "Gameface UI. Capture starts when the server first connects to the application.",
     inputSchema: {
       limit: exports_external.number().int().min(1).max(1000).optional().describe("Max entries to return (default 50)"),
       level: exports_external.string().optional().describe("Filter by level, e.g. error / warning / log / info"),
@@ -20675,16 +20675,16 @@ async function main() {
     }
   }, ({ limit, level, clear }) => gameConsole(client, consoleBuffer, limit, level, clear));
   server.registerTool("game_dom", {
-    title: "Inspect game UI DOM",
-    description: "Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements " + "matching a CSS selector in the live mod UI. Set all=true to return every match.",
+    title: "Inspect Gameface UI DOM",
+    description: "Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements " + "matching a CSS selector in the live Gameface UI. Set all=true to return every match.",
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector to query in the game UI"),
+      selector: exports_external.string().describe("CSS selector to query in the Gameface UI"),
       all: exports_external.boolean().optional().describe("Return all matches instead of just the first (default: false)"),
       maxHtml: exports_external.number().min(0).optional().describe("Max outerHTML characters per element before truncation (default: 4000)")
     }
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
   server.registerTool("game_click", {
-    title: "Click an element in the game UI",
+    title: "Click an element in the Gameface UI",
     description: "Click the element matching a CSS selector by dispatching a real bubbling " + "pointer/mouse/click sequence in the page (NOT CDP Input, which Gameface ignores for the " + "UI). React onClick handlers fire via event delegation. Use index to pick among matches.",
     inputSchema: {
       selector: exports_external.string().describe("CSS selector of the element to click"),
@@ -20700,7 +20700,7 @@ async function main() {
   }, ({ setPauseOnExceptions }) => debug.status(setPauseOnExceptions));
   server.registerTool("game_debug_scripts", {
     title: "List parsed UI scripts",
-    description: "List JavaScript scripts parsed in the mod UI (scriptId + url + line count), optionally " + "filtered by a url substring. Use the scriptId with game_debug_source.",
+    description: "List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally " + "filtered by a url substring. Use the scriptId with game_debug_source.",
     inputSchema: {
       filter: exports_external.string().optional().describe("Only scripts whose url contains this substring")
     }

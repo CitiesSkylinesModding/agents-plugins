@@ -1,8 +1,8 @@
 {
-  "name": "@cs2-modkit/gameface-mcp",
+  "name": "coherent-gameface-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Direct-CDP MCP server that drives the Cities: Skylines II Gameface UI",
+  "description": "Direct-CDP MCP server that drives a Coherent Gameface application UI",
   "type": "module",
   "scripts": {
     "build": "bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs",
