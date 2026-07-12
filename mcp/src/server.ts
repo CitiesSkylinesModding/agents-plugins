@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   const consoleBuffer = new ConsoleBuffer(client);
   const debug = new DebuggerSession(client);
 
-  const server = new McpServer({ name: 'gameface', version: VERSION });
+  const server = new McpServer({ name: 'gameface-devtools-mcp', version: VERSION });
 
   server.registerTool(
     'game_status',

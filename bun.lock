@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "coherent-gameface-mcp",
+      "name": "coherent-gameface-claude-plugin",
       "devDependencies": {
         "@toverux/blanc-hopital": "^3.0.0",
         "lefthook": "^2.1.6",
@@ -12,9 +12,12 @@
         "oxlint-tsgolint": "^0.24.0",
       },
     },
-    "server": {
-      "name": "@coherent-gameface-mcp/server",
+    "mcp": {
+      "name": "@csmodding/gameface-devtools-mcp",
       "version": "0.1.0",
+      "bin": {
+        "gameface-devtools-mcp": "dist/server.mjs",
+      },
       "devDependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@types/common-tags": "^1.8.4",
@@ -29,7 +32,7 @@
     "lefthook",
   ],
   "packages": {
-    "@coherent-gameface-mcp/server": ["@coherent-gameface-mcp/server@workspace:server"],
+    "@csmodding/gameface-devtools-mcp": ["@csmodding/gameface-devtools-mcp@workspace:mcp"],
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 

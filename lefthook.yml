@@ -7,8 +7,8 @@ pre-commit:
   parallel: true
   commands:
     tsc:
-      # The only tsconfig lives in server/; only staged files under it trigger the check.
-      root: "server/"
+      # The only tsconfig lives in mcp/; only staged files under it trigger the check.
+      root: "mcp/"
       glob: "*.{ts,tsx,js,json}"
       run: mise exec bun -- bun --bun tsc --noEmit
     oxlint:

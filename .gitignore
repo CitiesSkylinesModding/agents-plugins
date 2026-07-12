@@ -1,5 +1,5 @@
-# NOTE: server/dist/server.mjs is intentionally committed so the plugin works
-# with zero install. Do NOT add server/dist/ here.
+# NOTE: mcp/dist/server.mjs is intentionally committed so the plugin works
+# with zero install. Do NOT add mcp/dist/ here.
 
-# One at the root and one in server/.
+# One at the root and one in mcp/.
 node_modules

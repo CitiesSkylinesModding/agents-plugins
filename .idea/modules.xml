@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/coherent-gameface-mcp.iml" filepath="$PROJECT_DIR$/.idea/coherent-gameface-mcp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/coherent-gameface-claude-plugin.iml" filepath="$PROJECT_DIR$/.idea/coherent-gameface-claude-plugin.iml" />
     </modules>
   </component>
 </project>

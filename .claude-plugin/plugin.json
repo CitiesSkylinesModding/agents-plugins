@@ -1,10 +1,13 @@
 {
-  "name": "coherent-gameface-mcp",
+  "name": "coherent-gameface",
   "version": "0.1.0",
-  "description": "Generic MCP server (plus skills) that drives a running Coherent Gameface UI over a direct Chrome DevTools Protocol connection: evaluate JS, screenshot, inspect and drive the DOM, capture the console, and set JS breakpoints.",
+  "description": "Drive a running Coherent Gameface UI from Claude Code: ships the gameface-devtools-mcp server (evaluate JS, screenshot, inspect and drive the DOM, capture the console, set JS breakpoints over a direct Chrome DevTools Protocol connection), plus skills.",
   "author": {
     "name": "Morgan Touverey Quilling"
   },
+  "homepage": "https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin",
+  "repository": "https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin",
+  "license": "MIT",
   "keywords": [
     "coherent-gameface",
     "gameface",
@@ -13,6 +16,7 @@
     "chrome-devtools-protocol",
     "cdp",
     "browser-automation",
+    "debugger",
     "mcp"
   ]
 }

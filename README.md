@@ -1,25 +1,24 @@
-# coherent-gameface-mcp
+# coherent-gameface-claude-plugin
 
 A Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI.
 
 [Coherent Gameface](https://coherent-labs.com/products/coherent-gameface/) (Cohtml) is the
-HTML/CSS/ JS UI engine many games embed.
-This plugin ships an MCP server that lets Claude drive any Gameface UI over a **direct Chrome
-DevTools Protocol (CDP)** connection: evaluate JavaScript, take screenshots, inspect and drive the
-DOM, capture the console, and set JS breakpoints.
+HTML/CSS/JS UI engine many games embed.
+This plugin ships **[gameface-devtools-mcp](mcp/README.md)**, an MCP server that lets Claude drive
+any Gameface UI over a **direct Chrome DevTools Protocol (CDP)** connection: evaluate JavaScript,
+take screenshots, inspect and drive the DOM, capture the console, and set JS breakpoints.
 Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 > [!NOTE]
 > **Generic, but developed against Cities: Skylines II.** The server makes no assumptions about a
 > specific application; it works against any Gameface CDP endpoint. It is developed and verified
-> against Cities: Skylines II's Gameface UI, which is the reference target and the source of the CDP
-> quirks noted below.
+> against Cities: Skylines II's Gameface UI, which is the reference target.
 
-> [!NOTE]
-> **Why direct CDP instead of Puppeteer/Playwright (or chrome-devtools-mcp)?** Gameface does not
-> implement the browser-level handshake those tools rely on (`Browser.getVersion` is missing and
-> `Target.attachedToTarget` is never emitted), so they connect but find zero drivable pages.
-> A direct CDP client only sends the commands Gameface supports, and works end-to-end.
+> [!TIP]
+> **Not using Claude Code?** The MCP server is also published on npm as
+> [`@csmodding/gameface-devtools-mcp`](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp)
+> and works with any MCP client (Cursor, Codex CLI, Gemini CLI, VS Code, ...).
+> See [`mcp/README.md`](mcp/README.md) for the tool reference and per-client install snippets.
 
 ## Requirements
 
@@ -31,7 +30,8 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
   You should get back a JSON array containing a `"type": "page"` target. Set the host/port to match
   your application if it differs (see Configuration).
 - A JavaScript runtime to launch the server: **Bun** (default) or **Node 24+**.
-  No `npm install` is needed: the server is shipped as a self-contained bundle.
+  No `npm install` is needed: the plugin launches the server from a committed, self-contained
+  bundle, so it works offline and stays version-locked to the plugin.
 
 ## Install
 
@@ -39,51 +39,11 @@ Add this repository as a plugin (e.g., via your plugin marketplace or a local pa
 Claude Code autoloads the `gameface` MCP server from [`.mcp.json`](.mcp.json).
 Run `/mcp` to confirm it connected, then ask Claude to use the `game_*` tools.
 
-## Tools
-
-| Tool              | What it does                                                                    | Under the hood                      |
-| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
-| `game_status`     | Reachability + page target + engine info. Run first when things fail.           | `/json/list` + `/json/version`      |
-| `game_eval`       | Evaluate a JS expression in the Gameface UI, returns the value as JSON.         | `Runtime.evaluate` (returnByValue)  |
-| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image.               | `Page.captureScreenshot` (+ `clip`) |
-| `game_dom`        | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector.     | `Runtime.evaluate`                  |
-| `game_wait`       | Wait until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate`           |
-| `game_click`      | Click an element by dispatching real bubbling DOM events.                       | `Runtime.evaluate` (see note)       |
-| `game_fill`       | Set an input/textarea/contenteditable value.                                    | `Runtime.evaluate` (see note)       |
-| `game_type`       | Type text key by key (real KeyboardEvents + value sync).                        | `Runtime.evaluate` (see note)       |
-| `game_hover`      | Hover an element (over/enter/move sequence) to trigger tooltips/hover state.    | `Runtime.evaluate` (see note)       |
-| `game_console`    | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI.  | `Log` + `Runtime.consoleAPICalled`  |
-
-> [!NOTE]
-> **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
-> `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,
-> and `game_hover` dispatch real DOM events in the page.
-
-### JS debugger tools
-
-The Gameface UI's V8 `Debugger` domain is fully supported, so these drive a real source-level
-debugger.
-
-| Tool                           | What it does                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `game_debug_status`            | Debugger state: paused?/where, pause-on-exceptions, breakpoints, script count. Also sets pause-on-exceptions. |
-| `game_debug_scripts`           | List parsed UI scripts (scriptId + url), filterable by url substring.                                         |
-| `game_debug_source`            | Get a script's source (by scriptId) with line numbers, optionally a line range.                               |
-| `game_debug_set_breakpoint`    | Break at url-substring + line (1-based), with an optional JS condition.                                       |
-| `game_debug_remove_breakpoint` | Remove a breakpoint by id, or `all`.                                                                          |
-| `game_debug_pause_state`       | When paused: the call stack, optionally with each frame's local/closure variables.                            |
-| `game_debug_evaluate`          | Evaluate in the paused frame's scope (read locals), or globally when running.                                 |
-| `game_debug_step`              | `resume` / `over` / `into` / `out` / `pause`.                                                                 |
-
-> [!IMPORTANT]
-> **Hitting a breakpoint or pausing FREEZES the UI thread until you resume** (`game_debug_step` with
-> `resume`). Prefer conditional breakpoints to limit freezes, and while paused inspect with
-> `game_debug_evaluate` rather than `game_eval`. Safety net: if the server's connection drops while
-> paused, the engine auto-resumes.
+The full tool reference (UI tools + JS debugger tools) lives in [`mcp/README.md`](mcp/README.md).
 
 ## Configuration
 
-All are optional, read by the server (and surfaced in `.mcp.json`):
+All are optional, surfaced in [`.mcp.json`](.mcp.json):
 
 | Variable                      | Default     | Purpose                                                       |
 | ----------------------------- | ----------- | ------------------------------------------------------------- |
@@ -97,18 +57,18 @@ All are optional, read by the server (and surfaced in `.mcp.json`):
 
 Uses `mise` + `bun` (never `npx`). The repository is a bun workspace: the root `package.json`
 carries the lint/format tooling (oxlint, oxfmt) and the lefthook git hooks, while the MCP server
-lives in the `server/` workspace package.
+lives in the `mcp/` workspace package (published on npm as `@csmodding/gameface-devtools-mcp`).
 
 ```sh
 bun install   # install all workspace deps (also installs the git hooks)
 mise check    # type-check, lint (with safe auto-fixes), and format
-mise build    # rebuild server/dist/server.mjs (commit the result)
+mise build    # rebuild mcp/dist/server.mjs (commit the result)
 ```
 
 Run `mise tasks` for the full list.
 
-After changing anything under `server/src/`, run `mise check`, rebuild, and commit the updated
-`server/dist/server.mjs`.
+After changing anything under `mcp/src/`, run `mise check`, rebuild, and commit the updated
+`mcp/dist/server.mjs`.
 
 ## Troubleshooting
 

@@ -35,7 +35,7 @@ run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt"]
 
 [tasks."check:tsc"]
 description = "Type-checks the server with tsc."
-dir = "{{config_root}}/server"
+dir = "{{config_root}}/mcp"
 raw = true
 run = "bun --bun tsc --noEmit"
 
@@ -59,7 +59,7 @@ run = ["mise check:agents:tsc", "mise check:agents:oxlint", "mise check:oxfmt"]
 
 [tasks."check:agents:tsc"]
 description = "Type-checks the server with tsc, output optimized for AI agents."
-dir = "{{config_root}}/server"
+dir = "{{config_root}}/mcp"
 raw = true
 run = "bun --bun tsc --noEmit --pretty false"
 
@@ -71,16 +71,18 @@ run = "bun --bun oxlint --fix --format agent"
 # ===========
 
 [tasks.build]
-description = "Rebuild the shipped server bundle (server/dist/server.mjs); commit the result."
-dir = "{{config_root}}/server"
+description = "Rebuild the shipped server bundle (mcp/dist/server.mjs); commit the result."
+dir = "{{config_root}}/mcp"
 raw = true
-run = "bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs"
+# The shebang banner makes the bundle work as an npm bin script. Never enable minification:
+# page-context functions are serialized via .toString() and must stay readable/self-contained.
+run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
 # RUN TASKS
 # =========
 
 [tasks."run:server"]
 description = "Run the MCP server from sources (stdio transport, for quick smoke tests)."
-dir = "{{config_root}}/server"
+dir = "{{config_root}}/mcp"
 raw = true
 run = "bun run src/server.ts"

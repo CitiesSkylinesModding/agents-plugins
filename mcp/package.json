@@ -1,0 +1,51 @@
+{
+  "name": "@csmodding/gameface-devtools-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that drives a running Coherent Gameface (Cohtml) game UI over a direct Chrome DevTools Protocol connection: evaluate JS, screenshot, inspect and drive the DOM, capture the console, and set JS breakpoints.",
+  "keywords": [
+    "browser-automation",
+    "cdp",
+    "chrome-devtools-protocol",
+    "coherent-gameface",
+    "cohtml",
+    "debugger",
+    "game-ui",
+    "gameface",
+    "mcp",
+    "mcp-server"
+  ],
+  "homepage": "https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin",
+  "license": "MIT",
+  "author": {
+    "name": "Morgan Touverey Quilling"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin.git",
+    "directory": "mcp"
+  },
+  "bin": {
+    "gameface-devtools-mcp": "dist/server.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "// We use mise-en-place to manage tasks. See mise.toml for more info.": ""
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/common-tags": "^1.8.4",
+    "@types/node": "^24.13.3",
+    "common-tags": "^1.8.2",
+    "typescript": "^7.0.2",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

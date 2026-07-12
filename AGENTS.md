@@ -2,37 +2,42 @@
 
 ## Project overview
 
-`coherent-gameface-mcp` is a Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
+`coherent-gameface-claude-plugin` is a Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
 It ships an MCP server (evaluate JS, screenshot, inspect and drive the DOM, capture the console, set JS breakpoints) plus skills.
 It targets any Gameface application, but is developed and verified against **Cities: Skylines II**'s Gameface UI, which is the reference implementation and the source of the CDP quirks documented below.
+
+The repo wears two hats, with distinct names:
+
+- The Claude Code plugin (`coherent-gameface` in `.claude-plugin/plugin.json`, repo/root package `coherent-gameface-claude-plugin`): launches the committed server bundle from `.mcp.json` (zero-install, offline, version-locked) and will carry the skills.
+- The MCP server (`mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is `mcp/README.md`. Publishing is manual (`npm publish` from `mcp/`, run by Morgan).
 
 ## Tech stack
 
 Project-specific tech stack. Ex:
 
 - [mise-en-place](https://mise.jdx.dev): A tool to manage dev tools, env vars, and tasks per project.
-- Bun workspaces: the root `package.json` carries the lint/format tooling (oxfmt/oxlint configs live at the root) and lefthook; `server/` is the only workspace package. One `bun.lock` at the root.
+- Bun workspaces: the root `package.json` carries the lint/format tooling (oxfmt/oxlint configs live at the root) and lefthook; `mcp/` is the only workspace package. One `bun.lock` at the root.
 
 ## Repository structure
 
 - `package.json`: bun workspace root; lint/format tooling and lefthook live here (with `oxfmt.config.ts` / `oxlint.config.ts`).
 - `.claude-plugin/plugin.json`: plugin manifest.
 - `.mcp.json`: wires the `gameface` MCP server. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-bun}` so it runs under bun (default) or node (`GAMEFACE_MCP_RUNTIME=node`).
-- `server/src/`: the MCP server (TypeScript).
+- `mcp/src/`: the MCP server (TypeScript). `mcp/package.json` is the publishable npm package (`@csmodding/gameface-devtools-mcp`); `mcp/README.md` is what npm displays.
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
   - `tools.ts`: UI tool implementations + page-context functions injected via `Runtime.evaluate`, plus the `ConsoleBuffer`.
   - `debugger.ts`: the `DebuggerSession` (V8 Debugger domain) + `game_debug_*` tools.
   - `shared.ts`: result builders (text/errorText/toErrorResult), RemoteObject/EvaluateResult types.
   - `config.ts`: `GAMEFACE_*` env config.
-- `server/dist/server.mjs`: the shipped, self-contained bundle. COMMITTED on purpose (zero-install).
+- `mcp/dist/server.mjs`: the shipped, self-contained bundle. COMMITTED on purpose (zero-install). Also the file npm publishes (`files: ["dist"]`) and the package's `bin`.
 - `docs/ROADMAP.md`: planned facets.
 
 ## Commands
 
 You can run `mise tasks` to see the full list of shortcut commands. Do NOT use npx to run commands, always prefer mise shortcuts, or bun/bunx if there is no dedicated mise shortcut.
 
-- `mise build`: Rebuild the shipped bundle `server/dist/server.mjs` (commit the result).
+- `mise build`: Rebuild the shipped bundle `mcp/dist/server.mjs` (commit the result).
 - `mise check:agents`: Run type checking, formatting, and linting, with optimized output.
 
 Tip: you can append arguments to mise shortcuts, mise will pass them through, ex. `mise some:task --some-arg`.
@@ -41,9 +46,11 @@ Always run the appropriate check/test commands after performing changes; but do 
 
 ## How the server is built and shipped
 
-The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `server/dist/server.mjs` that runs under bun or node 24+ (both provide global `WebSocket` / `fetch`).
+The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `mcp/dist/server.mjs` that runs under bun or node 24+ (both provide global `WebSocket` / `fetch`).
 The SDK/zod are bundled in, so there is NO runtime installation step.
 Those packages are build-time `devDependencies` only.
+The build emits a `#!/usr/bin/env node` banner so the same bundle works as the npm package's `bin` script.
+Never enable minification (page-context functions are serialized via `.toString()`).
 
 ## Gameface CDP gotchas (verified, do not relearn the hard way)
 
@@ -84,6 +91,6 @@ Ask first before:
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Propose updates to `AGENTS.md` or `docs/` when you notice a pattern or introduced changes that deserve to be documented for future sessions.
-- After changing `server/src/`, run `mise check:agents` and `mise build`.
+- After changing `mcp/src/`, run `mise check:agents` and `mise build`.
 - Store hard-won facts about Gameface internals in memory.
 - Keep the server generic: no assumptions about a specific game's DOM and APIs beyond the defaults. CS2 is the test target, not a hard dependency.

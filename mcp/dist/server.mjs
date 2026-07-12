@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
@@ -31500,7 +31501,7 @@ async function main() {
   const client = new CdpClient(config2);
   const consoleBuffer = new ConsoleBuffer(client);
   const debug = new DebuggerSession(client);
-  const server = new McpServer({ name: "gameface", version: VERSION });
+  const server = new McpServer({ name: "gameface-devtools-mcp", version: VERSION });
   server.registerTool("game_status", {
     title: "Gameface UI status",
     description: import_common_tags4.oneLine`

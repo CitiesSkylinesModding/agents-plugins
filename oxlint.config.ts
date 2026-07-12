@@ -19,7 +19,7 @@ export default defineConfig({
   },
   overrides: [
     {
-      files: ['server/src/config.ts'],
+      files: ['mcp/src/config.ts'],
       rules: {
         // Config.ts is the designated env boundary; everything else must go through it.
         'node/no-process-env': 'off'

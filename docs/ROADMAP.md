@@ -1,8 +1,10 @@
 # Roadmap
 
-`coherent-gameface-mcp` is a generic toolkit for driving a running Coherent Gameface UI over CDP.
-The MCP server is the first facet; skills and richer instrumentation are planned. The plugin is
-developed and verified against Cities: Skylines II's Gameface UI, but stays application-agnostic.
+`coherent-gameface-claude-plugin` is a generic toolkit for driving a running Coherent Gameface UI
+over CDP. The MCP server (`gameface-devtools-mcp`, published on npm as
+`@csmodding/gameface-devtools-mcp`) is the first facet; skills and richer instrumentation are
+planned. The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays
+application-agnostic.
 
 ## Shipped
 
@@ -10,8 +12,8 @@ developed and verified against Cities: Skylines II's Gameface UI, but stays appl
 
 Direct Chrome DevTools Protocol control of a running Gameface UI. Tools: `game_status`,
 `game_eval`, `game_screenshot` (with selector clipping), `game_dom`, `game_wait`,
-`game_click`, `game_fill`, `game_type`, `game_hover`, `game_console`. See the README
-and `server/`. Input tools dispatch DOM events (CDP `Input` is ignored by Gameface).
+`game_click`, `game_fill`, `game_type`, `game_hover`, `game_console`. See `mcp/README.md`
+and `mcp/`. Input tools dispatch DOM events (CDP `Input` is ignored by Gameface).
 
 ### JS debugging (MCP server)
 
@@ -38,6 +40,14 @@ render as "Object". Use `Runtime.getProperties` / object previews to expand them
 
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools.
+
+### Self-contained executable
+
+Port the precompiled ESM build to a self-contained executable (`bun build --compile`), dropping
+the bun/node requirement for npm consumers. Deliver the executables through the SAME
+`@csmodding/gameface-devtools-mcp` package, following the esbuild/biome/oxlint pattern:
+per-platform binary packages wired as `optionalDependencies`, with a tiny JS launcher kept as the
+`bin` entry, so `npx -y @csmodding/gameface-devtools-mcp@latest` keeps delivering auto-updates.
 
 When these land they become standard plugin components: `commands/`, `agents/`,
 `skills/` directories auto-discovered by the plugin manifest.
