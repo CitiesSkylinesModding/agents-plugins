@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "gameface": {
-      "command": "${GAMEFACE_MCP_RUNTIME:-bun}",
+      "command": "${GAMEFACE_MCP_RUNTIME:-node}",
       "args": ["${CLAUDE_PLUGIN_ROOT:-.}/mcp/dist/server.mjs"],
       "env": {
         "GAMEFACE_HOST": "${GAMEFACE_HOST:-localhost}",

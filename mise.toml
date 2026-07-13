@@ -1,9 +1,8 @@
-# Dev tooling for building/testing the plugin. NOT required to RUN the plugin:
-# the shipped server is a committed, self-contained bundle launched by the user's
-# own bun or node (see .mcp.json / README).
+# Dev tooling for building/testing the plugin. NOT required to RUN the plugin: the shipped server is
+# a committed, self-contained bundle launched by the user's own node (see .mcp.json / README).
 [tools]
-bun = "1.3.14"
-node = "24.7.0"
+bun = "1.3"
+node = "24.4"
 
 [env]
 _.path = ["{{config_root}}/node_modules/.bin"]

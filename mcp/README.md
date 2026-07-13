@@ -27,7 +27,7 @@ and set JS breakpoints.
   ```
   You should get back a JSON array containing a `"type": "page"` target. Set the host/port to match
   your application if it differs (see Configuration).
-- **Node.js 24+** (or Bun). The package is a self-contained bundle; `npx` installs nothing else.
+- **Node.js 22.4+**. The package is a self-contained bundle; `npx` installs nothing else.
 
 ## Install
 
@@ -176,7 +176,7 @@ All are optional, read by the server from the environment:
   port is not reachable. Check `curl http://localhost:9444/json/list`. Use `game_status` for a
   structured diagnosis.
 - **The server fails to launch**: check your client's MCP logs for the server's stderr. Common
-  causes: `npx` not on `PATH`, or Node older than 24 (the bundle needs the global `WebSocket`).
+  causes: `npx` not on `PATH`, or Node older than 22.4 (the bundle needs the global `WebSocket`).
 
 ## Development
 

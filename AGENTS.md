@@ -22,7 +22,7 @@ Project-specific tech stack. Ex:
 
 - `package.json`: bun workspace root; lint/format tooling and lefthook live here (with `oxfmt.config.ts` / `oxlint.config.ts`).
 - `.claude-plugin/plugin.json`: plugin manifest.
-- `.mcp.json`: wires the `gameface` MCP server. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-bun}` so it runs under bun (default) or node (`GAMEFACE_MCP_RUNTIME=node`).
+- `.mcp.json`: wires the `gameface` MCP server. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-node}`; node 22.4+ is the sole supported runtime (the env var is an escape hatch).
 - `mcp/src/`: the MCP server (TypeScript). `mcp/package.json` is the publishable npm package (`@csmodding/gameface-devtools-mcp`); `mcp/README.md` is what npm displays.
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
@@ -46,7 +46,7 @@ Always run the appropriate check/test commands after performing changes; but do 
 
 ## How the server is built and shipped
 
-The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `mcp/dist/server.mjs` that runs under bun or node 24+ (both provide global `WebSocket` / `fetch`).
+The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `mcp/dist/server.mjs` that runs under node 22.4+ (global `WebSocket` / `fetch` are stable from that version). Bun is dev tooling only (build, package manager); the shipped runtime is node. Unit tests target node 24 and the current LTS.
 The SDK/zod are bundled in, so there is NO runtime installation step.
 Those packages are build-time `devDependencies` only.
 The build emits a `#!/usr/bin/env node` banner so the same bundle works as the npm package's `bin` script.
@@ -91,6 +91,6 @@ Ask first before:
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Propose updates to `AGENTS.md` or `docs/` when you notice a pattern or introduced changes that deserve to be documented for future sessions.
-- After changing `mcp/src/`, run `mise check:agents` and `mise build`.
+- After changing `mcp/src/`, run `mise check:agents` and `mise build`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` (verified sufficient, no Claude Code restart needed; agents cannot trigger it).
 - Store hard-won facts about Gameface internals in memory.
 - Keep the server generic: no assumptions about a specific game's DOM and APIs beyond the defaults. CS2 is the test target, not a hard dependency.

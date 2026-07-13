@@ -29,7 +29,7 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
   ```
   You should get back a JSON array containing a `"type": "page"` target. Set the host/port to match
   your application if it differs (see Configuration).
-- A JavaScript runtime to launch the server: **Bun** (default) or **Node 24+**.
+- **Node 22.4+** to launch the server.
   No `npm install` is needed: the plugin launches the server from a committed, self-contained
   bundle, so it works offline and stays version-locked to the plugin.
 
@@ -45,13 +45,13 @@ The full tool reference (UI tools + JS debugger tools) lives in [`mcp/README.md`
 
 All are optional, surfaced in [`.mcp.json`](.mcp.json):
 
-| Variable                      | Default     | Purpose                                                       |
-| ----------------------------- | ----------- | ------------------------------------------------------------- |
-| `GAMEFACE_MCP_RUNTIME`        | `bun`       | Runtime used to launch the server. Set to `node` to use Node. |
-| `GAMEFACE_HOST`               | `localhost` | Host of the Gameface CDP endpoint.                            |
-| `GAMEFACE_PORT`               | `9444`      | Port of the Gameface CDP endpoint.                            |
-| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000`      | HTTP discovery / WebSocket open timeout.                      |
-| `GAMEFACE_CALL_TIMEOUT_MS`    | `15000`     | Per-command reply timeout.                                    |
+| Variable                      | Default     | Purpose                                  |
+| ----------------------------- | ----------- | ---------------------------------------- |
+| `GAMEFACE_MCP_RUNTIME`        | `node`      | Runtime used to launch the server.       |
+| `GAMEFACE_HOST`               | `localhost` | Host of the Gameface CDP endpoint.       |
+| `GAMEFACE_PORT`               | `9444`      | Port of the Gameface CDP endpoint.       |
+| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000`      | HTTP discovery / WebSocket open timeout. |
+| `GAMEFACE_CALL_TIMEOUT_MS`    | `15000`     | Per-command reply timeout.               |
 
 ## Development
 
@@ -75,8 +75,7 @@ After changing anything under `mcp/src/`, run `mise check`, rebuild, and commit 
 - **`/mcp` shows the server failed / tools error with "Cannot reach ..."**: the Gameface application
   is not running or the debug port is not reachable. Check `curl http://localhost:9444/json/list`.
   Use `game_status` for a structured diagnosis.
-- **Runtime not found**: ensure `bun` (or `node`, with `GAMEFACE_MCP_RUNTIME=node`) is on your
-  `PATH`.
+- **Runtime not found**: ensure `node` (22.4+) is on your `PATH`.
 - **Read the MCP server logs**: Claude Code records each server's connection attempts and captured
   stderr to per-project JSONL files, the fastest way to see why a launch failed (e.g. a
   `-32000 Connection closed` from a bad command/path before any `game_*` tool runs). They live under

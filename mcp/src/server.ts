@@ -2,7 +2,7 @@
  * Gameface MCP server entry point.
  *
  * Exposes tools for driving a Coherent Gameface application UI over a direct CDP WebSocket.
- * Runs unchanged under Bun or Node 24+ (both provide global WebSocket / fetch).
+ * Runs under Node 22.4+ (global WebSocket and fetch are stable from that version).
  * All diagnostics go to stderr; stdout is reserved for the MCP JSON-RPC stream.
  */
 
