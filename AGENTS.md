@@ -2,13 +2,13 @@
 
 ## Project overview
 
-`coherent-gameface-claude-plugin` is a Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
+`coherent-gameface-agent-plugin` is a Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
 It ships an MCP server (evaluate JS, screenshot, inspect and drive the DOM, capture the console, set JS breakpoints) plus skills.
 It targets any Gameface application, but is developed and verified against **Cities: Skylines II**'s Gameface UI, which is the reference implementation and the source of the CDP quirks documented below.
 
 The repo wears two hats, with distinct names:
 
-- The Claude Code plugin (`coherent-gameface` in `.claude-plugin/plugin.json`, repo/root package `coherent-gameface-claude-plugin`): launches the committed server bundle from `.mcp.json` (zero-install, offline, version-locked) and will carry the skills.
+- The Claude Code plugin (`coherent-gameface` in `.claude-plugin/plugin.json`, repo/root package `coherent-gameface-agent-plugin`): launches the committed server bundle from `.mcp.json` (zero-install, offline, version-locked) and will carry the skills.
 - The MCP server (`mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is `mcp/README.md`. Publishing is manual (`npm publish` from `mcp/`, run by Morgan).
 
 ## Tech stack

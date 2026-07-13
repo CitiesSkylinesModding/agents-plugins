@@ -4,7 +4,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "component": "coherent-gameface-claude-plugin",
+      "component": "coherent-gameface-agent-plugin",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false,

@@ -1,6 +1,6 @@
 # Roadmap
 
-`coherent-gameface-claude-plugin` is a generic toolkit for driving a running Coherent Gameface UI
+`coherent-gameface-agent-plugin` is a generic toolkit for driving a running Coherent Gameface UI
 over CDP. The MCP server (`gameface-devtools-mcp`, published on npm as
 `@csmodding/gameface-devtools-mcp`) is the first facet; skills and richer instrumentation are
 planned. The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays

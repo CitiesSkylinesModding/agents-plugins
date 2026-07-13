@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "coherent-gameface-claude-plugin",
+      "name": "coherent-gameface-agent-plugin",
       "devDependencies": {
         "@toverux/blanc-hopital": "^3.0.0",
         "lefthook": "^2.1.6",

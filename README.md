@@ -1,4 +1,4 @@
-# coherent-gameface-claude-plugin
+# coherent-gameface-agent-plugin
 
 A Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI.
 
@@ -38,14 +38,14 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 In Claude Code, add this repository as a marketplace, then install the plugin from it:
 
 ```
-/plugin marketplace add CitiesSkylinesModding/coherent-gameface-claude-plugin
+/plugin marketplace add CitiesSkylinesModding/coherent-gameface-agent-plugin
 /plugin install coherent-gameface@csmodding
 ```
 
 Or from your terminal:
 
 ```sh
-claude plugin marketplace add CitiesSkylinesModding/coherent-gameface-claude-plugin
+claude plugin marketplace add CitiesSkylinesModding/coherent-gameface-agent-plugin
 claude plugin install coherent-gameface@csmodding
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "coherent-gameface-claude-plugin",
+  "name": "coherent-gameface-agent-plugin",
   "version": "0.1.0",
   "private": true,
   "description": "Workspace root: lint/format tooling and git hooks for the Coherent Gameface Claude Code plugin",

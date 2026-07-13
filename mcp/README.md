@@ -67,7 +67,7 @@ claude mcp add --env GAMEFACE_PORT=9444 --transport stdio gameface -- npx -y @cs
 ```
 
 Claude Code users can also install the
-[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin)
+[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
 instead, which bundles this server (no npm involved) plus skills that teach Claude the Gameface
 workflows.
 
@@ -181,6 +181,6 @@ All are optional, read by the server from the environment:
 ## Development
 
 The server is developed in the
-[coherent-gameface-claude-plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-claude-plugin)
+[coherent-gameface-agent-plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
 repository, where this package lives as the `mcp/` workspace. See the repository README for the
 development setup, and its `AGENTS.md` for the verified Gameface CDP behavior matrix.
