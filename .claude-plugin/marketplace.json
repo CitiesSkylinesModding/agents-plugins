@@ -1,0 +1,13 @@
+{
+  "name": "csmodding",
+  "owner": {
+    "name": "Cities: Skylines Modding"
+  },
+  "plugins": [
+    {
+      "name": "coherent-gameface",
+      "source": "./",
+      "description": "Drive a running Coherent Gameface UI from Claude Code over a direct Chrome DevTools Protocol connection."
+    }
+  ]
+}

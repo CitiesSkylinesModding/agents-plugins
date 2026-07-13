@@ -35,8 +35,21 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Install
 
-Add this repository as a plugin (e.g., via your plugin marketplace or a local path). Once enabled,
-Claude Code autoloads the `gameface` MCP server from [`.mcp.json`](.mcp.json).
+In Claude Code, add this repository as a marketplace, then install the plugin from it:
+
+```
+/plugin marketplace add CitiesSkylinesModding/coherent-gameface-claude-plugin
+/plugin install coherent-gameface@csmodding
+```
+
+Or from your terminal:
+
+```sh
+claude plugin marketplace add CitiesSkylinesModding/coherent-gameface-claude-plugin
+claude plugin install coherent-gameface@csmodding
+```
+
+Once enabled, Claude Code autoloads the `gameface` MCP server from [`.mcp.json`](.mcp.json).
 Run `/mcp` to confirm it connected, then ask Claude to use the `game_*` tools.
 
 The full tool reference (UI tools + JS debugger tools) lives in [`mcp/README.md`](mcp/README.md).

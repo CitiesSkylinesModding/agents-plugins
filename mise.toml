@@ -77,6 +77,20 @@ raw = true
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
+# PUBLISH TASKS
+# =============
+
+[tasks.publish]
+description = "Check, rebuild the bundle, then publish @csmodding/gameface-devtools-mcp to npm."
+run = ["mise check", "mise build", "mise publish:npm"]
+
+[tasks."publish:npm"]
+description = "Publish the mcp/ package to npm (assumes checks and build already ran)."
+dir = "{{config_root}}/mcp"
+# raw keeps stdio interactive so npm can prompt for the OTP.
+raw = true
+run = "npm publish"
+
 # RUN TASKS
 # =========
 
