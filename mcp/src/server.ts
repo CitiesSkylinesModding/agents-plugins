@@ -6,6 +6,7 @@
  * All diagnostics go to stderr; stdout is reserved for the MCP JSON-RPC stream.
  */
 
+import { readFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { oneLine } from 'common-tags';
@@ -27,7 +28,12 @@ import {
   gameWait
 } from './tools';
 
-const VERSION = '0.1.0';
+// Read at runtime rather than baked in at build time, so a version bump needs no rebuild.
+// Both execution modes sit one level below package.json (dist/server.mjs and src/server.ts).
+const { version: VERSION } = JSON.parse(
+  // oxlint-disable-next-line node/no-sync -- One-shot startup read, nothing is serving yet.
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+) as { version: string };
 
 async function main(): Promise<void> {
   const config = loadConfig();

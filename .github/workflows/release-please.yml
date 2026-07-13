@@ -1,0 +1,22 @@
+# Maintains a rolling release PR that bumps versions and changelogs from Conventional Commits.
+# Merging that PR tags and creates the GitHub Releases. Requires the org/repo setting
+# "Allow GitHub Actions to create and approve pull requests" to be enabled.
+# npm publishing stays manual (mise publish); this workflow never publishes.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

@@ -6,6 +6,12 @@ post-checkout:
 pre-commit:
   parallel: true
   commands:
+    build-bundle:
+      # Keep the committed bundle in sync with the sources; stage_fixed would only re-add the
+      # staged src files, so the freshly built bundle is staged explicitly.
+      root: "mcp/"
+      glob: "src/*.ts"
+      run: mise build && git add dist/server.mjs
     tsc:
       # The only tsconfig lives in mcp/; only staged files under it trigger the check.
       root: "mcp/"

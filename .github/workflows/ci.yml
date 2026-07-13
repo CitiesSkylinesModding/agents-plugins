@@ -1,0 +1,20 @@
+# Checks that pushed code passes lint/typecheck and that the committed bundle mcp/dist/server.mjs
+# is up to date with mcp/src/. check:agents applies safe auto-fixes and mise build rewrites the
+# bundle; the final git diff therefore fails if the commit was missing either.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: bun install --frozen-lockfile
+      - run: mise check:agents
+      - run: mise build
+      - run: git diff --exit-code

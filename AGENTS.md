@@ -52,6 +52,22 @@ Those packages are build-time `devDependencies` only.
 The build emits a `#!/usr/bin/env node` banner so the same bundle works as the npm package's `bin` script.
 Never enable minification (page-context functions are serialized via `.toString()`).
 
+## Versioning and releases
+
+release-please (`.github/workflows/release-please.yml`, config in `release-please-config.json` + `.release-please-manifest.json`) maintains a rolling release PR on `main` from Conventional Commits; merging it bumps versions, updates changelogs, tags, and creates GitHub Releases. Two release units with independent numbers:
+
+- **plugin** (root): version in root `package.json`, synced into `.claude-plugin/plugin.json` via `extra-files`. Bare `vX.Y.Z` tags.
+- **mcp** (`mcp/`): version in `mcp/package.json`. Tags `gameface-devtools-mcp-vX.Y.Z`.
+
+Rules that matter when committing:
+
+- Commit messages follow Conventional Commits. `feat`/`fix`/`deps` trigger releases; `chore`/`refactor`/`docs` do not. Anything user-facing (skills, server behavior, `.mcp.json`) must be committed as `feat` or `fix`.
+- Any `mcp/**` commit bumps BOTH mcp and the plugin (the `plugin.json` version is Claude Code's update pin, so an mcp fix must bump it to reach plugin users). Plugin-only changes bump only the plugin.
+- Pre-1.0: `feat` bumps minor, `fix` bumps patch. 1.0.0 only via a deliberate `Release-As:` footer.
+- The server reads its version from `mcp/package.json` at runtime (no hardcoded version, no rebuild needed on release).
+- npm publishing stays MANUAL (`mise publish`, run by Morgan). No CI publish job; do not add one.
+- CI (`.github/workflows/ci.yml`) runs `mise check:agents` + `mise build` and fails if the tree differs (stale bundle or unformatted code). A lefthook pre-commit rebuilds and stages `mcp/dist/server.mjs` whenever staged files touch `mcp/src/`.
+
 ## Gameface CDP gotchas (verified, do not relearn the hard way)
 
 These were verified against Cities: Skylines II's Gameface UI (Cohtml 1.64.0.7, V8 9.4, CDP 1.3) but

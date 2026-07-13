@@ -7681,6 +7681,9 @@ var require_lib = __commonJS((exports) => {
   exports.stripIndents = _stripIndents3.default;
 });
 
+// src/server.ts
+import { readFileSync } from "node:fs";
+
 // ../node_modules/.bun/zod@4.4.3/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
@@ -31495,7 +31498,7 @@ async function gameConsole(client, buffer, options) {
 }
 
 // src/server.ts
-var VERSION = "0.1.0";
+var { version: VERSION } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 async function main() {
   const config2 = loadConfig();
   const client = new CdpClient(config2);
