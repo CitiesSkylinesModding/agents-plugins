@@ -9,17 +9,17 @@ pre-commit:
     build-bundle:
       # Keep the committed bundle in sync with the sources; stage_fixed would only re-add the
       # staged src files, so the freshly built bundle is staged explicitly.
-      root: "mcp/"
-      glob: "mcp/src/*.ts"
+      root: "plugins/coherent-gameface/mcp/"
+      glob: "plugins/coherent-gameface/mcp/src/*.ts"
       run: mise build && git add dist/server.mjs
     tsc:
-      # The only tsconfig lives in mcp/; only staged files under it trigger the check.
-      root: "mcp/"
+      # The only tsconfig lives in the mcp workspace; only staged files under it trigger the check.
+      root: "plugins/coherent-gameface/mcp/"
       glob: "*.{ts,tsx,js,json}"
       run: mise exec bun -- bun --bun tsc --noEmit
     plugin-sync:
       # The Claude and Codex plugin manifests duplicate shared metadata; keep them in sync.
-      glob: "{.claude-plugin/*.json,.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
+      glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
       run: mise exec bun -- bun scripts/check-plugin-sync.ts
     oxlint:
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"

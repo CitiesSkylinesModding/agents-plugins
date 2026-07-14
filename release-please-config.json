@@ -2,10 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "separate-pull-requests": false,
   "packages": {
-    ".": {
+    "plugins/coherent-gameface": {
       "release-type": "node",
-      "component": "coherent-gameface-agent-plugin",
-      "include-component-in-tag": false,
+      "component": "coherent-gameface",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false,
       "extra-files": [
@@ -18,14 +17,26 @@
           "type": "json",
           "path": ".codex-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "/package.json",
+          "jsonpath": "$.version"
         }
       ]
     },
-    "mcp": {
+    "plugins/coherent-gameface/mcp": {
       "release-type": "node",
       "component": "gameface-devtools-mcp",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false
     }
-  }
+  },
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "coherent-gameface",
+      "components": ["coherent-gameface", "gameface-devtools-mcp"]
+    }
+  ]
 }

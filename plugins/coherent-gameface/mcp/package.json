@@ -14,15 +14,15 @@
     "mcp",
     "mcp-server"
   ],
-  "homepage": "https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin",
+  "homepage": "https://github.com/CitiesSkylinesModding/agents-plugins",
   "license": "MIT",
   "author": {
     "name": "Morgan Touverey Quilling"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin.git",
-    "directory": "mcp"
+    "url": "git+https://github.com/CitiesSkylinesModding/agents-plugins.git",
+    "directory": "plugins/coherent-gameface/mcp"
   },
   "bin": {
     "gameface-devtools-mcp": "dist/server.mjs"

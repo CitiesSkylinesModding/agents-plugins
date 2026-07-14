@@ -5,14 +5,14 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Freshness check for the gameface skill's baked version timeline.
-// The timeline in skills/gameface/references/version-gating.md is immutable history and only rots
+// The gameface skill's version-gating.md timeline is immutable history and only rots
 // by omission: releases newer than its recorded ceiling are simply missing.
 // This script fetches the live Gameface feature changelog and lists every release version above the
 // ceiling, so the timeline (and the ceiling marker) can be appended by hand.
 // Exits nonzero when the timeline is stale. Network-dependent: run manually, not in CI.
 
 const CHANGELOG_URL = 'https://docs.coherent-labs.com/cpp-gameface/changelog/feature/';
-const TIMELINE_PATH = 'skills/gameface/references/version-gating.md';
+const TIMELINE_PATH = 'plugins/coherent-gameface/skills/gameface/references/version-gating.md';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 

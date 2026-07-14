@@ -19,7 +19,7 @@ export default defineConfig({
   },
   overrides: [
     {
-      files: ['mcp/src/config.ts'],
+      files: ['plugins/coherent-gameface/mcp/src/config.ts'],
       rules: {
         // Config.ts is the designated env boundary; everything else must go through it.
         'node/no-process-env': 'off'

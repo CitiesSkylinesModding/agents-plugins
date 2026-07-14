@@ -67,7 +67,7 @@ claude mcp add --env GAMEFACE_PORT=9444 --transport stdio gameface -- npx -y @cs
 ```
 
 Claude Code and Codex CLI users can also install the
-[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
+[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/agents-plugins)
 instead, which bundles this server (no npm involved) plus skills that teach the agent the Gameface
 workflows.
 
@@ -91,7 +91,7 @@ args = ["-y", "@csmodding/gameface-devtools-mcp@latest"]
 ```
 
 Codex CLI users can also install the
-[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
+[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/agents-plugins)
 instead (see the note under Claude Code above).
 
 ### Gemini CLI
@@ -185,6 +185,7 @@ All are optional, read by the server from the environment:
 ## Development
 
 The server is developed in the
-[coherent-gameface-agent-plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
-repository, where this package lives as the `mcp/` workspace. See the repository README for the
-development setup, and its `AGENTS.md` for the verified Gameface CDP behavior matrix.
+[agents-plugins](https://github.com/CitiesSkylinesModding/agents-plugins)
+repository, where this package lives as the `plugins/coherent-gameface/mcp/` workspace. See the
+repository README for the development setup, and its `AGENTS.md` for the verified Gameface CDP
+behavior matrix.

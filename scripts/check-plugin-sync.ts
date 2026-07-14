@@ -12,10 +12,14 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
-const claudeManifest = readJsonObject('.claude-plugin/plugin.json');
-const codexManifest = readJsonObject('.codex-plugin/plugin.json');
+// Plugin sources live under plugins/<name>/; each carries its own pair of manifests.
+const pluginRoot = 'plugins/coherent-gameface';
+
+const claudeManifest = readJsonObject(`${pluginRoot}/.claude-plugin/plugin.json`);
+const codexManifest = readJsonObject(`${pluginRoot}/.codex-plugin/plugin.json`);
 
 checkSharedManifestFields();
+checkVersionAnchor();
 checkCodexMcpConfig();
 
 function checkSharedManifestFields(): void {
@@ -40,8 +44,31 @@ function checkSharedManifestFields(): void {
   }
 }
 
+function checkVersionAnchor(): void {
+  // The plugin's package.json is the release-please version anchor; the manifests and the root
+  // package.json are synced from it via extra-files, so any drift means a hand edit bypassed the
+  // release process. Codex manifest coverage is transitive through checkSharedManifestFields.
+  const anchor = readJsonObject(`${pluginRoot}/package.json`);
+
+  assert.equal(
+    claudeManifest.version,
+    anchor.version,
+    `The plugin manifests must carry the same version as ${pluginRoot}/package.json ` +
+      `(the release-please anchor).`
+  );
+
+  const rootPackage = readJsonObject('package.json');
+
+  assert.equal(
+    rootPackage.version,
+    anchor.version,
+    `The root package.json must carry the same version as ${pluginRoot}/package.json ` +
+      `(the release-please anchor).`
+  );
+}
+
 function checkCodexMcpConfig(): void {
-  const mcpConfig = readJsonObject('.codex-plugin/mcp.json');
+  const mcpConfig = readJsonObject(`${pluginRoot}/.codex-plugin/mcp.json`);
 
   // The key must be camelCase "mcpServers": Codex silently registers a bogus server when the
   // snake_case spelling is used.
@@ -73,9 +100,10 @@ function checkCodexMcpConfig(): void {
     `The "gameface" server in .codex-plugin/mcp.json must pass the bundle path as args[0].`
   );
 
+  // Codex resolves the relative path against the installed plugin root, so mirror that here.
   assert.ok(
-    existsSync(path.join(repoRoot, bundleRelativePath)),
-    `.codex-plugin/mcp.json points at "${bundleRelativePath}", which does not exist in the repository.`
+    existsSync(path.join(repoRoot, pluginRoot, bundleRelativePath)),
+    `.codex-plugin/mcp.json points at "${bundleRelativePath}", which does not exist under ${pluginRoot}.`
   );
 }
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-`coherent-gameface-agent-plugin` is a generic toolkit for driving a running Coherent Gameface UI
+`coherent-gameface` (in the `agents-plugins` marketplace) is a generic toolkit for driving a running Coherent Gameface UI
 over CDP. The MCP server (`gameface-devtools-mcp`, published on npm as
 `@csmodding/gameface-devtools-mcp`) is the first facet; skills and richer instrumentation are
 planned. The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays
@@ -30,7 +30,7 @@ version-gating protocol (docs describe the latest engine; games embed a frozen C
 version-to-feature timeline (`references/version-gating.md`, freshness-checked by
 `mise skills:check-changelog`), layout/scripting/performance/tooling references, and a
 `fetch-doc.mjs` extractor for the docs site (which defeats summarizing fetch tools). Generic
-across games, with Cities: Skylines II as the labeled worked example. See `skills/gameface/`.
+across games, with Cities: Skylines II as the labeled worked example. See `plugins/coherent-gameface/skills/gameface/`.
 
 ### Gameface driving skill (`gameface-driving`)
 
@@ -40,7 +40,7 @@ APIs, the act-then-verify loop, the rebuild-to-live reload cycle (full view relo
 detection), and safe source-level debugging (attach-before-parse script
 visibility, the pause freeze matrix, minified-bundle breakpoint placement). Verified live against
 Cities: Skylines II; points at the `gameface` skill for engine domain facts. See
-`skills/gameface-driving/`.
+`plugins/coherent-gameface/skills/gameface-driving/`.
 
 ## Planned
 

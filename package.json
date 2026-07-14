@@ -1,11 +1,11 @@
 {
-  "name": "coherent-gameface-agent-plugin",
+  "name": "agents-plugins",
   "version": "0.1.0",
   "private": true,
-  "description": "Workspace root: lint/format tooling and git hooks for the Coherent Gameface agent plugin",
+  "description": "Workspace root: lint/format tooling and git hooks for the CS Modding agent plugins marketplace",
   "license": "MIT",
   "workspaces": [
-    "mcp"
+    "plugins/coherent-gameface/mcp"
   ],
   "type": "module",
   "scripts": {

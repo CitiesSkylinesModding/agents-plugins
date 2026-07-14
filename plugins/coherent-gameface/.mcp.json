@@ -2,7 +2,7 @@
   "mcpServers": {
     "gameface": {
       "command": "${GAMEFACE_MCP_RUNTIME:-node}",
-      "args": ["plugins/coherent-gameface/mcp/dist/server.mjs"],
+      "args": ["${CLAUDE_PLUGIN_ROOT:-.}/mcp/dist/server.mjs"],
       "env": {
         "GAMEFACE_HOST": "${GAMEFACE_HOST:-localhost}",
         "GAMEFACE_PORT": "${GAMEFACE_PORT:-9444}"

@@ -40,7 +40,7 @@ run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt", "mise check:pl
 
 [tasks."check:tsc"]
 description = "Type-checks the server with tsc."
-dir = "{{config_root}}/mcp"
+dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 run = "bun --bun tsc --noEmit"
 
@@ -73,7 +73,7 @@ run = [
 
 [tasks."check:agents:tsc"]
 description = "Type-checks the server with tsc, output optimized for AI agents."
-dir = "{{config_root}}/mcp"
+dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 run = "bun --bun tsc --noEmit --pretty false"
 
@@ -93,8 +93,8 @@ run = "bun scripts/check-skill-changelog.ts"
 # ===========
 
 [tasks.build]
-description = "Rebuild the shipped server bundle (mcp/dist/server.mjs); commit the result."
-dir = "{{config_root}}/mcp"
+description = "Rebuild the shipped server bundle (plugins/coherent-gameface/mcp/dist/server.mjs); commit the result."
+dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 # The shebang banner makes the bundle work as an npm bin script. Never enable minification:
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
@@ -109,7 +109,7 @@ run = ["mise check", "mise build", "mise publish:npm"]
 
 [tasks."publish:npm"]
 description = "Publish the mcp/ package to npm (assumes checks and build already ran)."
-dir = "{{config_root}}/mcp"
+dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 # raw keeps stdio interactive so npm can prompt for the OTP.
 raw = true
 run = "npm publish"
@@ -119,6 +119,6 @@ run = "npm publish"
 
 [tasks."run:server"]
 description = "Run the MCP server from sources (stdio transport, for quick smoke tests)."
-dir = "{{config_root}}/mcp"
+dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 run = "bun run src/server.ts"

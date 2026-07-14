@@ -1,4 +1,4 @@
 {
-  ".": "0.1.0",
-  "mcp": "0.1.0"
+  "plugins/coherent-gameface": "0.1.0",
+  "plugins/coherent-gameface/mcp": "0.1.0"
 }

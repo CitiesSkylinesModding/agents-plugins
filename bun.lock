@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "coherent-gameface-agent-plugin",
+      "name": "agents-plugins",
       "devDependencies": {
         "@toverux/blanc-hopital": "^3.0.0",
         "@types/node": "^24.13.3",
@@ -14,7 +14,7 @@
         "oxlint-tsgolint": "^0.24.0",
       },
     },
-    "mcp": {
+    "plugins/coherent-gameface/mcp": {
       "name": "@csmodding/gameface-devtools-mcp",
       "version": "0.1.0",
       "bin": {
@@ -34,7 +34,7 @@
     "lefthook",
   ],
   "packages": {
-    "@csmodding/gameface-devtools-mcp": ["@csmodding/gameface-devtools-mcp@workspace:mcp"],
+    "@csmodding/gameface-devtools-mcp": ["@csmodding/gameface-devtools-mcp@workspace:plugins/coherent-gameface/mcp"],
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 

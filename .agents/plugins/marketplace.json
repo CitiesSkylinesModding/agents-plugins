@@ -8,7 +8,7 @@
       "name": "coherent-gameface",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugins/coherent-gameface"
       },
       "description": "Drive a running Coherent Gameface UI from your coding agent over a direct Chrome DevTools Protocol connection."
     }
