@@ -1,6 +1,6 @@
 {
   "name": "coherent-gameface",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drive a running Coherent Gameface UI from your coding agent (Claude Code, Codex CLI): ships the gameface-devtools-mcp server (evaluate JS, screenshot, inspect and drive the DOM, capture the console, set JS breakpoints over a direct Chrome DevTools Protocol connection), plus skills.",
   "author": {
     "name": "Morgan Touverey Quilling"
