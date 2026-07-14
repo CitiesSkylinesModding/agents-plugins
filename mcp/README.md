@@ -66,9 +66,9 @@ note that another option must sit between `--env` and the server name:
 claude mcp add --env GAMEFACE_PORT=9444 --transport stdio gameface -- npx -y @csmodding/gameface-devtools-mcp@latest
 ```
 
-Claude Code users can also install the
+Claude Code and Codex CLI users can also install the
 [coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
-instead, which bundles this server (no npm involved) plus skills that teach Claude the Gameface
+instead, which bundles this server (no npm involved) plus skills that teach the agent the Gameface
 workflows.
 
 ### Cursor
@@ -89,6 +89,10 @@ Or in `~/.codex/config.toml`:
 command = "npx"
 args = ["-y", "@csmodding/gameface-devtools-mcp@latest"]
 ```
+
+Codex CLI users can also install the
+[coherent-gameface plugin](https://github.com/CitiesSkylinesModding/coherent-gameface-agent-plugin)
+instead (see the note under Claude Code above).
 
 ### Gemini CLI
 

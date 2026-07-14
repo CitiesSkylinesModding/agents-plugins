@@ -2,13 +2,13 @@
 
 ## Project overview
 
-`coherent-gameface-agent-plugin` is a Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
+`coherent-gameface-agent-plugin` is an agent plugin for Claude Code and OpenAI Codex CLI: a **generic** toolkit for driving a running **Coherent Gameface** UI (the HTML/CSS/JS UI engine, Cohtml, that many games embed) over a direct Chrome DevTools Protocol (CDP) WebSocket.
 It ships an MCP server (evaluate JS, screenshot, inspect and drive the DOM, capture the console, set JS breakpoints) plus skills.
 It targets any Gameface application, but is developed and verified against **Cities: Skylines II**'s Gameface UI, which is the reference implementation and the source of the CDP quirks documented below.
 
 The repo wears two hats, with distinct names:
 
-- The Claude Code plugin (`coherent-gameface` in `.claude-plugin/plugin.json`, repo/root package `coherent-gameface-agent-plugin`): launches the committed server bundle from `.mcp.json` (zero-install, offline, version-locked) and will carry the skills.
+- The plugin (`coherent-gameface` in both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, repo/root package `coherent-gameface-agent-plugin`): launches the committed server bundle (zero-install, offline, version-locked) from `.mcp.json` on Claude Code and from `.codex-plugin/mcp.json` on Codex CLI, and will carry the skills.
 - The MCP server (`mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is `mcp/README.md`. Publishing is manual (`npm publish` from `mcp/`, run by Morgan).
 
 ## Tech stack
@@ -21,8 +21,10 @@ Project-specific tech stack. Ex:
 ## Repository structure
 
 - `package.json`: bun workspace root; lint/format tooling and lefthook live here (with `oxfmt.config.ts` / `oxlint.config.ts`).
-- `.claude-plugin/plugin.json`: plugin manifest.
-- `.mcp.json`: wires the `gameface` MCP server. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-node}`; node 22.4+ is the sole supported runtime (the env var is an escape hatch).
+- `.claude-plugin/plugin.json`: Claude Code plugin manifest (marketplace file: `.claude-plugin/marketplace.json`).
+- `.codex-plugin/plugin.json`: Codex CLI plugin manifest; points `mcpServers` at `.codex-plugin/mcp.json` (native marketplace file: `.agents/plugins/marketplace.json`). Shared fields must match the Claude manifest, see "Dual-harness plugin architecture".
+- `.mcp.json`: wires the `gameface` MCP server for Claude Code. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-node}`; node 22.4+ is the sole supported runtime (the env var is an escape hatch).
+- `scripts/check-plugin-sync.ts`: consistency check between the two plugin manifests, run by `mise check` / `mise check:agents` (task `check:plugin-sync`) and by the lefthook pre-commit.
 - `mcp/src/`: the MCP server (TypeScript). `mcp/package.json` is the publishable npm package (`@csmodding/gameface-devtools-mcp`); `mcp/README.md` is what npm displays.
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
@@ -52,11 +54,22 @@ Those packages are build-time `devDependencies` only.
 The build emits a `#!/usr/bin/env node` banner so the same bundle works as the npm package's `bin` script.
 Never enable minification (page-context functions are serialized via `.toString()`).
 
+## Dual-harness plugin architecture (Claude Code + Codex CLI)
+
+The plugin targets both harnesses from one repo, with one manifest per harness. The mcp configs CANNOT be merged into one file, each harness has a blocker the other does not (verified 2026-07, details below):
+
+- Claude Code: `.claude-plugin/plugin.json` + root `.mcp.json`. Interpolates `${VAR:-default}` (that syntax is Claude Code-specific) but IGNORES `cwd` (anthropics/claude-code#17565), so it relies on `${CLAUDE_PLUGIN_ROOT}` for the bundle path.
+- Codex CLI: `.codex-plugin/plugin.json` (schema is a superset of Claude's; component pointers are `./`-relative paths) + `.codex-plugin/mcp.json`. Codex does NOT interpolate `${VAR}` in MCP command/args (openai/codex#19582, open as of 2026-07) and injects almost no env vars into the MCP child; `PLUGIN_ROOT`/`CLAUDE_PLUGIN_ROOT` exist for hooks ONLY. THE working mechanism is a relative `"cwd"` resolved against the installed plugin root (verified in codex-rs `plugin_config.rs`; same pattern as OpenAI's first-party `codex-security` plugin). Watch #19582: if fixed, the two configs could converge.
+- Codex gotcha: the server-map key must be camelCase `mcpServers`; snake_case silently registers a bogus server.
+- Codex marketplace: native file is `.agents/plugins/marketplace.json` (object-form `source`, e.g. `{"source": "local", "path": "./"}`). The legacy fallback that reads `.claude-plugin/marketplace.json` is flaky (#19372), so we ship the native file.
+- Env config on Codex: no env block, `node` hardcoded (no `GAMEFACE_MCP_RUNTIME` escape hatch there); the server falls back to `mcp/src/config.ts` defaults. `~/.codex/config.toml` CANNOT override a plugin-provided server (verified 2026-07: Codex fails with `Error loading config.toml: invalid transport`); the only override path is registering the npm server manually via `codex mcp add`, which replaces the plugin's copy under the same name.
+- SYNC RULE: shared fields of the two plugin.json files (name, version, description, author, homepage, repository, license, keywords) must stay identical. `scripts/check-plugin-sync.ts` enforces this (plus that `.codex-plugin/mcp.json` points at an existing bundle) via `mise check:plugin-sync`, wired into `mise check`, `mise check:agents` (so CI gets it), and the lefthook pre-commit. When editing plugin metadata, edit BOTH manifests.
+
 ## Versioning and releases
 
 release-please (`.github/workflows/release-please.yml`, config in `release-please-config.json` + `.release-please-manifest.json`) maintains a rolling release PR on `main` from Conventional Commits; merging it bumps versions, updates changelogs, tags, and creates GitHub Releases. Two release units with independent numbers:
 
-- **plugin** (root): version in root `package.json`, synced into `.claude-plugin/plugin.json` via `extra-files`. Bare `vX.Y.Z` tags.
+- **plugin** (root): version in root `package.json`, synced into `.claude-plugin/plugin.json` AND `.codex-plugin/plugin.json` via `extra-files`. Bare `vX.Y.Z` tags.
 - **mcp** (`mcp/`): version in `mcp/package.json`. Tags `gameface-devtools-mcp-vX.Y.Z`.
 
 Rules that matter when committing:

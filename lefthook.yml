@@ -17,6 +17,10 @@ pre-commit:
       root: "mcp/"
       glob: "*.{ts,tsx,js,json}"
       run: mise exec bun -- bun --bun tsc --noEmit
+    plugin-sync:
+      # The Claude and Codex plugin manifests duplicate shared metadata; keep them in sync.
+      glob: "{.claude-plugin/*.json,.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
+      run: mise exec bun -- bun scripts/check-plugin-sync.ts
     oxlint:
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
       run: mise exec bun -- bun --bun oxlint --deny-warnings --no-error-on-unmatched-pattern {staged_files}

@@ -1,12 +1,14 @@
 # coherent-gameface-agent-plugin
 
-A Claude Code plugin: a **generic** toolkit for driving a running **Coherent Gameface** UI.
+An agent plugin for **Claude Code** and **OpenAI Codex CLI**: a **generic** toolkit for driving a
+running **Coherent Gameface** UI.
 
 [Coherent Gameface](https://coherent-labs.com/products/coherent-gameface/) (Cohtml) is the
 HTML/CSS/JS UI engine many games embed.
-This plugin ships **[gameface-devtools-mcp](mcp/README.md)**, an MCP server that lets Claude drive
-any Gameface UI over a **direct Chrome DevTools Protocol (CDP)** connection: evaluate JavaScript,
-take screenshots, inspect and drive the DOM, capture the console, and set JS breakpoints.
+This plugin ships **[gameface-devtools-mcp](mcp/README.md)**, an MCP server that lets your agent
+drive any Gameface UI over a **direct Chrome DevTools Protocol (CDP)** connection: evaluate
+JavaScript, take screenshots, inspect and drive the DOM, capture the console, and set JS
+breakpoints.
 Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 > [!NOTE]
@@ -15,9 +17,9 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 > against Cities: Skylines II's Gameface UI, which is the reference target.
 
 > [!TIP]
-> **Not using Claude Code?** The MCP server is also published on npm as
+> **Not using Claude Code or Codex CLI?** The MCP server is also published on npm as
 > [`@csmodding/gameface-devtools-mcp`](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp)
-> and works with any MCP client (Cursor, Codex CLI, Gemini CLI, VS Code, ...).
+> and works with any MCP client (Cursor, Gemini CLI, VS Code, …).
 > See [`mcp/README.md`](mcp/README.md) for the tool reference and per-client install snippets.
 
 ## Requirements
@@ -35,6 +37,12 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Install
 
+Both harnesses install the same plugin from this repository and launch the same committed server
+bundle. The full tool reference (UI tools and JS debugger tools) lives in
+[`mcp/README.md`](mcp/README.md).
+
+### Claude Code
+
 In Claude Code, add this repository as a marketplace, then install the plugin from it:
 
 ```
@@ -50,21 +58,43 @@ claude plugin install coherent-gameface@csmodding
 ```
 
 Once enabled, Claude Code autoloads the `gameface` MCP server from [`.mcp.json`](.mcp.json).
-Run `/mcp` to confirm it connected, then ask Claude to use the `game_*` tools.
+Run `/mcp` to confirm it connected, then Codex will use this MCP when it needs it.
+You can ask it to call `game_status` to check the MCP is working properly.
 
-The full tool reference (UI tools + JS debugger tools) lives in [`mcp/README.md`](mcp/README.md).
+### Codex CLI
+
+Add this repository as a marketplace, then install the plugin from it:
+
+```sh
+codex plugin marketplace add CitiesSkylinesModding/coherent-gameface-agent-plugin
+codex plugin add coherent-gameface@csmodding
+```
+
+Once enabled, Codex autoloads the `gameface` MCP server from
+[`.codex-plugin/mcp.json`](.codex-plugin/mcp.json).
+Run `/mcp` to confirm it connected, then Claude will use this MCP when it needs it.
+You can ask it to call `game_status` to check the MCP is working properly.
 
 ## Configuration
 
-All are optional, surfaced in [`.mcp.json`](.mcp.json):
+The server reads these environment variables (all optional):
 
 | Variable                      | Default     | Purpose                                  |
 | ----------------------------- | ----------- | ---------------------------------------- |
-| `GAMEFACE_MCP_RUNTIME`        | `node`      | Runtime used to launch the server.       |
 | `GAMEFACE_HOST`               | `localhost` | Host of the Gameface CDP endpoint.       |
 | `GAMEFACE_PORT`               | `9444`      | Port of the Gameface CDP endpoint.       |
 | `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000`      | HTTP discovery / WebSocket open timeout. |
 | `GAMEFACE_CALL_TIMEOUT_MS`    | `15000`     | Per-command reply timeout.               |
+
+**On Claude Code**, [`.mcp.json`](.mcp.json) forwards them from your environment
+(`${VAR:-default}`), and an extra `GAMEFACE_MCP_RUNTIME` variable (default `node`) overrides the
+runtime used to launch the server.
+
+**On Codex CLI**, the plugin config passes no environment block (Codex does not interpolate
+`${VAR}` placeholders, and `~/.codex/config.toml` cannot override a plugin-provided server), so the
+server always starts with the defaults above. If you need non-default settings, register the
+npm-published server manually with `codex mcp add` and the environment you want; it replaces the
+plugin's copy under the same name (see [`mcp/README.md`](mcp/README.md)).
 
 ## Development
 
@@ -85,12 +115,12 @@ After changing anything under `mcp/src/`, run `mise check`, rebuild, and commit 
 
 ## Troubleshooting
 
-- **`/mcp` shows the server failed / tools error with "Cannot reach ..."**: the Gameface application
+- **`/mcp` shows the server failed / tools error with "Cannot reach …"**: the Gameface application
   is not running or the debug port is not reachable. Check `curl http://localhost:9444/json/list`.
   Use `game_status` for a structured diagnosis.
 - **Runtime not found**: ensure `node` (22.4+) is on your `PATH`.
 - **Read the MCP server logs**: Claude Code records each server's connection attempts and captured
-  stderr to per-project JSONL files, the fastest way to see why a launch failed (e.g. a
+  stderr to per-project `.jsonl` files, the fastest way to see why a launch failed (e.g., a
   `-32000 Connection closed` from a bad command/path before any `game_*` tool runs). They live under
   the Claude CLI cache, in an `mcp-logs-gameface/` folder keyed by the project path (separators
   replaced with `-`); newest `.jsonl` first, and each `Server stderr: ...` line is what the server

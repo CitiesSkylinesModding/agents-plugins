@@ -30,7 +30,7 @@ run = [
 [tasks."check"]
 description = "Run lint checks (typescript and oxfmt/oxlint), with safe auto-fixes."
 # Not using `depends` because we want a sequential run with lint then format.
-run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt"]
+run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt", "mise check:plugin-sync"]
 
 [tasks."check:tsc"]
 description = "Type-checks the server with tsc."
@@ -48,13 +48,22 @@ description = "Lints code with oxlint."
 raw = true
 run = "bun --bun oxlint --fix"
 
+[tasks."check:plugin-sync"]
+description = "Checks that the Claude and Codex plugin manifests stay in sync."
+run = "bun scripts/check-plugin-sync.ts"
+
 # CHECK TASKS (AGENTS)
 # ====================
 
 [tasks."check:agents"]
 description = "Run lint checks (typescript and oxfmt/oxlint), with safe auto-fixes, output optimized for AI agents."
 # Not using `depends` because we want a sequential run with lint then format.
-run = ["mise check:agents:tsc", "mise check:agents:oxlint", "mise check:oxfmt"]
+run = [
+  "mise check:agents:tsc",
+  "mise check:agents:oxlint",
+  "mise check:oxfmt",
+  "mise check:plugin-sync"
+]
 
 [tasks."check:agents:tsc"]
 description = "Type-checks the server with tsc, output optimized for AI agents."
