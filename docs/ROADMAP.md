@@ -44,10 +44,54 @@ Cities: Skylines II; points at the `gameface` skill for engine domain facts. See
 
 ## Planned
 
-### Richer console object rendering
+### Text-based element discovery (`game_find`)
+
+Cohtml has no XPath, TreeWalker, or `innerText`, and app class names are often build-hashed, so
+agents locate elements by scanning `querySelectorAll` results and filtering on `textContent`
+through `game_eval`. Promote that idiom to a `game_find` tool: CSS selector plus a text
+equals/contains filter, returning tag/classes/rect per match. Ideally it also solves the
+discovery-to-action handoff by tagging matches with an auto attribute (e.g. `data-gf-h="3"`) and
+returning those as ready-to-use selectors for the input tools.
+
+### Selector `index` parity across tools
+
+`game_click` takes an `index` to pick among selector matches; `game_hover` and `game_screenshot`
+(selector clipping) do not, forcing a manual tag-the-node workaround when no unique selector
+exists. Add `index` to both.
+
+### Reload awareness
+
+A UI view reload (mod hot-reload, `location.reload()`) resets the JS context while the CDP
+connection survives; agents currently detect it with a sentinel global, which queued reloads can
+false-positive. The server should detect reloads passively from a CDP event instead: expose a
+reload counter/timestamp in `game_status` and let `game_wait` wait for the next reload. First step
+is verifying which event Gameface actually emits on view reload (candidates:
+`Runtime.executionContextsCleared`, `Runtime.executionContextCreated`, `Page.frameNavigated`); none
+was probed. Fallback if none fires: poll a server-planted context marker.
+
+### Debugger ergonomics
+
+Three sharp edges found while field-testing the debugger against a live game:
+
+- `game_screenshot` hangs for the full call timeout while the UI is paused (`Page.captureScreenshot`
+  needs the frozen frame loop); the server knows the pause state and should fail fast with "paused;
+  resume first". Only gate frame-dependent commands: `Runtime.evaluate` keeps working while paused
+  (verified), so `game_eval`, `game_dom`, and `game_wait` must stay usable.
+- The debugger only sees scripts parsed after it attaches (Gameface does not replay
+  `scriptParsed`), so a late attach lists nothing; `game_debug_scripts` should say so and suggest
+  triggering a UI reload.
+- On minified one-line bundles, a line breakpoint resolves to column 0 (module evaluation) and
+  never hits during normal interaction. `game_debug_set_breakpoint` should report the resolved
+  column and warn on single-line scripts; a `game_debug_search_source` (find string, return
+  line:column candidates) would make column targeting practical.
+
+### Richer console output
 
 `game_console` shows console args via their RemoteObject description, so objects
 render as "Object". Use `Runtime.getProperties` / object previews to expand them.
+Entries also carry no timestamps, which makes correlating logs with actions and reloads
+guesswork; capture and print one per entry (`Runtime.consoleAPICalled` and `Log.entryAdded` carry
+a `timestamp` field in standard CDP; verify Gameface populates it).
 
 ### Network inspection
 
