@@ -12,6 +12,12 @@ _.path = ["{{config_root}}/node_modules/.bin"]
 # DEVELOPMENT TASKS
 # =================
 
+[tasks."dev:mcp-logs"]
+description = "Tail and pretty-print the latest Claude Code MCP log for the gameface server."
+# raw keeps stdio attached so colors render and Ctrl+C stops the tail.
+raw = true
+run = "bun scripts/tail-mcp-logs.ts"
+
 [tasks."dev:deps-upgrade"]
 description = "Upgrades mise-en-place, proposes upgrades for tools managed by mise, and proposes upgrades for package.json dependencies."
 interactive = true
