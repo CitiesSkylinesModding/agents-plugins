@@ -74,6 +74,8 @@ JS and DOM:
   V8 is 9.4 (ES2021) since Cohtml 1.26, with no later bump recorded.
 - `event.target`/`currentTarget` are null once the dispatch call stack unwinds.
   `DOMContentLoaded` exists only since 1.27; `load` fires after fonts load.
+- `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined (verified on CS2).
+  Find elements by scanning `querySelectorAll` results and filtering on `textContent`.
 - `HTMLElement.click()` does not exist, and `PointerEvent`/`InputEvent` constructors are missing.
   Simulate input by dispatching bubbling `MouseEvent`, `KeyboardEvent`, and `Event('input')` events.
 

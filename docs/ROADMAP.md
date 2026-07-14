@@ -32,14 +32,17 @@ version-to-feature timeline (`references/version-gating.md`, freshness-checked b
 `fetch-doc.mjs` extractor for the docs site (which defeats summarizing fetch tools). Generic
 across games, with Cities: Skylines II as the labeled worked example. See `skills/gameface/`.
 
+### Gameface driving skill (`gameface-driving`)
+
+Model-invoked skill teaching agents how to operate the `game_*` tools against a live game:
+session triage and crash conduct, element discovery under hashed class names and missing lookup
+APIs, the act-then-verify loop, the rebuild-to-live reload cycle (full view reload, sentinel
+detection), and safe source-level debugging (attach-before-parse script
+visibility, the pause freeze matrix, minified-bundle breakpoint placement). Verified live against
+Cities: Skylines II; points at the `gameface` skill for engine domain facts. See
+`skills/gameface-driving/`.
+
 ## Planned
-
-### Driving skill
-
-A skill that documents how to drive a Gameface UI with the `game_*` tools: the CDP quirks
-(input via DOM events, malformed `webSocketDebuggerUrl`, the Debugger freeze), common recipes
-(find a widget, read React state, wait for a screen), and safe debugging workflows. Points at
-the `gameface` skill for engine domain facts instead of duplicating them.
 
 ### Richer console object rendering
 
@@ -52,5 +55,5 @@ Gameface implements the `Network` domain (observe + `getResponseBody` + cookies)
 missing (no request interception). Surface request/response observation as tools.
 
 When these land they become standard plugin components: `commands/`, `agents/`, and `skills/`
-directories auto-discovered by the plugin manifest (`skills/` already ships the `gameface`
-skill).
+directories auto-discovered by the plugin manifest (`skills/` already ships the `gameface` and
+`gameface-driving` skills).

@@ -96,6 +96,8 @@ Dispatch real bubbling DOM events; framework delegated handlers (React and frien
 
 ## DOM and JS quirks
 
+- Element lookup APIs: `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined; scan `querySelectorAll` results and filter on `textContent` instead.
+  In the JS query APIs (`querySelector*`, `closest`, `matches`), combinators, `:nth-child`, and `[attr*=]` all match, but `:not()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2).
 - `event.target` and `event.currentTarget` are valid only inside the dispatching call stack; a stored event object has them nulled afterwards.
 - Whitespace text nodes are virtualized through ONE shared internal node, materialized on access (pre-2.2 engines): never store a whitespace node reference, and avoid hardcoded `childNodes[i]` indexing (`innerHTML`-parsed markup shows no whitespace text nodes in `childNodes` at all).
   From 2.2, whitespace nodes are real DOM nodes (indices shift).
