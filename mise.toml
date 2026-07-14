@@ -81,6 +81,14 @@ run = "bun --bun tsc --noEmit --pretty false"
 description = "Lints code with oxlint, output optimized for AI agents."
 run = "bun --bun oxlint --fix --format agent"
 
+# SKILL MAINTENANCE TASKS
+# =======================
+
+[tasks."skills:check-changelog"]
+description = "Diff the gameface skill's baked version timeline against the live Gameface changelog."
+# Network-dependent, so deliberately not part of `mise check` / CI; run manually now and then.
+run = "bun scripts/check-skill-changelog.ts"
+
 # BUILD TASKS
 # ===========
 

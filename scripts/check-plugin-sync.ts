@@ -1,12 +1,13 @@
 /* oxlint-disable node/no-sync -- sequential check script, synchronous IO is intentional. */
+
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // Consistency check for the dual plugin manifests (Claude Code + Codex CLI).
-// The two harnesses need separate mcp configs (Codex resolves a relative "cwd" against the
-// plugin root but does not interpolate ${VAR}; Claude Code interpolates ${VAR} but ignores
-// "cwd"), so shared metadata is duplicated and must be kept in sync by hand.
+// The two harnesses need separate mcp configs (Codex resolves a relative "cwd" against the plugin
+// root but does not interpolate ${VAR}; Claude Code interpolates ${VAR} but ignores "cwd"), so
+// shared metadata is duplicated and must be kept in sync by hand.
 // Exits nonzero (via a failed assertion) on any drift.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');

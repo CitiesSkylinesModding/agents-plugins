@@ -9,7 +9,10 @@ This plugin ships **[gameface-devtools-mcp](mcp/README.md)**, an MCP server that
 drive any Gameface UI over a **direct Chrome DevTools Protocol (CDP)** connection: evaluate
 JavaScript, take screenshots, inspect and drive the DOM, capture the console, and set JS
 breakpoints.
-Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+It also ships the **`gameface` skill**, which teaches the agent the engine itself: how Gameface
+is, and is not, a browser; version-gating features against the changelog; data binding; and how
+to probe the running game for what the docs cannot promise.
 
 > [!NOTE]
 > **Generic, but developed against Cities: Skylines II.** The server makes no assumptions about a
@@ -21,6 +24,57 @@ Skills are planned on top, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 > [`@csmodding/gameface-devtools-mcp`](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp)
 > and works with any MCP client (Cursor, Gemini CLI, VS Code, …).
 > See [`mcp/README.md`](mcp/README.md) for the tool reference and per-client install snippets.
+
+## What it looks like in practice
+
+Short, abridged transcripts. The skill supplies the engine knowledge; the server supplies the
+hands.
+
+### "My panel looks right in Chrome but wrong in-game"
+
+> **You:** My settings panel is a two-column grid in Chrome, but in the game everything stacks
+> into one column. Why?
+>
+> **Agent:** Gameface has no CSS Grid in any version, and unsupported CSS is silently ignored:
+> your `display: grid` just falls back to the default, and in Gameface every element defaults to
+> `display: flex` in column direction, hence the single column. I rewrote the layout with nested
+> flex rows, and a `game_screenshot` of `.settings-panel` confirms the two columns now render
+> in-game.
+
+### "The UI stops updating after the first refresh"
+
+> **You:** My mod pushes stats to the UI every second, but the panel freezes on the first value.
+> No errors anywhere.
+>
+> **Agent:** `game_console` shows no exceptions, and `game_eval` on the bound nodes shows they
+> are stuck on the first payload. This is a known engine gotcha: Cohtml caches a model's shape by
+> its type name, and two payloads sharing a type name must expose the same set of PRESENT
+> properties. Your second update omits `delta` when nothing changed; an omitted property is a
+> different shape than a null one, and the cached binding breaks silently. Send `delta: null`
+> instead. Verified in-game across two refresh cycles.
+
+### "Test the new toolbar button end to end"
+
+> **You:** I just built the milestones toolbar button. Can you verify the whole flow in the
+> running game?
+>
+> **Agent:** `game_click` on `[data-tooltip="Milestones"]`: Gameface accepts CDP input commands
+> but never delivers them to the UI, so the click is dispatched as real bubbling DOM events,
+> which your React handlers receive. `game_wait` until `.milestones-panel` is visible,
+> `game_screenshot` to check the render, `game_console` shows no new errors. The flow works;
+> screenshot attached.
+
+### "Something throws when the trade panel opens, no idea where"
+
+> **You:** Opening the trade panel logs `TypeError: cannot read 'income' of undefined` and I
+> cannot reproduce it outside the game.
+>
+> **Agent:** `game_console` captures the stack, pointing at `trade-panel.js:412`.
+> `game_debug_set_breakpoint` there with the condition `district == null`, then `game_click` on
+> the trade button. It pauses; the UI thread is frozen while paused, so I inspect quickly:
+> `game_debug_pause_state` shows `district` is undefined exactly when the row is an
+> outside connection, then `game_debug_step resume`. Fix: guard the outside-connection case,
+> which has no district.
 
 ## Requirements
 

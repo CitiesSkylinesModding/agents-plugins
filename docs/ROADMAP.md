@@ -23,13 +23,23 @@ Source-level debugging of the UI via the V8 `Debugger` domain: `game_debug_statu
 `game_debug_step`. Breakpoints/pauses freeze the UI until resume; closing the
 connection auto-resumes.
 
+### Gameface domain-knowledge skill (`gameface`)
+
+Model-invoked skill teaching agents what Gameface is and is not: the not-a-browser deltas, the
+version-gating protocol (docs describe the latest engine; games embed a frozen Cohtml), a baked
+version-to-feature timeline (`references/version-gating.md`, freshness-checked by
+`mise skills:check-changelog`), layout/scripting/performance/tooling references, and a
+`fetch-doc.mjs` extractor for the docs site (which defeats summarizing fetch tools). Generic
+across games, with Cities: Skylines II as the labeled worked example. See `skills/gameface/`.
+
 ## Planned
 
-### Skills
+### Driving skill
 
-Skills packaged with the plugin that document how to drive a Gameface UI with the `game_*` tools:
-the CDP quirks (input via DOM events, malformed `webSocketDebuggerUrl`, the Debugger freeze), common
-recipes (find a widget, read React state, wait for a screen), and safe debugging workflows.
+A skill that documents how to drive a Gameface UI with the `game_*` tools: the CDP quirks
+(input via DOM events, malformed `webSocketDebuggerUrl`, the Debugger freeze), common recipes
+(find a widget, read React state, wait for a screen), and safe debugging workflows. Points at
+the `gameface` skill for engine domain facts instead of duplicating them.
 
 ### Richer console object rendering
 
@@ -41,5 +51,6 @@ render as "Object". Use `Runtime.getProperties` / object previews to expand them
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools.
 
-When these land they become standard plugin components: `commands/`, `agents/`,
-`skills/` directories auto-discovered by the plugin manifest.
+When these land they become standard plugin components: `commands/`, `agents/`, and `skills/`
+directories auto-discovered by the plugin manifest (`skills/` already ships the `gameface`
+skill).

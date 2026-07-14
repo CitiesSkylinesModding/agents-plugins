@@ -8,7 +8,7 @@ It targets any Gameface application, but is developed and verified against **Cit
 
 The repo wears two hats, with distinct names:
 
-- The plugin (`coherent-gameface` in both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, repo/root package `coherent-gameface-agent-plugin`): launches the committed server bundle (zero-install, offline, version-locked) from `.mcp.json` on Claude Code and from `.codex-plugin/mcp.json` on Codex CLI, and will carry the skills.
+- The plugin (`coherent-gameface` in both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, repo/root package `coherent-gameface-agent-plugin`): launches the committed server bundle (zero-install, offline, version-locked) from `.mcp.json` on Claude Code and from `.codex-plugin/mcp.json` on Codex CLI, and carries the skills (`skills/`).
 - The MCP server (`mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is `mcp/README.md`. Publishing is manual (`npm publish` from `mcp/`, run by Morgan).
 
 ## Tech stack
@@ -25,6 +25,8 @@ Project-specific tech stack. Ex:
 - `.codex-plugin/plugin.json`: Codex CLI plugin manifest; points `mcpServers` at `.codex-plugin/mcp.json` (native marketplace file: `.agents/plugins/marketplace.json`). Shared fields must match the Claude manifest, see "Dual-harness plugin architecture".
 - `.mcp.json`: wires the `gameface` MCP server for Claude Code. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-node}`; node 22.4+ is the sole supported runtime (the env var is an escape hatch).
 - `scripts/check-plugin-sync.ts`: consistency check between the two plugin manifests, run by `mise check` / `mise check:agents` (task `check:plugin-sync`) and by the lefthook pre-commit.
+- `scripts/check-skill-changelog.ts`: freshness check of the gameface skill's baked version timeline against the live Gameface changelog (`mise skills:check-changelog`; network-dependent, not in CI).
+- `skills/gameface/`: the Gameface domain-knowledge skill (`SKILL.md`, `references/`, and the `scripts/fetch-doc.mjs` docs extractor). AUTHORING CONVENTION: prose in `skills/**` markdown is written one sentence per line, never wrapped at 100 chars; it costs fewer tokens when loaded into context and keeps diffs line-granular.
 - `mcp/src/`: the MCP server (TypeScript). `mcp/package.json` is the publishable npm package (`@csmodding/gameface-devtools-mcp`); `mcp/README.md` is what npm displays.
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
