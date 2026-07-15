@@ -21,6 +21,7 @@ import {
   gameDom,
   gameEval,
   gameFill,
+  gameFind,
   gameHover,
   gameScreenshot,
   gameStatus,
@@ -51,8 +52,8 @@ async function main(): Promise<void> {
     {
       title: 'Gameface UI status',
       description: oneLine`
-        Check whether the Gameface UI debug endpoint is reachable and report the live page
-        target and engine info. Run this first when other game_* tools fail.
+        Check whether the Gameface UI debug endpoint is reachable and report the live page target
+        and engine info. Run this first when other game_* tools fail.
       `
     },
     () => gameStatus(client)
@@ -230,13 +231,65 @@ async function main(): Promise<void> {
   );
 
   server.registerTool(
+    'game_find',
+    {
+      title: 'Find elements by text in the Gameface UI',
+      description: oneLine`
+        Locate elements by their text content in the live Gameface UI: scan a CSS selector's
+        matches (default: every element) and filter on trimmed textContent by equals / contains /
+        regex (case-insensitive by default). Returns tag, id, classes, and bounding rect per match,
+        plus match counts before and after deepest pruning so pruning and limit truncation are both
+        visible. Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use
+        selectors for game_click / game_hover / game_screenshot. The go-to way to find an element
+        when class names are build-hashed and there is no XPath.
+      `,
+      inputSchema: {
+        text: z.string().describe("Text to match against each element's trimmed textContent"),
+        match: z
+          .enum(['equals', 'contains', 'regex'])
+          .optional()
+          .describe('How to match the text: equals / contains / regex (default: contains)'),
+        caseSensitive: z.boolean().optional().describe('Match case-sensitively (default: false)'),
+        selector: z
+          .string()
+          .optional()
+          .describe('CSS selector scoping the scan (default: *, every element)'),
+        deepest: z
+          .boolean()
+          .optional()
+          .describe(
+            'Keep only the innermost match, pruning ancestors that also matched (default: true)'
+          ),
+        tag: z
+          .boolean()
+          .optional()
+          .describe(
+            oneLine`
+              Stamp matches with data-gf-find handles and return them as selectors, clearing any
+              prior handles first (default: false).
+            `
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe('Max matches to return (default: 20); the total count is always reported')
+      }
+    },
+    ({ text, match, caseSensitive, selector, deepest, tag, limit }) =>
+      gameFind(client, { text, match, caseSensitive, selector, deepest, tag, limit })
+  );
+
+  server.registerTool(
     'game_click',
     {
       title: 'Click an element in the Gameface UI',
       description: oneLine`
-        Click the element matching a CSS selector by dispatching a real bubbling
-        pointer/mouse/click sequence in the page (NOT CDP Input, which Gameface ignores for the
-        UI). React onClick handlers fire via event delegation. Use index to pick among matches.
+        Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
+        sequence in the page (NOT CDP Input, which Gameface ignores for the UI). React onClick
+        handlers fire via event delegation. Use index to pick among matches.
       `,
       inputSchema: {
         selector: z.string().describe('CSS selector of the element to click'),
@@ -257,8 +310,8 @@ async function main(): Promise<void> {
       title: 'JS debugger status',
       description: oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
-        and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables
-        the debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
+        and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables the
+        debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
       `,
       inputSchema: {
         setPauseOnExceptions: z
@@ -275,8 +328,8 @@ async function main(): Promise<void> {
     {
       title: 'List parsed UI scripts',
       description: oneLine`
-        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count),
-        optionally filtered by a url substring. Use the scriptId with game_debug_source.
+        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
+        filtered by a url substring. Use the scriptId with game_debug_source.
       `,
       inputSchema: {
         filter: z.string().optional().describe('Only scripts whose url contains this substring')
@@ -307,9 +360,9 @@ async function main(): Promise<void> {
     {
       title: 'Set a breakpoint',
       description: oneLine`
-        Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to
-        only pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES
-        the UI until you resume with game_debug_step.
+        Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to only
+        pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES the UI
+        until you resume with game_debug_step.
       `,
       inputSchema: {
         urlContains: z.string().describe('Substring of the script url to break in'),

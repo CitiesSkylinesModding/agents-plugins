@@ -55,6 +55,40 @@ type RectResult =
   | { found: true; x: number; y: number; width: number; height: number }
   | { found: false };
 
+interface FindMatch {
+  tagName: string | null;
+  id: string | null;
+  classes: string | null;
+  rect: { x: number; y: number; width: number; height: number };
+  text: string;
+  truncated: boolean;
+  // Present only when tag=true: a ready-to-use selector targeting this match's data-gf-find handle.
+  selector?: string;
+}
+
+interface FindResult {
+  // Raw textContent matches before deepest pruning; unprunedTotal vs. total shows how many ancestor
+  // matches the deepest filter removed.
+  unprunedTotal: number;
+  // Matches after deepest pruning, before the limit truncates; total vs returned shows the limit
+  // truncating.
+  total: number;
+  returned: number;
+  tagged: boolean;
+  elements: FindMatch[];
+}
+
+// Input to findFn, passed as one object so the page function stays under the params ceiling.
+interface FindArgs {
+  sel: string;
+  needle: string;
+  mode: string;
+  caseSensitive: boolean;
+  deepest: boolean;
+  tag: boolean;
+  limit: number;
+}
+
 const collectDomFn = (sel: string, all: boolean, maxHtml: number): CollectDomResult => {
   const matches = document.querySelectorAll(sel);
   const first = matches.item(0);
@@ -88,6 +122,103 @@ const collectDomFn = (sel: string, all: boolean, maxHtml: number): CollectDomRes
   };
 
   return { count: matches.length, elements: chosen.map(el => describe(el)) };
+};
+
+// Scans querySelectorAll matches and filters on trimmed textContent, the only text search Cohtml
+// affords (no XPath, TreeWalker, or innerText). Returns lean, actionable info per match and, when
+// tag=true, stamps handles so the discovery result feeds straight into the input tools.
+const findFn = (args: FindArgs): FindResult | { error: string } => {
+  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+
+  // Cap on the returned text snippet, kept inline because page functions are self-contained.
+  const SNIPPET_MAX = 100;
+
+  // Precompile the matcher once. Case insensitivity lowercases both sides for equals/contains and
+  // adds the 'i' flag for regex.
+  const target = caseSensitive ? needle : needle.toLowerCase();
+
+  let regex: RegExp | undefined;
+
+  if (mode == 'regex') {
+    try {
+      regex = new RegExp(needle, caseSensitive ? '' : 'i');
+    } catch (error) {
+      return { error: `Invalid regex: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  const matches = (raw: string): boolean => {
+    if (mode == 'regex') {
+      return regex != null && regex.test(raw);
+    }
+
+    const hay = caseSensitive ? raw : raw.toLowerCase();
+
+    if (mode == 'equals') {
+      return hay == target;
+    }
+
+    // 'contains' is the default mode.
+    return hay.includes(target);
+  };
+
+  const found: Element[] = [];
+
+  for (const el of Array.from(document.querySelectorAll(sel))) {
+    if (matches((el.textContent || '').trim())) {
+      found.push(el);
+    }
+  }
+
+  // Deepest keeps only the innermost matches: an element's textContent includes its descendants',
+  // so an ancestor matches whenever a descendant does. Drop any match that contains another match.
+  const kept = deepest
+    ? found.filter(el => !found.some(other => other != el && el.contains(other)))
+    : found;
+
+  const chosen = kept.slice(0, limit);
+
+  if (tag) {
+    // Clear-then-retag: strip every handle from a previous find first, so its handles die here.
+    // Cohtml exposes setAttribute/removeAttribute but not the dataset DOMStringMap, so use those.
+    for (const stale of Array.from(document.querySelectorAll('[data-gf-find]'))) {
+      stale.removeAttribute('data-gf-find');
+    }
+
+    for (const [i, el] of chosen.entries()) {
+      el.setAttribute('data-gf-find', String(i + 1));
+    }
+  }
+
+  const describe = (el: Element, i: number): FindMatch => {
+    const rect = el.getBoundingClientRect();
+    const classAttr = el.getAttribute('class');
+    const raw = (el.textContent || '').trim();
+    const truncated = raw.length > SNIPPET_MAX;
+
+    const info: FindMatch = {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
+      truncated
+    };
+
+    if (tag) {
+      info.selector = `[data-gf-find="${i + 1}"]`;
+    }
+
+    return info;
+  };
+
+  return {
+    unprunedTotal: found.length,
+    total: kept.length,
+    returned: chosen.length,
+    tagged: tag,
+    elements: chosen.map((el, i) => describe(el, i))
+  };
 };
 
 // Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml/React
@@ -355,6 +486,7 @@ const MAX_WAIT_MS = 60_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 8000;
 const DEFAULT_JPEG_QUALITY = 80;
 const DEFAULT_CONSOLE_LIMIT = 50;
+const DEFAULT_FIND_LIMIT = 20;
 
 /**
  * Reports reachability + page target + engine info. Never throws.
@@ -523,6 +655,73 @@ export async function gameDom(
     }
 
     return text(JSON.stringify({ selector, ...value }, null, 2));
+  } catch (error) {
+    return toErrorResult(error);
+  }
+}
+
+/**
+ * Options for gameFind.
+ */
+export interface GameFindOptions {
+  readonly text: string;
+  readonly match?: 'equals' | 'contains' | 'regex' | undefined;
+  readonly caseSensitive?: boolean | undefined;
+  readonly selector?: string | undefined;
+  readonly deepest?: boolean | undefined;
+  readonly tag?: boolean | undefined;
+  readonly limit?: number | undefined;
+}
+
+/**
+ * Finds elements by their trimmed textContent (equals / contains / regex) and returns lean,
+ * actionable info per match, with the total count, so truncation is visible.
+ * With `tag=true`, stamps matches with `data-gf-find` handles and returns ready-to-use selectors,
+ * solving the discovery-to-action handoff when no unique selector can be written.
+ */
+export async function gameFind(
+  client: CdpClient,
+  options: GameFindOptions
+): Promise<CallToolResult> {
+  const {
+    text: needle,
+    match = 'contains',
+    caseSensitive = false,
+    selector = '*',
+    deepest = true,
+    tag = false,
+    limit = DEFAULT_FIND_LIMIT
+  } = options;
+
+  try {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
+      expression: callPageFn(findFn, {
+        sel: selector,
+        needle,
+        mode: match,
+        caseSensitive,
+        deepest,
+        tag,
+        limit
+      }),
+      returnByValue: true
+    });
+
+    if (res.exceptionDetails) {
+      return errorText(`Find failed: ${formatException(res.exceptionDetails)}`);
+    }
+
+    const value = res.result.value as FindResult | { error: string } | undefined;
+
+    if (!value) {
+      return errorText(`game_find returned no result for selector ${JSON.stringify(selector)}.`);
+    }
+
+    if ('error' in value) {
+      return errorText(`game_find: ${value.error}`);
+    }
+
+    return text(JSON.stringify({ selector, match, ...value }, null, 2));
   } catch (error) {
     return toErrorResult(error);
   }

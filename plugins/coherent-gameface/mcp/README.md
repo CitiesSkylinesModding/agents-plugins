@@ -131,6 +131,7 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 | `game_eval`       | Evaluate a JS expression in the Gameface UI, returns the value as JSON.         | `Runtime.evaluate` (returnByValue)  |
 | `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image.               | `Page.captureScreenshot` (+ `clip`) |
 | `game_dom`        | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector.     | `Runtime.evaluate`                  |
+| `game_find`       | Find elements by text (equals/contains/regex); returns rect + optional handles. | `Runtime.evaluate`                  |
 | `game_wait`       | Wait until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate`           |
 | `game_click`      | Click an element by dispatching real bubbling DOM events.                       | `Runtime.evaluate` (see note)       |
 | `game_fill`       | Set an input/textarea/contenteditable value.                                    | `Runtime.evaluate` (see note)       |

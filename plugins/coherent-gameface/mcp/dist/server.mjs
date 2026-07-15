@@ -31030,6 +31030,70 @@ var collectDomFn = (sel, all, maxHtml) => {
   };
   return { count: matches.length, elements: chosen.map((el) => describe3(el)) };
 };
+var findFn = (args) => {
+  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+  const SNIPPET_MAX = 100;
+  const target = caseSensitive ? needle : needle.toLowerCase();
+  let regex;
+  if (mode == "regex") {
+    try {
+      regex = new RegExp(needle, caseSensitive ? "" : "i");
+    } catch (error51) {
+      return { error: `Invalid regex: ${error51 instanceof Error ? error51.message : String(error51)}` };
+    }
+  }
+  const matches = (raw) => {
+    if (mode == "regex") {
+      return regex != null && regex.test(raw);
+    }
+    const hay = caseSensitive ? raw : raw.toLowerCase();
+    if (mode == "equals") {
+      return hay == target;
+    }
+    return hay.includes(target);
+  };
+  const found = [];
+  for (const el of Array.from(document.querySelectorAll(sel))) {
+    if (matches((el.textContent || "").trim())) {
+      found.push(el);
+    }
+  }
+  const kept = deepest ? found.filter((el) => !found.some((other) => other != el && el.contains(other))) : found;
+  const chosen = kept.slice(0, limit);
+  if (tag) {
+    for (const stale of Array.from(document.querySelectorAll("[data-gf-find]"))) {
+      stale.removeAttribute("data-gf-find");
+    }
+    for (const [i, el] of chosen.entries()) {
+      el.setAttribute("data-gf-find", String(i + 1));
+    }
+  }
+  const describe3 = (el, i) => {
+    const rect = el.getBoundingClientRect();
+    const classAttr = el.getAttribute("class");
+    const raw = (el.textContent || "").trim();
+    const truncated = raw.length > SNIPPET_MAX;
+    const info = {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
+      truncated
+    };
+    if (tag) {
+      info.selector = `[data-gf-find="${i + 1}"]`;
+    }
+    return info;
+  };
+  return {
+    unprunedTotal: found.length,
+    total: kept.length,
+    returned: chosen.length,
+    tagged: tag,
+    elements: chosen.map((el, i) => describe3(el, i))
+  };
+};
 var clickFn = (sel, index) => {
   const nodes = document.querySelectorAll(sel);
   if (nodes.length == 0) {
@@ -31199,6 +31263,7 @@ var MAX_WAIT_MS = 60000;
 var DEFAULT_WAIT_TIMEOUT_MS = 8000;
 var DEFAULT_JPEG_QUALITY = 80;
 var DEFAULT_CONSOLE_LIMIT = 50;
+var DEFAULT_FIND_LIMIT = 20;
 async function gameStatus(client) {
   const { host, port } = client.config;
   try {
@@ -31296,6 +31361,44 @@ async function gameDom(client, selector, all = false, maxHtml = 4000) {
       return text(JSON.stringify({ selector, count: 0, elements: [] }, null, 2));
     }
     return text(JSON.stringify({ selector, ...value }, null, 2));
+  } catch (error51) {
+    return toErrorResult(error51);
+  }
+}
+async function gameFind(client, options) {
+  const {
+    text: needle,
+    match = "contains",
+    caseSensitive = false,
+    selector = "*",
+    deepest = true,
+    tag = false,
+    limit = DEFAULT_FIND_LIMIT
+  } = options;
+  try {
+    const res = await client.call("Runtime.evaluate", {
+      expression: callPageFn(findFn, {
+        sel: selector,
+        needle,
+        mode: match,
+        caseSensitive,
+        deepest,
+        tag,
+        limit
+      }),
+      returnByValue: true
+    });
+    if (res.exceptionDetails) {
+      return errorText(`Find failed: ${formatException(res.exceptionDetails)}`);
+    }
+    const value = res.result.value;
+    if (!value) {
+      return errorText(`game_find returned no result for selector ${JSON.stringify(selector)}.`);
+    }
+    if ("error" in value) {
+      return errorText(`game_find: ${value.error}`);
+    }
+    return text(JSON.stringify({ selector, match, ...value }, null, 2));
   } catch (error51) {
     return toErrorResult(error51);
   }
@@ -31508,8 +31611,8 @@ async function main() {
   server.registerTool("game_status", {
     title: "Gameface UI status",
     description: import_common_tags4.oneLine`
-        Check whether the Gameface UI debug endpoint is reachable and report the live page
-        target and engine info. Run this first when other game_* tools fail.
+        Check whether the Gameface UI debug endpoint is reachable and report the live page target
+        and engine info. Run this first when other game_* tools fail.
       `
   }, () => gameStatus(client));
   server.registerTool("game_eval", {
@@ -31607,12 +31710,36 @@ async function main() {
       maxHtml: exports_external.number().min(0).optional().describe("Max outerHTML characters per element before truncation (default: 4000)")
     }
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
+  server.registerTool("game_find", {
+    title: "Find elements by text in the Gameface UI",
+    description: import_common_tags4.oneLine`
+        Locate elements by their text content in the live Gameface UI: scan a CSS selector's
+        matches (default: every element) and filter on trimmed textContent by equals / contains /
+        regex (case-insensitive by default). Returns tag, id, classes, and bounding rect per match,
+        plus match counts before and after deepest pruning so pruning and limit truncation are both
+        visible. Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use
+        selectors for game_click / game_hover / game_screenshot. The go-to way to find an element
+        when class names are build-hashed and there is no XPath.
+      `,
+    inputSchema: {
+      text: exports_external.string().describe("Text to match against each element's trimmed textContent"),
+      match: exports_external.enum(["equals", "contains", "regex"]).optional().describe("How to match the text: equals / contains / regex (default: contains)"),
+      caseSensitive: exports_external.boolean().optional().describe("Match case-sensitively (default: false)"),
+      selector: exports_external.string().optional().describe("CSS selector scoping the scan (default: *, every element)"),
+      deepest: exports_external.boolean().optional().describe("Keep only the innermost match, pruning ancestors that also matched (default: true)"),
+      tag: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+              Stamp matches with data-gf-find handles and return them as selectors, clearing any
+              prior handles first (default: false).
+            `),
+      limit: exports_external.number().int().min(1).max(100).optional().describe("Max matches to return (default: 20); the total count is always reported")
+    }
+  }, ({ text: text2, match, caseSensitive, selector, deepest, tag, limit }) => gameFind(client, { text: text2, match, caseSensitive, selector, deepest, tag, limit }));
   server.registerTool("game_click", {
     title: "Click an element in the Gameface UI",
     description: import_common_tags4.oneLine`
-        Click the element matching a CSS selector by dispatching a real bubbling
-        pointer/mouse/click sequence in the page (NOT CDP Input, which Gameface ignores for the
-        UI). React onClick handlers fire via event delegation. Use index to pick among matches.
+        Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
+        sequence in the page (NOT CDP Input, which Gameface ignores for the UI). React onClick
+        handlers fire via event delegation. Use index to pick among matches.
       `,
     inputSchema: {
       selector: exports_external.string().describe("CSS selector of the element to click"),
@@ -31623,8 +31750,8 @@ async function main() {
     title: "JS debugger status",
     description: import_common_tags4.oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
-        and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables
-        the debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
+        and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables the
+        debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
       `,
     inputSchema: {
       setPauseOnExceptions: exports_external.enum(["none", "uncaught", "all"]).optional().describe("If set, change which exceptions pause execution (default none)")
@@ -31633,8 +31760,8 @@ async function main() {
   server.registerTool("game_debug_scripts", {
     title: "List parsed UI scripts",
     description: import_common_tags4.oneLine`
-        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count),
-        optionally filtered by a url substring. Use the scriptId with game_debug_source.
+        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
+        filtered by a url substring. Use the scriptId with game_debug_source.
       `,
     inputSchema: {
       filter: exports_external.string().optional().describe("Only scripts whose url contains this substring")
@@ -31655,9 +31782,9 @@ async function main() {
   server.registerTool("game_debug_set_breakpoint", {
     title: "Set a breakpoint",
     description: import_common_tags4.oneLine`
-        Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to
-        only pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES
-        the UI until you resume with game_debug_step.
+        Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to only
+        pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES the UI
+        until you resume with game_debug_step.
       `,
     inputSchema: {
       urlContains: exports_external.string().describe("Substring of the script url to break in"),

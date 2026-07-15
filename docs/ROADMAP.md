@@ -1,63 +1,39 @@
 # Roadmap
 
-`coherent-gameface` (in the `agents-plugins` marketplace) is a generic toolkit for driving a running Coherent Gameface UI
-over CDP. The MCP server (`gameface-devtools-mcp`, published on npm as
-`@csmodding/gameface-devtools-mcp`) is the first facet; skills and richer instrumentation are
-planned. The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays
+`coherent-gameface` (in the `agents-plugins` marketplace) is a generic toolkit for driving a running
+Coherent Gameface UI over CDP.
+The MCP server (`gameface-devtools-mcp`, published on npm as `@csmodding/gameface-devtools-mcp`) is
+the first facet; skills and richer instrumentation are planned.
+The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays
 application-agnostic.
 
-## Shipped
-
-### Gameface UI instrumentation (MCP server)
-
-Direct Chrome DevTools Protocol control of a running Gameface UI. Tools: `game_status`,
-`game_eval`, `game_screenshot` (with selector clipping), `game_dom`, `game_wait`,
-`game_click`, `game_fill`, `game_type`, `game_hover`, `game_console`. See `mcp/README.md`
-and `mcp/`. Input tools dispatch DOM events (CDP `Input` is ignored by Gameface).
-
-### JS debugging (MCP server)
-
-Source-level debugging of the UI via the V8 `Debugger` domain: `game_debug_status`,
-`game_debug_scripts`, `game_debug_source`, `game_debug_set_breakpoint`,
-`game_debug_remove_breakpoint`, `game_debug_pause_state`, `game_debug_evaluate`,
-`game_debug_step`. Breakpoints/pauses freeze the UI until resume; closing the
-connection auto-resumes.
-
-### Gameface domain-knowledge skill (`gameface`)
-
-Model-invoked skill teaching agents what Gameface is and is not: the not-a-browser deltas, the
-version-gating protocol (docs describe the latest engine; games embed a frozen Cohtml), a baked
-version-to-feature timeline (`references/version-gating.md`, freshness-checked by
-`mise skills:check-changelog`), layout/scripting/performance/tooling references, and a
-`fetch-doc.mjs` extractor for the docs site (which defeats summarizing fetch tools). Generic
-across games, with Cities: Skylines II as the labeled worked example. See `plugins/coherent-gameface/skills/gameface/`.
-
-### Gameface driving skill (`gameface-driving`)
-
-Model-invoked skill teaching agents how to operate the `game_*` tools against a live game:
-session triage and crash conduct, element discovery under hashed class names and missing lookup
-APIs, the act-then-verify loop, the rebuild-to-live reload cycle (full view reload, sentinel
-detection), and safe source-level debugging (attach-before-parse script
-visibility, the pause freeze matrix, minified-bundle breakpoint placement). Verified live against
-Cities: Skylines II; points at the `gameface` skill for engine domain facts. See
-`plugins/coherent-gameface/skills/gameface-driving/`.
-
-## Planned
-
-### Text-based element discovery (`game_find`)
-
-Cohtml has no XPath, TreeWalker, or `innerText`, and app class names are often build-hashed, so
-agents locate elements by scanning `querySelectorAll` results and filtering on `textContent`
-through `game_eval`. Promote that idiom to a `game_find` tool: CSS selector plus a text
-equals/contains filter, returning tag/classes/rect per match. Ideally it also solves the
-discovery-to-action handoff by tagging matches with an auto attribute (e.g. `data-gf-h="3"`) and
-returning those as ready-to-use selectors for the input tools.
+## Planned/Explore
 
 ### Selector `index` parity across tools
 
 `game_click` takes an `index` to pick among selector matches; `game_hover` and `game_screenshot`
 (selector clipping) do not, forcing a manual tag-the-node workaround when no unique selector
 exists. Add `index` to both.
+
+### Keyboard input (`game_key`)
+
+No tool sends key presses to the UI: CDP `Input` is ignored, and `game_type` only feeds characters
+into a focused field (mutating its value). Escape-to-close a dialog, Enter-to-confirm, Tab between
+fields, and arrow-key list navigation have no path (surfaced live: closing a settings screen needed
+a manual find-and-click of the back arrow because Escape could not be sent). Add `game_key`
+dispatching real bubbling `KeyboardEvent`s (keydown/keyup; `KeyboardEvent` exists in Cohtml) for a
+named key to `document` or a selector, mirroring how `game_click` dispatches mouse events. First
+verify per-game whether keys like Escape route through a JS `onKeyDown` handler (a dispatched event
+reaches React) or at the native/engine level (it will not); document the caveat like the click one.
+
+### Non-text element discovery
+
+`game_find` matches on `textContent` only, so icon controls with no text (a back arrow, a close X)
+cannot be located by it, forcing a `game_eval` scan by attribute or bounding-box position (surfaced
+live locating a settings back arrow). Add an attribute-match mode to `game_find` (find by
+`aria-label` / `data-tooltip` / `title` / any attribute); the driving skill already targets
+`[data-tooltip="..."]` for clicks, so those anchors exist. `querySelectorAll` + `getAttribute` makes
+it trivial.
 
 ### Reload awareness
 

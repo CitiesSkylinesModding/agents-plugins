@@ -20,10 +20,14 @@ No reconnect ritual exists or is needed: the server re-resolves the page target 
 
 ## Finding elements
 
-Text is a durable anchor, and a scan is the only text search: `[...document.querySelectorAll('button')].find(el => el.textContent.trim() == 'Load Game')`.
+Text is a durable anchor, and `game_find` is the built-in text search: it scans `querySelectorAll` matches and filters on trimmed `textContent`, taking a `text` plus a `match` mode (`equals` / `contains` / `regex`, case-insensitive by default) and an optional `selector` to scope the scan.
+It returns tag, id, classes, and rect per match, plus three counts that cascade: `unprunedTotal` (raw text matches), `total` (after `deepest` pruning), and `returned` (after `limit`); `total` above `returned` means the `limit` truncated, so narrow the query, while `unprunedTotal` above `total` just shows how many ancestors `deepest` pruned.
+By default it keeps only the innermost match (`deepest`): an element's `textContent` includes its descendants', so a panel and its title button both match the title, and `deepest` prunes the panel; pass `deepest: false` to get the full ancestor chain when you want the enclosing container (finding a panel by its title).
+Set `tag: true` and `game_find` stamps each match with a `data-gf-find` handle and returns ready-to-use `[data-gf-find="N"]` selectors for `game_click` / `game_hover` / `game_screenshot`, which closes the discovery-to-action gap when class names are build-hashed and no unique selector exists.
+Tagging clears every prior `data-gf-find` first, so handles from an earlier `game_find` die on the next tagging call (and on any view reload); re-tag rather than reusing a stale handle.
+For a predicate `game_find` cannot express (matching on an attribute, a sibling relation, or computed state), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
 In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `:not()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2); a selector-taking tool erroring that way needs a rewritten selector, not a retry.
-When a tool call needs a unique selector you cannot write, tag the node from `game_eval` with `el.setAttribute('data-probe', '1')`, target `[data-probe]`, then remove the attribute.
 
 ## Act, then verify
 
