@@ -78,7 +78,7 @@ export function describeRemoteObject(obj: RemoteObject | undefined): unknown {
  */
 export function formatException(details: EvaluateResult['exceptionDetails']): string {
   const exception = details?.exception;
-  const desc = exception?.description ?? exception?.value ?? details?.text ?? 'unknown error';
+  const desc = exception?.description ?? exception?.value ?? details?.text ?? `unknown error`;
 
   return typeof desc == 'string' ? desc : JSON.stringify(desc);
 }

@@ -190,8 +190,8 @@ class CdpConnection {
     this.onEvent = onEvent;
 
     ws.addEventListener('message', event => this.handleMessage(event));
-    ws.addEventListener('close', () => this.handleClose('connection closed'));
-    ws.addEventListener('error', () => this.handleClose('connection error'));
+    ws.addEventListener('close', () => this.handleClose(`connection closed`));
+    ws.addEventListener('error', () => this.handleClose(`connection error`));
   }
 
   /**
@@ -248,7 +248,7 @@ class CdpConnection {
    */
   public call<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
     if (!this.isOpen) {
-      return Promise.reject(new CdpError('CDP connection is not open'));
+      return Promise.reject(new CdpError(`CDP connection is not open`));
     }
 
     const id = this.nextId++;
@@ -285,7 +285,7 @@ class CdpConnection {
   }
 
   public close(): void {
-    this.handleClose('closed by client');
+    this.handleClose(`closed by client`);
 
     try {
       this.ws.close();

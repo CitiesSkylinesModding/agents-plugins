@@ -30399,8 +30399,8 @@ class CdpConnection {
     this.target = target;
     this.onEvent = onEvent;
     ws.addEventListener("message", (event) => this.handleMessage(event));
-    ws.addEventListener("close", () => this.handleClose("connection closed"));
-    ws.addEventListener("error", () => this.handleClose("connection error"));
+    ws.addEventListener("close", () => this.handleClose(`connection closed`));
+    ws.addEventListener("error", () => this.handleClose(`connection error`));
   }
   static async open(cfg, target, onEvent) {
     const ws = new WebSocket(target.wsUrl);
@@ -30427,7 +30427,7 @@ class CdpConnection {
   }
   call(method, params) {
     if (!this.isOpen) {
-      return Promise.reject(new CdpError("CDP connection is not open"));
+      return Promise.reject(new CdpError(`CDP connection is not open`));
     }
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
@@ -30453,7 +30453,7 @@ class CdpConnection {
     this.enabledDomains.add(domain2);
   }
   close() {
-    this.handleClose("closed by client");
+    this.handleClose(`closed by client`);
     try {
       this.ws.close();
     } catch {}
@@ -30633,7 +30633,7 @@ function describeRemoteObject(obj) {
 }
 function formatException(details) {
   const exception = details?.exception;
-  const desc = exception?.description ?? exception?.value ?? details?.text ?? "unknown error";
+  const desc = exception?.description ?? exception?.value ?? details?.text ?? `unknown error`;
   return typeof desc == "string" ? desc : JSON.stringify(desc);
 }
 function valToStr(value) {
@@ -30817,7 +30817,7 @@ class DebuggerSession {
     try {
       await this.ensureReady();
       if (!this.paused) {
-        return text("Not paused (the UI is running). Set a breakpoint or use game_debug_step pause.");
+        return text(`Not paused (the UI is running). Set a breakpoint or use game_debug_step pause.`);
       }
       const frames = [];
       for (const [index, frame] of this.paused.callFrames.entries()) {
@@ -30886,7 +30886,7 @@ class DebuggerSession {
         return text(paused ? `Paused at ${this.topLocation()}.` : `Pause requested; nothing executed within ${PAUSE_WAIT_MS}ms (UI idle).`);
       }
       if (!this.paused) {
-        return errorText("Not paused. Set a breakpoint and trigger it, or use action 'pause' first.");
+        return errorText(`Not paused. Set a breakpoint and trigger it, or use action 'pause' first.`);
       }
       if (action == "resume") {
         await this.client.call("Debugger.resume");
@@ -30894,7 +30894,7 @@ class DebuggerSession {
         while (Date.now() < deadline && this.paused) {
           await sleep(POLL_INTERVAL_MS);
         }
-        return text("Resumed (UI unfrozen).");
+        return text(`Resumed (UI unfrozen).`);
       }
       const cdpMethod = { over: "stepOver", into: "stepInto", out: "stepOut" }[action];
       const before = this.pausedSeq;
@@ -31002,262 +31002,6 @@ class DebuggerSession {
 // src/tools.ts
 var import_common_tags3 = __toESM(require_lib(), 1);
 import { setTimeout as sleep2 } from "node:timers/promises";
-var collectDomFn = (sel, all, maxHtml) => {
-  const matches = document.querySelectorAll(sel);
-  const first = matches.item(0);
-  const chosen = all ? Array.from(matches) : first ? [first] : [];
-  const describe3 = (el) => {
-    const rect = el.getBoundingClientRect();
-    const attributes = {};
-    for (const attr of Array.from(el.attributes)) {
-      attributes[attr.name] = attr.value;
-    }
-    const classAttr = el.getAttribute("class");
-    let html = el.outerHTML || "";
-    const truncated = html.length > maxHtml;
-    if (truncated) {
-      html = html.slice(0, maxHtml);
-    }
-    return {
-      tagName: el.tagName ? el.tagName.toLowerCase() : null,
-      id: el.id || null,
-      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      attributes,
-      outerHTML: html,
-      truncated
-    };
-  };
-  return { count: matches.length, elements: chosen.map((el) => describe3(el)) };
-};
-var findFn = (args) => {
-  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
-  const SNIPPET_MAX = 100;
-  const target = caseSensitive ? needle : needle.toLowerCase();
-  let regex;
-  if (mode == "regex") {
-    try {
-      regex = new RegExp(needle, caseSensitive ? "" : "i");
-    } catch (error51) {
-      return { error: `Invalid regex: ${error51 instanceof Error ? error51.message : String(error51)}` };
-    }
-  }
-  const matches = (raw) => {
-    if (mode == "regex") {
-      return regex != null && regex.test(raw);
-    }
-    const hay = caseSensitive ? raw : raw.toLowerCase();
-    if (mode == "equals") {
-      return hay == target;
-    }
-    return hay.includes(target);
-  };
-  const found = [];
-  for (const el of Array.from(document.querySelectorAll(sel))) {
-    if (matches((el.textContent || "").trim())) {
-      found.push(el);
-    }
-  }
-  const kept = deepest ? found.filter((el) => !found.some((other) => other != el && el.contains(other))) : found;
-  const chosen = kept.slice(0, limit);
-  if (tag) {
-    for (const stale of Array.from(document.querySelectorAll("[data-gf-find]"))) {
-      stale.removeAttribute("data-gf-find");
-    }
-    for (const [i, el] of chosen.entries()) {
-      el.setAttribute("data-gf-find", String(i + 1));
-    }
-  }
-  const describe3 = (el, i) => {
-    const rect = el.getBoundingClientRect();
-    const classAttr = el.getAttribute("class");
-    const raw = (el.textContent || "").trim();
-    const truncated = raw.length > SNIPPET_MAX;
-    const info = {
-      tagName: el.tagName ? el.tagName.toLowerCase() : null,
-      id: el.id || null,
-      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
-      truncated
-    };
-    if (tag) {
-      info.selector = `[data-gf-find="${i + 1}"]`;
-    }
-    return info;
-  };
-  return {
-    unprunedTotal: found.length,
-    total: kept.length,
-    returned: chosen.length,
-    tagged: tag,
-    elements: chosen.map((el, i) => describe3(el, i))
-  };
-};
-var clickFn = (sel, index) => {
-  const nodes = document.querySelectorAll(sel);
-  if (nodes.length == 0) {
-    return { found: false, count: 0, fired: [] };
-  }
-  const el = nodes[index];
-  if (!el) {
-    return { found: false, count: nodes.length, fired: [] };
-  }
-  const rect = el.getBoundingClientRect();
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-  const base = {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    button: 0,
-    clientX: cx,
-    clientY: cy
-  };
-  const Pointer = typeof PointerEvent == "function" ? PointerEvent : MouseEvent;
-  const fired = [];
-  const fire = (Ctor, type, extra) => {
-    try {
-      el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
-      fired.push(type);
-    } catch {}
-  };
-  fire(Pointer, "pointerdown", { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, "mousedown");
-  fire(Pointer, "pointerup", { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, "mouseup");
-  fire(MouseEvent, "click");
-  return { found: true, count: nodes.length, x: cx, y: cy, fired };
-};
-var waitCheckFn = (sel, visible) => {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return false;
-  }
-  if (!visible) {
-    return true;
-  }
-  const rect = el.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0;
-};
-var fillFn = (sel, value) => {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return { found: false };
-  }
-  try {
-    el.focus();
-  } catch {}
-  const tag = (el.tagName || "").toLowerCase();
-  if (el.isContentEditable) {
-    el.textContent = value;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    return { found: true, mode: "contenteditable", value: el.textContent ?? "" };
-  }
-  const field = el;
-  const proto = tag == "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
-  if (setter) {
-    setter.call(el, value);
-  } else {
-    field.value = value;
-  }
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, mode: tag || "input", value: field.value };
-};
-var typeFn = (sel, textToType) => {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return { found: false, typed: 0 };
-  }
-  try {
-    el.focus();
-  } catch {}
-  const tag = (el.tagName || "").toLowerCase();
-  const editable = el.isContentEditable;
-  const field = el;
-  const proto = tag == "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
-  const current = () => {
-    if (editable) {
-      return el.textContent ?? "";
-    }
-    return field.value || "";
-  };
-  const setValue = (next) => {
-    if (editable) {
-      el.textContent = next;
-    } else if (setter) {
-      setter.call(el, next);
-    } else {
-      field.value = next;
-    }
-  };
-  let typed = 0;
-  for (const ch of textToType) {
-    const opts = {
-      bubbles: true,
-      cancelable: true,
-      key: ch,
-      view: window
-    };
-    try {
-      el.dispatchEvent(new KeyboardEvent("keydown", opts));
-    } catch {}
-    setValue(current() + ch);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    try {
-      el.dispatchEvent(new KeyboardEvent("keyup", opts));
-    } catch {}
-    typed++;
-  }
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, typed, value: current() };
-};
-var hoverFn = (sel) => {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return { found: false };
-  }
-  const rect = el.getBoundingClientRect();
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-  const base = {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    clientX: cx,
-    clientY: cy
-  };
-  const noBubble = { ...base, bubbles: false };
-  const fired = [];
-  const fire = (type, init) => {
-    try {
-      el.dispatchEvent(new MouseEvent(type, init));
-      fired.push(type);
-    } catch {}
-  };
-  fire("pointerover", base);
-  fire("mouseover", base);
-  fire("pointerenter", noBubble);
-  fire("mouseenter", noBubble);
-  fire("mousemove", base);
-  return { found: true, x: cx, y: cy, fired };
-};
-var rectFn = (sel) => {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return { found: false };
-  }
-  const rect = el.getBoundingClientRect();
-  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-};
-function callPageFn(fn, ...args) {
-  const serialisedArgs = args.map((arg) => JSON.stringify(arg)).join(", ");
-  return `(${fn.toString()})(${serialisedArgs})`;
-}
 var POLL_INTERVAL_MS2 = 150;
 var MAX_WAIT_MS = 60000;
 var DEFAULT_WAIT_TIMEOUT_MS = 8000;
@@ -31336,7 +31080,7 @@ async function gameScreenshot(client, format = "png", quality, selector) {
     }
     const res = await client.call("Page.captureScreenshot", params);
     if (!res?.data) {
-      return errorText("Page.captureScreenshot returned no image data.");
+      return errorText(`Page.captureScreenshot returned no image data.`);
     }
     return {
       content: [
@@ -31431,7 +31175,7 @@ async function gameClick(client, selector, index = 0) {
 async function gameWait(client, options) {
   const { selector, predicate, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, visible = false } = options;
   if (!selector && !predicate) {
-    return errorText("game_wait needs either 'selector' or 'predicate'.");
+    return errorText(`game_wait needs either 'selector' or 'predicate'.`);
   }
   const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
   const deadline = Date.now() + budget;
@@ -31599,6 +31343,265 @@ async function gameConsole(client, buffer, options) {
   return text(entries.map((entry) => `[${entry.level}] (${entry.kind}) ${entry.text}`).join(`
 `));
 }
+function callPageFn(fn, ...args) {
+  const serialisedArgs = args.map((arg) => JSON.stringify(arg)).join(", ");
+  return `(${fn.toString()})(${serialisedArgs})`;
+}
+function collectDomFn(sel, all, maxHtml) {
+  const matches = document.querySelectorAll(sel);
+  const first = matches.item(0);
+  const chosen = all ? Array.from(matches) : first ? [first] : [];
+  return { count: matches.length, elements: chosen.map((el) => describe3(el)) };
+  function describe3(el) {
+    const rect = el.getBoundingClientRect();
+    const attributes = {};
+    for (const attr of Array.from(el.attributes)) {
+      attributes[attr.name] = attr.value;
+    }
+    const classAttr = el.getAttribute("class");
+    let html = el.outerHTML || "";
+    const truncated = html.length > maxHtml;
+    if (truncated) {
+      html = html.slice(0, maxHtml);
+    }
+    return {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      attributes,
+      outerHTML: html,
+      truncated
+    };
+  }
+}
+function findFn(args) {
+  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+  const SNIPPET_MAX = 100;
+  const target = caseSensitive ? needle : needle.toLowerCase();
+  let regex;
+  if (mode == "regex") {
+    try {
+      regex = new RegExp(needle, caseSensitive ? "" : "i");
+    } catch (error51) {
+      return { error: `Invalid regex: ${error51 instanceof Error ? error51.message : String(error51)}` };
+    }
+  }
+  const found = [];
+  for (const el of Array.from(document.querySelectorAll(sel))) {
+    if (matches((el.textContent || "").trim())) {
+      found.push(el);
+    }
+  }
+  const kept = deepest ? found.filter((el) => !found.some((other) => other != el && el.contains(other))) : found;
+  const chosen = kept.slice(0, limit);
+  if (tag) {
+    for (const stale of Array.from(document.querySelectorAll("[data-gf-find]"))) {
+      stale.removeAttribute("data-gf-find");
+    }
+    for (const [i, el] of chosen.entries()) {
+      el.setAttribute("data-gf-find", String(i + 1));
+    }
+  }
+  return {
+    unprunedTotal: found.length,
+    total: kept.length,
+    returned: chosen.length,
+    tagged: tag,
+    elements: chosen.map((el, i) => describe3(el, i))
+  };
+  function matches(raw) {
+    if (mode == "regex") {
+      return regex != null && regex.test(raw);
+    }
+    const hay = caseSensitive ? raw : raw.toLowerCase();
+    if (mode == "equals") {
+      return hay == target;
+    }
+    return hay.includes(target);
+  }
+  function describe3(el, i) {
+    const rect = el.getBoundingClientRect();
+    const classAttr = el.getAttribute("class");
+    const raw = (el.textContent || "").trim();
+    const truncated = raw.length > SNIPPET_MAX;
+    const info = {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
+      truncated
+    };
+    if (tag) {
+      info.selector = `[data-gf-find="${i + 1}"]`;
+    }
+    return info;
+  }
+}
+function clickFn(sel, index) {
+  const nodes = document.querySelectorAll(sel);
+  if (nodes.length == 0) {
+    return { found: false, count: 0, fired: [] };
+  }
+  const node = nodes[index];
+  if (!node) {
+    return { found: false, count: nodes.length, fired: [] };
+  }
+  const el = node;
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  const base = {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+    button: 0,
+    clientX: cx,
+    clientY: cy
+  };
+  const Pointer = typeof PointerEvent == "function" ? PointerEvent : MouseEvent;
+  const fired = [];
+  fire(Pointer, "pointerdown", { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, "mousedown");
+  fire(Pointer, "pointerup", { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, "mouseup");
+  fire(MouseEvent, "click");
+  return { found: true, count: nodes.length, x: cx, y: cy, fired };
+  function fire(Ctor, type, extra) {
+    try {
+      el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
+      fired.push(type);
+    } catch {}
+  }
+}
+function waitCheckFn(sel, visible) {
+  const el = document.querySelector(sel);
+  if (!el) {
+    return false;
+  }
+  if (!visible) {
+    return true;
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+function fillFn(sel, value) {
+  const el = document.querySelector(sel);
+  if (!el) {
+    return { found: false };
+  }
+  try {
+    el.focus();
+  } catch {}
+  const tag = (el.tagName || "").toLowerCase();
+  if (el.isContentEditable) {
+    el.textContent = value;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return { found: true, mode: "contenteditable", value: el.textContent ?? "" };
+  }
+  const field = el;
+  const proto = tag == "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+  if (setter) {
+    setter.call(el, value);
+  } else {
+    field.value = value;
+  }
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  return { found: true, mode: tag || "input", value: field.value };
+}
+function typeFn(sel, textToType) {
+  const node = document.querySelector(sel);
+  if (!node) {
+    return { found: false, typed: 0 };
+  }
+  const el = node;
+  try {
+    el.focus();
+  } catch {}
+  const tag = (el.tagName || "").toLowerCase();
+  const editable = el.isContentEditable;
+  const field = el;
+  const proto = tag == "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+  let typed = 0;
+  for (const ch of textToType) {
+    const opts = {
+      bubbles: true,
+      cancelable: true,
+      key: ch,
+      view: window
+    };
+    try {
+      el.dispatchEvent(new KeyboardEvent("keydown", opts));
+    } catch {}
+    setValue(current() + ch);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    try {
+      el.dispatchEvent(new KeyboardEvent("keyup", opts));
+    } catch {}
+    typed++;
+  }
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  return { found: true, typed, value: current() };
+  function current() {
+    if (editable) {
+      return el.textContent ?? "";
+    }
+    return field.value || "";
+  }
+  function setValue(next) {
+    if (editable) {
+      el.textContent = next;
+    } else if (setter) {
+      setter.call(el, next);
+    } else {
+      field.value = next;
+    }
+  }
+}
+function hoverFn(sel) {
+  const node = document.querySelector(sel);
+  if (!node) {
+    return { found: false };
+  }
+  const el = node;
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  const base = {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+    clientX: cx,
+    clientY: cy
+  };
+  const noBubble = { ...base, bubbles: false };
+  const fired = [];
+  fire("pointerover", base);
+  fire("mouseover", base);
+  fire("pointerenter", noBubble);
+  fire("mouseenter", noBubble);
+  fire("mousemove", base);
+  return { found: true, x: cx, y: cy, fired };
+  function fire(type, init) {
+    try {
+      el.dispatchEvent(new MouseEvent(type, init));
+      fired.push(type);
+    } catch {}
+  }
+}
+function rectFn(sel) {
+  const el = document.querySelector(sel);
+  if (!el) {
+    return { found: false };
+  }
+  const rect = el.getBoundingClientRect();
+  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+}
 
 // src/server.ts
 var { version: VERSION } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -31609,109 +31612,109 @@ async function main() {
   const debug = new DebuggerSession(client);
   const server = new McpServer({ name: "gameface-devtools-mcp", version: VERSION });
   server.registerTool("game_status", {
-    title: "Gameface UI status",
+    title: `Gameface UI status`,
     description: import_common_tags4.oneLine`
         Check whether the Gameface UI debug endpoint is reachable and report the live page target
         and engine info. Run this first when other game_* tools fail.
       `
   }, () => gameStatus(client));
   server.registerTool("game_eval", {
-    title: "Evaluate JS in the Gameface UI",
+    title: `Evaluate JS in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate,
         returnByValue) and return the resulting value as JSON. Use document.querySelector and
         friends to read the live DOM, inspect React state, or call UI APIs.
       `,
     inputSchema: {
-      expression: exports_external.string().describe("JavaScript expression to evaluate in the page context"),
-      awaitPromise: exports_external.boolean().optional().describe("If the expression returns a Promise, await it before returning")
+      expression: exports_external.string().describe(`JavaScript expression to evaluate in the page context`),
+      awaitPromise: exports_external.boolean().optional().describe(`If the expression returns a Promise, await it before returning`)
     }
   }, ({ expression, awaitPromise }) => gameEval(client, expression, awaitPromise));
   server.registerTool("game_screenshot", {
-    title: "Screenshot the Gameface UI",
+    title: `Screenshot the Gameface UI`,
     description: import_common_tags4.oneLine`
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
         as an inline image. Pass a selector to clip the capture to one element. Use jpeg with a
         lower quality to reduce payload size.
       `,
     inputSchema: {
-      format: exports_external.enum(["png", "jpeg"]).optional().describe("Image format (default: png)"),
-      quality: exports_external.number().min(1).max(100).optional().describe("JPEG quality 1-100 (only used when format is jpeg; default 80)"),
-      selector: exports_external.string().optional().describe("If set, clip the screenshot to this element's bounding box")
+      format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
+      quality: exports_external.number().min(1).max(100).optional().describe(`JPEG quality 1-100 (only used when format is jpeg; default 80)`),
+      selector: exports_external.string().optional().describe(`If set, clip the screenshot to this element's bounding box`)
     }
   }, ({ format, quality, selector }) => gameScreenshot(client, format, quality, selector));
   server.registerTool("game_wait", {
-    title: "Wait for a condition in the Gameface UI",
+    title: `Wait for a condition in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Wait until a CSS selector matches (optionally visible) or a JS predicate becomes truthy,
         polling the page. Provide exactly one of selector / predicate. Returns when met or times
         out.
       `,
     inputSchema: {
-      selector: exports_external.string().optional().describe("CSS selector to wait for"),
-      predicate: exports_external.string().optional().describe("JS expression evaluated in the page; waits until it is truthy"),
-      timeoutMs: exports_external.number().int().min(0).optional().describe("Max time to wait in ms (default 8000, capped at 60000)"),
-      visible: exports_external.boolean().optional().describe("For selector waits, also require a non-zero bounding box (default false)")
+      selector: exports_external.string().optional().describe(`CSS selector to wait for`),
+      predicate: exports_external.string().optional().describe(`JS expression evaluated in the page; waits until it is truthy`),
+      timeoutMs: exports_external.number().int().min(0).optional().describe(`Max time to wait in ms (default 8000, capped at 60000)`),
+      visible: exports_external.boolean().optional().describe(`For selector waits, also require a non-zero bounding box (default false)`)
     }
   }, ({ selector, predicate, timeoutMs, visible }) => gameWait(client, { selector, predicate, timeoutMs, visible }));
   server.registerTool("game_fill", {
-    title: "Set an input value in the Gameface UI",
+    title: `Set an input value in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         React's onChange runs. Best for setting a field in one shot; use game_type for keystrokes.
       `,
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector of the field to fill"),
-      value: exports_external.string().describe("Value to set")
+      selector: exports_external.string().describe(`CSS selector of the field to fill`),
+      value: exports_external.string().describe(`Value to set`)
     }
   }, ({ selector, value }) => gameFill(client, selector, value));
   server.registerTool("game_type", {
-    title: "Type text into the Gameface UI",
+    title: `Type text into the Gameface UI`,
     description: import_common_tags4.oneLine`
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync. Use when handlers react to individual keystrokes; otherwise game_fill.
       `,
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector of the field to type into"),
-      text: exports_external.string().describe("Text to type")
+      selector: exports_external.string().describe(`CSS selector of the field to type into`),
+      text: exports_external.string().describe(`Text to type`)
     }
   }, ({ selector, text: text2 }) => gameType(client, selector, text2));
   server.registerTool("game_hover", {
-    title: "Hover an element in the Gameface UI",
+    title: `Hover an element in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
         React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.
       `,
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector of the element to hover")
+      selector: exports_external.string().describe(`CSS selector of the element to hover`)
     }
   }, ({ selector }) => gameHover(client, selector));
   server.registerTool("game_console", {
-    title: "Read the Gameface UI console",
+    title: `Read the Gameface UI console`,
     description: import_common_tags4.oneLine`
         Return recent console.* calls, log entries, and uncaught exceptions captured from the
         Gameface UI. Capture starts when the server first connects to the application.
       `,
     inputSchema: {
-      limit: exports_external.number().int().min(1).max(1000).optional().describe("Max entries to return (default 50)"),
-      level: exports_external.string().optional().describe("Filter by level, e.g. error / warning / log / info"),
-      clear: exports_external.boolean().optional().describe("Clear the buffer after reading (default false)")
+      limit: exports_external.number().int().min(1).max(1000).optional().describe(`Max entries to return (default 50)`),
+      level: exports_external.string().optional().describe(`Filter by level, e.g. error / warning / log / info`),
+      clear: exports_external.boolean().optional().describe(`Clear the buffer after reading (default false)`)
     }
   }, ({ limit, level, clear }) => gameConsole(client, consoleBuffer, { limit, level, clear }));
   server.registerTool("game_dom", {
-    title: "Inspect Gameface UI DOM",
+    title: `Inspect Gameface UI DOM`,
     description: import_common_tags4.oneLine`
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI. Set all=true to return every match.
       `,
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector to query in the Gameface UI"),
-      all: exports_external.boolean().optional().describe("Return all matches instead of just the first (default: false)"),
-      maxHtml: exports_external.number().min(0).optional().describe("Max outerHTML characters per element before truncation (default: 4000)")
+      selector: exports_external.string().describe(`CSS selector to query in the Gameface UI`),
+      all: exports_external.boolean().optional().describe(`Return all matches instead of just the first (default: false)`),
+      maxHtml: exports_external.number().min(0).optional().describe(`Max outerHTML characters per element before truncation (default: 4000)`)
     }
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
   server.registerTool("game_find", {
-    title: "Find elements by text in the Gameface UI",
+    title: `Find elements by text in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Locate elements by their text content in the live Gameface UI: scan a CSS selector's
         matches (default: every element) and filter on trimmed textContent by equals / contains /
@@ -31722,115 +31725,115 @@ async function main() {
         when class names are build-hashed and there is no XPath.
       `,
     inputSchema: {
-      text: exports_external.string().describe("Text to match against each element's trimmed textContent"),
-      match: exports_external.enum(["equals", "contains", "regex"]).optional().describe("How to match the text: equals / contains / regex (default: contains)"),
-      caseSensitive: exports_external.boolean().optional().describe("Match case-sensitively (default: false)"),
-      selector: exports_external.string().optional().describe("CSS selector scoping the scan (default: *, every element)"),
-      deepest: exports_external.boolean().optional().describe("Keep only the innermost match, pruning ancestors that also matched (default: true)"),
+      text: exports_external.string().describe(`Text to match against each element's trimmed textContent`),
+      match: exports_external.enum(["equals", "contains", "regex"]).optional().describe(`How to match the text: equals / contains / regex (default: contains)`),
+      caseSensitive: exports_external.boolean().optional().describe(`Match case-sensitively (default: false)`),
+      selector: exports_external.string().optional().describe(`CSS selector scoping the scan (default: *, every element)`),
+      deepest: exports_external.boolean().optional().describe(`Keep only the innermost match, pruning ancestors that also matched (default: true)`),
       tag: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
               Stamp matches with data-gf-find handles and return them as selectors, clearing any
               prior handles first (default: false).
             `),
-      limit: exports_external.number().int().min(1).max(100).optional().describe("Max matches to return (default: 20); the total count is always reported")
+      limit: exports_external.number().int().min(1).max(100).optional().describe(`Max matches to return (default: 20); the total count is always reported`)
     }
   }, ({ text: text2, match, caseSensitive, selector, deepest, tag, limit }) => gameFind(client, { text: text2, match, caseSensitive, selector, deepest, tag, limit }));
   server.registerTool("game_click", {
-    title: "Click an element in the Gameface UI",
+    title: `Click an element in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
         sequence in the page (NOT CDP Input, which Gameface ignores for the UI). React onClick
         handlers fire via event delegation. Use index to pick among matches.
       `,
     inputSchema: {
-      selector: exports_external.string().describe("CSS selector of the element to click"),
-      index: exports_external.number().int().min(0).optional().describe("Which match to click when several exist (default: 0)")
+      selector: exports_external.string().describe(`CSS selector of the element to click`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to click when several exist (default: 0)`)
     }
   }, ({ selector, index }) => gameClick(client, selector, index));
   server.registerTool("game_debug_status", {
-    title: "JS debugger status",
+    title: `JS debugger status`,
     description: import_common_tags4.oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
         and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables the
         debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
       `,
     inputSchema: {
-      setPauseOnExceptions: exports_external.enum(["none", "uncaught", "all"]).optional().describe("If set, change which exceptions pause execution (default none)")
+      setPauseOnExceptions: exports_external.enum(["none", "uncaught", "all"]).optional().describe(`If set, change which exceptions pause execution (default none)`)
     }
   }, ({ setPauseOnExceptions }) => debug.status(setPauseOnExceptions));
   server.registerTool("game_debug_scripts", {
-    title: "List parsed UI scripts",
+    title: `List parsed UI scripts`,
     description: import_common_tags4.oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
         filtered by a url substring. Use the scriptId with game_debug_source.
       `,
     inputSchema: {
-      filter: exports_external.string().optional().describe("Only scripts whose url contains this substring")
+      filter: exports_external.string().optional().describe(`Only scripts whose url contains this substring`)
     }
   }, ({ filter }) => debug.listScripts(filter));
   server.registerTool("game_debug_source", {
-    title: "Get UI script source",
+    title: `Get UI script source`,
     description: import_common_tags4.oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
         Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines).
       `,
     inputSchema: {
-      scriptId: exports_external.string().describe("Script id from game_debug_scripts"),
-      lineStart: exports_external.number().int().min(1).optional().describe("First line (1-based)"),
-      lineEnd: exports_external.number().int().min(1).optional().describe("Last line (1-based)")
+      scriptId: exports_external.string().describe(`Script id from game_debug_scripts`),
+      lineStart: exports_external.number().int().min(1).optional().describe(`First line (1-based)`),
+      lineEnd: exports_external.number().int().min(1).optional().describe(`Last line (1-based)`)
     }
   }, ({ scriptId, lineStart, lineEnd }) => debug.getSource(scriptId, lineStart, lineEnd));
   server.registerTool("game_debug_set_breakpoint", {
-    title: "Set a breakpoint",
+    title: `Set a breakpoint`,
     description: import_common_tags4.oneLine`
         Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to only
         pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES the UI
         until you resume with game_debug_step.
       `,
     inputSchema: {
-      urlContains: exports_external.string().describe("Substring of the script url to break in"),
-      line: exports_external.number().int().min(1).describe("Line number (1-based)"),
-      column: exports_external.number().int().min(0).optional().describe("Column (0-based), optional"),
-      condition: exports_external.string().optional().describe("Optional JS condition; pause only when it evaluates truthy")
+      urlContains: exports_external.string().describe(`Substring of the script url to break in`),
+      line: exports_external.number().int().min(1).describe(`Line number (1-based)`),
+      column: exports_external.number().int().min(0).optional().describe(`Column (0-based), optional`),
+      condition: exports_external.string().optional().describe(`Optional JS condition; pause only when it evaluates truthy`)
     }
   }, ({ urlContains, line, column, condition }) => debug.setBreakpoint(urlContains, line, column, condition));
   server.registerTool("game_debug_remove_breakpoint", {
-    title: "Remove a breakpoint",
-    description: "Remove a breakpoint by its id (from game_debug_status), or pass 'all'.",
+    title: `Remove a breakpoint`,
+    description: `Remove a breakpoint by its id (from game_debug_status), or pass 'all'.`,
     inputSchema: {
-      breakpoint: exports_external.string().describe("Breakpoint id, or 'all'")
+      breakpoint: exports_external.string().describe(`Breakpoint id, or 'all'`)
     }
   }, ({ breakpoint }) => debug.removeBreakpoint(breakpoint));
   server.registerTool("game_debug_pause_state", {
-    title: "Inspect the paused stack",
+    title: `Inspect the paused stack`,
     description: import_common_tags4.oneLine`
         When paused, return the call stack (frames with function + location + scope types). Set
         expandScopes to also list local/closure variables of each frame. Returns 'not paused'
         otherwise.
       `,
     inputSchema: {
-      expandScopes: exports_external.boolean().optional().describe("Also list local/closure variables per frame (default false)")
+      expandScopes: exports_external.boolean().optional().describe(`Also list local/closure variables per frame (default false)`)
     }
   }, ({ expandScopes }) => debug.pauseStateReport(expandScopes ?? false));
   server.registerTool("game_debug_evaluate", {
-    title: "Evaluate while debugging",
+    title: `Evaluate while debugging`,
     description: import_common_tags4.oneLine`
         Evaluate a JS expression. When paused, it runs in the selected call frame's scope
         (Debugger.evaluateOnCallFrame) so you can read locals; otherwise it runs globally. Prefer
         this over game_eval while paused.
       `,
     inputSchema: {
-      expression: exports_external.string().describe("JS expression to evaluate"),
-      frameIndex: exports_external.number().int().min(0).optional().describe("Call frame index to evaluate in when paused (default 0 = top)")
+      expression: exports_external.string().describe(`JS expression to evaluate`),
+      frameIndex: exports_external.number().int().min(0).optional().describe(`Call frame index to evaluate in when paused (default 0 = top)`)
     }
   }, ({ expression, frameIndex }) => debug.evaluate(expression, frameIndex));
   server.registerTool("game_debug_step", {
-    title: "Step / resume / pause execution",
+    title: `Step / resume / pause execution`,
     description: import_common_tags4.oneLine`
         Control paused execution: resume (unfreeze the UI), over / into / out (step), or pause
         (break at the next statement). Stepping reports the new location.
       `,
     inputSchema: {
-      action: exports_external.enum(["resume", "over", "into", "out", "pause"]).describe("resume | over | into | out | pause")
+      action: exports_external.enum(["resume", "over", "into", "out", "pause"]).describe(`resume | over | into | out | pause`)
     }
   }, ({ action }) => debug.step(action));
   const transport = new StdioServerTransport;

@@ -359,7 +359,7 @@ export class DebuggerSession {
 
       if (!this.paused) {
         return text(
-          'Not paused (the UI is running). Set a breakpoint or use game_debug_step pause.'
+          `Not paused (the UI is running). Set a breakpoint or use game_debug_step pause.`
         );
       }
 
@@ -463,7 +463,7 @@ export class DebuggerSession {
 
       if (!this.paused) {
         return errorText(
-          "Not paused. Set a breakpoint and trigger it, or use action 'pause' first."
+          `Not paused. Set a breakpoint and trigger it, or use action 'pause' first.`
         );
       }
 
@@ -477,7 +477,7 @@ export class DebuggerSession {
           await sleep(POLL_INTERVAL_MS);
         }
 
-        return text('Resumed (UI unfrozen).');
+        return text(`Resumed (UI unfrozen).`);
       }
 
       const cdpMethod = { over: 'stepOver', into: 'stepInto', out: 'stepOut' }[action];

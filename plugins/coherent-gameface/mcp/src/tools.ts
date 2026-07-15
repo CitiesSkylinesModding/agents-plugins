@@ -18,12 +18,6 @@ import {
   valToStr
 } from './shared';
 
-// Page-context functions.
-// These run inside the Gameface UI (never in this process); they are serialised with
-// .toString() and injected into Runtime.evaluate. Keep them as plain, self-contained browser
-// JS with no references to anything outside their body. Type annotations are fine: the build
-// erases them before serialization.
-
 // Result shapes returned by the page functions below, reused by the server-side callers to
 // cast Runtime.evaluate results.
 interface DomElementInfo {
@@ -87,394 +81,6 @@ interface FindArgs {
   deepest: boolean;
   tag: boolean;
   limit: number;
-}
-
-const collectDomFn = (sel: string, all: boolean, maxHtml: number): CollectDomResult => {
-  const matches = document.querySelectorAll(sel);
-  const first = matches.item(0);
-  const chosen = all ? Array.from(matches) : first ? [first] : [];
-
-  const describe = (el: Element): DomElementInfo => {
-    const rect = el.getBoundingClientRect();
-    const attributes: Record<string, string> = {};
-
-    for (const attr of Array.from(el.attributes)) {
-      attributes[attr.name] = attr.value;
-    }
-
-    const classAttr = el.getAttribute('class');
-    let html = el.outerHTML || '';
-    const truncated = html.length > maxHtml;
-
-    if (truncated) {
-      html = html.slice(0, maxHtml);
-    }
-
-    return {
-      tagName: el.tagName ? el.tagName.toLowerCase() : null,
-      id: el.id || null,
-      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      attributes,
-      outerHTML: html,
-      truncated
-    };
-  };
-
-  return { count: matches.length, elements: chosen.map(el => describe(el)) };
-};
-
-// Scans querySelectorAll matches and filters on trimmed textContent, the only text search Cohtml
-// affords (no XPath, TreeWalker, or innerText). Returns lean, actionable info per match and, when
-// tag=true, stamps handles so the discovery result feeds straight into the input tools.
-const findFn = (args: FindArgs): FindResult | { error: string } => {
-  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
-
-  // Cap on the returned text snippet, kept inline because page functions are self-contained.
-  const SNIPPET_MAX = 100;
-
-  // Precompile the matcher once. Case insensitivity lowercases both sides for equals/contains and
-  // adds the 'i' flag for regex.
-  const target = caseSensitive ? needle : needle.toLowerCase();
-
-  let regex: RegExp | undefined;
-
-  if (mode == 'regex') {
-    try {
-      regex = new RegExp(needle, caseSensitive ? '' : 'i');
-    } catch (error) {
-      return { error: `Invalid regex: ${error instanceof Error ? error.message : String(error)}` };
-    }
-  }
-
-  const matches = (raw: string): boolean => {
-    if (mode == 'regex') {
-      return regex != null && regex.test(raw);
-    }
-
-    const hay = caseSensitive ? raw : raw.toLowerCase();
-
-    if (mode == 'equals') {
-      return hay == target;
-    }
-
-    // 'contains' is the default mode.
-    return hay.includes(target);
-  };
-
-  const found: Element[] = [];
-
-  for (const el of Array.from(document.querySelectorAll(sel))) {
-    if (matches((el.textContent || '').trim())) {
-      found.push(el);
-    }
-  }
-
-  // Deepest keeps only the innermost matches: an element's textContent includes its descendants',
-  // so an ancestor matches whenever a descendant does. Drop any match that contains another match.
-  const kept = deepest
-    ? found.filter(el => !found.some(other => other != el && el.contains(other)))
-    : found;
-
-  const chosen = kept.slice(0, limit);
-
-  if (tag) {
-    // Clear-then-retag: strip every handle from a previous find first, so its handles die here.
-    // Cohtml exposes setAttribute/removeAttribute but not the dataset DOMStringMap, so use those.
-    for (const stale of Array.from(document.querySelectorAll('[data-gf-find]'))) {
-      stale.removeAttribute('data-gf-find');
-    }
-
-    for (const [i, el] of chosen.entries()) {
-      el.setAttribute('data-gf-find', String(i + 1));
-    }
-  }
-
-  const describe = (el: Element, i: number): FindMatch => {
-    const rect = el.getBoundingClientRect();
-    const classAttr = el.getAttribute('class');
-    const raw = (el.textContent || '').trim();
-    const truncated = raw.length > SNIPPET_MAX;
-
-    const info: FindMatch = {
-      tagName: el.tagName ? el.tagName.toLowerCase() : null,
-      id: el.id || null,
-      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
-      truncated
-    };
-
-    if (tag) {
-      info.selector = `[data-gf-find="${i + 1}"]`;
-    }
-
-    return info;
-  };
-
-  return {
-    unprunedTotal: found.length,
-    total: kept.length,
-    returned: chosen.length,
-    tagged: tag,
-    elements: chosen.map((el, i) => describe(el, i))
-  };
-};
-
-// Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml/React
-// DOM event system (verified: handlers never fire). So we click by dispatching real, bubbling
-// DOM events on the element, which React's delegated listeners pick up. Note:
-// HTMLElement.click() does not exist in Cohtml either.
-const clickFn = (sel: string, index: number): ClickResult => {
-  const nodes = document.querySelectorAll(sel);
-
-  if (nodes.length == 0) {
-    return { found: false, count: 0, fired: [] };
-  }
-
-  const el = nodes[index] as HTMLElement | undefined;
-
-  if (!el) {
-    return { found: false, count: nodes.length, fired: [] };
-  }
-
-  const rect = el.getBoundingClientRect();
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-
-  const base: MouseEventInit = {
-    bubbles: true,
-    cancelable: true,
-    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
-    view: window,
-    button: 0,
-    clientX: cx,
-    clientY: cy
-  };
-
-  type EventCtor = new (type: string, init?: PointerEventInit) => Event;
-
-  // PointerEvent does not exist in Cohtml; dispatch pointer* as MouseEvents (React keys off
-  // the event type string, not the constructor).
-  const Pointer: EventCtor = typeof PointerEvent == 'function' ? PointerEvent : MouseEvent;
-  const fired: string[] = [];
-
-  const fire = (Ctor: EventCtor, type: string, extra?: PointerEventInit): void => {
-    try {
-      el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
-      fired.push(type);
-    } catch {
-      /* Event type unsupported in this engine. */
-    }
-  };
-
-  fire(Pointer, 'pointerdown', { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, 'mousedown');
-  fire(Pointer, 'pointerup', { pointerId: 1, isPrimary: true });
-  fire(MouseEvent, 'mouseup');
-  fire(MouseEvent, 'click');
-
-  return { found: true, count: nodes.length, x: cx, y: cy, fired };
-};
-
-// Returns true once the selector matches (and, if `visible`, has a non-zero box).
-const waitCheckFn = (sel: string, visible: boolean): boolean => {
-  const el = document.querySelector(sel);
-
-  if (!el) {
-    return false;
-  }
-
-  if (!visible) {
-    return true;
-  }
-
-  const rect = el.getBoundingClientRect();
-
-  return rect.width > 0 && rect.height > 0;
-};
-
-// Sets an input/textarea/contenteditable value so React's onChange fires. We use the native
-// value setter (verified present in Cohtml) so React's value tracker notices. InputEvent is
-// missing in Cohtml, so we dispatch a plain bubbling Event('input').
-const fillFn = (sel: string, value: string): FillResult => {
-  const el = document.querySelector<HTMLElement>(sel);
-
-  if (!el) {
-    return { found: false };
-  }
-
-  try {
-    el.focus();
-  } catch {
-    /* Not focusable. */
-  }
-
-  const tag = (el.tagName || '').toLowerCase();
-
-  if (el.isContentEditable) {
-    el.textContent = value;
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-
-    return { found: true, mode: 'contenteditable', value: el.textContent ?? '' };
-  }
-
-  const field = el as HTMLInputElement | HTMLTextAreaElement;
-  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
-  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-
-  if (setter) {
-    setter.call(el, value);
-  } else {
-    field.value = value;
-  }
-
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-
-  return { found: true, mode: tag || 'input', value: field.value };
-};
-
-// Types text character by character, firing real KeyboardEvents (present in Cohtml) plus
-// keeping the value in sync and dispatching input/change for React.
-const typeFn = (sel: string, textToType: string): TypeResult => {
-  const el = document.querySelector<HTMLElement>(sel);
-
-  if (!el) {
-    return { found: false, typed: 0 };
-  }
-
-  try {
-    el.focus();
-  } catch {
-    /* Not focusable. */
-  }
-
-  const tag = (el.tagName || '').toLowerCase();
-  const editable = el.isContentEditable;
-  const field = el as HTMLInputElement | HTMLTextAreaElement;
-  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
-  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-
-  const current = (): string => {
-    if (editable) {
-      return el.textContent ?? '';
-    }
-
-    return field.value || '';
-  };
-
-  const setValue = (next: string): void => {
-    if (editable) {
-      el.textContent = next;
-    } else if (setter) {
-      setter.call(el, next);
-    } else {
-      field.value = next;
-    }
-  };
-
-  let typed = 0;
-
-  for (const ch of textToType) {
-    const opts: KeyboardEventInit = {
-      bubbles: true,
-      cancelable: true,
-      key: ch,
-      // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; KeyboardEventInit.view wants the Window.
-      view: window
-    };
-
-    try {
-      el.dispatchEvent(new KeyboardEvent('keydown', opts));
-    } catch {
-      /* No KeyboardEvent in this engine. */
-    }
-
-    setValue(current() + ch);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-
-    try {
-      el.dispatchEvent(new KeyboardEvent('keyup', opts));
-    } catch {
-      /* No KeyboardEvent in this engine. */
-    }
-
-    typed++;
-  }
-
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-
-  return { found: true, typed, value: current() };
-};
-
-// Hovers an element by dispatching the over/enter/move sequence. PointerEvent is missing in
-// Cohtml, so `pointer*` are dispatched as MouseEvents (the type string is what React keys off).
-// enter/leave do not bubble.
-const hoverFn = (sel: string): HoverResult => {
-  const el = document.querySelector<HTMLElement>(sel);
-
-  if (!el) {
-    return { found: false };
-  }
-
-  const rect = el.getBoundingClientRect();
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-
-  const base: MouseEventInit = {
-    bubbles: true,
-    cancelable: true,
-    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
-    view: window,
-    clientX: cx,
-    clientY: cy
-  };
-  const noBubble: MouseEventInit = { ...base, bubbles: false };
-  const fired: string[] = [];
-
-  const fire = (type: string, init: MouseEventInit): void => {
-    try {
-      el.dispatchEvent(new MouseEvent(type, init));
-      fired.push(type);
-    } catch {
-      /* Unsupported event type. */
-    }
-  };
-
-  fire('pointerover', base);
-  fire('mouseover', base);
-  fire('pointerenter', noBubble);
-  fire('mouseenter', noBubble);
-  fire('mousemove', base);
-
-  return { found: true, x: cx, y: cy, fired };
-};
-
-// Returns an element's viewport box, for clipping a screenshot to it.
-const rectFn = (sel: string): RectResult => {
-  const el = document.querySelector(sel);
-
-  if (!el) {
-    return { found: false };
-  }
-
-  const rect = el.getBoundingClientRect();
-
-  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-};
-
-/**
- * Serializes a page-context function and its JSON-safe args into one self-invoking expression
- * for Runtime.evaluate.
- */
-function callPageFn(fn: (...args: never[]) => unknown, ...args: unknown[]): string {
-  const serialisedArgs = args.map(arg => JSON.stringify(arg)).join(', ');
-
-  return `(${fn.toString()})(${serialisedArgs})`;
 }
 
 // Server-side polling interval for game_wait.
@@ -616,7 +222,7 @@ export async function gameScreenshot(
     const res = await client.call<{ data?: string }>('Page.captureScreenshot', params);
 
     if (!res?.data) {
-      return errorText('Page.captureScreenshot returned no image data.');
+      return errorText(`Page.captureScreenshot returned no image data.`);
     }
 
     return {
@@ -786,7 +392,7 @@ export async function gameWait(
   const { selector, predicate, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, visible = false } = options;
 
   if (!selector && !predicate) {
-    return errorText("game_wait needs either 'selector' or 'predicate'.");
+    return errorText(`game_wait needs either 'selector' or 'predicate'.`);
   }
 
   const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
@@ -1049,4 +655,427 @@ export async function gameConsole(
   }
 
   return text(entries.map(entry => `[${entry.level}] (${entry.kind}) ${entry.text}`).join('\n'));
+}
+
+/**
+ * Serializes a page-context function and its JSON-safe args into one self-invoking expression
+ * for Runtime.evaluate.
+ */
+function callPageFn(fn: (...args: never[]) => unknown, ...args: unknown[]): string {
+  const serialisedArgs = args.map(arg => JSON.stringify(arg)).join(', ');
+
+  return `(${fn.toString()})(${serialisedArgs})`;
+}
+
+// Page-context functions.
+// These run inside the Gameface UI (never in this process); they are serialised with
+// .toString() and injected into Runtime.evaluate. Keep them as plain, self-contained browser
+// JS with no references to anything outside their body. Type annotations are fine: the build
+// erases them before serialization.
+
+/**
+ * Collects DOM info (tag, id, classes, rect, attributes, outerHTML) for a selector's matches.
+ */
+function collectDomFn(sel: string, all: boolean, maxHtml: number): CollectDomResult {
+  const matches = document.querySelectorAll(sel);
+  const first = matches.item(0);
+  const chosen = all ? Array.from(matches) : first ? [first] : [];
+
+  return { count: matches.length, elements: chosen.map(el => describe(el)) };
+
+  function describe(el: Element): DomElementInfo {
+    const rect = el.getBoundingClientRect();
+    const attributes: Record<string, string> = {};
+
+    for (const attr of Array.from(el.attributes)) {
+      attributes[attr.name] = attr.value;
+    }
+
+    const classAttr = el.getAttribute('class');
+    let html = el.outerHTML || '';
+    const truncated = html.length > maxHtml;
+
+    if (truncated) {
+      html = html.slice(0, maxHtml);
+    }
+
+    return {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      attributes,
+      outerHTML: html,
+      truncated
+    };
+  }
+}
+
+/**
+ * Scans querySelectorAll matches and filters on trimmed textContent, the only text search Cohtml
+ * affords (no XPath, TreeWalker, or innerText). Returns lean, actionable info per match and, when
+ * tag=true, stamps handles so the discovery result feeds straight into the input tools.
+ */
+function findFn(args: FindArgs): FindResult | { error: string } {
+  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+
+  // Cap on the returned text snippet, kept inline because page functions are self-contained.
+  const SNIPPET_MAX = 100;
+
+  // Precompile the matcher once. Case insensitivity lowercases both sides for equals/contains and
+  // adds the 'i' flag for regex.
+  const target = caseSensitive ? needle : needle.toLowerCase();
+
+  let regex: RegExp | undefined;
+
+  if (mode == 'regex') {
+    try {
+      regex = new RegExp(needle, caseSensitive ? '' : 'i');
+    } catch (error) {
+      return { error: `Invalid regex: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  const found: Element[] = [];
+
+  for (const el of Array.from(document.querySelectorAll(sel))) {
+    if (matches((el.textContent || '').trim())) {
+      found.push(el);
+    }
+  }
+
+  // Deepest keeps only the innermost matches: an element's textContent includes its descendants',
+  // so an ancestor matches whenever a descendant does. Drop any match that contains another match.
+  const kept = deepest
+    ? found.filter(el => !found.some(other => other != el && el.contains(other)))
+    : found;
+
+  const chosen = kept.slice(0, limit);
+
+  if (tag) {
+    // Clear-then-retag: strip every handle from a previous find first, so its handles die here.
+    // Cohtml exposes setAttribute/removeAttribute but not the dataset DOMStringMap, so use those.
+    for (const stale of Array.from(document.querySelectorAll('[data-gf-find]'))) {
+      stale.removeAttribute('data-gf-find');
+    }
+
+    for (const [i, el] of chosen.entries()) {
+      el.setAttribute('data-gf-find', String(i + 1));
+    }
+  }
+
+  return {
+    unprunedTotal: found.length,
+    total: kept.length,
+    returned: chosen.length,
+    tagged: tag,
+    elements: chosen.map((el, i) => describe(el, i))
+  };
+
+  function matches(raw: string): boolean {
+    if (mode == 'regex') {
+      return regex != null && regex.test(raw);
+    }
+
+    const hay = caseSensitive ? raw : raw.toLowerCase();
+
+    if (mode == 'equals') {
+      return hay == target;
+    }
+
+    // 'contains' is the default mode.
+    return hay.includes(target);
+  }
+
+  function describe(el: Element, i: number): FindMatch {
+    const rect = el.getBoundingClientRect();
+    const classAttr = el.getAttribute('class');
+    const raw = (el.textContent || '').trim();
+    const truncated = raw.length > SNIPPET_MAX;
+
+    const info: FindMatch = {
+      tagName: el.tagName ? el.tagName.toLowerCase() : null,
+      id: el.id || null,
+      classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
+      truncated
+    };
+
+    if (tag) {
+      info.selector = `[data-gf-find="${i + 1}"]`;
+    }
+
+    return info;
+  }
+}
+
+/**
+ * Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml/React DOM
+ * event system (verified: handlers never fire). So we click by dispatching real, bubbling DOM
+ * events on the element, which React's delegated listeners pick up.
+ * Note: `HTMLElement.click()` does not exist in Cohtml either.
+ */
+function clickFn(sel: string, index: number): ClickResult {
+  const nodes = document.querySelectorAll(sel);
+
+  if (nodes.length == 0) {
+    return { found: false, count: 0, fired: [] };
+  }
+
+  const node = nodes[index] as HTMLElement | undefined;
+
+  if (!node) {
+    return { found: false, count: nodes.length, fired: [] };
+  }
+
+  // Alias the narrowed node so the hoisted fire() helper below closes over a non-null element.
+  const el = node;
+
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+
+  const base: MouseEventInit = {
+    bubbles: true,
+    cancelable: true,
+    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
+    view: window,
+    button: 0,
+    clientX: cx,
+    clientY: cy
+  };
+
+  type EventCtor = new (type: string, init?: PointerEventInit) => Event;
+
+  // PointerEvent does not exist in Cohtml; dispatch pointer* as MouseEvents (React keys off
+  // the event type string, not the constructor).
+  const Pointer: EventCtor = typeof PointerEvent == 'function' ? PointerEvent : MouseEvent;
+  const fired: string[] = [];
+
+  fire(Pointer, 'pointerdown', { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, 'mousedown');
+  fire(Pointer, 'pointerup', { pointerId: 1, isPrimary: true });
+  fire(MouseEvent, 'mouseup');
+  fire(MouseEvent, 'click');
+
+  return { found: true, count: nodes.length, x: cx, y: cy, fired };
+
+  function fire(Ctor: EventCtor, type: string, extra?: PointerEventInit): void {
+    try {
+      el.dispatchEvent(new Ctor(type, { ...base, ...extra }));
+      fired.push(type);
+    } catch {
+      /* Event type unsupported in this engine. */
+    }
+  }
+}
+
+/**
+ * Returns true once the selector matches (and, if `visible`, has a non-zero box).
+ */
+function waitCheckFn(sel: string, visible: boolean): boolean {
+  const el = document.querySelector(sel);
+
+  if (!el) {
+    return false;
+  }
+
+  if (!visible) {
+    return true;
+  }
+
+  const rect = el.getBoundingClientRect();
+
+  return rect.width > 0 && rect.height > 0;
+}
+
+/**
+ * Sets an input/textarea/contenteditable value so React's onChange fires.
+ * We use the native value setter (verified present in Cohtml) so React's value tracker notices.
+ * InputEvent is missing in Cohtml, so we dispatch a plain bubbling `Event('input')`.
+ */
+function fillFn(sel: string, value: string): FillResult {
+  const el = document.querySelector<HTMLElement>(sel);
+
+  if (!el) {
+    return { found: false };
+  }
+
+  try {
+    el.focus();
+  } catch {
+    /* Not focusable. */
+  }
+
+  const tag = (el.tagName || '').toLowerCase();
+
+  if (el.isContentEditable) {
+    el.textContent = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+
+    return { found: true, mode: 'contenteditable', value: el.textContent ?? '' };
+  }
+
+  const field = el as HTMLInputElement | HTMLTextAreaElement;
+  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+  if (setter) {
+    setter.call(el, value);
+  } else {
+    field.value = value;
+  }
+
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return { found: true, mode: tag || 'input', value: field.value };
+}
+
+/**
+ * Types text character by character, firing real KeyboardEvents (present in Cohtml) plus keeping
+ * the value in sync and dispatching input/change for React.
+ */
+function typeFn(sel: string, textToType: string): TypeResult {
+  const node = document.querySelector<HTMLElement>(sel);
+
+  if (!node) {
+    return { found: false, typed: 0 };
+  }
+
+  // Alias the narrowed node so the hoisted helpers below close over a non-null element.
+  const el = node;
+
+  try {
+    el.focus();
+  } catch {
+    /* Not focusable. */
+  }
+
+  const tag = (el.tagName || '').toLowerCase();
+  const editable = el.isContentEditable;
+  const field = el as HTMLInputElement | HTMLTextAreaElement;
+  const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+  let typed = 0;
+
+  for (const ch of textToType) {
+    const opts: KeyboardEventInit = {
+      bubbles: true,
+      cancelable: true,
+      key: ch,
+      // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; KeyboardEventInit.view wants the Window.
+      view: window
+    };
+
+    try {
+      el.dispatchEvent(new KeyboardEvent('keydown', opts));
+    } catch {
+      /* No KeyboardEvent in this engine. */
+    }
+
+    setValue(current() + ch);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+
+    try {
+      el.dispatchEvent(new KeyboardEvent('keyup', opts));
+    } catch {
+      /* No KeyboardEvent in this engine. */
+    }
+
+    typed++;
+  }
+
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return { found: true, typed, value: current() };
+
+  function current(): string {
+    if (editable) {
+      return el.textContent ?? '';
+    }
+
+    return field.value || '';
+  }
+
+  function setValue(next: string): void {
+    if (editable) {
+      el.textContent = next;
+    } else if (setter) {
+      setter.call(el, next);
+    } else {
+      field.value = next;
+    }
+  }
+}
+
+/**
+ * Hovers an element by dispatching the over/enter/move sequence.
+ * PointerEvent is missing in Cohtml, so `pointer*` are dispatched as MouseEvents (the type string
+ * is what React keys off).
+ * `enter`/`leave` do not bubble.
+ */
+function hoverFn(sel: string): HoverResult {
+  const node = document.querySelector<HTMLElement>(sel);
+
+  if (!node) {
+    return { found: false };
+  }
+
+  // Alias the narrowed node so the hoisted fire() helper below closes over a non-null element.
+  const el = node;
+
+  const rect = el.getBoundingClientRect();
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+
+  const base: MouseEventInit = {
+    bubbles: true,
+    cancelable: true,
+    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
+    view: window,
+    clientX: cx,
+    clientY: cy
+  };
+
+  const noBubble: MouseEventInit = { ...base, bubbles: false };
+
+  const fired: string[] = [];
+
+  fire('pointerover', base);
+  fire('mouseover', base);
+  fire('pointerenter', noBubble);
+  fire('mouseenter', noBubble);
+  fire('mousemove', base);
+
+  return { found: true, x: cx, y: cy, fired };
+
+  function fire(type: string, init: MouseEventInit): void {
+    try {
+      el.dispatchEvent(new MouseEvent(type, init));
+      fired.push(type);
+    } catch {
+      /* Unsupported event type. */
+    }
+  }
+}
+
+/**
+ * Returns an element's viewport box, for clipping a screenshot to it.
+ */
+function rectFn(sel: string): RectResult {
+  const el = document.querySelector(sel);
+
+  if (!el) {
+    return { found: false };
+  }
+
+  const rect = el.getBoundingClientRect();
+
+  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
