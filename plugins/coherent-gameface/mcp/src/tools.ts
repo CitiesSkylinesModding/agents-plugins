@@ -83,21 +83,41 @@ interface FindArgs {
   limit: number;
 }
 
-// Server-side polling interval for game_wait.
+/**
+ * Server-side polling interval for game_wait.
+ */
 const POLL_INTERVAL_MS = 150;
 
-// Hard ceiling on game_wait budgets, so a huge timeoutMs cannot hang a tool call for minutes.
+/**
+ * Hard ceiling on game_wait budgets, so a huge timeoutMs cannot hang a tool call for minutes.
+ */
 const MAX_WAIT_MS = 60_000;
 
 const DEFAULT_WAIT_TIMEOUT_MS = 8000;
+
+/**
+ * Reload waits default higher: the trigger latency of an application-side file watcher can run tens
+ * of seconds (CS2's mtime poll ticks every ~15-20s) before the first context swap.
+ */
+const DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30_000;
+
+/**
+ * Default quiescence window after a reload is observed; long enough to absorb engines that swap
+ * the context more than once per reload trigger (CS2's watcher fires two swaps ~530ms apart).
+ */
+const DEFAULT_QUIESCENT_MS = 1000;
+
 const DEFAULT_JPEG_QUALITY = 80;
 const DEFAULT_CONSOLE_LIMIT = 50;
 const DEFAULT_FIND_LIMIT = 20;
 
 /**
- * Reports reachability + page target + engine info. Never throws.
+ * Reports reachability + page target + engine info + view-reload tracking. Never throws.
  */
-export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
+export async function gameStatus(
+  client: CdpClient,
+  reloads: ReloadTracker
+): Promise<CallToolResult> {
   const { host, port } = client.config;
 
   try {
@@ -119,6 +139,19 @@ export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
       /* Version info is best-effort. */
     }
 
+    // Arm reload tracking: opening the WebSocket enables Runtime, which starts the passive
+    // execution-context watch. Best-effort: the HTTP-only report must survive a WS failure.
+    let tracking = false;
+
+    try {
+      await client.connection();
+      tracking = true;
+    } catch {
+      /* HTTP reachable but no WS; report tracking: false. */
+    }
+
+    const { lastReloadAt } = reloads;
+
     // noinspection HttpUrlsUsage
     return text(
       JSON.stringify(
@@ -127,7 +160,17 @@ export async function gameStatus(client: CdpClient): Promise<CallToolResult> {
           endpoint: `http://${host}:${port}`,
           target: { id: target.id, url: target.url, title: target.title, wsUrl: target.wsUrl },
           browser,
-          cdpProtocol: protocol
+          cdpProtocol: protocol,
+          reloads: tracking
+            ? {
+                tracking: true,
+                // Lower bound: reloads that happen while disconnected collapse into one.
+                count: reloads.count,
+                lastReloadAt: lastReloadAt == null ? null : new Date(lastReloadAt).toISOString(),
+                lastReloadAgoMs: lastReloadAt == null ? null : Date.now() - lastReloadAt,
+                contextUniqueId: reloads.contextUniqueId ?? null
+              }
+            : { tracking: false }
         },
         null,
         2
@@ -373,41 +416,137 @@ export async function gameClick(
 }
 
 /**
- * Options for gameWait. Provide exactly one of `selector` / `predicate`.
+ * Options for gameWait.
+ * Provide at least one of `reload` / `selector` / `predicate`; `selector` and `predicate` are
+ * mutually exclusive.
  */
 export interface GameWaitOptions {
   readonly selector?: string | undefined;
   readonly predicate?: string | undefined;
+  readonly reload?: boolean | undefined;
+  readonly sinceReloads?: number | undefined;
+  readonly quiescentMs?: number | undefined;
   readonly timeoutMs?: number | undefined;
   readonly visible?: boolean | undefined;
 }
 
 /**
- * Waits (server-side polling) until a selector matches or a JS predicate is truthy.
+ * Waits (server-side polling) for a view reload and/or until a selector matches or a JS
+ * predicate is truthy.
+ * The phases compose in order: reload, then quiescence, then the selector/predicate poll running
+ * in the fresh context.
  */
 export async function gameWait(
   client: CdpClient,
+  reloads: ReloadTracker,
   options: GameWaitOptions
 ): Promise<CallToolResult> {
-  const { selector, predicate, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, visible = false } = options;
+  const {
+    selector,
+    predicate,
+    reload = false,
+    sinceReloads,
+    quiescentMs = DEFAULT_QUIESCENT_MS,
+    visible = false
+  } = options;
 
-  if (!selector && !predicate) {
-    return errorText(`game_wait needs either 'selector' or 'predicate'.`);
+  if (!reload && !selector && !predicate) {
+    return errorText(`game_wait needs at least one of 'reload', 'selector', or 'predicate'.`);
   }
 
-  const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
-  const deadline = Date.now() + budget;
-  const start = Date.now();
-  const expression = selector
-    ? callPageFn(waitCheckFn, selector, visible)
-    : `Boolean(${predicate ?? ''})`;
+  if (selector && predicate) {
+    return errorText(`game_wait takes either 'selector' or 'predicate', not both.`);
+  }
 
-  // Remember the last predicate error so a predicate that consistently throws (e.g., a typo)
-  // surfaces in the timeout message instead of failing silently on every poll.
-  let lastError: string | undefined;
+  const timeoutMs =
+    options.timeoutMs ?? (reload ? DEFAULT_RELOAD_WAIT_TIMEOUT_MS : DEFAULT_WAIT_TIMEOUT_MS);
+  const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
+
+  const start = Date.now();
+  const deadline = start + budget;
 
   try {
-    for (;;) {
+    if (reload) {
+      const failed = await waitForReload();
+
+      if (failed) {
+        return failed;
+      }
+
+      if (!selector && !predicate) {
+        return text(
+          `Reload observed after ${Date.now() - start}ms (reload count: ${reloads.count}).`
+        );
+      }
+    }
+
+    return await pollCondition();
+  } catch (error) {
+    return toErrorResult(error);
+  }
+
+  /**
+   * Reload phase + quiescence phase. Returns an error result on timeout, undefined on success.
+   */
+  async function waitForReload(): Promise<CallToolResult | undefined> {
+    // Arm tracking before baselining: the counter only moves while a WS connection exists.
+    await client.connection();
+
+    // `sinceReloads` lets the caller baseline against a prior game_status, so a reload that
+    // fired between that call and this one (location.reload() lands in ~200ms, faster than the
+    // next tool call) still satisfies the wait instead of hanging until timeout.
+    const baseline = sinceReloads ?? reloads.count;
+
+    while (reloads.count <= baseline) {
+      if (Date.now() >= deadline) {
+        return errorText(oneLine`
+          Timed out after ${budget}ms waiting for a view reload
+          (reload count still ${reloads.count}, baseline ${baseline}).
+        `);
+      }
+
+      await sleep(POLL_INTERVAL_MS);
+    }
+
+    // Quiescence: hold until no further context swap for quiescentMs, so an engine that swaps
+    // the context several times per reload trigger yields one wait return, not one per swap.
+    if (quiescentMs > 0) {
+      let lastCount = reloads.count;
+      let quietSince = Date.now();
+
+      while (Date.now() - quietSince < quiescentMs) {
+        if (Date.now() >= deadline) {
+          return errorText(oneLine`
+            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within the
+            ${quiescentMs}ms quiescence window.
+          `);
+        }
+
+        await sleep(POLL_INTERVAL_MS);
+
+        if (reloads.count != lastCount) {
+          lastCount = reloads.count;
+          quietSince = Date.now();
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * The selector/predicate poll loop.
+   */
+  async function pollCondition(): Promise<CallToolResult> {
+    const expression = selector
+      ? callPageFn(waitCheckFn, selector, visible)
+      : `Boolean(${predicate ?? ''})`;
+
+    // Remember the last predicate error so a predicate that consistently throws (e.g., a typo)
+    // surfaces in the timeout message instead of failing silently on every poll.
+    let lastError: string | undefined;
+
+    while (true) {
       const res = await client.call<EvaluateResult>('Runtime.evaluate', {
         expression,
         returnByValue: true
@@ -418,7 +557,10 @@ export async function gameWait(
       } else if (res.result.value) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
 
-        return text(`Condition met (${what}) after ${Date.now() - start}ms.`);
+        // The reload count lets agents chain baselines without an extra game_status call.
+        const reloadNote = reload ? ` Reload count: ${reloads.count}.` : '';
+
+        return text(`Condition met (${what}) after ${Date.now() - start}ms.${reloadNote}`);
       } else {
         // The expression evaluated cleanly but falsy; clear any stale error.
         lastError = undefined;
@@ -433,8 +575,6 @@ export async function gameWait(
 
       await sleep(POLL_INTERVAL_MS);
     }
-  } catch (error) {
-    return toErrorResult(error);
   }
 }
 
@@ -534,6 +674,118 @@ export async function gameHover(client: CdpClient, selector: string): Promise<Ca
 }
 
 /**
+ * Payload of Runtime.executionContextCreated (only the fields we read).
+ * Gameface serializes auxData.isDefault as the string "true" (verified); accept the boolean too.
+ */
+interface ExecutionContextCreatedParams {
+  readonly context?: {
+    readonly uniqueId?: string;
+    readonly auxData?: { readonly isDefault?: boolean | string };
+  };
+}
+
+/**
+ * Called after each detected view reload with the new (monotonic) reload count.
+ */
+export type ReloadListener = (count: number) => void;
+
+/**
+ * Passively counts UI view reloads by watching the default execution context's uniqueId.
+ *
+ * A view reload (mod hot-reload, `location.reload()`) destroys and recreates the page's default
+ * execution context on the surviving WebSocket; Gameface never fires `Page.frameNavigated` or
+ * `Runtime.executionContextsCleared`, so `executionContextCreated` is THE reload signal.
+ * `Runtime.enable` replays `executionContextCreated` for the already-live context, so the first
+ * uniqueId observed is the baseline, not a reload; a reconnect replaying the SAME uniqueId
+ * (socket blip) does not count either, while a different one (e.g., a game restart while
+ * disconnected) does.
+ * The count is monotonic for the server process lifetime and is a lower bound: reloads that happen
+ * while disconnected collapse into one.
+ */
+export class ReloadTracker {
+  private reloadCount = 0;
+
+  private lastReloadAtMs: number | undefined;
+
+  private uniqueId: string | undefined;
+
+  private readonly reloadListeners = new Set<ReloadListener>();
+
+  public constructor(client: CdpClient) {
+    client.onConnect(async conn => {
+      await conn.ensureDomain('Runtime');
+    });
+
+    client.onEvent((method, params) => {
+      this.handle(method, params);
+    });
+  }
+
+  public get count(): number {
+    return this.reloadCount;
+  }
+
+  /**
+   * Epoch ms of the last detected reload, or undefined before the first one.
+   */
+  public get lastReloadAt(): number | undefined {
+    return this.lastReloadAtMs;
+  }
+
+  /**
+   * The current default execution context's uniqueId, or undefined before the first
+   * executionContextCreated (none observed yet on this server's connections).
+   */
+  public get contextUniqueId(): string | undefined {
+    return this.uniqueId;
+  }
+
+  /**
+   * Subscribe to reload detections (e.g., to prune per-context caches).
+   */
+  public onReload(listener: ReloadListener): void {
+    this.reloadListeners.add(listener);
+  }
+
+  private handle(method: string, params: unknown): void {
+    if (method != 'Runtime.executionContextCreated') {
+      return;
+    }
+
+    const { context } = params as ExecutionContextCreatedParams;
+    const isDefault = context?.auxData?.isDefault;
+
+    // Only the default (page) context defines a view reload; ignore auxiliary contexts.
+    if (!(isDefault == true || isDefault == 'true') || context?.uniqueId == null) {
+      return;
+    }
+
+    if (this.uniqueId == context.uniqueId) {
+      return;
+    }
+
+    const isBaseline = this.uniqueId == null;
+
+    this.uniqueId = context.uniqueId;
+
+    if (isBaseline) {
+      return;
+    }
+
+    this.reloadCount++;
+    this.lastReloadAtMs = Date.now();
+
+    for (const listener of this.reloadListeners) {
+      try {
+        listener(this.reloadCount);
+      } catch {
+        /* Listener errors must not break event handling. */
+      }
+    }
+  }
+}
+
+/**
  * One captured console/log/exception line.
  */
 export interface ConsoleEntry {
@@ -546,12 +798,15 @@ export interface ConsoleEntry {
 /**
  * Buffers console/log/exception events from the Gameface UI into a ring buffer.
  * Subscribes to CDP events and (re)enables `Runtime` and `Log` on every connection.
+ * Also interleaves a synthetic entry per detected view reload, so log lines can be correlated
+ * with the context reset that separates them.
  */
 export class ConsoleBuffer {
   private readonly entries: ConsoleEntry[] = [];
+
   private readonly max: number;
 
-  public constructor(client: CdpClient, max = 500) {
+  public constructor(client: CdpClient, reloads: ReloadTracker, max = 500) {
     this.max = max;
 
     client.onConnect(async conn => {
@@ -561,6 +816,15 @@ export class ConsoleBuffer {
 
     client.onEvent((method, params) => {
       this.handle(method, params as Record<string, unknown>);
+    });
+
+    reloads.onReload(count => {
+      this.push({
+        ts: Date.now(),
+        kind: 'reload',
+        level: 'info',
+        text: `view reloaded (#${count})`
+      });
     });
   }
 
@@ -668,7 +932,7 @@ function callPageFn(fn: (...args: never[]) => unknown, ...args: unknown[]): stri
 }
 
 // Page-context functions.
-// These run inside the Gameface UI (never in this process); they are serialised with
+// These run inside the Gameface UI (never in this process); they are serialized with
 // .toString() and injected into Runtime.evaluate. Keep them as plain, self-contained browser
 // JS with no references to anything outside their body. Type annotations are fine: the build
 // erases them before serialization.

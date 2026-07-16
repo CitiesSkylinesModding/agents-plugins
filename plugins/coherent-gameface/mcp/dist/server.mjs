@@ -30666,11 +30666,14 @@ class DebuggerSession {
   nextBpId = 1;
   pausedSeq = 0;
   client;
-  constructor(client) {
+  constructor(client, reloads) {
     this.client = client;
     client.onConnect((conn) => this.onConnect(conn));
     client.onEvent((method, params) => {
       this.handle(method, params);
+    });
+    reloads.onReload(() => {
+      this.scripts.clear();
     });
   }
   async status(setPause) {
@@ -31005,10 +31008,12 @@ import { setTimeout as sleep2 } from "node:timers/promises";
 var POLL_INTERVAL_MS2 = 150;
 var MAX_WAIT_MS = 60000;
 var DEFAULT_WAIT_TIMEOUT_MS = 8000;
+var DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30000;
+var DEFAULT_QUIESCENT_MS = 1000;
 var DEFAULT_JPEG_QUALITY = 80;
 var DEFAULT_CONSOLE_LIMIT = 50;
 var DEFAULT_FIND_LIMIT = 20;
-async function gameStatus(client) {
+async function gameStatus(client, reloads) {
   const { host, port } = client.config;
   try {
     const target = await client.discover();
@@ -31022,12 +31027,25 @@ async function gameStatus(client) {
         protocol = versionInfo["Protocol-Version"];
       }
     } catch {}
+    let tracking = false;
+    try {
+      await client.connection();
+      tracking = true;
+    } catch {}
+    const { lastReloadAt } = reloads;
     return text(JSON.stringify({
       reachable: true,
       endpoint: `http://${host}:${port}`,
       target: { id: target.id, url: target.url, title: target.title, wsUrl: target.wsUrl },
       browser,
-      cdpProtocol: protocol
+      cdpProtocol: protocol,
+      reloads: tracking ? {
+        tracking: true,
+        count: reloads.count,
+        lastReloadAt: lastReloadAt == null ? null : new Date(lastReloadAt).toISOString(),
+        lastReloadAgoMs: lastReloadAt == null ? null : Date.now() - lastReloadAt,
+        contextUniqueId: reloads.contextUniqueId ?? null
+      } : { tracking: false }
     }, null, 2));
   } catch (error51) {
     return text(JSON.stringify({
@@ -31172,18 +31190,74 @@ async function gameClick(client, selector, index = 0) {
     return toErrorResult(error51);
   }
 }
-async function gameWait(client, options) {
-  const { selector, predicate, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, visible = false } = options;
-  if (!selector && !predicate) {
-    return errorText(`game_wait needs either 'selector' or 'predicate'.`);
+async function gameWait(client, reloads, options) {
+  const {
+    selector,
+    predicate,
+    reload = false,
+    sinceReloads,
+    quiescentMs = DEFAULT_QUIESCENT_MS,
+    visible = false
+  } = options;
+  if (!reload && !selector && !predicate) {
+    return errorText(`game_wait needs at least one of 'reload', 'selector', or 'predicate'.`);
   }
+  if (selector && predicate) {
+    return errorText(`game_wait takes either 'selector' or 'predicate', not both.`);
+  }
+  const timeoutMs = options.timeoutMs ?? (reload ? DEFAULT_RELOAD_WAIT_TIMEOUT_MS : DEFAULT_WAIT_TIMEOUT_MS);
   const budget = Math.min(Math.max(timeoutMs, 0), MAX_WAIT_MS);
-  const deadline = Date.now() + budget;
   const start = Date.now();
-  const expression = selector ? callPageFn(waitCheckFn, selector, visible) : `Boolean(${predicate ?? ""})`;
-  let lastError;
+  const deadline = start + budget;
   try {
-    for (;; ) {
+    if (reload) {
+      const failed = await waitForReload();
+      if (failed) {
+        return failed;
+      }
+      if (!selector && !predicate) {
+        return text(`Reload observed after ${Date.now() - start}ms (reload count: ${reloads.count}).`);
+      }
+    }
+    return await pollCondition();
+  } catch (error51) {
+    return toErrorResult(error51);
+  }
+  async function waitForReload() {
+    await client.connection();
+    const baseline = sinceReloads ?? reloads.count;
+    while (reloads.count <= baseline) {
+      if (Date.now() >= deadline) {
+        return errorText(import_common_tags3.oneLine`
+          Timed out after ${budget}ms waiting for a view reload
+          (reload count still ${reloads.count}, baseline ${baseline}).
+        `);
+      }
+      await sleep2(POLL_INTERVAL_MS2);
+    }
+    if (quiescentMs > 0) {
+      let lastCount = reloads.count;
+      let quietSince = Date.now();
+      while (Date.now() - quietSince < quiescentMs) {
+        if (Date.now() >= deadline) {
+          return errorText(import_common_tags3.oneLine`
+            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within the
+            ${quiescentMs}ms quiescence window.
+          `);
+        }
+        await sleep2(POLL_INTERVAL_MS2);
+        if (reloads.count != lastCount) {
+          lastCount = reloads.count;
+          quietSince = Date.now();
+        }
+      }
+    }
+    return;
+  }
+  async function pollCondition() {
+    const expression = selector ? callPageFn(waitCheckFn, selector, visible) : `Boolean(${predicate ?? ""})`;
+    let lastError;
+    while (true) {
       const res = await client.call("Runtime.evaluate", {
         expression,
         returnByValue: true
@@ -31192,7 +31266,8 @@ async function gameWait(client, options) {
         lastError = formatException(res.exceptionDetails);
       } else if (res.result.value) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
-        return text(`Condition met (${what}) after ${Date.now() - start}ms.`);
+        const reloadNote = reload ? ` Reload count: ${reloads.count}.` : "";
+        return text(`Condition met (${what}) after ${Date.now() - start}ms.${reloadNote}`);
       } else {
         lastError = undefined;
       }
@@ -31203,8 +31278,6 @@ async function gameWait(client, options) {
       }
       await sleep2(POLL_INTERVAL_MS2);
     }
-  } catch (error51) {
-    return toErrorResult(error51);
   }
 }
 async function gameFill(client, selector, value) {
@@ -31271,10 +31344,62 @@ async function gameHover(client, selector) {
   }
 }
 
+class ReloadTracker {
+  reloadCount = 0;
+  lastReloadAtMs;
+  uniqueId;
+  reloadListeners = new Set;
+  constructor(client) {
+    client.onConnect(async (conn) => {
+      await conn.ensureDomain("Runtime");
+    });
+    client.onEvent((method, params) => {
+      this.handle(method, params);
+    });
+  }
+  get count() {
+    return this.reloadCount;
+  }
+  get lastReloadAt() {
+    return this.lastReloadAtMs;
+  }
+  get contextUniqueId() {
+    return this.uniqueId;
+  }
+  onReload(listener) {
+    this.reloadListeners.add(listener);
+  }
+  handle(method, params) {
+    if (method != "Runtime.executionContextCreated") {
+      return;
+    }
+    const { context } = params;
+    const isDefault = context?.auxData?.isDefault;
+    if (!(isDefault == true || isDefault == "true") || context?.uniqueId == null) {
+      return;
+    }
+    if (this.uniqueId == context.uniqueId) {
+      return;
+    }
+    const isBaseline = this.uniqueId == null;
+    this.uniqueId = context.uniqueId;
+    if (isBaseline) {
+      return;
+    }
+    this.reloadCount++;
+    this.lastReloadAtMs = Date.now();
+    for (const listener of this.reloadListeners) {
+      try {
+        listener(this.reloadCount);
+      } catch {}
+    }
+  }
+}
+
 class ConsoleBuffer {
   entries = [];
   max;
-  constructor(client, max = 500) {
+  constructor(client, reloads, max = 500) {
     this.max = max;
     client.onConnect(async (conn) => {
       await conn.ensureDomain("Runtime");
@@ -31282,6 +31407,14 @@ class ConsoleBuffer {
     });
     client.onEvent((method, params) => {
       this.handle(method, params);
+    });
+    reloads.onReload((count) => {
+      this.push({
+        ts: Date.now(),
+        kind: "reload",
+        level: "info",
+        text: `view reloaded (#${count})`
+      });
     });
   }
   read(limit, level, clear) {
@@ -31608,16 +31741,19 @@ var { version: VERSION } = JSON.parse(readFileSync(new URL("../package.json", im
 async function main() {
   const config2 = loadConfig();
   const client = new CdpClient(config2);
-  const consoleBuffer = new ConsoleBuffer(client);
-  const debug = new DebuggerSession(client);
+  const reloads = new ReloadTracker(client);
+  const consoleBuffer = new ConsoleBuffer(client, reloads);
+  const debug = new DebuggerSession(client, reloads);
   const server = new McpServer({ name: "gameface-devtools-mcp", version: VERSION });
   server.registerTool("game_status", {
     title: `Gameface UI status`,
     description: import_common_tags4.oneLine`
-        Check whether the Gameface UI debug endpoint is reachable and report the live page target
-        and engine info. Run this first when other game_* tools fail.
+        Check whether the Gameface UI debug endpoint is reachable and report the live page target,
+        engine info, and view-reload tracking (count, last reload time, context id). Calling it
+        arms reload tracking and returns the baseline count for game_wait's sinceReloads. Run this
+        first when other game_* tools fail.
       `
-  }, () => gameStatus(client));
+  }, () => gameStatus(client, reloads));
   server.registerTool("game_eval", {
     title: `Evaluate JS in the Gameface UI`,
     description: import_common_tags4.oneLine`
@@ -31646,17 +31782,42 @@ async function main() {
   server.registerTool("game_wait", {
     title: `Wait for a condition in the Gameface UI`,
     description: import_common_tags4.oneLine`
-        Wait until a CSS selector matches (optionally visible) or a JS predicate becomes truthy,
-        polling the page. Provide exactly one of selector / predicate. Returns when met or times
-        out.
+        Wait until a CSS selector matches (optionally visible), a JS predicate becomes truthy,
+        and/or a view reload happens. Provide at least one of reload / selector / predicate
+        (selector and predicate are mutually exclusive). With reload, the phases compose: reload
+        first, then a quiescence window, then the selector/predicate poll in the fresh context.
+        Returns when met or times out.
       `,
     inputSchema: {
       selector: exports_external.string().optional().describe(`CSS selector to wait for`),
       predicate: exports_external.string().optional().describe(`JS expression evaluated in the page; waits until it is truthy`),
-      timeoutMs: exports_external.number().int().min(0).optional().describe(`Max time to wait in ms (default 8000, capped at 60000)`),
+      reload: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+            Wait for a view reload (context reset) before the selector/predicate phase. Without
+            sinceReloads, waits for the next reload after the call starts.
+          `),
+      sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+            Baseline reload count (from a prior game_status or game_wait). The reload phase is
+            satisfied as soon as the count exceeds it, even if the reload already happened; use it
+            to avoid racing a reload you triggered yourself.
+          `),
+      quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+            After a reload is observed, hold until no further context swap for this long (default
+            1000, 0 disables); absorbs engines that swap the context several times per reload.
+          `),
+      timeoutMs: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+            Max time to wait in ms (default 8000, or 30000 when reload is set; capped at 60000)
+          `),
       visible: exports_external.boolean().optional().describe(`For selector waits, also require a non-zero bounding box (default false)`)
     }
-  }, ({ selector, predicate, timeoutMs, visible }) => gameWait(client, { selector, predicate, timeoutMs, visible }));
+  }, ({ selector, predicate, reload, sinceReloads, quiescentMs, timeoutMs, visible }) => gameWait(client, reloads, {
+    selector,
+    predicate,
+    reload,
+    sinceReloads,
+    quiescentMs,
+    timeoutMs,
+    visible
+  }));
   server.registerTool("game_fill", {
     title: `Set an input value in the Gameface UI`,
     description: import_common_tags4.oneLine`

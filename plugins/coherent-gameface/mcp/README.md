@@ -125,19 +125,19 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 
 ## Tools
 
-| Tool              | What it does                                                                    | Under the hood                      |
-| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
-| `game_status`     | Reachability + page target + engine info. Run first when things fail.           | `/json/list` + `/json/version`      |
-| `game_eval`       | Evaluate a JS expression in the Gameface UI, returns the value as JSON.         | `Runtime.evaluate` (returnByValue)  |
-| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image.               | `Page.captureScreenshot` (+ `clip`) |
-| `game_dom`        | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector.     | `Runtime.evaluate`                  |
-| `game_find`       | Find elements by text (equals/contains/regex); returns rect + optional handles. | `Runtime.evaluate`                  |
-| `game_wait`       | Wait until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate`           |
-| `game_click`      | Click an element by dispatching real bubbling DOM events.                       | `Runtime.evaluate` (see note)       |
-| `game_fill`       | Set an input/textarea/contenteditable value.                                    | `Runtime.evaluate` (see note)       |
-| `game_type`       | Type text key by key (real KeyboardEvents + value sync).                        | `Runtime.evaluate` (see note)       |
-| `game_hover`      | Hover an element (over/enter/move sequence) to trigger tooltips/hover state.    | `Runtime.evaluate` (see note)       |
-| `game_console`    | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI.  | `Log` + `Runtime.consoleAPICalled`  |
+| Tool              | What it does                                                                                                                  | Under the hood                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `game_status`     | Reachability + page target + engine info + view-reload tracking (count, last reload, context id). Run first when things fail. | `/json/list` + `/json/version` + `Runtime.executionContextCreated` |
+| `game_eval`       | Evaluate a JS expression in the Gameface UI, returns the value as JSON.                                                       | `Runtime.evaluate` (returnByValue)                                 |
+| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image.                                                             | `Page.captureScreenshot` (+ `clip`)                                |
+| `game_dom`        | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector.                                                   | `Runtime.evaluate`                                                 |
+| `game_find`       | Find elements by text (equals/contains/regex); returns rect + optional handles.                                               | `Runtime.evaluate`                                                 |
+| `game_wait`       | Wait for a view reload and/or until a selector matches (optionally visible) or a JS predicate is truthy.                      | polled `Runtime.evaluate` + `Runtime.executionContextCreated`      |
+| `game_click`      | Click an element by dispatching real bubbling DOM events.                                                                     | `Runtime.evaluate` (see note)                                      |
+| `game_fill`       | Set an input/textarea/contenteditable value.                                                                                  | `Runtime.evaluate` (see note)                                      |
+| `game_type`       | Type text key by key (real KeyboardEvents + value sync).                                                                      | `Runtime.evaluate` (see note)                                      |
+| `game_hover`      | Hover an element (over/enter/move sequence) to trigger tooltips/hover state.                                                  | `Runtime.evaluate` (see note)                                      |
+| `game_console`    | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI.                                                | `Log` + `Runtime.consoleAPICalled`                                 |
 
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
 > `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,

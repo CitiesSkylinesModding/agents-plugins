@@ -16,6 +16,7 @@ import { loadConfig } from './config';
 import { DebuggerSession } from './debugger';
 import {
   ConsoleBuffer,
+  ReloadTracker,
   gameClick,
   gameConsole,
   gameDom,
@@ -41,9 +42,11 @@ async function main(): Promise<void> {
   const client = new CdpClient(config);
 
   // Constructing these registers their CDP connect/event listeners; they must exist before the
-  // first connection, so console capture and breakpoint re-binding are armed from the start.
-  const consoleBuffer = new ConsoleBuffer(client);
-  const debug = new DebuggerSession(client);
+  // first connection, so reload tracking, console capture, and breakpoint re-binding are armed
+  // from the start. The tracker comes first: the others subscribe to its reload detections.
+  const reloads = new ReloadTracker(client);
+  const consoleBuffer = new ConsoleBuffer(client, reloads);
+  const debug = new DebuggerSession(client, reloads);
 
   const server = new McpServer({ name: 'gameface-devtools-mcp', version: VERSION });
 
@@ -52,11 +55,13 @@ async function main(): Promise<void> {
     {
       title: `Gameface UI status`,
       description: oneLine`
-        Check whether the Gameface UI debug endpoint is reachable and report the live page target
-        and engine info. Run this first when other game_* tools fail.
+        Check whether the Gameface UI debug endpoint is reachable and report the live page target,
+        engine info, and view-reload tracking (count, last reload time, context id). Calling it
+        arms reload tracking and returns the baseline count for game_wait's sinceReloads. Run this
+        first when other game_* tools fail.
       `
     },
-    () => gameStatus(client)
+    () => gameStatus(client, reloads)
   );
 
   server.registerTool(
@@ -110,9 +115,11 @@ async function main(): Promise<void> {
     {
       title: `Wait for a condition in the Gameface UI`,
       description: oneLine`
-        Wait until a CSS selector matches (optionally visible) or a JS predicate becomes truthy,
-        polling the page. Provide exactly one of selector / predicate. Returns when met or times
-        out.
+        Wait until a CSS selector matches (optionally visible), a JS predicate becomes truthy,
+        and/or a view reload happens. Provide at least one of reload / selector / predicate
+        (selector and predicate are mutually exclusive). With reload, the phases compose: reload
+        first, then a quiescence window, then the selector/predicate poll in the fresh context.
+        Returns when met or times out.
       `,
       inputSchema: {
         selector: z.string().optional().describe(`CSS selector to wait for`),
@@ -120,20 +127,38 @@ async function main(): Promise<void> {
           .string()
           .optional()
           .describe(`JS expression evaluated in the page; waits until it is truthy`),
-        timeoutMs: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe(`Max time to wait in ms (default 8000, capped at 60000)`),
+        reload: z.boolean().optional().describe(oneLine`
+            Wait for a view reload (context reset) before the selector/predicate phase. Without
+            sinceReloads, waits for the next reload after the call starts.
+          `),
+        sinceReloads: z.number().int().min(0).optional().describe(oneLine`
+            Baseline reload count (from a prior game_status or game_wait). The reload phase is
+            satisfied as soon as the count exceeds it, even if the reload already happened; use it
+            to avoid racing a reload you triggered yourself.
+          `),
+        quiescentMs: z.number().int().min(0).optional().describe(oneLine`
+            After a reload is observed, hold until no further context swap for this long (default
+            1000, 0 disables); absorbs engines that swap the context several times per reload.
+          `),
+        timeoutMs: z.number().int().min(0).optional().describe(oneLine`
+            Max time to wait in ms (default 8000, or 30000 when reload is set; capped at 60000)
+          `),
         visible: z
           .boolean()
           .optional()
           .describe(`For selector waits, also require a non-zero bounding box (default false)`)
       }
     },
-    ({ selector, predicate, timeoutMs, visible }) =>
-      gameWait(client, { selector, predicate, timeoutMs, visible })
+    ({ selector, predicate, reload, sinceReloads, quiescentMs, timeoutMs, visible }) =>
+      gameWait(client, reloads, {
+        selector,
+        predicate,
+        reload,
+        sinceReloads,
+        quiescentMs,
+        timeoutMs,
+        visible
+      })
   );
 
   server.registerTool(

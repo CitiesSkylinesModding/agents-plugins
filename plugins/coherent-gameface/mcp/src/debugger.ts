@@ -22,6 +22,7 @@ import {
   toErrorResult,
   valToStr
 } from './shared';
+import type { ReloadTracker } from './tools';
 
 /**
  * How long to let the engine replay scriptParsed events after (re)connect.
@@ -128,12 +129,18 @@ export class DebuggerSession {
 
   private readonly client: CdpClient;
 
-  public constructor(client: CdpClient) {
+  public constructor(client: CdpClient, reloads: ReloadTracker) {
     this.client = client;
 
     client.onConnect(conn => this.onConnect(conn));
     client.onEvent((method, params) => {
       this.handle(method, params as Record<string, unknown>);
+    });
+
+    // A view reload re-parses every script under fresh scriptIds; drop the stale ones so
+    // game_debug_scripts lists only ids that are still resolvable.
+    reloads.onReload(() => {
+      this.scripts.clear();
     });
   }
 
