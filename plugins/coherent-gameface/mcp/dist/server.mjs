@@ -31075,36 +31075,45 @@ async function gameEval(client, expression, awaitPromise = false) {
     return toErrorResult(error51);
   }
 }
-async function gameScreenshot(client, format = "png", quality, selector) {
+async function gameScreenshot(client, options = {}) {
+  const { format = "jpeg", quality, selector, index = 0 } = options;
   try {
     await client.ensureDomain("Page");
     const params = { format };
     if (format == "jpeg") {
       params.quality = quality ?? DEFAULT_JPEG_QUALITY;
     }
+    let caption;
     if (selector) {
       const rectRes = await client.call("Runtime.evaluate", {
-        expression: callPageFn(rectFn, selector),
+        expression: callPageFn(rectFn, selector, index),
         returnByValue: true
       });
       const rect = rectRes.result.value;
       if (!rect?.found) {
-        return errorText(`No element matched ${JSON.stringify(selector)} for game_screenshot.`);
+        return errorText(import_common_tags3.oneLine`
+          No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
+          (matches found: ${rect?.count ?? 0}).
+        `);
       }
       if (!(rect.width > 0 && rect.height > 0)) {
         return errorText(`Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`);
       }
       params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
+      caption = import_common_tags3.oneLine`
+        Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
+      `;
     }
     const res = await client.call("Page.captureScreenshot", params);
     if (!res?.data) {
       return errorText(`Page.captureScreenshot returned no image data.`);
     }
-    return {
-      content: [
-        { type: "image", data: res.data, mimeType: format == "jpeg" ? "image/jpeg" : "image/png" }
-      ]
+    const image = {
+      type: "image",
+      data: res.data,
+      mimeType: format == "jpeg" ? "image/jpeg" : "image/png"
     };
+    return { content: caption ? [{ type: "text", text: caption }, image] : [image] };
   } catch (error51) {
     return toErrorResult(error51);
   }
@@ -31280,10 +31289,10 @@ async function gameWait(client, reloads, options) {
     }
   }
 }
-async function gameFill(client, selector, value) {
+async function gameFill(client, selector, value, index = 0) {
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(fillFn, selector, value),
+      expression: callPageFn(fillFn, selector, value, index),
       returnByValue: true
     });
     if (res.exceptionDetails) {
@@ -31291,20 +31300,23 @@ async function gameFill(client, selector, value) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_fill.`);
+      return errorText(import_common_tags3.oneLine`
+        No element matched ${JSON.stringify(selector)} for game_fill at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
     return text(import_common_tags3.oneLine`
-      Filled ${JSON.stringify(selector)} (${info.mode}).
-      Value is now ${JSON.stringify(info.value)}.
+      Filled ${JSON.stringify(selector)} [index ${index}] (${info.mode}).
+      Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
   } catch (error51) {
     return toErrorResult(error51);
   }
 }
-async function gameType(client, selector, textToType) {
+async function gameType(client, selector, textToType, index = 0) {
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(typeFn, selector, textToType),
+      expression: callPageFn(typeFn, selector, textToType, index),
       returnByValue: true
     });
     if (res.exceptionDetails) {
@@ -31312,20 +31324,23 @@ async function gameType(client, selector, textToType) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_type.`);
+      return errorText(import_common_tags3.oneLine`
+        No element matched ${JSON.stringify(selector)} for game_type at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
     return text(import_common_tags3.oneLine`
-      Typed ${info.typed} char(s) into ${JSON.stringify(selector)}.
-      Value is now ${JSON.stringify(info.value)}.
+      Typed ${info.typed} char(s) into ${JSON.stringify(selector)} [index ${index}].
+      Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
   } catch (error51) {
     return toErrorResult(error51);
   }
 }
-async function gameHover(client, selector) {
+async function gameHover(client, selector, index = 0) {
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(hoverFn, selector),
+      expression: callPageFn(hoverFn, selector, index),
       returnByValue: true
     });
     if (res.exceptionDetails) {
@@ -31333,11 +31348,15 @@ async function gameHover(client, selector) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_hover.`);
+      return errorText(import_common_tags3.oneLine`
+        No element matched ${JSON.stringify(selector)} for game_hover at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
     return text(import_common_tags3.oneLine`
-      Hovered ${JSON.stringify(selector)} at (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
-      Dispatched: ${info.fired.join(", ")}.
+      Hovered ${JSON.stringify(selector)} [index ${index}] at
+      (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
+      Dispatched: ${info.fired.join(", ")}. Matches: ${info.count}.
     `);
   } catch (error51) {
     return toErrorResult(error51);
@@ -31619,11 +31638,17 @@ function waitCheckFn(sel, visible) {
   const rect = el.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0;
 }
-function fillFn(sel, value) {
-  const el = document.querySelector(sel);
-  if (!el) {
-    return { found: false };
+function fillFn(sel, value, index) {
+  const nodes = document.querySelectorAll(sel);
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
   }
+  const node = nodes[index];
+  if (!node) {
+    return { found: false, count: nodes.length };
+  }
+  const el = node;
+  const count = nodes.length;
   try {
     el.focus();
   } catch {}
@@ -31632,7 +31657,7 @@ function fillFn(sel, value) {
     el.textContent = value;
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
-    return { found: true, mode: "contenteditable", value: el.textContent ?? "" };
+    return { found: true, count, mode: "contenteditable", value: el.textContent ?? "" };
   }
   const field = el;
   const proto = tag == "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -31644,14 +31669,19 @@ function fillFn(sel, value) {
   }
   el.dispatchEvent(new Event("input", { bubbles: true }));
   el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, mode: tag || "input", value: field.value };
+  return { found: true, count, mode: tag || "input", value: field.value };
 }
-function typeFn(sel, textToType) {
-  const node = document.querySelector(sel);
+function typeFn(sel, textToType, index) {
+  const nodes = document.querySelectorAll(sel);
+  if (nodes.length == 0) {
+    return { found: false, count: 0, typed: 0 };
+  }
+  const node = nodes[index];
   if (!node) {
-    return { found: false, typed: 0 };
+    return { found: false, count: nodes.length, typed: 0 };
   }
   const el = node;
+  const count = nodes.length;
   try {
     el.focus();
   } catch {}
@@ -31679,7 +31709,7 @@ function typeFn(sel, textToType) {
     typed++;
   }
   el.dispatchEvent(new Event("change", { bubbles: true }));
-  return { found: true, typed, value: current() };
+  return { found: true, count, typed, value: current() };
   function current() {
     if (editable) {
       return el.textContent ?? "";
@@ -31696,12 +31726,17 @@ function typeFn(sel, textToType) {
     }
   }
 }
-function hoverFn(sel) {
-  const node = document.querySelector(sel);
+function hoverFn(sel, index) {
+  const nodes = document.querySelectorAll(sel);
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
+  }
+  const node = nodes[index];
   if (!node) {
-    return { found: false };
+    return { found: false, count: nodes.length };
   }
   const el = node;
+  const count = nodes.length;
   const rect = el.getBoundingClientRect();
   const cx = rect.x + rect.width / 2;
   const cy = rect.y + rect.height / 2;
@@ -31719,7 +31754,7 @@ function hoverFn(sel) {
   fire("pointerenter", noBubble);
   fire("mouseenter", noBubble);
   fire("mousemove", base);
-  return { found: true, x: cx, y: cy, fired };
+  return { found: true, count, x: cx, y: cy, fired };
   function fire(type, init) {
     try {
       el.dispatchEvent(new MouseEvent(type, init));
@@ -31727,13 +31762,24 @@ function hoverFn(sel) {
     } catch {}
   }
 }
-function rectFn(sel) {
-  const el = document.querySelector(sel);
+function rectFn(sel, index) {
+  const nodes = document.querySelectorAll(sel);
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
+  }
+  const el = nodes[index];
   if (!el) {
-    return { found: false };
+    return { found: false, count: nodes.length };
   }
   const rect = el.getBoundingClientRect();
-  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  return {
+    found: true,
+    count: nodes.length,
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height
+  };
 }
 
 // src/server.ts
@@ -31749,17 +31795,17 @@ async function main() {
     title: `Gameface UI status`,
     description: import_common_tags4.oneLine`
         Check whether the Gameface UI debug endpoint is reachable and report the live page target,
-        engine info, and view-reload tracking (count, last reload time, context id). Calling it
-        arms reload tracking and returns the baseline count for game_wait's sinceReloads. Run this
-        first when other game_* tools fail.
+        engine info, and view-reload tracking (count, last reload time, context id).
+        Calling it arms reload tracking and returns the baseline count for game_wait's sinceReloads.
+        Run this first when other game_* tools fail.
       `
   }, () => gameStatus(client, reloads));
   server.registerTool("game_eval", {
     title: `Evaluate JS in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate,
-        returnByValue) and return the resulting value as JSON. Use document.querySelector and
-        friends to read the live DOM, inspect React state, or call UI APIs.
+        returnByValue) and return the resulting value as JSON.
+        Use document.querySelector and friends to read the live DOM, inspect state, or call UI APIs.
       `,
     inputSchema: {
       expression: exports_external.string().describe(`JavaScript expression to evaluate in the page context`),
@@ -31770,35 +31816,37 @@ async function main() {
     title: `Screenshot the Gameface UI`,
     description: import_common_tags4.oneLine`
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
-        as an inline image. Pass a selector to clip the capture to one element. Use jpeg with a
-        lower quality to reduce payload size.
+        as an inline image.
+        Pass a selector to clip the capture to one element; use index to pick among matches.
       `,
     inputSchema: {
-      format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
+      format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: jpeg)`),
       quality: exports_external.number().min(1).max(100).optional().describe(`JPEG quality 1-100 (only used when format is jpeg; default 80)`),
-      selector: exports_external.string().optional().describe(`If set, clip the screenshot to this element's bounding box`)
+      selector: exports_external.string().optional().describe(`If set, clip the screenshot to this element's bounding box`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to clip to when several exist (default: 0)`)
     }
-  }, ({ format, quality, selector }) => gameScreenshot(client, format, quality, selector));
+  }, ({ format, quality, selector, index }) => gameScreenshot(client, { format, quality, selector, index }));
   server.registerTool("game_wait", {
     title: `Wait for a condition in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Wait until a CSS selector matches (optionally visible), a JS predicate becomes truthy,
         and/or a view reload happens. Provide at least one of reload / selector / predicate
-        (selector and predicate are mutually exclusive). With reload, the phases compose: reload
-        first, then a quiescence window, then the selector/predicate poll in the fresh context.
+        (selector and predicate are mutually exclusive).
+        With reload, the phases compose: reload first, then a quiescence window, then the
+        selector/predicate poll in the fresh context.
         Returns when met or times out.
       `,
     inputSchema: {
       selector: exports_external.string().optional().describe(`CSS selector to wait for`),
       predicate: exports_external.string().optional().describe(`JS expression evaluated in the page; waits until it is truthy`),
       reload: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
-            Wait for a view reload (context reset) before the selector/predicate phase. Without
-            sinceReloads, waits for the next reload after the call starts.
+            Wait for a view reload (context reset) before the selector/predicate phase.
+            Without sinceReloads, waits for the next reload after the call starts.
           `),
       sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
-            Baseline reload count (from a prior game_status or game_wait). The reload phase is
-            satisfied as soon as the count exceeds it, even if the reload already happened; use it
-            to avoid racing a reload you triggered yourself.
+            Baseline reload count (from a prior game_status or game_wait).
+            The reload phase is satisfied as soon as the count exceeds it, even if the reload
+            already happened; use it to avoid racing a reload you triggered yourself.
           `),
       quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
             After a reload is observed, hold until no further context swap for this long (default
@@ -31822,39 +31870,48 @@ async function main() {
     title: `Set an input value in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Set the value of an input, textarea, or contenteditable element and fire input/change so
-        React's onChange runs. Best for setting a field in one shot; use game_type for keystrokes.
+        to simulate user input.
+        Best for setting a field in one shot; use game_type for keystrokes.
+        Use index to pick among matches.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector of the field to fill`),
-      value: exports_external.string().describe(`Value to set`)
+      value: exports_external.string().describe(`Value to set`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to fill when several exist (default: 0)`)
     }
-  }, ({ selector, value }) => gameFill(client, selector, value));
+  }, ({ selector, value, index }) => gameFill(client, selector, value, index));
   server.registerTool("game_type", {
     title: `Type text into the Gameface UI`,
     description: import_common_tags4.oneLine`
         Type text into an element character by character, firing real KeyboardEvents plus keeping
-        the value in sync. Use when handlers react to individual keystrokes; otherwise game_fill.
+        the value in sync.
+        Use when handlers react to individual keystrokes; otherwise game_fill.
+        Use index to pick among matches.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector of the field to type into`),
-      text: exports_external.string().describe(`Text to type`)
+      text: exports_external.string().describe(`Text to type`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to type into when several exist (default: 0)`)
     }
-  }, ({ selector, text: text2 }) => gameType(client, selector, text2));
+  }, ({ selector, text: text2, index }) => gameType(client, selector, text2, index));
   server.registerTool("game_hover", {
     title: `Hover an element in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
         React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.
+        Use index to pick among matches.
       `,
     inputSchema: {
-      selector: exports_external.string().describe(`CSS selector of the element to hover`)
+      selector: exports_external.string().describe(`CSS selector of the element to hover`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to hover when several exist (default: 0)`)
     }
-  }, ({ selector }) => gameHover(client, selector));
+  }, ({ selector, index }) => gameHover(client, selector, index));
   server.registerTool("game_console", {
     title: `Read the Gameface UI console`,
     description: import_common_tags4.oneLine`
         Return recent console.* calls, log entries, and uncaught exceptions captured from the
-        Gameface UI. Capture starts when the server first connects to the application.
+        Gameface UI.
+        Capture starts when the server first connects to the application.
       `,
     inputSchema: {
       limit: exports_external.number().int().min(1).max(1000).optional().describe(`Max entries to return (default 50)`),
@@ -31866,7 +31923,8 @@ async function main() {
     title: `Inspect Gameface UI DOM`,
     description: import_common_tags4.oneLine`
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
-        matching a CSS selector in the live Gameface UI. Set all=true to return every match.
+        matching a CSS selector in the live Gameface UI.
+        Set all=true to return every match.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector to query in the Gameface UI`),
@@ -31877,13 +31935,14 @@ async function main() {
   server.registerTool("game_find", {
     title: `Find elements by text in the Gameface UI`,
     description: import_common_tags4.oneLine`
-        Locate elements by their text content in the live Gameface UI: scan a CSS selector's
-        matches (default: every element) and filter on trimmed textContent by equals / contains /
-        regex (case-insensitive by default). Returns tag, id, classes, and bounding rect per match,
-        plus match counts before and after deepest pruning so pruning and limit truncation are both
-        visible. Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use
-        selectors for game_click / game_hover / game_screenshot. The go-to way to find an element
-        when class names are build-hashed and there is no XPath.
+        Locate elements by their text content in the live Gameface UI: scan a CSS selector's matches
+        (default: every element) and filter on trimmed textContent by equals/contains/regex
+        (case-insensitive by default).
+        Returns tag, id, classes, and bounding rect per match, plus match counts before and after
+        deepest pruning so pruning and limit truncation are both visible.
+        Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use selectors
+        for game_click / game_hover / game_screenshot.
+        The go-to way to find an element when class names are build-hashed and there is no XPath.
       `,
     inputSchema: {
       text: exports_external.string().describe(`Text to match against each element's trimmed textContent`),
@@ -31902,8 +31961,8 @@ async function main() {
     title: `Click an element in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
-        sequence in the page (NOT CDP Input, which Gameface ignores for the UI). React onClick
-        handlers fire via event delegation. Use index to pick among matches.
+        sequence in the page (NOT CDP Input, which Gameface ignores for the UI).
+        Use index to pick among matches.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector of the element to click`),
@@ -31914,8 +31973,10 @@ async function main() {
     title: `JS debugger status`,
     description: import_common_tags4.oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
-        and parsed script count. Pass setPauseOnExceptions to change exception pausing. Enables the
-        debugger on first use. Hitting a breakpoint FREEZES the UI until resumed.
+        and parsed script count.
+        Pass setPauseOnExceptions to change exception pausing.
+        Enables the debugger on first use.
+        Hitting a breakpoint FREEZES the UI until resumed.
       `,
     inputSchema: {
       setPauseOnExceptions: exports_external.enum(["none", "uncaught", "all"]).optional().describe(`If set, change which exceptions pause execution (default none)`)
@@ -31925,7 +31986,8 @@ async function main() {
     title: `List parsed UI scripts`,
     description: import_common_tags4.oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
-        filtered by a url substring. Use the scriptId with game_debug_source.
+        filtered by a url substring.
+        Use the scriptId with game_debug_source.
       `,
     inputSchema: {
       filter: exports_external.string().optional().describe(`Only scripts whose url contains this substring`)
@@ -31946,9 +32008,10 @@ async function main() {
   server.registerTool("game_debug_set_breakpoint", {
     title: `Set a breakpoint`,
     description: import_common_tags4.oneLine`
-        Set a breakpoint by url substring + line (1-based). Add a condition (JS expression) to only
-        pause when it is truthy, which limits how often the UI freezes. Hitting it FREEZES the UI
-        until you resume with game_debug_step.
+        Set a breakpoint by url substring + line (1-based).
+        Add a condition (JS expression) to only pause when it is truthy, which limits how often the
+        UI freezes.
+        Hitting it FREEZES the UI until you resume with game_debug_step.
       `,
     inputSchema: {
       urlContains: exports_external.string().describe(`Substring of the script url to break in`),
@@ -31967,9 +32030,9 @@ async function main() {
   server.registerTool("game_debug_pause_state", {
     title: `Inspect the paused stack`,
     description: import_common_tags4.oneLine`
-        When paused, return the call stack (frames with function + location + scope types). Set
-        expandScopes to also list local/closure variables of each frame. Returns 'not paused'
-        otherwise.
+        When paused, return the call stack (frames with function + location + scope types).
+        Set expandScopes to also list local/closure variables of each frame.
+        Returns 'not paused' otherwise.
       `,
     inputSchema: {
       expandScopes: exports_external.boolean().optional().describe(`Also list local/closure variables per frame (default false)`)
@@ -31978,9 +32041,10 @@ async function main() {
   server.registerTool("game_debug_evaluate", {
     title: `Evaluate while debugging`,
     description: import_common_tags4.oneLine`
-        Evaluate a JS expression. When paused, it runs in the selected call frame's scope
-        (Debugger.evaluateOnCallFrame) so you can read locals; otherwise it runs globally. Prefer
-        this over game_eval while paused.
+        Evaluate a JS expression.
+        When paused, it runs in the selected call frame's scope (Debugger.evaluateOnCallFrame) so
+        you can read locals; otherwise it runs globally.
+        Prefer this over game_eval while paused.
       `,
     inputSchema: {
       expression: exports_external.string().describe(`JS expression to evaluate`),
@@ -31990,8 +32054,9 @@ async function main() {
   server.registerTool("game_debug_step", {
     title: `Step / resume / pause execution`,
     description: import_common_tags4.oneLine`
-        Control paused execution: resume (unfreeze the UI), over / into / out (step), or pause
-        (break at the next statement). Stepping reports the new location.
+        Control paused execution: resume (unfreeze the UI), over/into/out (step), or pause (break at
+        the next statement).
+        Stepping reports the new location.
       `,
     inputSchema: {
       action: exports_external.enum(["resume", "over", "into", "out", "pause"]).describe(`resume | over | into | out | pause`)

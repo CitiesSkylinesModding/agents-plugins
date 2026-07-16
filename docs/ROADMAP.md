@@ -9,12 +9,6 @@ application-agnostic.
 
 ## Planned/Explore
 
-### Selector `index` parity across tools
-
-`game_click` takes an `index` to pick among selector matches; `game_hover` and `game_screenshot`
-(selector clipping) do not, forcing a manual tag-the-node workaround when no unique selector
-exists. Add `index` to both.
-
 ### Keyboard input (`game_key`)
 
 No tool sends key presses to the UI: CDP `Input` is ignored, and `game_type` only feeds characters

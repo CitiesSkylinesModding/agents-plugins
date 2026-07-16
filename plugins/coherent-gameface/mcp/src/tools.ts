@@ -39,15 +39,21 @@ type ClickResult =
   | { found: true; count: number; x: number; y: number; fired: string[] }
   | { found: false; count: number; fired: string[] };
 
-type FillResult = { found: true; mode: string; value: string } | { found: false };
+type FillResult =
+  | { found: true; count: number; mode: string; value: string }
+  | { found: false; count: number };
 
-type TypeResult = { found: true; typed: number; value: string } | { found: false; typed: 0 };
+type TypeResult =
+  | { found: true; count: number; typed: number; value: string }
+  | { found: false; count: number; typed: 0 };
 
-type HoverResult = { found: true; x: number; y: number; fired: string[] } | { found: false };
+type HoverResult =
+  | { found: true; count: number; x: number; y: number; fired: string[] }
+  | { found: false; count: number };
 
 type RectResult =
-  | { found: true; x: number; y: number; width: number; height: number }
-  | { found: false };
+  | { found: true; count: number; x: number; y: number; width: number; height: number }
+  | { found: false; count: number };
 
 interface FindMatch {
   tagName: string | null;
@@ -224,15 +230,25 @@ export async function gameEval(
 }
 
 /**
+ * Options for gameScreenshot.
+ */
+export interface GameScreenshotOptions {
+  readonly format?: 'png' | 'jpeg' | undefined;
+  readonly quality?: number | undefined;
+  readonly selector?: string | undefined;
+  readonly index?: number | undefined;
+}
+
+/**
  * Captures a screenshot of the Gameface UI and returns it as an inline image.
- * When a selector is given, the capture is clipped to that element's bounding box.
+ * When a selector is given, the capture is clipped to the `index`-th match's bounding box.
  */
 export async function gameScreenshot(
   client: CdpClient,
-  format: 'png' | 'jpeg' = 'png',
-  quality?: number,
-  selector?: string
+  options: GameScreenshotOptions = {}
 ): Promise<CallToolResult> {
+  const { format = 'jpeg', quality, selector, index = 0 } = options;
+
   try {
     await client.ensureDomain('Page');
 
@@ -242,15 +258,21 @@ export async function gameScreenshot(
       params.quality = quality ?? DEFAULT_JPEG_QUALITY;
     }
 
+    let caption: string | undefined;
+
     if (selector) {
       const rectRes = await client.call<EvaluateResult>('Runtime.evaluate', {
-        expression: callPageFn(rectFn, selector),
+        expression: callPageFn(rectFn, selector, index),
         returnByValue: true
       });
+
       const rect = rectRes.result.value as RectResult | undefined;
 
       if (!rect?.found) {
-        return errorText(`No element matched ${JSON.stringify(selector)} for game_screenshot.`);
+        return errorText(oneLine`
+          No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
+          (matches found: ${rect?.count ?? 0}).
+        `);
       }
 
       if (!(rect.width > 0 && rect.height > 0)) {
@@ -260,6 +282,10 @@ export async function gameScreenshot(
       }
 
       params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
+
+      caption = oneLine`
+        Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
+      `;
     }
 
     const res = await client.call<{ data?: string }>('Page.captureScreenshot', params);
@@ -268,11 +294,15 @@ export async function gameScreenshot(
       return errorText(`Page.captureScreenshot returned no image data.`);
     }
 
-    return {
-      content: [
-        { type: 'image', data: res.data, mimeType: format == 'jpeg' ? 'image/jpeg' : 'image/png' }
-      ]
+    const image = {
+      type: 'image' as const,
+      data: res.data,
+      mimeType: format == 'jpeg' ? 'image/jpeg' : 'image/png'
     };
+
+    // A clipped capture prefixes a text block naming the match and index; a full-viewport capture
+    // (no selector) has no match concept and stays image-only.
+    return { content: caption ? [{ type: 'text', text: caption }, image] : [image] };
   } catch (error) {
     return toErrorResult(error);
   }
@@ -584,11 +614,12 @@ export async function gameWait(
 export async function gameFill(
   client: CdpClient,
   selector: string,
-  value: string
+  value: string,
+  index = 0
 ): Promise<CallToolResult> {
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(fillFn, selector, value),
+      expression: callPageFn(fillFn, selector, value, index),
       returnByValue: true
     });
 
@@ -599,12 +630,15 @@ export async function gameFill(
     const info = res.result.value as FillResult | undefined;
 
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_fill.`);
+      return errorText(oneLine`
+        No element matched ${JSON.stringify(selector)} for game_fill at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
 
     return text(oneLine`
-      Filled ${JSON.stringify(selector)} (${info.mode}).
-      Value is now ${JSON.stringify(info.value)}.
+      Filled ${JSON.stringify(selector)} [index ${index}] (${info.mode}).
+      Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
   } catch (error) {
     return toErrorResult(error);
@@ -617,11 +651,12 @@ export async function gameFill(
 export async function gameType(
   client: CdpClient,
   selector: string,
-  textToType: string
+  textToType: string,
+  index = 0
 ): Promise<CallToolResult> {
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(typeFn, selector, textToType),
+      expression: callPageFn(typeFn, selector, textToType, index),
       returnByValue: true
     });
 
@@ -632,12 +667,15 @@ export async function gameType(
     const info = res.result.value as TypeResult | undefined;
 
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_type.`);
+      return errorText(oneLine`
+        No element matched ${JSON.stringify(selector)} for game_type at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
 
     return text(oneLine`
-      Typed ${info.typed} char(s) into ${JSON.stringify(selector)}.
-      Value is now ${JSON.stringify(info.value)}.
+      Typed ${info.typed} char(s) into ${JSON.stringify(selector)} [index ${index}].
+      Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
   } catch (error) {
     return toErrorResult(error);
@@ -647,10 +685,14 @@ export async function gameType(
 /**
  * Hovers an element by dispatching the over/enter/move event sequence.
  */
-export async function gameHover(client: CdpClient, selector: string): Promise<CallToolResult> {
+export async function gameHover(
+  client: CdpClient,
+  selector: string,
+  index = 0
+): Promise<CallToolResult> {
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(hoverFn, selector),
+      expression: callPageFn(hoverFn, selector, index),
       returnByValue: true
     });
 
@@ -661,12 +703,16 @@ export async function gameHover(client: CdpClient, selector: string): Promise<Ca
     const info = res.result.value as HoverResult | undefined;
 
     if (!info?.found) {
-      return errorText(`No element matched ${JSON.stringify(selector)} for game_hover.`);
+      return errorText(oneLine`
+        No element matched ${JSON.stringify(selector)} for game_hover at index ${index}
+        (matches found: ${info?.count ?? 0}).
+      `);
     }
 
     return text(oneLine`
-      Hovered ${JSON.stringify(selector)} at (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
-      Dispatched: ${info.fired.join(', ')}.
+      Hovered ${JSON.stringify(selector)} [index ${index}] at
+      (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
+      Dispatched: ${info.fired.join(', ')}. Matches: ${info.count}.
     `);
   } catch (error) {
     return toErrorResult(error);
@@ -1159,12 +1205,22 @@ function waitCheckFn(sel: string, visible: boolean): boolean {
  * We use the native value setter (verified present in Cohtml) so React's value tracker notices.
  * InputEvent is missing in Cohtml, so we dispatch a plain bubbling `Event('input')`.
  */
-function fillFn(sel: string, value: string): FillResult {
-  const el = document.querySelector<HTMLElement>(sel);
+function fillFn(sel: string, value: string, index: number): FillResult {
+  const nodes = document.querySelectorAll<HTMLElement>(sel);
 
-  if (!el) {
-    return { found: false };
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
   }
+
+  const node = nodes[index];
+
+  if (!node) {
+    return { found: false, count: nodes.length };
+  }
+
+  // Alias the narrowed node so the branches below operate on a non-null element.
+  const el = node;
+  const count = nodes.length;
 
   try {
     el.focus();
@@ -1179,7 +1235,7 @@ function fillFn(sel: string, value: string): FillResult {
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
 
-    return { found: true, mode: 'contenteditable', value: el.textContent ?? '' };
+    return { found: true, count, mode: 'contenteditable', value: el.textContent ?? '' };
   }
 
   const field = el as HTMLInputElement | HTMLTextAreaElement;
@@ -1196,22 +1252,29 @@ function fillFn(sel: string, value: string): FillResult {
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
 
-  return { found: true, mode: tag || 'input', value: field.value };
+  return { found: true, count, mode: tag || 'input', value: field.value };
 }
 
 /**
  * Types text character by character, firing real KeyboardEvents (present in Cohtml) plus keeping
  * the value in sync and dispatching input/change for React.
  */
-function typeFn(sel: string, textToType: string): TypeResult {
-  const node = document.querySelector<HTMLElement>(sel);
+function typeFn(sel: string, textToType: string, index: number): TypeResult {
+  const nodes = document.querySelectorAll<HTMLElement>(sel);
+
+  if (nodes.length == 0) {
+    return { found: false, count: 0, typed: 0 };
+  }
+
+  const node = nodes[index];
 
   if (!node) {
-    return { found: false, typed: 0 };
+    return { found: false, count: nodes.length, typed: 0 };
   }
 
   // Alias the narrowed node so the hoisted helpers below close over a non-null element.
   const el = node;
+  const count = nodes.length;
 
   try {
     el.focus();
@@ -1244,6 +1307,7 @@ function typeFn(sel: string, textToType: string): TypeResult {
     }
 
     setValue(current() + ch);
+
     el.dispatchEvent(new Event('input', { bubbles: true }));
 
     try {
@@ -1257,7 +1321,7 @@ function typeFn(sel: string, textToType: string): TypeResult {
 
   el.dispatchEvent(new Event('change', { bubbles: true }));
 
-  return { found: true, typed, value: current() };
+  return { found: true, count, typed, value: current() };
 
   function current(): string {
     if (editable) {
@@ -1284,15 +1348,22 @@ function typeFn(sel: string, textToType: string): TypeResult {
  * is what React keys off).
  * `enter`/`leave` do not bubble.
  */
-function hoverFn(sel: string): HoverResult {
-  const node = document.querySelector<HTMLElement>(sel);
+function hoverFn(sel: string, index: number): HoverResult {
+  const nodes = document.querySelectorAll<HTMLElement>(sel);
+
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
+  }
+
+  const node = nodes[index];
 
   if (!node) {
-    return { found: false };
+    return { found: false, count: nodes.length };
   }
 
   // Alias the narrowed node so the hoisted fire() helper below closes over a non-null element.
   const el = node;
+  const count = nodes.length;
 
   const rect = el.getBoundingClientRect();
   const cx = rect.x + rect.width / 2;
@@ -1317,7 +1388,7 @@ function hoverFn(sel: string): HoverResult {
   fire('mouseenter', noBubble);
   fire('mousemove', base);
 
-  return { found: true, x: cx, y: cy, fired };
+  return { found: true, count, x: cx, y: cy, fired };
 
   function fire(type: string, init: MouseEventInit): void {
     try {
@@ -1332,14 +1403,27 @@ function hoverFn(sel: string): HoverResult {
 /**
  * Returns an element's viewport box, for clipping a screenshot to it.
  */
-function rectFn(sel: string): RectResult {
-  const el = document.querySelector(sel);
+function rectFn(sel: string, index: number): RectResult {
+  const nodes = document.querySelectorAll(sel);
+
+  if (nodes.length == 0) {
+    return { found: false, count: 0 };
+  }
+
+  const el = nodes[index];
 
   if (!el) {
-    return { found: false };
+    return { found: false, count: nodes.length };
   }
 
   const rect = el.getBoundingClientRect();
 
-  return { found: true, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  return {
+    found: true,
+    count: nodes.length,
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height
+  };
 }
