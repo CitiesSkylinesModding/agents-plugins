@@ -35,16 +35,6 @@ live locating a settings back arrow). Add an attribute-match mode to `game_find`
 `[data-tooltip="..."]` for clicks, so those anchors exist. `querySelectorAll` + `getAttribute` makes
 it trivial.
 
-### Reload awareness
-
-A UI view reload (mod hot-reload, `location.reload()`) resets the JS context while the CDP
-connection survives; agents currently detect it with a sentinel global, which queued reloads can
-false-positive. The server should detect reloads passively from a CDP event instead: expose a
-reload counter/timestamp in `game_status` and let `game_wait` wait for the next reload. First step
-is verifying which event Gameface actually emits on view reload (candidates:
-`Runtime.executionContextsCleared`, `Runtime.executionContextCreated`, `Page.frameNavigated`); none
-was probed. Fallback if none fires: poll a server-planted context marker.
-
 ### Debugger ergonomics
 
 Three sharp edges found while field-testing the debugger against a live game:
@@ -60,6 +50,10 @@ Three sharp edges found while field-testing the debugger against a live game:
   never hits during normal interaction. `game_debug_set_breakpoint` should report the resolved
   column and warn on single-line scripts; a `game_debug_search_source` (find string, return
   line:column candidates) would make column targeting practical.
+- Open question: whether CDP breakpoints re-resolve across a same-connection view reload (scripts
+  re-parse under fresh scriptIds; the server prunes its script map, but the engine-side
+  `setBreakpointByUrl` registrations were never verified to re-bind). Probe before relying on
+  breakpoints surviving a reload.
 
 ### Richer console output
 
