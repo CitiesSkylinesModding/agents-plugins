@@ -42,8 +42,15 @@ Gameface ships no file watcher (its docs' "Live Reload" page is a webpack-dev-se
 Hot reload is typically a developer-mode feature; when a rebuild produces no reload, suspect the gate (a launch flag, how the UI was installed) before suspecting the build, and `game_eval` of `location.reload()` is the manual fallback.
 However triggered, a reload is a full view reload: the JS context resets (all globals wiped), the document rebuilds, and every script re-parses.
 The CDP connection survives the reload transparently, and an in-flight `game_wait` keeps polling across the context reset and can resolve on the other side.
-To detect "my new code is live" without editing the source: plant `globalThis.__sentinel = 1` via `game_eval` before the rebuild, `game_wait` on `!globalThis.__sentinel` (it fires the moment the context resets), then wait for the app's root selector to be visible again.
-Reloads can queue up, so a sentinel wipe can come from a stale reload rather than your build; when exactness matters, confirm the new code by an observable it introduces.
+The server detects reloads passively: `game_status` arms the tracking and reports a `reloads` block (monotonic `count`, `lastReloadAt`, the context's `uniqueId`), and `game_wait` takes `reload: true` to wait for one.
+The deterministic idiom to get new code live: rebuild, read the baseline `count` from `game_status`, `game_eval` of `location.reload()`, then one `game_wait({reload: true, sinceReloads: <baseline>, selector: <app root>})`.
+`sinceReloads` matters because `location.reload()` lands in ~200ms (CS2-verified), faster than your next tool call; with the baseline, the wait is satisfied even when the reload already happened, so there is no race to lose.
+After the reload phase, `game_wait` holds until no further context swap for `quiescentMs` (default 1000ms), then runs the selector/predicate phase in the fresh context, so one call covers "reloaded and UI ready"; its success text reports the final reload count, the baseline for the next iteration without another `game_status`.
+The count is a lower bound: reloads while the server is disconnected collapse into one, and a game restart surfaces as one reload at reconnect.
+`game_console` interleaves a `view reloaded (#N)` entry per reload, which correlates log lines with context resets.
+CS2-verified watcher behavior: the mod-file watcher is a slow coalescing mtime poll (~15-20s period, jittery); all file changes since its last tick coalesce into ONE reload trigger, and each trigger fires exactly two context swaps ~530ms apart (absorbed by the default quiescence window, counted as +2).
+So on CS2, prefer the `location.reload()` idiom for determinism; when relying on the watcher, raise the wait budget (`game_wait({reload: true, timeoutMs: 45000, ...})`), since the trigger latency alone can approach 20s before the first swap.
+Reloads can still queue or coalesce outside your control; when exactness matters, confirm the new code by an observable it introduces.
 
 ## Debugging without freezing the session away
 
