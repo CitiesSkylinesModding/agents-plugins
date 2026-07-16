@@ -31362,6 +31362,71 @@ async function gameHover(client, selector, index = 0) {
     return toErrorResult(error51);
   }
 }
+async function gameKey(client, options) {
+  const {
+    key,
+    count = 1,
+    ctrl = false,
+    shift = false,
+    alt = false,
+    meta: meta3 = false,
+    selector,
+    index = 0
+  } = options;
+  try {
+    const res = await client.call("Runtime.evaluate", {
+      expression: callPageFn(keyFn, {
+        key,
+        count,
+        ctrl,
+        shift,
+        alt,
+        meta: meta3,
+        sel: selector ?? null,
+        index
+      }),
+      returnByValue: true
+    });
+    if (res.exceptionDetails) {
+      return errorText(`Key press failed: ${formatException(res.exceptionDetails)}`);
+    }
+    const info = res.result.value;
+    if (!info) {
+      return errorText(`game_key returned no result.`);
+    }
+    if (!info.found) {
+      return errorText(import_common_tags3.oneLine`
+        No element matched ${JSON.stringify(selector)} for game_key at index ${index}
+        (matches found: ${info.count}).
+      `);
+    }
+    const where = info.via == "selector" ? `${JSON.stringify(selector)} [index ${index}] ${info.target}` : info.via == "activeElement" ? `the focused element ${info.target}` : `document`;
+    const matchNote = info.matches == null ? "" : ` Matches: ${info.matches}.`;
+    return text(import_common_tags3.oneLine`
+      Pressed ${keyLabel(key, { ctrl, shift, alt, meta: meta3 })} ${info.presses}x on ${where}.${matchNote}
+      Default prevented: ${info.defaultPrevented ? "yes" : "no"}.
+    `);
+  } catch (error51) {
+    return toErrorResult(error51);
+  }
+}
+function keyLabel(key, mods) {
+  const parts = [];
+  if (mods.ctrl) {
+    parts.push("Ctrl");
+  }
+  if (mods.shift) {
+    parts.push("Shift");
+  }
+  if (mods.alt) {
+    parts.push("Alt");
+  }
+  if (mods.meta) {
+    parts.push("Meta");
+  }
+  parts.push(key == " " ? "Space" : key);
+  return parts.join("+");
+}
 
 class ReloadTracker {
   reloadCount = 0;
@@ -31762,6 +31827,135 @@ function hoverFn(sel, index) {
     } catch {}
   }
 }
+function keyFn(args) {
+  const { key, count, ctrl, shift, alt, meta: meta3, sel, index } = args;
+  let target;
+  let via;
+  let node = null;
+  let matches = null;
+  if (sel == null) {
+    const active = document.activeElement;
+    if (active) {
+      target = active;
+      node = active;
+      via = "activeElement";
+    } else {
+      target = document.body || document;
+      node = document.body;
+      via = "document";
+    }
+  } else {
+    const nodes = document.querySelectorAll(sel);
+    if (nodes.length == 0) {
+      return { found: false, count: 0 };
+    }
+    const chosen = nodes[index];
+    if (!chosen) {
+      return { found: false, count: nodes.length };
+    }
+    try {
+      chosen.focus();
+    } catch {}
+    target = chosen;
+    node = chosen;
+    matches = nodes.length;
+    via = "selector";
+  }
+  const map3 = codeFor(key);
+  const init = {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+    key,
+    ctrlKey: ctrl,
+    shiftKey: shift,
+    altKey: alt,
+    metaKey: meta3
+  };
+  if (map3) {
+    init.code = map3.code;
+  }
+  let defaultPrevented = false;
+  let presses = 0;
+  for (let i = 0;i < count; i++) {
+    if (dispatch("keydown")) {
+      defaultPrevented = true;
+    }
+    dispatch("keyup");
+    presses++;
+  }
+  return {
+    found: true,
+    via,
+    target: node ? describe3(node) : "document",
+    matches,
+    presses,
+    defaultPrevented
+  };
+  function dispatch(type) {
+    try {
+      const ev = new KeyboardEvent(type, init);
+      force(ev, "key", key);
+      if (map3) {
+        force(ev, "code", map3.code);
+        force(ev, "keyCode", map3.keyCode);
+        force(ev, "which", map3.keyCode);
+      }
+      const notPrevented = target.dispatchEvent(ev);
+      return type == "keydown" && !notPrevented;
+    } catch {
+      return false;
+    }
+  }
+  function force(ev, prop, value) {
+    try {
+      Object.defineProperty(ev, prop, { get: () => value, configurable: true });
+    } catch {}
+  }
+  function codeFor(name) {
+    const table = {
+      Escape: { code: "Escape", keyCode: 27 },
+      Enter: { code: "Enter", keyCode: 13 },
+      Tab: { code: "Tab", keyCode: 9 },
+      " ": { code: "Space", keyCode: 32 },
+      Backspace: { code: "Backspace", keyCode: 8 },
+      Delete: { code: "Delete", keyCode: 46 },
+      Home: { code: "Home", keyCode: 36 },
+      End: { code: "End", keyCode: 35 },
+      PageUp: { code: "PageUp", keyCode: 33 },
+      PageDown: { code: "PageDown", keyCode: 34 },
+      ArrowUp: { code: "ArrowUp", keyCode: 38 },
+      ArrowDown: { code: "ArrowDown", keyCode: 40 },
+      ArrowLeft: { code: "ArrowLeft", keyCode: 37 },
+      ArrowRight: { code: "ArrowRight", keyCode: 39 }
+    };
+    const known = table[name];
+    if (known) {
+      return known;
+    }
+    const F1_KEY_CODE = 112;
+    const fn = /^F(?<num>[1-9]|1[0-2])$/u.exec(name);
+    if (fn) {
+      const num2 = Number(fn.groups?.num);
+      return { code: `F${num2}`, keyCode: F1_KEY_CODE + num2 - 1 };
+    }
+    if (/^[a-zA-Z]$/u.test(name)) {
+      const upper = name.toUpperCase();
+      return { code: `Key${upper}`, keyCode: upper.codePointAt(0) ?? 0 };
+    }
+    if (/^[0-9]$/u.test(name)) {
+      return { code: `Digit${name}`, keyCode: name.codePointAt(0) ?? 0 };
+    }
+    return;
+  }
+  function describe3(el) {
+    const tag = el.tagName ? el.tagName.toLowerCase() : "node";
+    const id = el.id ? `#${el.id}` : "";
+    const classAttr = el.getAttribute("class");
+    const cls = classAttr && classAttr.trim() ? `.${classAttr.trim().split(/\s+/u)[0]}` : "";
+    return `<${tag}${id}${cls}>`;
+  }
+}
 function rectFn(sel, index) {
   const nodes = document.querySelectorAll(sel);
   if (nodes.length == 0) {
@@ -31898,7 +32092,7 @@ async function main() {
     title: `Hover an element in the Gameface UI`,
     description: import_common_tags4.oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
-        React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.
+        the UI's mouseenter / pointerover handlers (tooltips, hover states) fire.
         Use index to pick among matches.
       `,
     inputSchema: {
@@ -31906,6 +32100,34 @@ async function main() {
       index: exports_external.number().int().min(0).optional().describe(`Which match to hover when several exist (default: 0)`)
     }
   }, ({ selector, index }) => gameHover(client, selector, index));
+  server.registerTool("game_key", {
+    title: `Press a key in the Gameface UI`,
+    description: import_common_tags4.oneLine`
+        Press a named key by dispatching a real bubbling keydown+keyup in the page
+        (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
+        ctrl/shift/alt/meta and a repeat count.
+        With a selector it focuses that element and dispatches on it (index picks among matches);
+        without one it dispatches on the focused element, else document.
+        It fires ONLY keydown and keyup (no keypress) and performs NO default action: no character
+        insertion, no Backspace delete, no Tab focus move, no scrolling; use game_type to enter
+        text.
+        It reaches the UI's JS keydown handlers, but keys the game routes through its own native
+        input layer do NOT respond (e.g. an Escape-to-close handled by the engine rather than the
+        DOM).
+        The result reports whether a handler called preventDefault, the observable signal the key
+        was consumed.
+      `,
+    inputSchema: {
+      key: exports_external.string().describe(`KeyboardEvent.key name to press, e.g. Escape, Enter, ArrowDown, a, F5`),
+      count: exports_external.number().int().min(1).max(100).optional().describe(`How many keydown+keyup presses to fire back-to-back (default 1)`),
+      ctrl: exports_external.boolean().optional().describe(`Hold Ctrl (ctrlKey) during the press (default false)`),
+      shift: exports_external.boolean().optional().describe(`Hold Shift (shiftKey) during the press (default false)`),
+      alt: exports_external.boolean().optional().describe(`Hold Alt (altKey) during the press (default false)`),
+      meta: exports_external.boolean().optional().describe(`Hold Meta / Win / Cmd (metaKey) during the press (default false)`),
+      selector: exports_external.string().optional().describe(`If set, focus this element and dispatch on it; else the focused element`),
+      index: exports_external.number().int().min(0).optional().describe(`Which match to target when the selector has several (default: 0)`)
+    }
+  }, ({ key, count, ctrl, shift, alt, meta: meta3, selector, index }) => gameKey(client, { key, count, ctrl, shift, alt, meta: meta3, selector, index }));
   server.registerTool("game_console", {
     title: `Read the Gameface UI console`,
     description: import_common_tags4.oneLine`

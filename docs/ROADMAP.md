@@ -9,17 +9,6 @@ application-agnostic.
 
 ## Planned/Explore
 
-### Keyboard input (`game_key`)
-
-No tool sends key presses to the UI: CDP `Input` is ignored, and `game_type` only feeds characters
-into a focused field (mutating its value). Escape-to-close a dialog, Enter-to-confirm, Tab between
-fields, and arrow-key list navigation have no path (surfaced live: closing a settings screen needed
-a manual find-and-click of the back arrow because Escape could not be sent). Add `game_key`
-dispatching real bubbling `KeyboardEvent`s (keydown/keyup; `KeyboardEvent` exists in Cohtml) for a
-named key to `document` or a selector, mirroring how `game_click` dispatches mouse events. First
-verify per-game whether keys like Escape route through a JS `onKeyDown` handler (a dispatched event
-reaches React) or at the native/engine level (it will not); document the caveat like the click one.
-
 ### Non-text element discovery
 
 `game_find` matches on `textContent` only, so icon controls with no text (a back arrow, a close X)

@@ -55,6 +55,35 @@ type RectResult =
   | { found: true; count: number; x: number; y: number; width: number; height: number }
   | { found: false; count: number };
 
+type KeyResult =
+  | {
+      found: true;
+      // How the target was resolved, for the human-readable result.
+      via: 'selector' | 'activeElement' | 'document';
+      // Compact <tag#id.class> descriptor of the resolved element, or 'document' when no element.
+      target: string;
+      // Selector match count when via=selector, else null.
+      matches: number | null;
+      presses: number;
+      // True when any keydown had preventDefault() called: the observable signal a JS handler
+      // consumed the key.
+      defaultPrevented: boolean;
+    }
+  | { found: false; count: number };
+
+// Input to keyFn, passed as one object so the page function stays under the params ceiling.
+interface KeyArgs {
+  key: string;
+  count: number;
+  ctrl: boolean;
+  shift: boolean;
+  alt: boolean;
+  meta: boolean;
+  // Null selects the focused element (or document); a string targets its index-th match.
+  sel: string | null;
+  index: number;
+}
+
 interface FindMatch {
   tagName: string | null;
   id: string | null;
@@ -609,7 +638,7 @@ export async function gameWait(
 }
 
 /**
- * Sets the value of an input/textarea/contenteditable (React-aware).
+ * Sets the value of an input/textarea/contenteditable (framework-aware).
  */
 export async function gameFill(
   client: CdpClient,
@@ -717,6 +746,117 @@ export async function gameHover(
   } catch (error) {
     return toErrorResult(error);
   }
+}
+
+/**
+ * Options for gameKey.
+ */
+export interface GameKeyOptions {
+  readonly key: string;
+  readonly count?: number | undefined;
+  readonly ctrl?: boolean | undefined;
+  readonly shift?: boolean | undefined;
+  readonly alt?: boolean | undefined;
+  readonly meta?: boolean | undefined;
+  readonly selector?: string | undefined;
+  readonly index?: number | undefined;
+}
+
+/**
+ * Presses a named key by dispatching real bubbling keydown+keyup events (no keypress, no default
+ * action), optionally with modifiers and repeats, on a selector/the focused element/document.
+ */
+export async function gameKey(client: CdpClient, options: GameKeyOptions): Promise<CallToolResult> {
+  const {
+    key,
+    count = 1,
+    ctrl = false,
+    shift = false,
+    alt = false,
+    meta = false,
+    selector,
+    index = 0
+  } = options;
+
+  try {
+    const res = await client.call<EvaluateResult>('Runtime.evaluate', {
+      expression: callPageFn(keyFn, {
+        key,
+        count,
+        ctrl,
+        shift,
+        alt,
+        meta,
+        sel: selector ?? null,
+        index
+      }),
+      returnByValue: true
+    });
+
+    if (res.exceptionDetails) {
+      return errorText(`Key press failed: ${formatException(res.exceptionDetails)}`);
+    }
+
+    const info = res.result.value as KeyResult | undefined;
+
+    if (!info) {
+      return errorText(`game_key returned no result.`);
+    }
+
+    if (!info.found) {
+      return errorText(oneLine`
+        No element matched ${JSON.stringify(selector)} for game_key at index ${index}
+        (matches found: ${info.count}).
+      `);
+    }
+
+    // Where the press landed: the selector match, the focused element, or the document.
+    const where =
+      info.via == 'selector'
+        ? `${JSON.stringify(selector)} [index ${index}] ${info.target}`
+        : info.via == 'activeElement'
+          ? `the focused element ${info.target}`
+          : `document`;
+
+    const matchNote = info.matches == null ? '' : ` Matches: ${info.matches}.`;
+
+    return text(oneLine`
+      Pressed ${keyLabel(key, { ctrl, shift, alt, meta })} ${info.presses}x on ${where}.${matchNote}
+      Default prevented: ${info.defaultPrevented ? 'yes' : 'no'}.
+    `);
+  } catch (error) {
+    return toErrorResult(error);
+  }
+}
+
+/**
+ * Builds a human-readable "Ctrl+Shift+Escape" label for the result line.
+ */
+function keyLabel(
+  key: string,
+  mods: { ctrl: boolean; shift: boolean; alt: boolean; meta: boolean }
+): string {
+  const parts: string[] = [];
+
+  if (mods.ctrl) {
+    parts.push('Ctrl');
+  }
+
+  if (mods.shift) {
+    parts.push('Shift');
+  }
+
+  if (mods.alt) {
+    parts.push('Alt');
+  }
+
+  if (mods.meta) {
+    parts.push('Meta');
+  }
+
+  parts.push(key == ' ' ? 'Space' : key);
+
+  return parts.join('+');
 }
 
 /**
@@ -1121,9 +1261,9 @@ function findFn(args: FindArgs): FindResult | { error: string } {
 }
 
 /**
- * Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml/React DOM
- * event system (verified: handlers never fire). So we click by dispatching real, bubbling DOM
- * events on the element, which React's delegated listeners pick up.
+ * Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml DOM event
+ * system (verified: handlers never fire). So we click by dispatching real, bubbling DOM events on
+ * the element, which the UI's delegated event listeners pick up.
  * Note: `HTMLElement.click()` does not exist in Cohtml either.
  */
 function clickFn(sel: string, index: number): ClickResult {
@@ -1158,8 +1298,8 @@ function clickFn(sel: string, index: number): ClickResult {
 
   type EventCtor = new (type: string, init?: PointerEventInit) => Event;
 
-  // PointerEvent does not exist in Cohtml; dispatch pointer* as MouseEvents (React keys off
-  // the event type string, not the constructor).
+  // PointerEvent does not exist in Cohtml; dispatch pointer* as MouseEvents (delegated handlers
+  // key off the event type string, not the constructor).
   const Pointer: EventCtor = typeof PointerEvent == 'function' ? PointerEvent : MouseEvent;
   const fired: string[] = [];
 
@@ -1201,8 +1341,8 @@ function waitCheckFn(sel: string, visible: boolean): boolean {
 }
 
 /**
- * Sets an input/textarea/contenteditable value so React's onChange fires.
- * We use the native value setter (verified present in Cohtml) so React's value tracker notices.
+ * Sets an input/textarea/contenteditable value so the framework's change handler fires.
+ * We use the native value setter (verified present in Cohtml) so a framework value tracker notices.
  * InputEvent is missing in Cohtml, so we dispatch a plain bubbling `Event('input')`.
  */
 function fillFn(sel: string, value: string, index: number): FillResult {
@@ -1240,7 +1380,7 @@ function fillFn(sel: string, value: string, index: number): FillResult {
 
   const field = el as HTMLInputElement | HTMLTextAreaElement;
   const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so the framework's value tracker sees the native setter run.
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
 
   if (setter) {
@@ -1257,7 +1397,7 @@ function fillFn(sel: string, value: string, index: number): FillResult {
 
 /**
  * Types text character by character, firing real KeyboardEvents (present in Cohtml) plus keeping
- * the value in sync and dispatching input/change for React.
+ * the value in sync and dispatching input/change for the framework.
  */
 function typeFn(sel: string, textToType: string, index: number): TypeResult {
   const nodes = document.querySelectorAll<HTMLElement>(sel);
@@ -1286,7 +1426,7 @@ function typeFn(sel: string, textToType: string, index: number): TypeResult {
   const editable = el.isContentEditable;
   const field = el as HTMLInputElement | HTMLTextAreaElement;
   const proto = tag == 'textarea' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so React's value tracker sees the native setter run.
+  // oxlint-disable-next-line typescript/unbound-method -- Deliberately unbound: invoked with .call(el) so the framework's value tracker sees the native setter run.
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
 
   let typed = 0;
@@ -1345,7 +1485,7 @@ function typeFn(sel: string, textToType: string, index: number): TypeResult {
 /**
  * Hovers an element by dispatching the over/enter/move sequence.
  * PointerEvent is missing in Cohtml, so `pointer*` are dispatched as MouseEvents (the type string
- * is what React keys off).
+ * is what delegated handlers key off).
  * `enter`/`leave` do not bubble.
  */
 function hoverFn(sel: string, index: number): HoverResult {
@@ -1397,6 +1537,198 @@ function hoverFn(sel: string, index: number): HoverResult {
     } catch {
       /* Unsupported event type. */
     }
+  }
+}
+
+/**
+ * Presses a named key by dispatching real bubbling keydown+keyup DOM events.
+ *
+ * Cohtml's KeyboardEvent DERIVES `key` from the init `keyCode` and ignores the init `key`
+ * (verified: keyCode 65 yields key "A", 27/13 yield ""), so we force `key` (and code/keyCode/which
+ * when known) on every instance via `Object.defineProperty`; standard engines that ignore init
+ * keyCode get the same forced values, so the target reads exactly the requested key either way.
+ * We fire ONLY keydown and keyup and perform NO default action (no character insertion, no
+ * deletion, no focus move, no scrolling): text entry is typeFn's job.
+ */
+function keyFn(args: KeyArgs): KeyResult {
+  const { key, count, ctrl, shift, alt, meta, sel, index } = args;
+
+  // Resolve the target. A selector focuses its index-th match and dispatches on it; without one,
+  // dispatch on the focused element, else the body / document. Events bubble either way.
+  let target: EventTarget;
+  let via: 'selector' | 'activeElement' | 'document';
+  let node: Element | null = null;
+  let matches: number | null = null;
+
+  if (sel == null) {
+    const active = document.activeElement;
+
+    if (active) {
+      target = active;
+      node = active;
+      via = 'activeElement';
+    } else {
+      target = document.body || document;
+      node = document.body;
+      via = 'document';
+    }
+  } else {
+    const nodes = document.querySelectorAll<HTMLElement>(sel);
+
+    if (nodes.length == 0) {
+      return { found: false, count: 0 };
+    }
+
+    const chosen = nodes[index];
+
+    if (!chosen) {
+      return { found: false, count: nodes.length };
+    }
+
+    try {
+      chosen.focus();
+    } catch {
+      /* Not focusable; still dispatch on it. */
+    }
+
+    target = chosen;
+    node = chosen;
+    matches = nodes.length;
+    via = 'selector';
+  }
+
+  // Legacy code/keyCode for the known key names; undefined leaves an unknown key with key-only
+  // fields (never rejected).
+  const map = codeFor(key);
+
+  const init: KeyboardEventInit = {
+    bubbles: true,
+    cancelable: true,
+    // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; view wants Window.
+    view: window,
+    key,
+    ctrlKey: ctrl,
+    shiftKey: shift,
+    altKey: alt,
+    metaKey: meta
+  };
+
+  if (map) {
+    init.code = map.code;
+  }
+
+  let defaultPrevented = false;
+  let presses = 0;
+
+  for (let i = 0; i < count; i++) {
+    if (dispatch('keydown')) {
+      defaultPrevented = true;
+    }
+
+    dispatch('keyup');
+    presses++;
+  }
+
+  return {
+    found: true,
+    via,
+    target: node ? describe(node) : 'document',
+    matches,
+    presses,
+    defaultPrevented
+  };
+
+  // Dispatches one event of the given type; returns true only when a keydown was preventDefault-ed.
+  function dispatch(type: string): boolean {
+    try {
+      const ev = new KeyboardEvent(type, init);
+
+      // Force the fields regardless of engine derivation (see the function docblock).
+      force(ev, 'key', key);
+
+      if (map) {
+        force(ev, 'code', map.code);
+        force(ev, 'keyCode', map.keyCode);
+        force(ev, 'which', map.keyCode);
+      }
+
+      const notPrevented = target.dispatchEvent(ev);
+
+      return type == 'keydown' && !notPrevented;
+    } catch {
+      // No KeyboardEvent constructor in this engine (does not happen on Gameface).
+      return false;
+    }
+  }
+
+  function force(ev: KeyboardEvent, prop: string, value: string | number): void {
+    try {
+      Object.defineProperty(ev, prop, { get: () => value, configurable: true });
+    } catch {
+      /* Property not redefinable here; keep the constructed value. */
+    }
+  }
+
+  // Maps a KeyboardEvent.key name to its `code` and legacy keyCode; returns undefined for names we
+  // do not know, so they pass through with key-only fields.
+  function codeFor(name: string): { code: string; keyCode: number } | undefined {
+    const table: Record<string, { code: string; keyCode: number }> = {
+      'Escape': { code: 'Escape', keyCode: 27 },
+      'Enter': { code: 'Enter', keyCode: 13 },
+      'Tab': { code: 'Tab', keyCode: 9 },
+      ' ': { code: 'Space', keyCode: 32 },
+      'Backspace': { code: 'Backspace', keyCode: 8 },
+      'Delete': { code: 'Delete', keyCode: 46 },
+      'Home': { code: 'Home', keyCode: 36 },
+      'End': { code: 'End', keyCode: 35 },
+      'PageUp': { code: 'PageUp', keyCode: 33 },
+      'PageDown': { code: 'PageDown', keyCode: 34 },
+      'ArrowUp': { code: 'ArrowUp', keyCode: 38 },
+      'ArrowDown': { code: 'ArrowDown', keyCode: 40 },
+      'ArrowLeft': { code: 'ArrowLeft', keyCode: 37 },
+      'ArrowRight': { code: 'ArrowRight', keyCode: 39 }
+    };
+
+    const known = table[name];
+
+    if (known) {
+      return known;
+    }
+
+    // F1-F12: keyCode counts up from F1. The char-guarded branches below can never see an empty
+    // string, so the `?? 0` fallbacks are unreachable and only satisfy codePointAt's return type.
+    const F1_KEY_CODE = 112;
+    const fn = /^F(?<num>[1-9]|1[0-2])$/u.exec(name);
+
+    if (fn) {
+      const num = Number(fn.groups?.num);
+
+      return { code: `F${num}`, keyCode: F1_KEY_CODE + num - 1 };
+    }
+
+    // Single letter: code KeyX, keyCode is the uppercase char code (65-90).
+    if (/^[a-zA-Z]$/u.test(name)) {
+      const upper = name.toUpperCase();
+
+      return { code: `Key${upper}`, keyCode: upper.codePointAt(0) ?? 0 };
+    }
+
+    // Single digit: code DigitX, keyCode 48-57.
+    if (/^[0-9]$/u.test(name)) {
+      return { code: `Digit${name}`, keyCode: name.codePointAt(0) ?? 0 };
+    }
+
+    return undefined;
+  }
+
+  // Compact <tag#id.firstclass> descriptor of the resolved element for the result line.
+  function describe(el: Element): string {
+    const tag = el.tagName ? el.tagName.toLowerCase() : 'node';
+    const id = el.id ? `#${el.id}` : '';
+    const classAttr = el.getAttribute('class');
+    const cls = classAttr && classAttr.trim() ? `.${classAttr.trim().split(/\s+/u)[0]}` : '';
+
+    return `<${tag}${id}${cls}>`;
   }
 }
 

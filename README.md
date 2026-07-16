@@ -102,7 +102,7 @@ hands.
 >
 > **Agent:** `game_click` on `[data-tooltip="Milestones"]`: Gameface accepts CDP input commands
 > but never delivers them to the UI, so the click is dispatched as real bubbling DOM events,
-> which your React handlers receive. `game_wait` until `.milestones-panel` is visible,
+> which your UI's handlers receive. `game_wait` until `.milestones-panel` is visible,
 > `game_screenshot` to check the render, `game_console` shows no new errors. The flow works;
 > screenshot attached.
 

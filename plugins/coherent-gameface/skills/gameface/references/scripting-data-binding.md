@@ -87,7 +87,7 @@ The DevTools Data Binding Models panel (newer SDKs) exports and imports model sn
 
 ## Simulating input from JS
 
-Dispatch real bubbling DOM events; framework delegated handlers (React and friends) receive them:
+Dispatch real bubbling DOM events; a UI framework's delegated handlers receive them:
 
 - `el.dispatchEvent(new MouseEvent('click', {bubbles: true, ...}))` works; `HTMLElement.click()` does not exist.
 - `PointerEvent` and `InputEvent` constructors are missing: dispatch `pointer*` names as `MouseEvent`, and `new Event('input', {bubbles: true})` for input events.

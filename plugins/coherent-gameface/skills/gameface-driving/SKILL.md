@@ -1,6 +1,6 @@
 ---
 name: gameface-driving
-description: 'Operating manual for driving a live Gameface UI with the game_* MCP tools: procedures and traps verified on a real game. Load before first use of the input tools (game_click, game_fill, game_type, game_hover) or of any game_debug_* tool. Also use when verifying UI changes against a running game, when waiting for a mod rebuild to go live in-game, or when a game_* call fails or returns puzzling results. Engine support questions (does this CSS/JS/layout feature exist) belong to the gameface skill.'
+description: 'Operating manual for driving a live Gameface UI with the game_* MCP tools: procedures and traps verified on a real game. Load before first use of the input tools (game_click, game_fill, game_type, game_key, game_hover) or of any game_debug_* tool. Also use when verifying UI changes against a running game, when waiting for a mod rebuild to go live in-game, or when a game_* call fails or returns puzzling results. Engine support questions (does this CSS/JS/layout feature exist) belong to the gameface skill.'
 ---
 
 # Driving a Gameface UI
@@ -36,6 +36,18 @@ Input calls report that events were dispatched, not that the UI reacted; confirm
 The cheap confirmations: `game_wait` on a predicate or selector, `game_dom` on the region that should have changed, a clipped screenshot, and `game_console` for exceptions a silent failure left behind.
 `game_click` returns after dispatching the event sequence, before any async handler work; pair it with a wait on the expected outcome.
 `game_hover` fires the JS hover handlers but never sets the CSS `:hover` state, which only real game-forwarded mouse input can set; verify a hover by its DOM effect, never by styling.
+
+## Keyboard: `game_key` and native-handled keys
+
+`game_key` dispatches a named key (`KeyboardEvent.key`, e.g. `Escape`, `Enter`, `ArrowDown`, `a`, `F5`) as a real bubbling `keydown`+`keyup`, with optional `ctrl`/`shift`/`alt`/`meta` and a repeat `count`, on a `selector` (focused first, `index` picks among matches), else the focused element, else `document`.
+It fires only `keydown`+`keyup` (no `keypress`) and performs NO default action: no character insertion, no Backspace delete, no Tab focus move, no scrolling, so entering text stays `game_type`'s job and `game_key` is for keys a handler interprets (Enter to confirm a dialog, arrows for in-UI list navigation, a UI's own `onKeyDown` shortcut).
+A dispatched key reaches the UI's JS `onKeyDown` handlers, but not any input the application consumes at the native/engine level, and the two are easy to confuse.
+Games commonly route global navigation and hotkeys (Escape/back, closing a menu or settings screen, tool cancel) through the host's own input system rather than the DOM, so a dispatched key such as `Escape` fires page listeners yet has no effect on that native handling; test per application before relying on a key doing more than reaching a DOM handler.
+The result reports whether a handler called `preventDefault` (the "consumed" signal), but treat that as a hint and confirm the observable effect you care about, not the dispatch.
+Do not hand-roll a `KeyboardEvent` in `game_eval` and expect `.key` to read back: Cohtml derives `key` from the event's `keyCode` and ignores the constructor's `key`, so a handler sees the wrong key unless you `Object.defineProperty` it; `game_key` already forces `key`/`code`/`keyCode`/`which` on every event, so reach for it instead of rolling your own.
+When a key is handled natively and has no DOM path, do not try to fake it: invoke the action the UI's own JS runs for that key instead.
+If the application drives its UI through Gameface's data-binding bridge, that action is usually a binding you can call from `game_eval` (`engine.trigger('<group>.<name>', ...)` or `engine.call`), for example the binding a screen uses to close or navigate.
+Binding names are per-application; discover them by searching the UI's JS bundles or the application's source, and note there is no JS seam to simulate a raw key/input action or inject a trusted engine key event.
 
 ## The dev loop: rebuild to live
 

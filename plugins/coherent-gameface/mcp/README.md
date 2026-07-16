@@ -136,12 +136,16 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 | `game_click`      | Click an element by dispatching real bubbling DOM events.                                                                     | `Runtime.evaluate` (see note)                                      |
 | `game_fill`       | Set an input/textarea/contenteditable value.                                                                                  | `Runtime.evaluate` (see note)                                      |
 | `game_type`       | Type text key by key (real KeyboardEvents + value sync).                                                                      | `Runtime.evaluate` (see note)                                      |
+| `game_key`        | Press a named key (Escape/Enter/arrows/…) as bubbling keydown+keyup, with modifiers/repeats.                                  | `Runtime.evaluate` (see note)                                      |
 | `game_hover`      | Hover an element (over/enter/move sequence) to trigger tooltips/hover state.                                                  | `Runtime.evaluate` (see note)                                      |
 | `game_console`    | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI.                                                | `Log` + `Runtime.consoleAPICalled`                                 |
 
+> [!IMPORTANT]
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
 > `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,
-> and `game_hover` dispatch real DOM events in the page.
+> `game_key`, and `game_hover` dispatch real DOM events in the page. These reach the UI's own JS
+> handlers, but not any input the game routes at the native/engine level (e.g. Escape-to-close is
+> often handled natively and will not respond to a dispatched key).
 
 ### JS debugger tools
 

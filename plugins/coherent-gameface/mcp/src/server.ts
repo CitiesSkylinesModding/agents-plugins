@@ -24,6 +24,7 @@ import {
   gameFill,
   gameFind,
   gameHover,
+  gameKey,
   gameScreenshot,
   gameStatus,
   gameType,
@@ -223,7 +224,7 @@ async function main(): Promise<void> {
       title: `Hover an element in the Gameface UI`,
       description: oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
-        React onMouseEnter / onPointerOver handlers (tooltips, hover states) fire.
+        the UI's mouseenter / pointerover handlers (tooltips, hover states) fire.
         Use index to pick among matches.
       `,
       inputSchema: {
@@ -237,6 +238,65 @@ async function main(): Promise<void> {
       }
     },
     ({ selector, index }) => gameHover(client, selector, index)
+  );
+
+  server.registerTool(
+    'game_key',
+    {
+      title: `Press a key in the Gameface UI`,
+      description: oneLine`
+        Press a named key by dispatching a real bubbling keydown+keyup in the page
+        (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
+        ctrl/shift/alt/meta and a repeat count.
+        With a selector it focuses that element and dispatches on it (index picks among matches);
+        without one it dispatches on the focused element, else document.
+        It fires ONLY keydown and keyup (no keypress) and performs NO default action: no character
+        insertion, no Backspace delete, no Tab focus move, no scrolling; use game_type to enter
+        text.
+        It reaches the UI's JS keydown handlers, but keys the game routes through its own native
+        input layer do NOT respond (e.g. an Escape-to-close handled by the engine rather than the
+        DOM).
+        The result reports whether a handler called preventDefault, the observable signal the key
+        was consumed.
+      `,
+      inputSchema: {
+        key: z
+          .string()
+          .describe(`KeyboardEvent.key name to press, e.g. Escape, Enter, ArrowDown, a, F5`),
+        count: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(`How many keydown+keyup presses to fire back-to-back (default 1)`),
+        ctrl: z
+          .boolean()
+          .optional()
+          .describe(`Hold Ctrl (ctrlKey) during the press (default false)`),
+        shift: z
+          .boolean()
+          .optional()
+          .describe(`Hold Shift (shiftKey) during the press (default false)`),
+        alt: z.boolean().optional().describe(`Hold Alt (altKey) during the press (default false)`),
+        meta: z
+          .boolean()
+          .optional()
+          .describe(`Hold Meta / Win / Cmd (metaKey) during the press (default false)`),
+        selector: z
+          .string()
+          .optional()
+          .describe(`If set, focus this element and dispatch on it; else the focused element`),
+        index: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(`Which match to target when the selector has several (default: 0)`)
+      }
+    },
+    ({ key, count, ctrl, shift, alt, meta, selector, index }) =>
+      gameKey(client, { key, count, ctrl, shift, alt, meta, selector, index })
   );
 
   server.registerTool(
