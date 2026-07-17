@@ -1,0 +1,5 @@
+[submodule "plugins/unity-devtools/vendor/unity-mono"]
+	path = plugins/unity-devtools/vendor/unity-mono
+	url = https://github.com/Unity-Technologies/mono
+	branch = unity-6000.6-mbe
+	shallow = true

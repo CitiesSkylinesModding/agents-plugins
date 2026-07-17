@@ -100,6 +100,21 @@ raw = true
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
+# UNITY DEVTOOLS POC TASKS
+# ========================
+
+[tasks."poc:unity:build"]
+description = "Build the unity-devtools PoC CLI (dotnet; compiles the vendored SDB client)."
+dir = "{{config_root}}/plugins/unity-devtools/poc"
+raw = true
+run = "dotnet build UnityDevtoolsPoc.csproj"
+
+[tasks."poc:unity:run"]
+description = "Run the unity-devtools PoC CLI; append the subcommand, e.g. `mise poc:unity:run status`."
+dir = "{{config_root}}/plugins/unity-devtools/poc"
+raw = true
+run = "dotnet run -v q --project UnityDevtoolsPoc.csproj --"
+
 # PUBLISH TASKS
 # =============
 

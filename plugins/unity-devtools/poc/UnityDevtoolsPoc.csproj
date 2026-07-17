@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    PoC CLI: drive a running dev-Mono Unity game (CS2 is the test target) over the Mono Soft
+    Debugger protocol. Vendored client sources come from Unity's mono fork (MIT), pinned via the
+    sparse submodule at ../vendor/unity-mono.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Vendored sources predate nullable annotations; keep the whole PoC nullable-off. -->
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--
+      MONO_DATACONVERTER_STATIC_METHODS matches the upstream Makefile.
+      ENABLE_CECIL is deliberately NOT defined: it gates optional Metadata/IL features that need
+      Mono.Cecil, which this PoC does not use (live mirrors and invokes only).
+    -->
+    <DefineConstants>$(DefineConstants);MONO_DATACONVERTER_STATIC_METHODS</DefineConstants>
+    <AssemblyName>unity-devtools-poc</AssemblyName>
+    <RootNamespace>UnityDevtools.Poc</RootNamespace>
+    <!--
+      Vendored-source warnings, suppressed project-wide instead of editing vendored files:
+      SYSLIB0001/0050 obsolete APIs, CS9258 the C# 14 `field` keyword change.
+    -->
+    <NoWarn>$(NoWarn);SYSLIB0001;SYSLIB0050;CS9258</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VendorSdbDir>../vendor/unity-mono/mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft/</VendorSdbDir>
+    <PatchedConnection>$(BaseIntermediateOutputPath)Connection.Patched.cs</PatchedConnection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Connection.cs is compiled from a build-time patched copy (see PatchVendoredConnection):
+      its reply dispatch uses delegate BeginInvoke, which throws PlatformNotSupportedException
+      on modern .NET. Patching into obj/ keeps the vendored submodule tree pristine.
+    -->
+    <Compile
+      Include="$(VendorSdbDir)*.cs"
+      Exclude="$(VendorSdbDir)Connection.cs"
+      LinkBase="Vendor/Mono.Debugger.Soft" />
+    <Compile Include="$(PatchedConnection)" Link="Vendor/Mono.Debugger.Soft/Connection.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+  </ItemGroup>
+
+  <Target
+    Name="PatchVendoredConnection"
+    BeforeTargets="BeforeCompile"
+    Inputs="$(VendorSdbDir)Connection.cs"
+    Outputs="$(PatchedConnection)">
+    <Exec Command="pwsh -NoProfile -Command &quot;$src = Get-Content -Raw '$(VendorSdbDir)Connection.cs'; $anchor = 'cb.BeginInvoke (r, null, null)'; if (-not $src.Contains($anchor)) { Write-Error 'vendored Connection.cs patch anchor missing (upstream changed?)'; exit 1 }; $src.Replace($anchor, 'System.Threading.Tasks.Task.Run (() =&gt; cb (r))') | Set-Content -NoNewline '$(PatchedConnection)'&quot;" />
+  </Target>
+</Project>

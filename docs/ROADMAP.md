@@ -54,3 +54,26 @@ missing (no request interception). Surface request/response observation as tools
 When these land they become standard plugin components: `commands/`, `agents/`, and `skills/`
 directories auto-discovered by the plugin manifest (`skills/` already ships the `gameface` and
 `gameface-driving` skills).
+
+## Sibling plugin: unity-devtools
+
+`plugins/unity-devtools/` is a second, generic plugin in the making: drive a running Unity Mono
+development build from the outside over the Mono Soft Debugger protocol (SDB) — attach, inspect,
+query ECS entities, read/write components live, invoke C# — with CS2 as the reference target
+(dev Mono build, SDB agent live). The feasibility PoC (`poc/`, a .NET CLI) is done and verified
+end-to-end against CS2; see `plugins/unity-devtools/AGENTS.md` for what it proves and the SDB
+gotchas. The natural next step is converting the CLI's attach-act-detach commands into a .NET MCP
+server, the same shape `coherent-gameface` has for CDP.
+
+Shipping checklist when it graduates from PoC (not registered anywhere yet):
+
+- Dual manifests: `.claude-plugin/plugin.json` + `.codex-plugin/plugin.json` (+ its `mcp.json`),
+  shared fields identical.
+- Entries in BOTH marketplace files: `.claude-plugin/marketplace.json` and
+  `.agents/plugins/marketplace.json`.
+- A release-please unit (its own `package.json` anchor + `release-please-config.json` entry;
+  decide whether it joins the `linked-versions` group or versions independently).
+- Extend `scripts/check-plugin-sync.ts` to cover its manifest pair.
+- Decide the vendored `Mono.Debugger.Soft` story for installs (marketplace installs copy the
+  plugin subtree; a git submodule does not ship through that path — likely needs the built
+  binary committed, mirroring the `coherent-gameface` bundle approach).
