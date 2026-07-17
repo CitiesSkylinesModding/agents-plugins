@@ -1,5 +1,7 @@
-# NOTE: plugins/coherent-gameface/mcp/dist/server.mjs is intentionally committed so the
-# plugin works with zero install. Do NOT add that dist/ here.
+# NOTE: plugins/coherent-gameface/mcp/dist/server.mjs is intentionally committed so the plugin works
+# with zero install. Do NOT add that dist/ here.
 
 # One at the root and one in the mcp workspace.
 node_modules
+# Machine-specific settings
+*.DotSettings.user

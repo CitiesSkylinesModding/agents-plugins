@@ -9,7 +9,7 @@ It targets any Gameface application, but is developed and verified against **Cit
 The repo is a plugin MARKETPLACE (`csmodding`); plugin sources live under `plugins/<name>/`. It currently wears two hats, with distinct names:
 
 - The plugin (`plugins/coherent-gameface/`, named `coherent-gameface` in both its `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`; the repo/root package is `agents-plugins`): launches the committed server bundle (zero-install, offline, version-locked) from its `.mcp.json` on Claude Code and from its `.codex-plugin/mcp.json` on Codex CLI, and carries the skills (`plugins/coherent-gameface/skills/`).
-- The MCP server (`plugins/coherent-gameface/mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is the workspace's `README.md`. Publishing is manual (`mise publish`, run by Morgan).
+- The MCP server (`plugins/coherent-gameface/mcp/` workspace) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name `gameface-devtools-mcp`, bin `gameface-devtools-mcp`, launched via `npx -y @csmodding/gameface-devtools-mcp@latest`). Its npm-facing product page is the workspace's `README.md`. Publishing is manual (`mise publish`).
 
 Everything a plugin ships MUST live inside its `plugins/<name>/` directory (marketplace installs copy only that subtree); that is why the `mcp/` workspace lives inside the plugin. Future plugins (e.g. a CS2-specific one) get sibling directories and entries in both marketplace files.
 
@@ -48,8 +48,8 @@ Project-specific tech stack. Ex:
 
 You can run `mise tasks` to see the full list of shortcut commands. Do NOT use npx to run commands, always prefer mise shortcuts, or bun/bunx if there is no dedicated mise shortcut.
 
-- `mise build`: Rebuild the shipped bundle `plugins/coherent-gameface/mcp/dist/server.mjs` (commit the result).
-- `mise check:agents`: Run type checking, formatting, and linting, with optimized output.
+- `mise build:gameface`: Rebuild the shipped bundle `plugins/coherent-gameface/mcp/dist/server.mjs` (commit the result). (`build:` is a namespace; unity-devtools has `build:unity:poc` / `build:unity:mcp`.)
+- `mise check:agents`: Verify (read-only) type checking, linting, and formatting, with output optimized for agents. `check:*` write nothing; `mise fix` (or `fix:oxlint` / `fix:oxfmt`) applies the auto-fixes.
 
 Tip: you can append arguments to mise shortcuts, mise will pass them through, ex. `mise some:task --some-arg`.
 
@@ -89,8 +89,8 @@ Rules that matter when committing:
 - Because of `linked-versions`, any releasable commit under `plugins/coherent-gameface/` (mcp or not) bumps BOTH units to the same version.
 - Pre-1.0: `feat` bumps minor, `fix` bumps patch. 1.0.0 only via a deliberate `Release-As:` footer.
 - The server reads its version from the mcp workspace's `package.json` at runtime (no hardcoded version, no rebuild needed on release).
-- npm publishing stays MANUAL (`mise publish`, run by Morgan). No CI publish job; do not add one.
-- CI (`.github/workflows/ci.yml`) runs `mise check:agents` + `mise build` and fails if the tree differs (stale bundle or unformatted code). A lefthook pre-commit rebuilds and stages the bundle whenever staged files touch the mcp workspace's `src/`.
+- npm publishing stays MANUAL (`mise publish`, run by the user). No CI publish job; do not add one.
+- CI (`.github/workflows/ci.yml`) runs `mise check:agents` (read-only; fails on any unformatted or lint-dirty file) + `mise build:gameface`, then `git diff --exit-code` catches a stale committed bundle. A lefthook pre-commit rebuilds and stages the bundle whenever staged files touch the mcp workspace's `src/`.
 
 ## Gameface CDP gotchas (verified, do not relearn the hard way)
 
@@ -131,7 +131,7 @@ Ask first before:
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Propose updates to `AGENTS.md` or `docs/` when you notice a pattern or introduced changes that deserve to be documented for future sessions.
-- After changing `plugins/coherent-gameface/mcp/src/`, run `mise check:agents` and `mise build`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` (verified sufficient, no Claude Code restart needed; agents cannot trigger it).
+- After changing `plugins/coherent-gameface/mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` whenever you need to get the new build.
 - Store hard-won facts about Gameface internals in memory.
 - Keep the server generic: no assumptions about a specific game's DOM and APIs beyond the defaults. CS2 is the test target, not a hard dependency.
 - Keep skills and docs generic too (`skills/**`, `docs/`, `README`s): the plugin targets any Gameface application, so write the general behavior as the guidance and the rule. CS2 is where facts are verified, not the lesson: state what holds for any Gameface UI, and keep CS2-only specifics (a concrete DOM path or class, an engine detail like Unity/`Colossal.*`, a binding name such as `menu.setActiveScreen`, a decompiled-source finding) out of the general text. When such a specific genuinely aids understanding, demote it to a clearly labeled example ("verified on CS2: ...") rather than letting it become the framing, and prefer none at all in a section meant as general procedure. The gameface engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain and generic; a particular game's use of it is not.

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="UserContentModel">
+    <attachedFolders />
+    <explicitIncludes>
+      <Path>.</Path>
+    </explicitIncludes>
+    <explicitExcludes>
+      <Path>.claude</Path>
+      <Path>.git</Path>
+      <Path>CLAUDE.md</Path>
+      <Path>LICENSE</Path>
+      <Path>bun.lock</Path>
+      <Path>skills-lock.json</Path>
+    </explicitExcludes>
+  </component>
+</project>

@@ -204,8 +204,9 @@ oxfmt) and the lefthook git hooks, while the MCP server lives in the
 
 ```sh
 bun install   # install all workspace deps (also installs the git hooks)
-mise check    # type-check, lint (with safe auto-fixes), and format
-mise build    # rebuild the server bundle (commit the result)
+mise check          # verify (read-only): type-check, lint, format
+mise fix            # auto-fix lint + format in place
+mise build:gameface # rebuild the server bundle (commit the result)
 ```
 
 Run `mise tasks` for the full list.

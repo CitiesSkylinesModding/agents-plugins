@@ -1,7 +1,5 @@
-# Checks that pushed code passes lint/typecheck and that the committed bundle
-# plugins/coherent-gameface/mcp/dist/server.mjs is up to date with its src/. check:agents applies
-# safe auto-fixes and mise build rewrites the bundle; the final git diff therefore fails if the
-# commit was missing either.
+# Checks that pushed code passes lint/typecheck.
+
 name: ci
 
 on:
@@ -17,5 +15,5 @@ jobs:
       - uses: jdx/mise-action@v4
       - run: bun install --frozen-lockfile
       - run: mise check:agents
-      - run: mise build
+      - run: mise build:gameface
       - run: git diff --exit-code

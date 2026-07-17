@@ -1,8 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Mono.Debugger.Soft;
 using SdbThreadMirror = Mono.Debugger.Soft.ThreadMirror;
 
-namespace UnityDevtools.Poc;
+namespace UnityDevtools.Sdb;
 
 /// <summary>
 /// Mirror-level plumbing shared by the ECS commands: type/method resolution, method invocation on
@@ -10,7 +11,7 @@ namespace UnityDevtools.Poc;
 /// All invokes run on the game's main thread (thread-safety: ECS writes from another thread could
 /// trip the Entities safety system mid-frame).
 /// </summary>
-internal sealed class Invoker(VirtualMachine vm) {
+public sealed class Invoker(VirtualMachine vm) {
   public VirtualMachine Vm { get; } = vm;
 
   public SdbThreadMirror MainThread { get; } = Invoker.PickMainThread(vm);
@@ -20,9 +21,9 @@ internal sealed class Invoker(VirtualMachine vm) {
 
     // Unity's main thread is the first attached thread; its name is empty in player builds ("Main
     // Thread" in some editor builds).
-    return threads.FirstOrDefault(t => t.Name == "Main Thread")
-           ?? threads.Where(t => string.IsNullOrEmpty(t.Name)).OrderBy(t => t.Id).FirstOrDefault()
-           ?? threads.OrderBy(t => t.Id).First();
+    return threads.FirstOrDefault(t => t.Name == "Main Thread") ??
+      threads.Where(t => string.IsNullOrEmpty(t.Name)).OrderBy(t => t.Id).FirstOrDefault() ??
+      threads.OrderBy(t => t.Id).First();
   }
 
   public TypeMirror ResolveType(string fullName) {
@@ -44,8 +45,17 @@ internal sealed class Invoker(VirtualMachine vm) {
   /// <paramref name="paramTypes" /> disambiguates overloads by parameter type name, position by
   /// position (e.g. ["Entity"], ["Type", "Int32"]); a null entry matches any.
   /// </summary>
+
+  // CA1822 (mark static): kept an instance member on purpose. It is part of Invoker's cohesive
+  // invoke abstraction and is called as `this.inv.FindMethod(...)` across files; making it static
+  // would churn every call site for no real gain.
+  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public MethodMirror FindMethod(
-    TypeMirror type, string name, int argc, int genericArity = 0, string[] paramTypes = null
+    TypeMirror type,
+    string name,
+    int argc,
+    int genericArity = 0,
+    string[] paramTypes = null
   ) {
     for (var t = type; t != null; t = t.BaseType) {
       foreach (var m in t.GetMethods()) {
@@ -56,14 +66,12 @@ internal sealed class Invoker(VirtualMachine vm) {
         switch (genericArity) {
           case 0 when m.IsGenericMethodDefinition:
           case > 0 when !m.IsGenericMethodDefinition ||
-                        m.GetGenericArguments().Length != genericArity:
+            m.GetGenericArguments().Length != genericArity:
             continue;
         }
 
-        if (
-          paramTypes != null &&
-          paramTypes
-            .Where((p, i) => p != null && m.GetParameters()[i].ParameterType.Name != p)
+        if (paramTypes != null &&
+          paramTypes.Where((p, i) => p != null && m.GetParameters()[i].ParameterType.Name != p)
             .Any()) {
           continue;
         }
@@ -82,6 +90,9 @@ internal sealed class Invoker(VirtualMachine vm) {
   /// main thread can still be in native engine code, and it only parks at a suspendable safe point
   /// once it re-enters managed code during the frame.
   /// </summary>
+
+  // CA1822: instance member by design (see FindMethod); part of the invoke plumbing.
+  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   private T Retrying<T>(Func<T> invoke) {
     for (var attempt = 0;; attempt++) {
       try {
@@ -99,12 +110,18 @@ internal sealed class Invoker(VirtualMachine vm) {
   /// Pass placeholder values (defaults) for the out parameters.
   /// </summary>
   public InvokeResult InvokeStaticWithOutArgs(
-    TypeMirror type, MethodMirror method, params Value[] args
+    TypeMirror type,
+    MethodMirror method,
+    params Value[] args
   ) {
-    return this.Retrying(() =>
-      type.EndInvokeMethodWithResult(
+    return this.Retrying(() => type.EndInvokeMethodWithResult(
         type.BeginInvokeMethod(
-          this.MainThread, method, args, InvokeOptions.ReturnOutArgs, null, null
+          this.MainThread,
+          method,
+          args,
+          InvokeOptions.ReturnOutArgs,
+          null,
+          null
         )
       )
     );
@@ -113,11 +130,12 @@ internal sealed class Invoker(VirtualMachine vm) {
   /// <summary>Invokes an instance method on whatever mirror kind the target is.</summary>
   public Value Invoke(Value target, MethodMirror method, params Value[] args) {
     return this.Retrying(() => target switch {
-      ObjectMirror o => o.InvokeMethod(this.MainThread, method, args),
-      StructMirror s => s.InvokeMethod(this.MainThread, method, args),
-      PrimitiveValue p => p.InvokeMethod(this.MainThread, method, args),
-      _ => throw new InvalidOperationException($"cannot invoke on {target.GetType().Name}")
-    });
+        ObjectMirror o => o.InvokeMethod(this.MainThread, method, args),
+        StructMirror s => s.InvokeMethod(this.MainThread, method, args),
+        PrimitiveValue p => p.InvokeMethod(this.MainThread, method, args),
+        _ => throw new InvalidOperationException($"cannot invoke on {target.GetType().Name}")
+      }
+    );
   }
 
   public Value Invoke(Value target, string method, params Value[] args) =>
@@ -136,6 +154,8 @@ internal sealed class Invoker(VirtualMachine vm) {
   public Value GetStaticProperty(TypeMirror type, string name) =>
     this.InvokeStatic(type, this.FindMethod(type, $"get_{name}", 0));
 
+  // CA1822: instance member by design (see FindMethod); called via this.inv.TypeOf cross-file.
+  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public TypeMirror TypeOf(Value v) {
     return v switch {
       ObjectMirror o => o.Type,
@@ -151,25 +171,20 @@ internal sealed class Invoker(VirtualMachine vm) {
   /// <summary>Renders a mirrored value as text; structs and boxed structs list fields.</summary>
   public string Format(Value v, int depth = 2) {
     switch (v) {
-      case null:
-        return "null";
+      case null: return "null";
 
       case PrimitiveValue p:
         return p.Value is IFormattable f
           ? f.ToString(null, CultureInfo.InvariantCulture)
           : p.Value?.ToString() ?? "null";
 
-      case StringMirror s:
-        return $"\"{s.Value}\"";
+      case StringMirror s: return $"\"{s.Value}\"";
 
-      case EnumMirror e:
-        return $"{e.Type.Name}.{e.StringValue}";
+      case EnumMirror e: return $"{e.Type.Name}.{e.StringValue}";
 
-      case ArrayMirror a:
-        return $"{a.Type.FullName}[{a.Length}]";
+      case ArrayMirror a: return $"{a.Type.FullName}[{a.Length}]";
 
-      case StructMirror st:
-        return this.FormatFields(st.Type, st.Fields, depth);
+      case StructMirror st: return this.FormatFields(st.Type, st.Fields, depth);
 
       case ObjectMirror o when o.Type.IsValueType: {
         // Boxed struct: read its instance fields off the heap object.
@@ -178,28 +193,26 @@ internal sealed class Invoker(VirtualMachine vm) {
         return this.FormatFields(o.Type, o.GetValues(fields), depth);
       }
 
-      case ObjectMirror o:
-        return $"{o.Type.FullName}#{o.Address}";
+      case ObjectMirror o: return $"{o.Type.FullName}#{o.Address}";
 
-      default:
-        return v.ToString();
+      default: return v.ToString();
     }
   }
 
-  private string FormatFields(TypeMirror type, IList<Value> values, int depth) {
+  private string FormatFields(TypeMirror type, Value[] values, int depth) {
     if (depth <= 0) {
       return $"{type.Name} {{...}}";
     }
 
     var fields = Invoker.InstanceFields(type);
 
-    var parts = fields
-      .Select((f, i) => $"{f.Name}={this.Format(i < values.Count ? values[i] : null, depth - 1)}");
+    var parts = fields.Select((f, i) =>
+      $"{f.Name}={this.Format(i < values.Length ? values[i] : null, depth - 1)}"
+    );
 
     return $"{type.Name} {{ {string.Join(", ", parts)} }}";
   }
 
-  public static FieldInfoMirror[] InstanceFields(TypeMirror type) {
-    return type.GetFields().Where(f => !f.IsStatic).ToArray();
-  }
+  public static FieldInfoMirror[] InstanceFields(TypeMirror type) =>
+    type.GetFields().Where(f => !f.IsStatic).ToArray();
 }

@@ -62,8 +62,12 @@ development build from the outside over the Mono Soft Debugger protocol (SDB) �
 query ECS entities, read/write components live, invoke C# — with CS2 as the reference target
 (dev Mono build, SDB agent live). The feasibility PoC (`poc/`, a .NET CLI) is done and verified
 end-to-end against CS2; see `plugins/unity-devtools/AGENTS.md` for what it proves and the SDB
-gotchas. The natural next step is converting the CLI's attach-act-detach commands into a .NET MCP
-server, the same shape `coherent-gameface` has for CDP.
+gotchas. The SDB client + attach/invoke plumbing are now isolated in a `sdb/` class library, and a
+demo `.NET` MCP server (`mcp/`, official `ModelContextProtocol` SDK, stdio) exposes attach-level
+tools (`status`, `attach_check`) over the same shape `coherent-gameface` has for CDP — verified
+live against CS2. The next step is porting the CLI's richer commands (ECS query, component
+read/write, invoke) into MCP tools, and settling the session model (attach-per-call works; a
+persistent per-conversation session is the known fix for multi-write consistency windows).
 
 Shipping checklist when it graduates from PoC (not registered anywhere yet):
 

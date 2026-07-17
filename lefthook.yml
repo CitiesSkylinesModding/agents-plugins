@@ -11,7 +11,7 @@ pre-commit:
       # staged src files, so the freshly built bundle is staged explicitly.
       root: "plugins/coherent-gameface/mcp/"
       glob: "plugins/coherent-gameface/mcp/src/*.ts"
-      run: mise build && git add dist/server.mjs
+      run: mise build:gameface && git add dist/server.mjs
     tsc:
       # The only tsconfig lives in the mcp workspace; only staged files under it trigger the check.
       root: "plugins/coherent-gameface/mcp/"

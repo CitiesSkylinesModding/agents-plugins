@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using System.Globalization;
 using Mono.Debugger.Soft;
+using UnityDevtools.Sdb;
 
 namespace UnityDevtools.Poc;
 
@@ -28,80 +28,93 @@ internal static class Program {
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "type full name"),
-          args.Contains("--members")),
+          args.Contains("--members")
+        ),
         "query" => Commands.Query(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positionals(args).Skip(1).ToArray(),
-          int.Parse(Program.ArgValue(args, "--limit") ?? "10"),
+          int.Parse(Program.ArgValue(args, "--limit") ?? "10", CultureInfo.InvariantCulture),
           Program.ArgValue(args, "--world"),
-          Program.ArgValue(args, "--label")),
+          Program.ArgValue(args, "--label")
+        ),
         "call-static" => Commands.CallStatic(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "type full name"),
           Program.Positional(args, 2, "method name"),
           Program.Positionals(args).Skip(3).ToArray(),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--world")
+        ),
         "call-system" => Commands.CallSystem(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "system type full name"),
           Program.Positional(args, 2, "method name"),
           Program.Positionals(args).Skip(3).ToArray(),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--world")
+        ),
         "get-buffer" => Commands.GetBuffer(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "buffer element type full name"),
-          Program.ArgValue(args, "--entity")
-          ?? throw new ArgumentException("missing --entity <index[:version]>"),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--entity") ??
+          throw new ArgumentException("missing --entity <index[:version]>"),
+          Program.ArgValue(args, "--world")
+        ),
         "buffer-add" => Commands.BufferAdd(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "buffer element type full name"),
-          Program.ArgValue(args, "--entity")
-          ?? throw new ArgumentException("missing --entity <index[:version]>"),
+          Program.ArgValue(args, "--entity") ??
+          throw new ArgumentException("missing --entity <index[:version]>"),
           Program.ArgValue(args, "--set") ??
           throw new ArgumentException("missing --set <field>=<value>"),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--world")
+        ),
         "buffer-remove-at" => Commands.BufferRemoveAt(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "buffer element type full name"),
-          Program.ArgValue(args, "--entity")
-          ?? throw new ArgumentException("missing --entity <index[:version]>"),
-          int.Parse(Program.ArgValue(args, "--index")
-                    ?? throw new ArgumentException("missing --index <n>")),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--entity") ??
+          throw new ArgumentException("missing --entity <index[:version]>"),
+          int.Parse(
+            Program.ArgValue(args, "--index") ?? throw new ArgumentException("missing --index <n>"),
+            CultureInfo.InvariantCulture
+          ),
+          Program.ArgValue(args, "--world")
+        ),
         "get-component" => Commands.GetComponent(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "component full name"),
-          Program.ArgValue(args, "--entity")
-          ?? throw new ArgumentException("missing --entity <index[:version]>"),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--entity") ??
+          throw new ArgumentException("missing --entity <index[:version]>"),
+          Program.ArgValue(args, "--world")
+        ),
         "set-component" => Commands.SetComponent(
           Program.Host(args),
           Program.RequirePort(args),
           Program.Positional(args, 1, "component full name"),
-          Program.ArgValue(args, "--entity")
-          ?? throw new ArgumentException("missing --entity <index[:version]>"),
+          Program.ArgValue(args, "--entity") ??
+          throw new ArgumentException("missing --entity <index[:version]>"),
           Program.ArgValue(args, "--field") ?? throw new ArgumentException("missing --field"),
           Program.ArgValue(args, "--value") ?? throw new ArgumentException("missing --value"),
-          Program.ArgValue(args, "--world")),
+          Program.ArgValue(args, "--world")
+        ),
         _ => Program.Usage()
       };
     }
     catch (Exception e) {
       Console.Error.WriteLine($"error: {e.Message}");
+
       return 1;
     }
   }
 
   private static int Usage() {
-    Console.Error.WriteLine("""
+    Console.Error.WriteLine(
+      """
       unity-devtools-poc <command> [options]
 
       commands:
@@ -137,7 +150,8 @@ internal static class Program {
       common options:
         --host <ip>    debugger host (default 127.0.0.1)
         --port <port>  SDB port (see `status`)
-      """);
+      """
+    );
 
     return 2;
   }
@@ -146,18 +160,17 @@ internal static class Program {
     Program.ArgValue(args, "--host") ?? Program.DefaultHost;
 
   private static int RequirePort(string[] args) {
-    var raw =
-      Program.ArgValue(args, "--port") ??
+    var raw = Program.ArgValue(args, "--port") ??
       throw new ArgumentException("missing --port (run `status` to discover it)");
 
-    return int.Parse(raw);
+    return int.Parse(raw, CultureInfo.InvariantCulture);
   }
 
   private static List<string> Positionals(string[] args) {
     var positionals = new List<string>();
 
     for (var i = 0; i < args.Length; i++) {
-      if (args[i].StartsWith("--")) {
+      if (args[i].StartsWith("--", StringComparison.Ordinal)) {
         if (!Program.Flags.Contains(args[i])) {
           i++;
         }
@@ -198,13 +211,11 @@ internal static class Program {
 
 internal static class Commands {
   /// <summary>
-  ///   Finds the game process and its Mono Soft Debugger listen port (56000-56511 range)
-  ///   by parsing netstat, so nothing touches the port before a real attach.
+  /// Finds the game process and its Mono Soft Debugger listen port via the shared
+  /// <see cref="SdbDiscovery" />, so nothing touches the port before a real attach.
   /// </summary>
   public static int Status(string processName) {
-    var processes = Process.GetProcesses()
-      .Where(p => p.ProcessName.StartsWith(processName, StringComparison.OrdinalIgnoreCase))
-      .ToList();
+    var processes = SdbDiscovery.Locate(processName);
 
     if (processes.Count == 0) {
       Console.WriteLine($"process '{processName}*': not running");
@@ -213,22 +224,21 @@ internal static class Commands {
     }
 
     foreach (var p in processes) {
-      Console.WriteLine($"process: {p.ProcessName} (pid {p.Id})");
+      Console.WriteLine($"process: {p.Name} (pid {p.Pid})");
+      Console.WriteLine($"listening: {string.Join(", ", p.ListeningPorts)}");
 
-      var ports = Commands.ListenPorts(p.Id);
-      var sdb = ports.Where(port => port >= 56000 && port <= 56511).ToList();
-
-      Console.WriteLine($"listening: {string.Join(", ", ports.OrderBy(x => x))}");
-
-      Console.WriteLine(sdb.Count > 0
-        ? $"sdb port: {sdb[0]}"
-        : "sdb port: none found in 56000-56511 (not a dev/Mono build?)");
+      Console.WriteLine(
+        p.SdbPort is {} sdb
+          ? $"sdb port: {sdb}"
+          : $"sdb port: none found in " +
+          $"{SdbDiscovery.PortRangeStart}-{SdbDiscovery.PortRangeEnd} (not a dev/Mono build?)"
+      );
     }
 
     return 0;
   }
 
-  /// <summary>Attaches, prints VM/runtime info, then resumes and detaches.</summary>
+  /// <summary>Attaches, prints VM/runtime info, then resumes, and detaches.</summary>
   public static int AttachCheck(string host, int port) {
     using var session = SdbSession.Connect(host, port);
 
@@ -252,8 +262,8 @@ internal static class Commands {
   }
 
   /// <summary>
-  ///   Resolves a type by fully-qualified name over SDB and prints where it lives;
-  ///   with --members, also lists its fields, properties, and methods.
+  /// Resolves a type by fully qualified name over SDB and prints where it lives; with --members,
+  /// also lists its fields, properties, and methods.
   /// </summary>
   public static int FindTypes(string host, int port, string fullName, bool members) {
     using var session = SdbSession.Connect(host, port);
@@ -295,8 +305,10 @@ internal static class Commands {
       Console.WriteLine("  methods:");
 
       foreach (var m in t.GetMethods()) {
-        var pars = string.Join(", ", m.GetParameters()
-          .Select(x => $"{x.ParameterType.Name} {x.Name}"));
+        var pars = string.Join(
+          ", ",
+          m.GetParameters().Select(x => $"{x.ParameterType.Name} {x.Name}")
+        );
 
         Console.WriteLine($"    {m.ReturnType.Name} {m.Name}({pars})");
       }
@@ -306,11 +318,16 @@ internal static class Commands {
   }
 
   /// <summary>
-  ///   Counts and lists entities having all the given component types; with --label, each
-  ///   listed entity is annotated via a one-Entity-arg system method (e.g. a name system).
+  /// Counts and lists entities having all the given component types; with --label, each listed
+  /// entity is annotated via a one-Entity-arg system method (e.g., a name system).
   /// </summary>
   public static int Query(
-    string host, int port, string[] comps, int limit, string world, string label
+    string host,
+    int port,
+    string[] comps,
+    int limit,
+    string world,
+    string label
   ) {
     if (comps.Length == 0) {
       throw new ArgumentException("missing component type name(s)");
@@ -363,7 +380,12 @@ internal static class Commands {
 
   /// <summary>Calls a managed system method with loosely typed CLI arguments.</summary>
   public static int CallSystem(
-    string host, int port, string sysType, string method, string[] rawArgs, string world
+    string host,
+    int port,
+    string sysType,
+    string method,
+    string[] rawArgs,
+    string world
   ) {
     using var session = SdbSession.Connect(host, port);
 
@@ -380,9 +402,7 @@ internal static class Commands {
   }
 
   /// <summary>Prints an entity's DynamicBuffer elements.</summary>
-  public static int GetBuffer(
-    string host, int port, string elem, string entitySpec, string world
-  ) {
+  public static int GetBuffer(string host, int port, string elem, string entitySpec, string world) {
     using var session = SdbSession.Connect(host, port);
 
     var inv = new Invoker(session.Vm);
@@ -390,7 +410,7 @@ internal static class Commands {
 
     var (index, version) = Commands.ParseEntitySpec(entitySpec);
     var buf = ecs.GetBuffer(ecs.MakeEntity(index, version ?? 1), inv.ResolveType(elem));
-    var len = (int)((PrimitiveValue)inv.GetProperty(buf, "Length")).Value;
+    var len = (int) ((PrimitiveValue) inv.GetProperty(buf, "Length")).Value;
 
     Console.WriteLine($"{elem}[{len}] on entity {index}:{version ?? 1}");
 
@@ -402,10 +422,15 @@ internal static class Commands {
   }
 
   /// <summary>
-  ///   Appends a buffer element: clones element 0 as a template, applies --set, adds it.
+  /// Appends a buffer element: clones element 0 as a template, applies --set, adds it.
   /// </summary>
   public static int BufferAdd(
-    string host, int port, string elem, string entitySpec, string setSpec, string world
+    string host,
+    int port,
+    string elem,
+    string entitySpec,
+    string setSpec,
+    string world
   ) {
     using var session = SdbSession.Connect(host, port);
 
@@ -415,7 +440,7 @@ internal static class Commands {
     var elemType = inv.ResolveType(elem);
     var (index, version) = Commands.ParseEntitySpec(entitySpec);
     var buf = ecs.GetBuffer(ecs.MakeEntity(index, version ?? 1), elemType);
-    var len = (int)((PrimitiveValue)inv.GetProperty(buf, "Length")).Value;
+    var len = (int) ((PrimitiveValue) inv.GetProperty(buf, "Length")).Value;
 
     if (len == 0) {
       throw new InvalidOperationException(
@@ -423,7 +448,7 @@ internal static class Commands {
       );
     }
 
-    var element = (StructMirror)inv.Invoke(buf, "get_Item", inv.Prim(0));
+    var element = (StructMirror) inv.Invoke(buf, "get_Item", inv.Prim(0));
     var eq = setSpec.IndexOf('=');
 
     if (eq <= 0) {
@@ -434,9 +459,13 @@ internal static class Commands {
 
     var fieldInfo =
       Invoker.InstanceFields(elemType)
-        .FirstOrDefault(f => string.Equals(f.Name, fieldName, StringComparison.OrdinalIgnoreCase))
-      ?? throw new ArgumentException(
-        $"field '{fieldName}' not found on {elemType.FullName}");
+        .FirstOrDefault(f => string.Equals(
+            f.Name,
+            fieldName,
+            StringComparison.OrdinalIgnoreCase
+          )
+        ) ??
+      throw new ArgumentException($"field '{fieldName}' not found on {elemType.FullName}");
 
     element[fieldInfo.Name] = ecs.ParseFieldValue(fieldInfo.FieldType, setSpec[(eq + 1)..]);
     inv.Invoke(buf, "Add", element);
@@ -449,7 +478,12 @@ internal static class Commands {
 
   /// <summary>Removes one buffer element by index.</summary>
   public static int BufferRemoveAt(
-    string host, int port, string elem, string entitySpec, int at, string world
+    string host,
+    int port,
+    string elem,
+    string entitySpec,
+    int at,
+    string world
   ) {
     using var session = SdbSession.Connect(host, port);
 
@@ -471,7 +505,12 @@ internal static class Commands {
 
   /// <summary>Calls a static method; out-param values are printed after the result.</summary>
   public static int CallStatic(
-    string host, int port, string typeName, string method, string[] rawArgs, string world
+    string host,
+    int port,
+    string typeName,
+    string method,
+    string[] rawArgs,
+    string world
   ) {
     using var session = SdbSession.Connect(host, port);
 
@@ -498,21 +537,18 @@ internal static class Commands {
 
   private static Value ParseCallArg(Ecs ecs, Invoker inv, string raw) {
     switch (raw) {
-      case "em":
-        return ecs.EntityManager;
-      case "out-int":
-        return inv.Prim(0);
-      case "out-entity":
-        return ecs.MakeEntity(0, 0);
+      case "em": return ecs.EntityManager;
+
+      case "out-int": return inv.Prim(0);
+
+      case "out-entity": return ecs.MakeEntity(0, 0);
     }
 
     var parts = raw.Split(':');
 
-    if (
-      parts.Length == 2 &&
+    if (parts.Length == 2 &&
       int.TryParse(parts[0], out var ei) &&
-      int.TryParse(parts[1], out var ev)
-    ) {
+      int.TryParse(parts[1], out var ev)) {
       return ecs.MakeEntity(ei, ev);
     }
 
@@ -533,7 +569,11 @@ internal static class Commands {
 
   /// <summary>Prints one entity's component field values.</summary>
   public static int GetComponent(
-    string host, int port, string comp, string entitySpec, string world
+    string host,
+    int port,
+    string comp,
+    string entitySpec,
+    string world
   ) {
     using var session = SdbSession.Connect(host, port);
 
@@ -575,13 +615,13 @@ internal static class Commands {
 
     var fieldInfo =
       Invoker.InstanceFields(compType)
-        .FirstOrDefault(f => string.Equals(f.Name, field, StringComparison.OrdinalIgnoreCase))
-      ?? throw new ArgumentException(
-        $"field '{field}' not found on {compType.FullName}; "
-        + $"fields: {string.Join(", ", Invoker.InstanceFields(compType).Select(f => f.Name))}"
+        .FirstOrDefault(f => string.Equals(f.Name, field, StringComparison.OrdinalIgnoreCase)) ??
+      throw new ArgumentException(
+        $"field '{field}' not found on {compType.FullName}; " +
+        $"fields: {string.Join(", ", Invoker.InstanceFields(compType).Select(f => f.Name))}"
       );
 
-    var value = (StructMirror)ecs.GetComponent(entity, compType);
+    var value = (StructMirror) ecs.GetComponent(entity, compType);
 
     Console.WriteLine($"entity: {inv.Format(entity)}");
     Console.WriteLine($"before: {inv.Format(value, 3)}");
@@ -599,44 +639,7 @@ internal static class Commands {
   private static (int index, int? version) ParseEntitySpec(string spec) {
     var parts = spec.Split(':');
 
-    return (int.Parse(parts[0]), parts.Length > 1 ? int.Parse(parts[1]) : null);
-  }
-
-  private static List<int> ListenPorts(int pid) {
-    // netstat -ano is the lightest way to map listen ports to a PID on Windows without P/Invoke;
-    // fine for a PoC.
-    var psi = new ProcessStartInfo("netstat", "-ano -p tcp") {
-      RedirectStandardOutput = true,
-      UseShellExecute = false
-    };
-
-    using var netstat = Process.Start(psi);
-
-    var output = netstat!.StandardOutput.ReadToEnd();
-
-    netstat.WaitForExit();
-
-    var ports = new List<int>();
-
-    foreach (var line in output.Split('\n')) {
-      var cols = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-      // TCP <local> <remote> LISTENING <pid>
-      if (
-        cols.Length >= 5 &&
-        cols[0] == "TCP" &&
-        cols[3] == "LISTENING" &&
-        cols[4].Trim() == pid.ToString()
-      ) {
-        var local = cols[1];
-        var idx = local.LastIndexOf(':');
-
-        if (idx > 0 && int.TryParse(local[(idx + 1)..], out var port)) {
-          ports.Add(port);
-        }
-      }
-    }
-
-    return ports.Distinct().ToList();
+    return (int.Parse(parts[0], CultureInfo.InvariantCulture),
+      parts.Length > 1 ? int.Parse(parts[1], CultureInfo.InvariantCulture) : null);
   }
 }

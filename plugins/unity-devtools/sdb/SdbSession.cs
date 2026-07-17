@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Mono.Debugger.Soft;
 
-namespace UnityDevtools.Poc;
+namespace UnityDevtools.Sdb;
 
 /// <summary>
 /// One attach-act-detach session against the game's Mono Soft Debugger agent.
@@ -10,7 +10,7 @@ namespace UnityDevtools.Poc;
 /// <see cref="Dispose"/> always resumes and detaches, even on failure, so the game never stays
 /// frozen.
 /// </summary>
-internal sealed class SdbSession : IDisposable {
+public sealed class SdbSession : IDisposable {
   private SdbSession(VirtualMachine vm) {
     this.Vm = vm;
   }

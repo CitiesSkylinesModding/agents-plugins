@@ -7,6 +7,9 @@
         "GAMEFACE_HOST": "${GAMEFACE_HOST:-localhost}",
         "GAMEFACE_PORT": "${GAMEFACE_PORT:-9444}"
       }
+    },
+    "unity": {
+      "command": "plugins/unity-devtools/mcp/dist/unity-devtools-mcp.exe"
     }
   }
 }
