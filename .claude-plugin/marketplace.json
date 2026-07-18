@@ -8,6 +8,11 @@
       "name": "coherent-gameface",
       "source": "./plugins/coherent-gameface",
       "description": "Drive a running Coherent Gameface UI from your coding agent over a direct Chrome DevTools Protocol connection."
+    },
+    {
+      "name": "unity-devtools",
+      "source": "./plugins/unity-devtools",
+      "description": "Drive a running Unity Mono development build from your coding agent over the Mono Soft Debugger protocol: live reflection, method invokes, and ECS read-write, no code injection."
     }
   ]
 }

@@ -12,6 +12,13 @@ pre-commit:
       root: "plugins/coherent-gameface/mcp/"
       glob: "plugins/coherent-gameface/mcp/src/*.ts"
       run: mise build:gameface && git add dist/server.mjs
+    build-unity-dist:
+      # The same freshness rule for the committed unity-devtools exe: any staged change to the C#
+      # sources (server or sdb library) or the publishing script rebuilds and stages it.
+      # Both flat and nested patterns: `**/` requires an intermediate directory, so it alone
+      # would miss the flat top-level sources.
+      glob: "{plugins/unity-devtools/{mcp,sdb}/*.{cs,csproj},plugins/unity-devtools/{mcp,sdb}/**/*.{cs,csproj},scripts/build-unity-mcp.ps1}"
+      run: mise build:unity:mcp && git add plugins/unity-devtools/mcp/dist/unity-devtools-mcp.exe
     tsc:
       # The only tsconfig lives in the mcp workspace; only staged files under it trigger the check.
       root: "plugins/coherent-gameface/mcp/"

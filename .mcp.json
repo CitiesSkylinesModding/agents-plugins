@@ -9,7 +9,12 @@
       }
     },
     "unity": {
-      "command": "plugins/unity-devtools/mcp/dist/unity-devtools-mcp.exe"
+      "command": "plugins/unity-devtools/mcp/dist/unity-devtools-mcp.exe",
+      "env": {
+        "UNITY_MCP_HOST": "${UNITY_MCP_HOST:-}",
+        "UNITY_MCP_PORT": "${UNITY_MCP_PORT:-}",
+        "UNITY_MCP_PROCESS": "${UNITY_MCP_PROCESS:-}"
+      }
     }
   }
 }

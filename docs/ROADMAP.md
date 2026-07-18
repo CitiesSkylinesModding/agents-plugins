@@ -1,13 +1,15 @@
 # Roadmap
 
-`coherent-gameface` (in the `agents-plugins` marketplace) is a generic toolkit for driving a running
-Coherent Gameface UI over CDP.
-The MCP server (`gameface-devtools-mcp`, published on npm as `@csmodding/gameface-devtools-mcp`) is
-the first facet; skills and richer instrumentation are planned.
-The plugin is developed and verified against Cities: Skylines II's Gameface UI, but stays
-application-agnostic.
+Planned facets for the `csmodding` marketplace plugins. Both plugins are generic toolkits,
+developed and verified against Cities: Skylines II but application-agnostic.
 
-## Planned/Explore
+## coherent-gameface
+
+Drive a running Coherent Gameface UI over CDP; the MCP server (`gameface-devtools-mcp`, published
+on npm as `@csmodding/gameface-devtools-mcp`) is the first facet; richer instrumentation is
+planned. When these land they become standard plugin components: `commands/`, `agents/`, and
+`skills/` directories auto-discovered by the plugin manifest (`skills/` already ships the
+`gameface` and `gameface-driving` skills).
 
 ### Non-text element discovery
 
@@ -51,33 +53,58 @@ a `timestamp` field in standard CDP; verify Gameface populates it).
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools.
 
-When these land they become standard plugin components: `commands/`, `agents/`, and `skills/`
-directories auto-discovered by the plugin manifest (`skills/` already ships the `gameface` and
-`gameface-driving` skills).
+## unity-devtools
 
-## Sibling plugin: unity-devtools
+Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
+(SDB): discovery, live type reflection, method invokes, ECS entity/component/buffer read-write,
+through one persistent lazy-attach session.
 
-`plugins/unity-devtools/` is a second, generic plugin in the making: drive a running Unity Mono
-development build from the outside over the Mono Soft Debugger protocol (SDB) — attach, inspect,
-query ECS entities, read/write components live, invoke C# — with CS2 as the reference target
-(dev Mono build, SDB agent live). The feasibility PoC (`poc/`, a .NET CLI) is done and verified
-end-to-end against CS2; see `plugins/unity-devtools/AGENTS.md` for what it proves and the SDB
-gotchas. The SDB client + attach/invoke plumbing are now isolated in a `sdb/` class library, and a
-demo `.NET` MCP server (`mcp/`, official `ModelContextProtocol` SDK, stdio) exposes attach-level
-tools (`status`, `attach_check`) over the same shape `coherent-gameface` has for CDP — verified
-live against CS2. The next step is porting the CLI's richer commands (ECS query, component
-read/write, invoke) into MCP tools, and settling the session model (attach-per-call works; a
-persistent per-conversation session is the known fix for multi-write consistency windows).
+### Cross-platform support
 
-Shipping checklist when it graduates from PoC (not registered anywhere yet):
+Discovery is netstat-based and Windows-only, and the committed exe is win-x64. Port discovery to
+Linux/macOS (parse `/proc` or `lsof`) and publish per-RID artifacts.
 
-- Dual manifests: `.claude-plugin/plugin.json` + `.codex-plugin/plugin.json` (+ its `mcp.json`),
-  shared fields identical.
-- Entries in BOTH marketplace files: `.claude-plugin/marketplace.json` and
-  `.agents/plugins/marketplace.json`.
-- A release-please unit (its own `package.json` anchor + `release-please-config.json` entry;
-  decide whether it joins the `linked-versions` group or versions independently).
-- Extend `scripts/check-plugin-sync.ts` to cover its manifest pair.
-- Decide the vendored `Mono.Debugger.Soft` story for installs (marketplace installs copy the
-  plugin subtree; a git submodule does not ship through that path — likely needs the built
-  binary committed, mirroring the `coherent-gameface` bundle approach).
+### Complex invoke arguments / expression evaluation
+
+`invoke` coerces text tokens against the resolved signature, which covers primitives, enums,
+strings, Entity, and the EntityManager; struct/object parameters are unreachable. Two explorable
+extensions:
+
+- Struct arguments constructed debuggee-side: JSON-shaped input mapped onto a
+  default-constructed StructMirror, field by field (the machinery `ecs_set_component` already
+  uses, generalized).
+- A C# expression evaluator, the way Rider does it: SDB has NO expression-evaluation command, so
+  IDEs parse the expression client-side and interpret it as a sequence of mirror primitives
+  (field reads, property getters, invokes, indexers), which our `Invoker` already provides.
+  A parser (Roslyn parser-only package, or a hand-rolled subset grammar: member chains, calls,
+  literals, casts, indexers) plus an AST walker over `Invoker` would cover most of what Rider's
+  evaluator does, with no change to the runtime footprint. Lambdas/LINQ need real compilation and
+  fall to the next tier.
+- An OPT-IN injected helper (exploratory, nothing decided): compile client-side, load into the
+  debuggee via an `Assembly.Load(byte[])` invoke. Unlocks lambdas/LINQ, arbitrary struct
+  construction, and above all batching (one in-game call instead of thousands of mirror
+  round-trips for bulk reads/edits). Constraints that would shape any design: Mono cannot unload
+  assemblies, so one persistent helper loaded once per game session (never per-expression
+  compilation, which leaks an assembly per eval); compiling user expressions against game types
+  needs the game's `Managed/` assemblies on disk as references; and it changes the footprint from
+  pure outside observer to injected helper, so it would stay opt-in with the injection-free mode
+  remaining the default.
+
+  One possible shape, sketched not settled: a debuggee-side counterpart of the MCP server, a
+  small static gateway class with SDB-friendly signatures (primitives/strings in, JSON out) that
+  existing mirror invokes can call like any static method. Candidate surface, in rough order of
+  value: batch ECS reads (run a query and serialize N entities with selected fields in-process,
+  one invoke instead of thousands); reflection-driven member-path projections over query results
+  (covers most lambda use without compilation); JSON-shaped writes and invoke arguments
+  (deserialize onto the real struct debuggee-side, dissolving the coercion ceiling); managed
+  (class) `IComponentData` access via the object-based EntityManager APIs (unreachable over
+  mirrors today); temporal captures (record a value across N frames, return the series); plus a
+  version/handshake method (detect a stale helper after a plugin update; no reload until game
+  restart) and structured try/catch so in-game exceptions come back as data. User-compiled
+  lambda execution would come only as a later layer on the same gateway, where the no-unload
+  leak actually bites.
+
+### GameObject/MonoBehaviour tools
+
+The current surface is ECS + static/system invokes; add tools for the classic Unity object model
+(scene hierarchy, GameObject/MonoBehaviour inspection and mutation).

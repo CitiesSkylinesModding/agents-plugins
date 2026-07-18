@@ -1,3 +1,6 @@
+# NOTE: dist/ is intentionally committed (single-file exe) so plugin installs work with zero build.
+# Only the rename-swap leftovers of scripts/build-unity-mcp.ps1 are ignored.
+
 bin/
 obj/
-dist/
+dist/*.stale*

@@ -1,0 +1,23 @@
+{
+  "name": "unity-devtools",
+  "version": "0.1.0",
+  "description": "Drive a running Unity Mono development build from your coding agent (Claude Code, Codex CLI): ships the unity-devtools-mcp server (process discovery, live type reflection, main-thread method invokes, and ECS entity/component/buffer read-write over the Mono Soft Debugger protocol, no code injection), plus skills.",
+  "author": {
+    "name": "Morgan Touverey Quilling"
+  },
+  "homepage": "https://github.com/CitiesSkylinesModding/agents-plugins",
+  "repository": "https://github.com/CitiesSkylinesModding/agents-plugins",
+  "license": "MIT",
+  "keywords": [
+    "unity",
+    "mono",
+    "soft-debugger",
+    "sdb",
+    "ecs",
+    "unity-entities",
+    "game-modding",
+    "debugger",
+    "mcp"
+  ],
+  "mcpServers": "./.codex-plugin/mcp.json"
+}

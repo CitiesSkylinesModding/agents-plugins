@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "unity": {
+      "command": "${CLAUDE_PLUGIN_ROOT:-.}/mcp/dist/unity-devtools-mcp.exe",
+      "env": {
+        "UNITY_MCP_HOST": "${UNITY_MCP_HOST:-}",
+        "UNITY_MCP_PORT": "${UNITY_MCP_PORT:-}",
+        "UNITY_MCP_PROCESS": "${UNITY_MCP_PROCESS:-}"
+      }
+    }
+  }
+}

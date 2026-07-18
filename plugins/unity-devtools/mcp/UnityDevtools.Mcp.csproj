@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Demo MCP server (walking skeleton): a C# stdio MCP server that reaches a running dev-Mono Unity
-    game over SDB and exposes attach-level tools only (status, attach_check). It references the
-    UnityDevtools.Sdb library for all vendored/SDB plumbing, so this project stays nullable-clean
-    with warnings as errors. Richer tools (ECS query, component read/write) are deliberately out of
-    scope here; see docs/ROADMAP.md.
+    The unity-devtools MCP server: a C# stdio MCP server that drives a running dev-Mono Unity game
+    over SDB (discovery, type reflection, method invokes, ECS query/read/write, buffer edits)
+    through one persistent lazy-attach session. It references the UnityDevtools.Sdb library for all
+    vendored/SDB plumbing, so this project stays nullable-clean with warnings as errors.
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!-- x-release-please-start-version -->
+    <Version>0.1.0</Version>
+    <!-- x-release-please-end -->
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

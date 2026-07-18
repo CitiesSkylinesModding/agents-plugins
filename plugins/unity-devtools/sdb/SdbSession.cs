@@ -5,8 +5,9 @@ using Mono.Debugger.Soft;
 namespace UnityDevtools.Sdb;
 
 /// <summary>
-/// One attach-act-detach session against the game's Mono Soft Debugger agent.
-/// The VM is suspended while the session is open (invokes need a suspended thread);
+/// One live attach to the game's Mono Soft Debugger agent.
+/// The VM is left RUNNING between operations; callers open their own suspend windows (invokes need
+/// a suspended thread).
 /// <see cref="Dispose"/> always resumes and detaches, even on failure, so the game never stays
 /// frozen.
 /// </summary>
@@ -18,17 +19,7 @@ public sealed class SdbSession : IDisposable {
   public VirtualMachine Vm { get; }
 
   public void Dispose() {
-    // The agent counts suspensions; resume until it reports "not suspended" so the game is
-    // guaranteed to run again whatever nesting the session built up.
-    for (var i = 0; i < 16; i++) {
-      try {
-        this.Vm.Resume();
-      }
-      catch {
-        // Not suspended anymore, or connection gone (socket close auto-resumes).
-        break;
-      }
-    }
+    SdbSession.DrainSuspends(this.Vm);
 
     try {
       this.Vm.Detach();
@@ -48,11 +39,28 @@ public sealed class SdbSession : IDisposable {
 
     var vm = VirtualMachineManager.Connect(new TcpConnection(socket), null, null);
 
-    // The agent queues a VM_START composite event at attach time; pump it so the
-    // event queue is clean, then suspend explicitly so invokes are legal.
+    // The agent queues a VM_START composite event at attach time; pump it so the event queue is
+    // clean, then normalize to "running" whatever suspend state the composite left behind, so the
+    // game keeps playing until an operation opens its own suspend window.
     vm.GetNextEventSet();
-    vm.Suspend();
+    SdbSession.DrainSuspends(vm);
 
     return new SdbSession(vm);
+  }
+
+  /// <summary>
+  /// Resumes until the agent reports "not suspended": suspensions are counted, so a single resume
+  /// is not enough to guarantee the game runs again.
+  /// </summary>
+  private static void DrainSuspends(VirtualMachine vm) {
+    for (var i = 0; i < 16; i++) {
+      try {
+        vm.Resume();
+      }
+      catch {
+        // Not suspended anymore, or connection gone (socket close auto-resumes).
+        break;
+      }
+    }
   }
 }

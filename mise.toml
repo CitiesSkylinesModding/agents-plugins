@@ -97,10 +97,8 @@ run = "bun scripts/check-skill-changelog.ts"
 # ===========
 
 [tasks.build]
-description = "Build everything: the gameface server bundle and all unity-devtools .NET artifacts (PoC CLI + demo MCP exe)."
-# Sequential, not parallel: build:unity:mcp and build:unity:poc share the sdb project, so concurrent
-# dotnet builds would race on its obj/bin.
-run = ["mise build:gameface", "mise build:unity:mcp", "mise build:unity:poc"]
+description = "Build everything: the gameface server bundle and the unity-devtools MCP exe."
+run = ["mise build:gameface", "mise build:unity:mcp"]
 
 [tasks."build:gameface"]
 description = "Rebuild the shipped gameface server bundle (plugins/coherent-gameface/mcp/dist/server.mjs), commit the result."
@@ -110,19 +108,11 @@ raw = true
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
-[tasks."build:unity:poc"]
-description = "Build the unity-devtools PoC CLI (dotnet, compiles the vendored SDB client)."
-dir = "{{config_root}}/plugins/unity-devtools/poc"
-raw = true
-run = "dotnet build UnityDevtoolsPoc.csproj"
-
 [tasks."build:unity:mcp"]
-description = "Publish the unity-devtools demo MCP server to a single exe under mcp/dist/ (what the root .mcp.json `unity` entry launches). Rebuild before reconnecting via /mcp."
-dir = "{{config_root}}/plugins/unity-devtools/mcp"
+description = "Publish the unity-devtools MCP server to the COMMITTED single exe under mcp/dist/ (commit the result). Rebuild before reconnecting via /mcp; a running server's exe is rename-swapped aside."
+dir = "{{config_root}}"
 raw = true
-# Framework-dependent single-file exe: one launchable file in dist/, gitignored.
-# '-r' is required for PublishSingleFile, win-x64 matches the Windows-only port discovery.
-run = "dotnet publish UnityDevtools.Mcp.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist"
+run = "pwsh -NoProfile -File scripts/build-unity-mcp.ps1"
 
 # FIX TASKS
 # =========
@@ -148,8 +138,9 @@ run = "bun --bun oxfmt"
 description = "Format the C# projects in place with jb (ReSharper) cleanupcode, honoring the root .editorconfig. Requires `dotnet tool restore` (pinned in .config/dotnet-tools.json)."
 raw = true
 # jb cleanupcode (same engine as Rider) with the custom "CSModCleanup" profile: applies the
-# resharper_* wrapping dotnet format cannot and the minor code-style fixes that keep the :warning
-# IDE rules satisfied. Excludes the vendored tree and generated obj/. No --no-build: cleanups need semantics.
+# resharper_* wrapping dotnet format cannot, and the minor code-style fixes that keep the :warning
+# IDE rules satisfied.
+# Excludes the vendored tree and generated obj/. No --no-build: cleanups need semantics.
 run = "dotnet jb cleanupcode agents-plugins.slnx --profile=\"CSModCleanup\" --settings=\"agents-plugins.sln.DotSettings\" --exclude=\"plugins/unity-devtools/vendor/**;plugins/unity-devtools/sdb/obj/**\""
 
 # PUBLISH TASKS
@@ -175,14 +166,8 @@ dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 run = "bun run src/server.ts"
 
-[tasks."run:unity:poc"]
-description = "Run the unity-devtools PoC CLI; append the subcommand, e.g. `mise run:unity:poc status`."
-dir = "{{config_root}}/plugins/unity-devtools/poc"
-raw = true
-run = "dotnet run -v q --project UnityDevtoolsPoc.csproj"
-
 [tasks."run:unity:mcp"]
-description = "Run the unity-devtools demo MCP server over stdio (manual smoke test, real clients launch the built exe via the root .mcp.json)."
+description = "Run the unity-devtools MCP server over stdio (manual smoke test, real clients launch the built exe via the root .mcp.json)."
 dir = "{{config_root}}/plugins/unity-devtools/mcp"
 raw = true
 run = "dotnet run -v q --project UnityDevtools.Mcp.csproj"

@@ -192,5 +192,5 @@ All are optional, read by the server from the environment:
 The server is developed in the
 [agents-plugins](https://github.com/CitiesSkylinesModding/agents-plugins)
 repository, where this package lives as the `plugins/coherent-gameface/mcp/` workspace. See the
-repository README for the development setup, and its `AGENTS.md` for the verified Gameface CDP
-behavior matrix.
+repository README for the development setup, and the plugin's `AGENTS.md`
+(`plugins/coherent-gameface/AGENTS.md`) for the verified Gameface CDP behavior matrix.

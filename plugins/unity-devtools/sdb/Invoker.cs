@@ -86,6 +86,28 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
+  /// Finds every non-generic method matching name and arity, derived-first, so a caller can pick
+  /// the overload whose signature accepts its arguments.
+  /// </summary>
+
+  // CA1822: instance member by design (see FindMethod); part of the invoke plumbing.
+  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
+  public List<MethodMirror> FindMethods(TypeMirror type, string name, int argc) {
+    var matches = new List<MethodMirror>();
+
+    for (var t = type; t != null; t = t.BaseType) {
+      matches.AddRange(
+        t.GetMethods()
+          .Where(m =>
+            m.Name == name && m.GetParameters().Length == argc && !m.IsGenericMethodDefinition
+          )
+      );
+    }
+
+    return matches;
+  }
+
+  /// <summary>
   /// Runs an <c>invoke</c>, retrying while the agent reports NOT_SUSPENDED: right after attach the
   /// main thread can still be in native engine code, and it only parks at a suspendable safe point
   /// once it re-enters managed code during the frame.

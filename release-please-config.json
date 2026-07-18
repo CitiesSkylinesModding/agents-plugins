@@ -30,6 +30,36 @@
       "component": "gameface-devtools-mcp",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false
+    },
+    "plugins/unity-devtools": {
+      "release-type": "node",
+      "component": "unity-devtools",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    },
+    "plugins/unity-devtools/mcp": {
+      "release-type": "node",
+      "component": "unity-devtools-mcp",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "UnityDevtools.Mcp.csproj"
+        }
+      ]
     }
   },
   "plugins": [
@@ -37,6 +67,11 @@
       "type": "linked-versions",
       "groupName": "coherent-gameface",
       "components": ["coherent-gameface", "gameface-devtools-mcp"]
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "unity-devtools",
+      "components": ["unity-devtools", "unity-devtools-mcp"]
     }
   ]
 }

@@ -17,3 +17,19 @@ jobs:
       - run: mise check:agents
       - run: mise build:gameface
       - run: git diff --exit-code
+      # The C# side compiles in CI to catch build errors, but the committed unity-devtools exe is
+      # NOT diffed: a "dotnet publish" has not (yet?) been tested to be byte-reproducible across
+      # environments.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore vendored SDB sources (sparse submodule)
+        run: |
+          path=plugins/unity-devtools/vendor/unity-mono
+          url=$(git config -f .gitmodules "submodule.$path.url")
+          sha=$(git rev-parse "HEAD:$path")
+          git clone --filter=tree:0 --no-checkout --depth 1 "$url" "$path"
+          git -C "$path" sparse-checkout set mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft
+          git -C "$path" fetch --depth 1 origin "$sha"
+          git -C "$path" checkout "$sha"
+      - run: dotnet build agents-plugins.slnx

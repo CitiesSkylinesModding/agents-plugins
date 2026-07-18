@@ -1,5 +1,4 @@
 <Solution>
   <Project Path="plugins/unity-devtools/sdb/UnityDevtools.Sdb.csproj" />
-  <Project Path="plugins/unity-devtools/poc/UnityDevtoolsPoc.csproj" />
   <Project Path="plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj" />
 </Solution>
