@@ -59,6 +59,12 @@
     BeforeTargets="BeforeCompile"
     Inputs="$(VendorSdbDir)Connection.cs"
     Outputs="$(PatchedConnection)">
-    <Exec Command="pwsh -NoProfile -Command &quot;$src = Get-Content -Raw '$(VendorSdbDir)Connection.cs'; $anchor = 'cb.BeginInvoke (r, null, null)'; if (-not $src.Contains($anchor)) { Write-Error 'vendored Connection.cs patch anchor missing (upstream changed?)'; exit 1 }; $src.Replace($anchor, 'System.Threading.Tasks.Task.Run (() =&gt; cb (r))') | Set-Content -NoNewline '$(PatchedConnection)'&quot;" />
+    <!--
+      The patch logic lives in patch-connection.ps1, not inline here: MSBuild runs Exec commands
+      through /bin/sh on Linux, which would expand the script's $src/$anchor PowerShell variables
+      away before pwsh saw them. Only MSBuild $(...) properties (no shell metacharacters) reach the
+      command line.
+    -->
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/patch-connection.ps1&quot; -Source &quot;$(VendorSdbDir)Connection.cs&quot; -Output &quot;$(PatchedConnection)&quot;" />
   </Target>
 </Project>
