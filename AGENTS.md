@@ -94,8 +94,7 @@ Rules that matter when committing:
 
 ## Gameface CDP gotchas (verified, do not relearn the hard way)
 
-These were verified against Cities: Skylines II's Gameface UI (Cohtml 1.64.0.7, V8 9.4, CDP 1.3) but
-reflect Gameface/Cohtml behavior in general.
+These were verified against Cities: Skylines II's Gameface UI (Cohtml 1.64.0.7, V8 9.4, CDP 1.3) but reflect Gameface/Cohtml behavior in general. The essentials are below; the full verified matrix (CDP domain support, in-page DOM API availability, input-dispatch details, the JS debugger, and view-reload detection) lives in the `gameface` and `gameface-driving` skills under `plugins/coherent-gameface/skills/`, which are the canonical source and teach it to agents at runtime.
 
 - Discover the page target from `GET /json/list`; build the WS URL yourself as `ws://host:port/devtools/page/<id>`. The `webSocketDebuggerUrl` field is malformed.
 - `Runtime.evaluate` (returnByValue) works immediately. `Page.captureScreenshot` needs `Page.enable`.
@@ -131,7 +130,7 @@ Ask first before:
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Propose updates to `AGENTS.md` or `docs/` when you notice a pattern or introduced changes that deserve to be documented for future sessions.
-- After changing `plugins/coherent-gameface/mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` whenever you need to get the new build.
+- After changing `plugins/coherent-gameface/mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` whenever you need to get the new build. Server launch/connection failures (e.g. `MCP error -32000: Connection closed`, an SDK process-exit/spawn error, not a CDP error) are diagnosable from the newest `.jsonl` under `%LocalAppData%\claude-cli-nodejs\Cache\C--Users-Morgan-Documents-Projets-coherent-gameface-mcp\mcp-logs-gameface\`.
 - Store hard-won facts about Gameface internals in memory.
 - Keep the server generic: no assumptions about a specific game's DOM and APIs beyond the defaults. CS2 is the test target, not a hard dependency.
 - Keep skills and docs generic too (`skills/**`, `docs/`, `README`s): the plugin targets any Gameface application, so write the general behavior as the guidance and the rule. CS2 is where facts are verified, not the lesson: state what holds for any Gameface UI, and keep CS2-only specifics (a concrete DOM path or class, an engine detail like Unity/`Colossal.*`, a binding name such as `menu.setActiveScreen`, a decompiled-source finding) out of the general text. When such a specific genuinely aids understanding, demote it to a clearly labeled example ("verified on CS2: ...") rather than letting it become the framing, and prefer none at all in a section meant as general procedure. The gameface engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain and generic; a particular game's use of it is not.

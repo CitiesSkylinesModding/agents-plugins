@@ -33,6 +33,9 @@ import {
 
 // Read at runtime rather than baked in at build time, so a version bump needs no rebuild.
 // Both execution modes sit one level below package.json (dist/server.mjs and src/server.ts).
+// A static JSON import is avoided on purpose: `bun build` either inlines it (baking the version)
+// or, with --external, strips the `with { type: 'json' }` attribute so Node throws; the dynamic
+// form warns on Node < 22.12 (the floor is 22.4). readFileSync is silent on every supported Node.
 const { version: VERSION } = JSON.parse(
   // oxlint-disable-next-line node/no-sync -- One-shot startup read, nothing is serving yet.
   readFileSync(new URL('../package.json', import.meta.url), 'utf8')
