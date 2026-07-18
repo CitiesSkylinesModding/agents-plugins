@@ -17,14 +17,19 @@ public static class AttachTools {
   [Description(
     """
     Find running dev-Mono Unity game processes and their Mono Soft Debugger (SDB) port, without
-    attaching. Returns each matching process with its listen ports and the SDB port to pass to
-    attach_check.
+    attaching. With no processName, auto-discovers every process exposing an SDB port. Returns
+    each matching process with its listen ports and the SDB port to pass to attach_check.
     """
   )]
   [UsedImplicitly]
   public static StatusResult Status(
-    [Description("Process name prefix to match, case-insensitive (default \"Cities2\").")]
-    string processName = "Cities2"
+    [Description(
+      """
+      Optional process name prefix to match, case-insensitive.
+      Omit to auto-discover every running dev-Mono Unity game by its SDB port signature.
+      """
+    )]
+    string? processName = null
   ) {
     var processes = SdbDiscovery.Locate(processName)
       .Select(process => new GameProcessInfo {
@@ -45,8 +50,9 @@ public static class AttachTools {
   [McpServerTool(Name = "attach_check")]
   [Description(
     """
-    Attach to the game's SDB port, report VM/runtime info, then resume and detach. The game is
-    briefly suspended during the attach and always resumed afterward, so it keeps running.
+    Attach to the game's SDB port, report VM/runtime info, then resume and detach.
+    The game is briefly suspended during the attach and always resumed afterward, so it keeps
+    running.
     """
   )]
   [UsedImplicitly]
@@ -75,7 +81,8 @@ public static class AttachTools {
 
 /// <summary>Result of the <c>status</c> tool: the query and every matching game process.</summary>
 public sealed record StatusResult {
-  public required string ProcessQuery { [UsedImplicitly] get; init; }
+  /// <summary>The name-prefix filter applied, or null when discovery ran unfiltered.</summary>
+  public required string? ProcessQuery { [UsedImplicitly] get; init; }
 
   public required IReadOnlyList<GameProcessInfo> Processes { [UsedImplicitly] get; init; }
 }

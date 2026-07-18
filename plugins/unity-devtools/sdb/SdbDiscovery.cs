@@ -18,24 +18,44 @@ public static class SdbDiscovery {
   public const int PortRangeEnd = 56999;
 
   /// <summary>
-  /// Finds every process whose name starts with <paramref name="processNamePrefix" />
-  /// (case-insensitive) and, for each, its listen ports and best guess at the SDB port.
+  /// Locates running dev-Mono Unity game processes and, for each, its listen ports and best guess
+  /// at the SDB port.
+  /// With a <paramref name="processNamePrefix" />, returns every process whose name starts with it
+  /// (case-insensitive), whether it exposes a port or not, so a caller can tell "not running" from
+  /// "running but not a dev/Mono build".
+  /// With no prefix, returns every process that exposes a plausible SDB port: generic
+  /// auto-discovery by port signature, with no assumption about the game's name.
   /// </summary>
-  public static IReadOnlyList<GameProcess> Locate(string processNamePrefix) {
+  public static IReadOnlyList<GameProcess> Locate(string processNamePrefix = null) {
+    var hasFilter = !string.IsNullOrEmpty(processNamePrefix);
+
+    // One netstat pass maps every listening port to its owning PID, so unfiltered discovery does
+    // not spawn a netstat per process on the machine.
+    var portsByPid = SdbDiscovery.ListenPortsByPid();
+
     var found = new List<GameProcess>();
 
-    var processes = Process.GetProcesses()
-      .Where(p => p.ProcessName.StartsWith(processNamePrefix, StringComparison.OrdinalIgnoreCase));
+    foreach (var process in Process.GetProcesses()) {
+      if (hasFilter &&
+        !process.ProcessName.StartsWith(processNamePrefix, StringComparison.OrdinalIgnoreCase)) {
+        continue;
+      }
 
-    foreach (var process in processes) {
-      var ports = SdbDiscovery.ListenPorts(process.Id);
+      var ports = portsByPid.TryGetValue(process.Id, out var owned) ? owned : [];
+      var sdbPort = SdbDiscovery.PickSdbPort(ports);
+
+      // Without a name filter, discovery is purely by port signature: skip anything with no SDB
+      // port, so the result is real dev-Mono candidates, not every process on the machine.
+      if (!hasFilter && sdbPort is null) {
+        continue;
+      }
 
       found.Add(
         new GameProcess {
           Name = process.ProcessName,
           Pid = process.Id,
           ListeningPorts = ports.OrderBy(x => x).ToArray(),
-          SdbPort = SdbDiscovery.PickSdbPort(ports)
+          SdbPort = sdbPort
         }
       );
     }
@@ -65,7 +85,7 @@ public static class SdbDiscovery {
     return aboveStart.Count > 0 ? aboveStart.Max() : null;
   }
 
-  private static List<int> ListenPorts(int pid) {
+  private static Dictionary<int, List<int>> ListenPortsByPid() {
     var psi = new ProcessStartInfo("netstat", "-ano -p tcp") {
       RedirectStandardOutput = true,
       UseShellExecute = false
@@ -77,26 +97,45 @@ public static class SdbDiscovery {
 
     netstat.WaitForExit();
 
-    var ports = new List<int>();
+    var byPid = new Dictionary<int, List<int>>();
 
     foreach (var line in output.Split('\n')) {
       var cols = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
       // TCP <local> <remote> LISTENING <pid>
-      if (cols.Length >= 5 &&
-        cols[0] == "TCP" &&
-        cols[3] == "LISTENING" &&
-        cols[4].Trim() == pid.ToString(CultureInfo.InvariantCulture)) {
-        var local = cols[1];
-        var idx = local.LastIndexOf(':');
+      if (cols.Length < 5 || cols[0] != "TCP" || cols[3] != "LISTENING") {
+        continue;
+      }
 
-        if (idx > 0 && int.TryParse(local[(idx + 1)..], out var port)) {
-          ports.Add(port);
-        }
+      var pidParsed = int.TryParse(
+        cols[4].Trim(),
+        NumberStyles.Integer,
+        CultureInfo.InvariantCulture,
+        out var pid
+      );
+
+      if (!pidParsed) {
+        continue;
+      }
+
+      var local = cols[1];
+      var idx = local.LastIndexOf(':');
+
+      if (idx <= 0 || !int.TryParse(local[(idx + 1)..], out var port)) {
+        continue;
+      }
+
+      if (!byPid.TryGetValue(pid, out var ports)) {
+        ports = [];
+        byPid[pid] = ports;
+      }
+
+      if (!ports.Contains(port)) {
+        ports.Add(port);
       }
     }
 
-    return ports.Distinct().ToList();
+    return byPid;
   }
 }
 

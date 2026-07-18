@@ -22,7 +22,7 @@ internal static class Program {
 
     try {
       return args[0] switch {
-        "status" => Commands.Status(Program.ArgValue(args, "--process") ?? "Cities2"),
+        "status" => Commands.Status(Program.ArgValue(args, "--process")),
         "attach-check" => Commands.AttachCheck(Program.Host(args), Program.RequirePort(args)),
         "find-types" => Commands.FindTypes(
           Program.Host(args),
@@ -118,7 +118,8 @@ internal static class Program {
       unity-devtools-poc <command> [options]
 
       commands:
-        status [--process <name>]   find the game process and its SDB port (no attach)
+        status [--process <name>]   find the game process and its SDB port (no attach);
+                                    auto-discovers any dev-Mono game when --process is omitted
         attach-check --port <port>  attach, print VM info, resume, detach
         find-types <full-name> [--members] --port <port>
                                     resolve a type by fully-qualified name (case-insensitive);
@@ -214,11 +215,15 @@ internal static class Commands {
   /// Finds the game process and its Mono Soft Debugger listen port via the shared
   /// <see cref="SdbDiscovery" />, so nothing touches the port before a real attach.
   /// </summary>
-  public static int Status(string processName) {
+  public static int Status(string processName = null) {
     var processes = SdbDiscovery.Locate(processName);
 
     if (processes.Count == 0) {
-      Console.WriteLine($"process '{processName}*': not running");
+      Console.WriteLine(
+        string.IsNullOrEmpty(processName)
+          ? "no dev-Mono Unity game found (none exposing an SDB port)"
+          : $"process '{processName}*': not running"
+      );
 
       return 1;
     }
