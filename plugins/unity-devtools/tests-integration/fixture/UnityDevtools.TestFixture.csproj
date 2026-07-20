@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Debuggee for the evaluator integration tests: a tiny net472 console program launched under a
+    Mono runtime with the SDB agent, then driven through the real SdbSession/Invoker.
+    net472 + LangVersion latest compiles the C# 10+ shapes the reference game (compiled as C# 9)
+    cannot provide, via the reference assemblies package (compiler-only features).
+    No pdb/mdb on purpose: mirror invokes need no symbols.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>TestFixture</RootNamespace>
+    <AssemblyName>UnityDevtools.TestFixture</AssemblyName>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference
+      Include="Microsoft.NETFramework.ReferenceAssemblies"
+      Version="1.0.3"
+      PrivateAssets="all" />
+  </ItemGroup>
+</Project>

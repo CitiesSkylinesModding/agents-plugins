@@ -19,8 +19,8 @@ pre-commit:
       # when brace alternations nest (verified), and `**/` alone would miss the flat top-level
       # sources because it requires an intermediate directory.
       glob:
-        - "plugins/unity-devtools/{mcp,sdb,tests}/*.{cs,csproj}"
-        - "plugins/unity-devtools/{mcp,sdb,tests}/**/*.{cs,csproj}"
+        - "plugins/unity-devtools/{mcp,sdb,tests,tests-integration}/*.{cs,csproj}"
+        - "plugins/unity-devtools/{mcp,sdb,tests,tests-integration}/**/*.{cs,csproj}"
       run: dotnet test agents-plugins.slnx
     tsc:
       # The only tsconfig lives in the mcp workspace; only staged files under it trigger the check.

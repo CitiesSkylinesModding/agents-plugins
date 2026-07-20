@@ -100,38 +100,6 @@ there for a breakpoint/pause toolset (twin of gameface's `game_debug_*`): a `Sta
 scope (`StackFrame.GetValues`/`SetValues` exist in the vendored client) would give expressions
 frame locals and `this` with zero grammar or walker changes.
 
-### Evaluator integration tests against a headless Mono debuggee (exploratory)
-
-Offline coverage stops one layer short of results on each side: parser tests assert source to AST,
-PrimitiveOps tests assert operator semantics on unwrapped client values, and the walker
-(`EvalInterpreter`), where evaluation semantics actually live, runs only against live SDB mirrors
-(the vendored mirror layer is concrete and wire-bound, unmockable). Classic Mono ships the same
-debugger agent (`mono --debugger-agent=...`, version-negotiated at attach like Unity's), so an
-integration suite could launch a tiny fixture program under Mono, attach through the real
-`SdbSession`/`Invoker`, evaluate raw C# strings, and assert results in CI. The fixture assembly
-can carry exactly the shapes the reference game (compiled as C# 9) cannot provide: a struct with a
-declared parameterless ctor, a ulong-backed enum above `long.MaxValue`, a derived `new` member
-shadowing a base one, a receiver-mutating struct method with out params, rank > 1 arrays; that
-turns the walker semantics verified live-only today into asserted regressions. Costs: a Mono
-runtime as a new toolchain dependency (mise-pinned locally, apt on CI), a net4x fixture buildable
-via reference assemblies, and debuggee process lifecycle in an xUnit collection fixture. Caveat:
-upstream Mono's agent is not byte-for-byte Unity's fork, so live verification against the
-reference game stays the final gate for Unity-specific behavior; this complements it.
-
-The eval grammar is frozen as shipped. What it accepts composes directly into mirror primitives
-with bounded wire cost, and three review rounds (2026-07) found the defects in core-operation
-semantics (equality, overload binding, coercion, struct-write persistence), never in syntax
-breadth, so shrinking the grammar buys nothing while rejecting idiomatic C# taxes every agent
-call with a failed attempt; anything needing debuggee-side execution (lambdas, LINQ, loops,
-control flow) stays out of the client-side walker and belongs to the injected-helper tier below.
-The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as
-C# would; edge semantics may diverge but must fail loudly with an actionable message, never
-succeed silently wrong; deliberate divergences stay documented (today: numeric-to-enum
-convenience, in-range integral narrowing, enum/numeric operator mixing, `entity(index)` version
-defaulting). New evaluator effort goes to enforcing this contract through the Mono-debuggee suite
-below, and to focused delta reviews of new mechanisms, not to chasing further semantic
-completeness or another full review pass.
-
 ### Injected in-game helper (exploratory, opt-in)
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,

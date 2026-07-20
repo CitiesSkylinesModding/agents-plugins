@@ -2,4 +2,6 @@
   <Project Path="plugins/unity-devtools/sdb/UnityDevtools.Sdb.csproj" />
   <Project Path="plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj" />
   <Project Path="plugins/unity-devtools/tests/UnityDevtools.Sdb.Tests.csproj" />
+  <Project Path="plugins/unity-devtools/tests-integration/UnityDevtools.Sdb.IntegrationTests.csproj" />
+  <Project Path="plugins/unity-devtools/tests-integration/fixture/UnityDevtools.TestFixture.csproj" />
 </Solution>

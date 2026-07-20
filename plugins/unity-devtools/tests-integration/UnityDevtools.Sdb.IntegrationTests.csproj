@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Evaluator integration suite: launches the net472 fixture program under a Mono runtime with the
+    SDB agent, attaches through the real SdbSession/Invoker, evaluates raw C# strings, and asserts
+    EvalOutcome results (the same Formatted/TypeName contract EvalTools serves to agents).
+    Tests SKIP (not fail) when no Mono runtime resolves; live CS2 stays the final fidelity gate for
+    Unity-fork-specific behavior.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>UnityDevtools.Sdb.IntegrationTests</RootNamespace>
+    <!-- The nested debuggee project owns its sources; keep them out of this project's globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);fixture/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../sdb/UnityDevtools.Sdb.csproj" />
+    <!--
+      Build-only dependency on the net472 debuggee exe (no assembly reference across the TFM gap);
+      tests locate the built exe by relative path from their own output directory.
+    -->
+    <ProjectReference
+      Include="fixture/UnityDevtools.TestFixture.csproj"
+      ReferenceOutputAssembly="false"
+      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
+  </ItemGroup>
+</Project>

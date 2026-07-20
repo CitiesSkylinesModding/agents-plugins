@@ -3,7 +3,7 @@
     Offline test suite for the C# expression evaluator in sdb/Eval: parser/AST coverage and
     client-side primitive operator semantics.
     Anything touching a live VM (the interpreter's mirror walking) is out of scope here and is
-    verified live against a running game instead.
+    covered by the tests-integration suite against a headless Mono debuggee instead.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
