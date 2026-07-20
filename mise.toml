@@ -136,7 +136,7 @@ raw = true
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
 [tasks."build:unity:pack"]
-description = "Pack the unity-devtools MCP server as the CitiesSkylinesModding.UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; publish with publish:unity:nuget)."
+description = "Pack the unity-devtools MCP server as the UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; publish with publish:unity:nuget)."
 dir = "{{config_root}}"
 raw = true
 # bash for the glob-clean; mise defaults to cmd on Windows.
@@ -193,7 +193,7 @@ description = "Check, test, pack, then publish the unity-devtools MCP dotnet too
 run = ["mise check", "mise test", "mise build:unity:pack", "mise publish:unity:nuget"]
 
 [tasks."publish:unity:nuget"]
-description = "Push the packed CitiesSkylinesModding.UnityDevtools.Mcp nupkg to nuget.org (manual, like npm; append --api-key <key> or configure one)."
+description = "Push the packed UnityDevtools.Mcp nupkg to nuget.org (manual, like npm; append --api-key <key> or configure one)."
 dir = "{{config_root}}/plugins/unity-devtools/mcp"
 raw = true
 # bash so `dist/*.nupkg` expands: mise defaults to cmd on Windows, where dotnet nuget push gets the

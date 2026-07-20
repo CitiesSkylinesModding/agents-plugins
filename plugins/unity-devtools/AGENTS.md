@@ -5,7 +5,7 @@
 `unity-devtools` is a generic plugin for driving a running **Unity Mono development build** from the outside, over the **Mono Soft Debugger protocol (SDB)**: no code injection, no game modification.
 Cities: Skylines II is the reference/test target (a dev Mono build with the SDB agent live), mirroring how `coherent-gameface` is generic Gameface with CS2 as reference.
 It ships the `unity` MCP server (process discovery, live type reflection, C# expression evaluation on the main thread, ECS entity/component/buffer read-write) plus skills, registered in both marketplace files with dual harness manifests.
-Windows-only for now (netstat-based discovery); users need the .NET 10 SDK (the server ships as the `CitiesSkylinesModding.UnityDevtools.Mcp` NuGet dotnet tool, launched via `dotnet dnx`).
+Windows-only for now (netstat-based discovery); users need the .NET 10 SDK (the server ships as the `UnityDevtools.Mcp` NuGet dotnet tool, launched via `dotnet dnx`).
 
 ## Tool surface and session model
 
@@ -49,7 +49,7 @@ Formatting is `jb cleanupcode` (ReSharper CLI, pinned in `.config/dotnet-tools.j
 Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (the vendored client is nullable-oblivious, its known warnings silenced via `NoWarn`); `mcp/` is nullable-clean (see `.agents/rules/cs-code-style.md`).
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
-- `.claude-plugin/plugin.json` + `.mcp.json`: Claude Code manifest and server wiring (`dotnet dnx CitiesSkylinesModding.UnityDevtools.Mcp --version <pin> --yes`, `UNITY_MCP_*` env passthrough). `dotnet` is the command (not the bare `dnx` shim, a `.cmd` script MCP hosts cannot spawn directly on Windows); the version pin is a standalone args element so release-please can update it (json extra-files on `$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
+- `.claude-plugin/plugin.json` + `.mcp.json`: Claude Code manifest and server wiring (`dotnet dnx UnityDevtools.Mcp --version <pin> --yes`, `UNITY_MCP_*` env passthrough). `dotnet` is the command (not the bare `dnx` shim, a `.cmd` script MCP hosts cannot spawn directly on Windows); the version pin is a standalone args element so release-please can update it (json extra-files on `$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
 - `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: Codex CLI manifest pair (same `dotnet dnx` launch; no env block, the server falls back to its built-in defaults there).
 - `skills/`: the plugin's skills (`unity-driving`).
 - `sdb/` (`UnityDevtools.Sdb`): the SDB client library and the PUBLIC surface consumers use, so no other project touches vendored code.
@@ -70,7 +70,7 @@ Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (th
   Nullable-clean, warnings as errors.
   `mcp/package.json` is that unit's private release-please anchor; the csproj `<Version>` is synced from it and reaches the MCP handshake through the assembly version.
   All logs go to stderr so they never corrupt the stdio stream.
-- Distribution: the server ships as the `CitiesSkylinesModding.UnityDevtools.Mcp` NuGet **dotnet tool** (`PackAsTool` in the csproj; framework-dependent, platform-agnostic), which both harness configs launch via `dotnet dnx ... --version <pin> --yes` (downloads on first launch, cached after; verified against SDK 10.0.302, incl. that `--version` after the package id is consumed by dnx, not forwarded to the tool).
+- Distribution: the server ships as the `UnityDevtools.Mcp` NuGet **dotnet tool** (`PackAsTool` in the csproj; framework-dependent, platform-agnostic), which both harness configs launch via `dotnet dnx ... --version <pin> --yes` (downloads on first launch, cached after; verified against SDK 10.0.302, incl. that `--version` after the package id is consumed by dnx, not forwarded to the tool).
   `mise build:unity:pack` packs the nupkg into `mcp/dist/` (gitignored); `mise publish:unity:nuget` pushes it, MANUAL like npm publishing, no CI publish.
   Release-day ordering: merging the release PR bumps the dnx version pins in git, so publish the nupkg to NuGet right after; installs and reconnects resolve the pinned version from NuGet and fail until it exists (`check:plugin-sync` verifies the pins and package id offline, publish existence it cannot).
   NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV ONLY) runs the server from sources via `dotnet run --project`, so every `/mcp` reconnect rebuilds and serves the current code. dnx is deliberately NOT used for local dev: it caches the extracted tool by version, so a rebuilt nupkg under an unchanged version would keep serving stale bits.

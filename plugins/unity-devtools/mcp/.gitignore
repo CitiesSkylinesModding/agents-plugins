@@ -1,5 +1,5 @@
 # dist/ holds only the packed nupkg (mise build:unity:pack); the shipped artifact is the
-# CitiesSkylinesModding.UnityDevtools.Mcp NuGet dotnet tool, and local dev runs from sources via
+# UnityDevtools.Mcp NuGet dotnet tool, and local dev runs from sources via
 # dotnet run.
 
 bin/

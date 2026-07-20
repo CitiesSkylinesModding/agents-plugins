@@ -4,7 +4,7 @@
       "command": "dotnet",
       "args": [
         "dnx",
-        "CitiesSkylinesModding.UnityDevtools.Mcp",
+        "UnityDevtools.Mcp",
         "--version",
         "0.2.0",
         "--yes"

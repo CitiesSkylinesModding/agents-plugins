@@ -8,7 +8,7 @@ reflect types, evaluate C# expressions, and read & write ECS state, with no code
 Generic tooling: works with **any** dev-Mono Unity game exposing the Mono Soft Debugger (SDB)
 agent, not just Cities: Skylines II.
 
-[![nuget](https://img.shields.io/nuget/v/CitiesSkylinesModding.UnityDevtools.Mcp?label=nuget)](https://www.nuget.org/packages/CitiesSkylinesModding.UnityDevtools.Mcp)
+[![nuget](https://img.shields.io/nuget/v/UnityDevtools.Mcp?label=nuget)](https://www.nuget.org/packages/UnityDevtools.Mcp)
 [![dotnet](https://img.shields.io/badge/.NET-10-blueviolet)](#requirements)
 [![platform](https://img.shields.io/badge/platform-Windows-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
@@ -127,7 +127,7 @@ and a dropped connection (or game restart) re-discovers and reattaches on the ne
   Cities: Skylines II: a dev build; a retail build exposes no SDB port and cannot be driven).
 - **Windows** (process/port discovery is netstat-based for now).
 - **The .NET 10 SDK** to launch the server. No build step: the plugin launches the
-  [`CitiesSkylinesModding.UnityDevtools.Mcp`](https://www.nuget.org/packages/CitiesSkylinesModding.UnityDevtools.Mcp)
+  [`UnityDevtools.Mcp`](https://www.nuget.org/packages/UnityDevtools.Mcp)
   NuGet dotnet tool through `dotnet dnx`, version-pinned to the plugin (downloaded on first
   launch, cached after).
 
