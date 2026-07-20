@@ -70,7 +70,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
           );
         }
         finally {
-          if (this.session != null) {
+          if (this.session is not null) {
             try {
               vm.Resume();
             }
@@ -103,7 +103,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         throw new InvalidOperationException("no suspension is held (nothing to resume)");
       }
 
-      if (this.session == null) {
+      if (this.session is null) {
         // The connection has died since the hold; the closed socket already resumed the VM.
         this.heldSuspends = 0;
 
@@ -129,7 +129,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   /// </summary>
   public bool Detach() {
     lock (this.gate) {
-      if (this.session == null) {
+      if (this.session is null) {
         return false;
       }
 
@@ -142,9 +142,9 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   public UnitySessionSnapshot Snapshot() {
     lock (this.gate) {
       return new UnitySessionSnapshot {
-        Attached = this.session != null,
+        Attached = this.session is not null,
         Host = this.attachedHost,
-        Port = this.session != null ? this.attachedPort : null,
+        Port = this.session is not null ? this.attachedPort : null,
         VmVersion = this.attachedVmVersion,
         Protocol = this.attachedProtocol,
         HeldSuspends = this.heldSuspends
@@ -155,7 +155,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   public void Dispose() => this.Detach();
 
   private VirtualMachine EnsureAttached() {
-    if (this.session != null) {
+    if (this.session is not null) {
       return this.session.Vm;
     }
 
@@ -184,7 +184,24 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
     var prefix = this.Config.ProcessNamePrefix;
 
-    var candidates = SdbDiscovery.Locate(prefix).Where(p => p.SdbPort != null).ToList();
+    var candidates = SdbDiscovery.Locate(prefix).Where(p => p.SdbPort is not null).ToList();
+
+    // The above-range fallback exists for agent drift, but arbitrary apps also happen to listen
+    // on ephemeral ports at or above the range start; a SINGLE strict in-range candidate outranks
+    // them as the game (verified live: only noise sat above the range).
+    // Tradeoff: if the game's agent ever drifts above the range while a noise process sits
+    // in-range, this picks the noise port; an explicit port (UNITY_MCP_PORT) is the escape hatch.
+    // Ambiguity errors list every candidate, above-range ones included, so nothing is silently
+    // dropped.
+    var inRange = candidates.Where(p =>
+        p.SdbPort is >= SdbDiscovery.PortRangeStart and <= SdbDiscovery.PortRangeEnd
+      )
+      .ToList();
+
+    if (inRange.Count == 1) {
+      // ReSharper disable once PossibleInvalidOperationException
+      return (host, inRange[0].SdbPort.Value);
+    }
 
     var scope = string.IsNullOrEmpty(prefix) ? "process" : $"process matching '{prefix}*'";
 
@@ -197,7 +214,13 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
       ),
       _ => throw new InvalidOperationException(
         "several dev-Mono Unity candidates found: " +
-        string.Join(", ", candidates.Select(c => $"{c.Name} (pid {c.Pid}, sdb port {c.SdbPort})")) +
+        string.Join(
+          ", ",
+          candidates.Select(c =>
+            $"{c.Name} (pid {c.Pid}, sdb port {c.SdbPort}" +
+            $"{(inRange.Contains(c) ? "" : ", above range")})"
+          )
+        ) +
         "; restrict discovery with a process-name prefix or an explicit port"
       )
     };
@@ -240,7 +263,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
   private static bool IsDisconnect(Exception e) =>
     e is VMDisconnectedException or IOException or SocketException ||
-    (e.InnerException != null && UnitySession.IsDisconnect(e.InnerException));
+    (e.InnerException is not null && UnitySession.IsDisconnect(e.InnerException));
 }
 
 /// <summary>How a <see cref="UnitySession"/> finds its game; every field is optional.</summary>

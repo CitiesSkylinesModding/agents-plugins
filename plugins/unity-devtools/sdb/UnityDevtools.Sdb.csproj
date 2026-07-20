@@ -52,6 +52,11 @@
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+    <!--
+      Parser only, for the Eval area: expressions are parsed into a SyntaxTree and translated to
+      our own AST; no semantic model, no compilation, no emit.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
   </ItemGroup>
 
   <Target

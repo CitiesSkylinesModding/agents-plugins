@@ -85,6 +85,14 @@ run = "bun --bun tsc --noEmit --pretty false"
 description = "Lints with oxlint (read-only, warnings denied), output optimized for AI agents."
 run = "bun --bun oxlint --deny-warnings --format agent"
 
+# TEST TASKS
+# ==========
+
+[tasks.test]
+description = "Run the .NET test suite (unity-devtools evaluator: parser and operator semantics)."
+raw = true
+run = "dotnet test agents-plugins.slnx"
+
 # SKILL MAINTENANCE TASKS
 # =======================
 
@@ -97,8 +105,8 @@ run = "bun scripts/check-skill-changelog.ts"
 # ===========
 
 [tasks.build]
-description = "Build everything: the gameface server bundle and the unity-devtools MCP exe."
-run = ["mise build:gameface", "mise build:unity:mcp"]
+description = "Build everything: the gameface server bundle and the unity-devtools MCP tool nupkg."
+run = ["mise build:gameface", "mise build:unity:pack"]
 
 [tasks."build:gameface"]
 description = "Rebuild the shipped gameface server bundle (plugins/coherent-gameface/mcp/dist/server.mjs), commit the result."
@@ -108,11 +116,11 @@ raw = true
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
-[tasks."build:unity:mcp"]
-description = "Publish the unity-devtools MCP server to the COMMITTED single exe under mcp/dist/ (commit the result). Rebuild before reconnecting via /mcp; a running server's exe is rename-swapped aside."
+[tasks."build:unity:pack"]
+description = "Pack the unity-devtools MCP server as the CitiesSkylinesModding.UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; publish with publish:unity:nuget)."
 dir = "{{config_root}}"
 raw = true
-run = "pwsh -NoProfile -File scripts/build-unity-mcp.ps1"
+run = "dotnet pack plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj -c Release -o plugins/unity-devtools/mcp/dist"
 
 # FIX TASKS
 # =========
@@ -157,6 +165,16 @@ dir = "{{config_root}}/plugins/coherent-gameface/mcp"
 raw = true
 run = "npm publish"
 
+[tasks."publish:unity"]
+description = "Check, test, pack, then publish the unity-devtools MCP dotnet tool to nuget.org."
+run = ["mise check", "mise test", "mise build:unity:pack", "mise publish:unity:nuget"]
+
+[tasks."publish:unity:nuget"]
+description = "Push the packed CitiesSkylinesModding.UnityDevtools.Mcp nupkg to nuget.org (manual, like npm; append --api-key <key> or configure one)."
+dir = "{{config_root}}/plugins/unity-devtools/mcp"
+raw = true
+run = "dotnet nuget push dist/*.nupkg --source https://api.nuget.org/v3/index.json"
+
 # RUN TASKS
 # =========
 
@@ -167,7 +185,7 @@ raw = true
 run = "bun run src/server.ts"
 
 [tasks."run:unity:mcp"]
-description = "Run the unity-devtools MCP server over stdio (manual smoke test, real clients launch the built exe via the root .mcp.json)."
+description = "Run the unity-devtools MCP server over stdio from sources (manual smoke test; the root .mcp.json launches the same way)."
 dir = "{{config_root}}/plugins/unity-devtools/mcp"
 raw = true
 run = "dotnet run -v q --project UnityDevtools.Mcp.csproj"

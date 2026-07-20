@@ -21,7 +21,7 @@ public sealed class Invoker(VirtualMachine vm) {
 
     // Unity's main thread is the first attached thread; its name is empty in player builds ("Main
     // Thread" in some editor builds).
-    return threads.FirstOrDefault(t => t.Name == "Main Thread") ??
+    return threads.FirstOrDefault(t => t.Name is "Main Thread") ??
       threads.Where(t => string.IsNullOrEmpty(t.Name)).OrderBy(t => t.Id).FirstOrDefault() ??
       threads.OrderBy(t => t.Id).First();
   }
@@ -36,6 +36,41 @@ public sealed class Invoker(VirtualMachine vm) {
     }
 
     return types[0];
+  }
+
+  private readonly Dictionary<string, TypeMirror> typeCache = [];
+
+  /// <summary>
+  /// Case-sensitive type lookup (unlike <see cref="ResolveType" />, matching C# name semantics)
+  /// with the evaluator's nested-type fallback: dotted names retry with '+' separators from the
+  /// right (C# syntax has no '+', runtime names do).
+  /// Hits are cached for the lifetime of this attach; misses are NOT, because the debuggee loads
+  /// assemblies over time and a type can become resolvable later in the same session.
+  /// </summary>
+  public TypeMirror FindTypeOrNull(string dotted) {
+    if (this.typeCache.TryGetValue(dotted, out var cached)) {
+      return cached;
+    }
+
+    var candidate = dotted;
+
+    while (true) {
+      var types = this.Vm.GetTypes(candidate, false);
+
+      if (types.Count > 0) {
+        this.typeCache[dotted] = types[0];
+
+        return types[0];
+      }
+
+      var lastDot = candidate.LastIndexOf('.');
+
+      if (lastDot < 0) {
+        return null;
+      }
+
+      candidate = $"{candidate[..lastDot]}+{candidate[(lastDot + 1)..]}";
+    }
   }
 
   /// <summary>
@@ -57,7 +92,7 @@ public sealed class Invoker(VirtualMachine vm) {
     int genericArity = 0,
     string[] paramTypes = null
   ) {
-    for (var t = type; t != null; t = t.BaseType) {
+    for (var t = type; t is not null; t = t.BaseType) {
       foreach (var m in t.GetMethods()) {
         if (m.Name != name || m.GetParameters().Length != argc) {
           continue;
@@ -70,8 +105,8 @@ public sealed class Invoker(VirtualMachine vm) {
             continue;
         }
 
-        if (paramTypes != null &&
-          paramTypes.Where((p, i) => p != null && m.GetParameters()[i].ParameterType.Name != p)
+        if (paramTypes is not null &&
+          paramTypes.Where((p, i) => p is not null && m.GetParameters()[i].ParameterType.Name != p)
             .Any()) {
           continue;
         }
@@ -95,7 +130,7 @@ public sealed class Invoker(VirtualMachine vm) {
   public List<MethodMirror> FindMethods(TypeMirror type, string name, int argc) {
     var matches = new List<MethodMirror>();
 
-    for (var t = type; t != null; t = t.BaseType) {
+    for (var t = type; t is not null; t = t.BaseType) {
       matches.AddRange(
         t.GetMethods()
           .Where(m =>
@@ -149,11 +184,66 @@ public sealed class Invoker(VirtualMachine vm) {
     );
   }
 
-  /// <summary>Invokes an instance method on whatever mirror kind the target is.</summary>
+  /// <summary>
+  /// Instance invoke that also returns out-parameter values (see
+  /// <see cref="InvokeStaticWithOutArgs"/>); pass placeholder values for the out parameters.
+  /// Struct receivers additionally request <see cref="InvokeOptions.ReturnOutThis"/>: the
+  /// vendored EndInvokeMethodWithResult writes the post-call fields back into the receiver
+  /// mirror, so a mutating struct method behaves like C# on the caller's variable.
+  /// </summary>
+  public InvokeResult InvokeWithOutArgs(Value target, MethodMirror method, params Value[] args) {
+    return this.Retrying(() => target switch {
+        ObjectMirror o => o.EndInvokeMethodWithResult(
+          o.BeginInvokeMethod(
+            this.MainThread,
+            method,
+            args,
+            InvokeOptions.ReturnOutArgs,
+            null,
+            null
+          )
+        ),
+        StructMirror s => s.EndInvokeMethodWithResult(
+          s.BeginInvokeMethod(
+            this.MainThread,
+            method,
+            args,
+            InvokeOptions.ReturnOutArgs | InvokeOptions.ReturnOutThis,
+            null,
+            null
+          )
+        ),
+        _ => throw new InvalidOperationException(
+          $"cannot invoke with out args on {target.GetType().Name}"
+        )
+      }
+    );
+  }
+
+  /// <summary>Constructs a debuggee-side instance through the given constructor.</summary>
+  public Value NewInstance(TypeMirror type, MethodMirror ctor, params Value[] args) =>
+    this.Retrying(() => type.NewInstance(this.MainThread, ctor, args));
+
+  /// <summary>
+  /// Invokes an instance method on whatever mirror kind the target is.
+  /// Struct receivers request <see cref="InvokeOptions.ReturnOutThis"/>: the vendored
+  /// EndInvokeMethodWithResult writes the post-call fields back into the receiver mirror, so
+  /// mutating struct methods and property setters behave like C# on the caller's variable.
+  /// </summary>
   public Value Invoke(Value target, MethodMirror method, params Value[] args) {
     return this.Retrying(() => target switch {
         ObjectMirror o => o.InvokeMethod(this.MainThread, method, args),
-        StructMirror s => s.InvokeMethod(this.MainThread, method, args),
+        StructMirror s => s.EndInvokeMethodWithResult(
+            s.BeginInvokeMethod(
+              this.MainThread,
+              method,
+              args,
+              InvokeOptions.ReturnOutThis,
+              null,
+              null
+            )
+          )
+          .Result,
         PrimitiveValue p => p.InvokeMethod(this.MainThread, method, args),
         _ => throw new InvalidOperationException($"cannot invoke on {target.GetType().Name}")
       }
@@ -237,4 +327,8 @@ public sealed class Invoker(VirtualMachine vm) {
 
   public static FieldInfoMirror[] InstanceFields(TypeMirror type) =>
     type.GetFields().Where(f => !f.IsStatic).ToArray();
+
+  /// <summary>Comma-joined instance field names, for member-not-found error messages.</summary>
+  public static string InstanceFieldNames(TypeMirror type) =>
+    string.Join(", ", Invoker.InstanceFields(type).Select(f => f.Name));
 }

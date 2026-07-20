@@ -56,55 +56,109 @@ missing (no request interception). Surface request/response observation as tools
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
-(SDB): discovery, live type reflection, method invokes, ECS entity/component/buffer read-write,
-through one persistent lazy-attach session.
+(SDB): discovery, live type reflection, C# expression evaluation, ECS entity/component/buffer
+read-write, through one persistent lazy-attach session.
 
 ### Cross-platform support
 
-Discovery is netstat-based and Windows-only, and the committed exe is win-x64. Port discovery to
-Linux/macOS (parse `/proc` or `lsof`) and publish per-RID artifacts.
+Discovery is netstat-based and Windows-only. Port discovery to Linux/macOS (parse `/proc` or
+`lsof`); the server itself now ships as a platform-agnostic NuGet dotnet tool, so distribution
+needs no per-RID artifacts.
 
-### Complex invoke arguments / expression evaluation
+### Entity archetype dump (`ecs_list_components`)
 
-`invoke` coerces text tokens against the resolved signature, which covers primitives, enums,
-strings, Entity, and the EntityManager; struct/object parameters are unreachable. Two explorable
-extensions:
+Discovering where a piece of state lives currently means playing twenty questions with
+`HasComponent<T>` in `eval` (surfaced live hunting for a building's attractiveness, which turned
+out to sit on the prefab, not the building). One call listing every component on an entity, and
+optionally on its `PrefabRef` target, answers "what does this entity carry" in one shot:
+`EntityManager.GetComponentTypes(e)` is mirror-reachable, and the result composes directly with
+`eval` for the follow-up reads.
 
-- Struct arguments constructed debuggee-side: JSON-shaped input mapped onto a
-  default-constructed StructMirror, field by field (the machinery `ecs_set_component` already
-  uses, generalized).
-- A C# expression evaluator, the way Rider does it: SDB has NO expression-evaluation command, so
-  IDEs parse the expression client-side and interpret it as a sequence of mirror primitives
-  (field reads, property getters, invokes, indexers), which our `Invoker` already provides.
-  A parser (Roslyn parser-only package, or a hand-rolled subset grammar: member chains, calls,
-  literals, casts, indexers) plus an AST walker over `Invoker` would cover most of what Rider's
-  evaluator does, with no change to the runtime footprint. Lambdas/LINQ need real compilation and
-  fall to the next tier.
-- An OPT-IN injected helper (exploratory, nothing decided): compile client-side, load into the
-  debuggee via an `Assembly.Load(byte[])` invoke. Unlocks lambdas/LINQ, arbitrary struct
-  construction, and above all batching (one in-game call instead of thousands of mirror
-  round-trips for bulk reads/edits). Constraints that would shape any design: Mono cannot unload
-  assemblies, so one persistent helper loaded once per game session (never per-expression
-  compilation, which leaks an assembly per eval); compiling user expressions against game types
-  needs the game's `Managed/` assemblies on disk as references; and it changes the footprint from
-  pure outside observer to injected helper, so it would stay opt-in with the injection-free mode
-  remaining the default.
+### Type search by fragment
 
-  One possible shape, sketched not settled: a debuggee-side counterpart of the MCP server, a
-  small static gateway class with SDB-friendly signatures (primitives/strings in, JSON out) that
-  existing mirror invokes can call like any static method. Candidate surface, in rough order of
-  value: batch ECS reads (run a query and serialize N entities with selected fields in-process,
-  one invoke instead of thousands); reflection-driven member-path projections over query results
-  (covers most lambda use without compilation); JSON-shaped writes and invoke arguments
-  (deserialize onto the real struct debuggee-side, dissolving the coercion ceiling); managed
-  (class) `IComponentData` access via the object-based EntityManager APIs (unreachable over
-  mirrors today); temporal captures (record a value across N frames, return the series); plus a
-  version/handshake method (detect a stale helper after a plugin update; no reload until game
-  restart) and structured try/catch so in-game exceptions come back as data. User-compiled
-  lambda execution would come only as a later layer on the same gateway, where the no-unload
-  leak actually bites.
+`find_types` requires an exact fully-qualified name, so agents without domain knowledge of the
+game fall back to offline decompilation to harvest candidates (the driving skill documents that
+workaround). Add a substring/pattern mode over the loaded type list; SDB's `GetTypes` cannot
+search, but enumerating assemblies and their types over mirrors (with a per-session cache) can.
+
+### Deterministic simulation advance (`advance`)
+
+"Let the simulation react, then verify" currently means an eval to unpause, a wall-clock sleep on
+the client, and an eval to re-pause: crude and racy (surfaced live waiting for the attraction
+system to recompute a building's attractiveness from fresh prefab data). Two layers, only one of
+them generic: releasing a held debugger suspend for N seconds and re-taking it is pure SDB and
+fits the server; a game's OWN pause (CS2's simulation speed) is game logic no SDB operation can
+lift, and that was the actual blocker in the live scenario. Keep the game knowledge caller-side:
+`advance` could take optional before/after eval snippets (e.g. the CS2 speed writes), with the
+per-game recipe living in a driving skill, never hardcoded in the server.
+
+### Frame-context evaluation (`debug_evaluate`)
+
+The `eval` tool (shipped) interprets C# client-side over mirror primitives with a pluggable
+binding-scope chain; today only the frameless scope exists (builtins + type roots). The seam is
+there for a breakpoint/pause toolset (twin of gameface's `game_debug_*`): a `StackFrame`-backed
+scope (`StackFrame.GetValues`/`SetValues` exist in the vendored client) would give expressions
+frame locals and `this` with zero grammar or walker changes.
+
+### Evaluator integration tests against a headless Mono debuggee (exploratory)
+
+Offline coverage stops one layer short of results on each side: parser tests assert source to AST,
+PrimitiveOps tests assert operator semantics on unwrapped client values, and the walker
+(`EvalInterpreter`), where evaluation semantics actually live, runs only against live SDB mirrors
+(the vendored mirror layer is concrete and wire-bound, unmockable). Classic Mono ships the same
+debugger agent (`mono --debugger-agent=...`, version-negotiated at attach like Unity's), so an
+integration suite could launch a tiny fixture program under Mono, attach through the real
+`SdbSession`/`Invoker`, evaluate raw C# strings, and assert results in CI. The fixture assembly
+can carry exactly the shapes the reference game (compiled as C# 9) cannot provide: a struct with a
+declared parameterless ctor, a ulong-backed enum above `long.MaxValue`, a derived `new` member
+shadowing a base one, a receiver-mutating struct method with out params, rank > 1 arrays; that
+turns the walker semantics verified live-only today into asserted regressions. Costs: a Mono
+runtime as a new toolchain dependency (mise-pinned locally, apt on CI), a net4x fixture buildable
+via reference assemblies, and debuggee process lifecycle in an xUnit collection fixture. Caveat:
+upstream Mono's agent is not byte-for-byte Unity's fork, so live verification against the
+reference game stays the final gate for Unity-specific behavior; this complements it.
+
+The eval grammar is frozen as shipped. What it accepts composes directly into mirror primitives
+with bounded wire cost, and three review rounds (2026-07) found the defects in core-operation
+semantics (equality, overload binding, coercion, struct-write persistence), never in syntax
+breadth, so shrinking the grammar buys nothing while rejecting idiomatic C# taxes every agent
+call with a failed attempt; anything needing debuggee-side execution (lambdas, LINQ, loops,
+control flow) stays out of the client-side walker and belongs to the injected-helper tier below.
+The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as
+C# would; edge semantics may diverge but must fail loudly with an actionable message, never
+succeed silently wrong; deliberate divergences stay documented (today: numeric-to-enum
+convenience, in-range integral narrowing, enum/numeric operator mixing, `entity(index)` version
+defaulting). New evaluator effort goes to enforcing this contract through the Mono-debuggee suite
+below, and to focused delta reviews of new mechanisms, not to chasing further semantic
+completeness or another full review pass.
+
+### Injected in-game helper (exploratory, opt-in)
+
+The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
+loops, and control flow): compile client-side, load into the debuggee via an
+`Assembly.Load(byte[])` invoke. Unlocks lambdas/LINQ, and above all batching (one in-game call
+instead of thousands of mirror round-trips for bulk reads/edits). Constraints that would shape
+any design: Mono cannot unload assemblies, so one persistent helper loaded once per game session
+(never per-expression compilation, which leaks an assembly per eval); compiling user expressions
+against game types needs the game's `Managed/` assemblies on disk as references; and it changes
+the footprint from pure outside observer to injected helper, so it would stay opt-in with the
+injection-free mode remaining the default.
+
+One possible shape, sketched not settled: a debuggee-side counterpart of the MCP server, a
+small static gateway class with SDB-friendly signatures (primitives/strings in, JSON out) that
+existing mirror invokes can call like any static method. Candidate surface, in rough order of
+value: batch ECS reads (run a query and serialize N entities with selected fields in-process,
+one invoke instead of thousands); reflection-driven member-path projections over query results
+(covers most lambda use without compilation); JSON-shaped writes and invoke arguments
+(deserialize onto the real struct debuggee-side, dissolving the coercion ceiling); managed
+(class) `IComponentData` access via the object-based EntityManager APIs (unreachable over
+mirrors today); temporal captures (record a value across N frames, return the series); plus a
+version/handshake method (detect a stale helper after a plugin update; no reload until game
+restart) and structured try/catch so in-game exceptions come back as data. User-compiled
+lambda execution would come only as a later layer on the same gateway, where the no-unload
+leak actually bites.
 
 ### GameObject/MonoBehaviour tools
 
-The current surface is ECS + static/system invokes; add tools for the classic Unity object model
+The current surface is ECS + expression evaluation; add tools for the classic Unity object model
 (scene hierarchy, GameObject/MonoBehaviour inspection and mutation).

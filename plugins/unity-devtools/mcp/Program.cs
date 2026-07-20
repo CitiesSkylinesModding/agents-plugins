@@ -1,7 +1,14 @@
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using UnityDevtools.Mcp;
 using UnityDevtools.Sdb;
+using UnityDevtools.Sdb.Eval;
+
+// Error messages travel to coding agents; keep framework diagnostics (e.g., Roslyn parse errors in
+// eval) in English regardless of the host machine's locale.
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 // MCP server entry point: a generic-host app speaking MCP over stdio.
 var builder = Host.CreateApplicationBuilder(args);
@@ -22,6 +29,13 @@ builder.Services.AddSingleton(_ => new UnitySession(
     }
   )
 );
+
+// The eval tool's `_` last-result slot lives for the whole server session.
+builder.Services.AddSingleton<EvalState>();
+
+// Dies with the launching wrapper, so an MCP reconnection never strands a stale server holding the
+// exclusive SDB slot (see ParentWatchdog).
+builder.Services.AddHostedService<ParentWatchdog>();
 
 builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly();
 

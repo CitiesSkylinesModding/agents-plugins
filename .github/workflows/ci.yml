@@ -33,3 +33,4 @@ jobs:
           git -C "$path" fetch --depth 1 origin "$sha"
           git -C "$path" checkout "$sha"
       - run: dotnet build agents-plugins.slnx
+      - run: dotnet test agents-plugins.slnx --no-build

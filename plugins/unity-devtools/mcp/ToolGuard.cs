@@ -15,8 +15,8 @@ internal static class ToolGuard {
     catch (McpException) {
       throw;
     }
-    catch (Exception e) {
-      throw new McpException(e.Message);
+    catch (Exception ex) {
+      throw new McpException(ex.Message);
     }
   }
 }

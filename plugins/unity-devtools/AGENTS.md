@@ -4,8 +4,8 @@
 
 `unity-devtools` is a generic plugin for driving a running **Unity Mono development build** from the outside, over the **Mono Soft Debugger protocol (SDB)**: no code injection, no game modification.
 Cities: Skylines II is the reference/test target (a dev Mono build with the SDB agent live), mirroring how `coherent-gameface` is generic Gameface with CS2 as reference.
-It ships the `unity` MCP server (process discovery, live type reflection, main-thread method invokes, ECS entity/component/buffer read-write) plus skills, registered in both marketplace files with dual harness manifests.
-Windows-only for now (netstat-based discovery); users need the .NET 10 runtime.
+It ships the `unity` MCP server (process discovery, live type reflection, C# expression evaluation on the main thread, ECS entity/component/buffer read-write) plus skills, registered in both marketplace files with dual harness manifests.
+Windows-only for now (netstat-based discovery); users need the .NET 10 SDK (the server ships as the `CitiesSkylinesModding.UnityDevtools.Mcp` NuGet dotnet tool, launched via `dotnet dnx`).
 
 ## Tool surface and session model
 
@@ -14,7 +14,10 @@ The server exposes bare names for generic Unity tools and an `ecs_*` prefix for 
 - `status`: process/SDB-port discovery (no attach) + current session state.
 - `detach`, `suspend`, `resume`: session lifecycle.
 - `find_types`: live type resolution, optionally with members.
-- `invoke`: static type methods (with out-param support) or managed ECS system methods, discriminated by `target`; text arguments are coerced against the resolved signature (same-arity overloads tried until one accepts), so tokens carry no type syntax.
+- `eval`: C# statement-sequence evaluation, the way IDE debuggers evaluate over SDB (which has no expression-evaluation command): Roslyn parse-only into an owned AST (`sdb/Eval/EvalParser`), then a client-side walker (`EvalInterpreter`) interpreting each construct as mirror primitives over `Invoker`.
+  Grammar: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators (computed client-side, exact C# semantics via the runtime binder), assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`; lambdas/LINQ/loops/control flow rejected at parse time ("unsupported: ...").
+  Roots resolve through a pluggable binding-scope chain (locals → builtins `em`/`world`/`entity()`/`_` → longest dotted type prefix, with a '+' fallback for nested types); the chain is the seam for a future StackFrame-backed `debug_evaluate`.
+  `_` holds the last successful result per server session (`EvalState`, DI singleton); collected heap mirrors fail with a "re-evaluate" error.
 - `ecs_query` (with the `label` annotation capability), `ecs_get_component`, `ecs_set_component`, `ecs_get_buffer`, `ecs_buffer_edit` (add / remove_at behind an `op` discriminator).
 
 Session model (implemented by `UnitySession` in `sdb/`):
@@ -40,28 +43,32 @@ Everything below was proven end-to-end by the retired PoC CLI (see git history f
 
 ## Project layout and commands
 
-Two .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (build both with `dotnet build agents-plugins.slnx`; the repo has no other .NET code).
+Three .NET projects (server, sdb library, tests) plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (build with `dotnet build agents-plugins.slnx`; the repo has no other .NET code).
 Both set `TreatWarningsAsErrors`, so a plain build doubles as the C# typecheck/lint.
 Formatting is `jb cleanupcode` (ReSharper CLI, pinned in `.config/dotnet-tools.json` as `JetBrains.ReSharper.GlobalTools`; standalone, no Rider install needed) honoring the root `.editorconfig` (same-line braces, 2-space, Stroustrup else/catch, file-scoped namespaces, and the `resharper_*` wrapping keys such as dangling `)` that `dotnet format` cannot do): run `mise fix:cs` (after `dotnet tool restore`), which excludes the vendored tree and the generated `obj/` patch. There is no `check:cs`: jb has no read-only/dry-run mode and C# is inert to CI checks, so format C# by running `fix:cs` and committing (Rider uses the same engine + `.editorconfig` live).
 Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (the vendored client is nullable-oblivious, its known warnings silenced via `NoWarn`); `mcp/` is nullable-clean (see `.agents/rules/cs-code-style.md`).
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
-- `.claude-plugin/plugin.json` + `.mcp.json`: Claude Code manifest and server wiring (`${CLAUDE_PLUGIN_ROOT}`-based exe path, `UNITY_MCP_*` env passthrough).
-- `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: Codex CLI manifest pair (relative `cwd`, no env block; the server falls back to its built-in defaults there).
+- `.claude-plugin/plugin.json` + `.mcp.json`: Claude Code manifest and server wiring (`dotnet dnx CitiesSkylinesModding.UnityDevtools.Mcp --version <pin> --yes`, `UNITY_MCP_*` env passthrough). `dotnet` is the command (not the bare `dnx` shim, a `.cmd` script MCP hosts cannot spawn directly on Windows); the version pin is a standalone args element so release-please can update it (json extra-files on `$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
+- `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: Codex CLI manifest pair (same `dotnet dnx` launch; no env block, the server falls back to its built-in defaults there).
 - `skills/`: the plugin's skills (`unity-driving`).
 - `sdb/` (`UnityDevtools.Sdb`): the SDB client library and the PUBLIC surface consumers use, so no other project touches vendored code.
-  It compiles the vendored `Mono.Debugger.Soft` sources (via the `../vendor` globs), the `Locale`/`AsyncResult` shims, and the build-time `PatchVendoredConnection` target, plus the plumbing: `SdbSession` (synchronous attach via the internal `TcpConnection`, running-state normalization, guaranteed resume+detach on dispose), `Invoker` (mirror-level type/method resolution, main-thread invokes, value formatting), `Ecs` (world selection, entity queries, component/buffer read-write, value parsing), `UnitySession` (the persistent lazy-attach session model above), and `SdbDiscovery` (process + SDB-port scan).
+  It compiles the vendored `Mono.Debugger.Soft` sources (via the `../vendor` globs), the `Locale`/`AsyncResult` shims, and the build-time `PatchVendoredConnection` target, plus the plumbing: `SdbSession` (synchronous attach via the internal `TcpConnection`, running-state normalization, guaranteed resume+detach on dispose), `Invoker` (mirror-level type/method resolution, main-thread invokes incl. out-args and NewInstance, value formatting), `Ecs` (world selection, entity queries, component/buffer read-write, value parsing), `UnitySession` (the persistent lazy-attach session model above), and `SdbDiscovery` (process + SDB-port scan).
   Kept `Nullable=disable` precisely so the vendored sources compile and consumers can be nullable-clean.
+  Compiling the vendored sources into this assembly also exposes their `internal` surface: the evaluator builds default `StructMirror`s entirely client-side through the internal `StructMirror(vm, type, fields)` ctor.
+- `sdb/Eval/` (namespace `UnityDevtools.Sdb.Eval`): the expression evaluator. `EvalParser` (Roslyn parse-only, `Microsoft.CodeAnalysis.CSharp`; translates the supported grammar into the owned AST in `EvalAst.cs`, rejects the rest with "unsupported: ..." + position), `EvalInterpreter` (the walker over `Invoker`; overload binding by client-side coercion, exact matches first then cost-ranked widening; enum constants via debuggee `Enum.Parse`; C# lvalue semantics for writes: chained struct writes replay by-copy links back into their containers, struct temporaries are rejected like CS1612, and struct receivers request `ReturnOutThis` so mutating methods/setters update the caller's mirror), `PrimitiveOps` (client-side operators delegating to the C# runtime binder via `dynamic`, so promotion/concat semantics are exactly the language's), `EvalScopes` (`IEvalScope` chain + `BuiltinScope` + `EvalState`), and the exception pair (`EvalParseException`, `EvalFailedException` with statement context/in-game exception/locals).
+- `tests/` (`UnityDevtools.Sdb.Tests`): the repo's offline test suite (xUnit): parser/AST coverage (literals, chains, generic-vs-`<` ambiguity, precedence, error positions, rejections) and `PrimitiveOps` semantics. Run with `mise test` (also in CI and the lefthook pre-commit); walker semantics are live-only, verified against CS2.
 - `mcp/` (`unity-devtools-mcp`): net10.0 MCP server, referencing `sdb/`.
   Uses the official `ModelContextProtocol` C# SDK (stdio transport, generic-host builder, attribute-based instance tool classes taking the shared `UnitySession` via DI) with `Microsoft.Extensions.Hosting`.
-  Tool implementations live in `SessionTools.cs`, `TypeTools.cs`, and `EcsTools.cs`; `ToolGuard` wraps bodies in `McpException` so error messages reach the client verbatim.
+  Tool implementations live in `SessionTools.cs`, `TypeTools.cs`, `EvalTools.cs`, and `EcsTools.cs`; `ToolGuard` wraps bodies in `McpException` so error messages reach the client verbatim.
   Nullable-clean, warnings as errors.
   `mcp/package.json` is that unit's private release-please anchor; the csproj `<Version>` is synced from it and reaches the MCP handshake through the assembly version.
   All logs go to stderr so they never corrupt the stdio stream.
-- `mcp/dist/unity-devtools-mcp.exe`: the shipped single-file framework-dependent exe. COMMITTED on purpose (zero-build plugin installs; the git submodule does not ship through marketplace installs).
-  `mise build:unity:mcp` (via `scripts/build-unity-mcp.ps1`) publishes it; when a running MCP server locks the exe, the script rename-swaps it aside (`.exe.stale`, gitignored, cleaned on the next run) so the publish never fails, and reconnecting via `/mcp` picks up the new file.
-  A lefthook pre-commit rebuilds and stages the exe whenever staged files touch the C# sources; CI builds the solution but does NOT diff the exe (publish output is not assumed byte-reproducible).
-  For live use in a Claude Code session, the root `.mcp.json` (LOCAL DEV ONLY) registers it as the `unity` server, launching the committed exe directly.
+- Distribution: the server ships as the `CitiesSkylinesModding.UnityDevtools.Mcp` NuGet **dotnet tool** (`PackAsTool` in the csproj; framework-dependent, platform-agnostic), which both harness configs launch via `dotnet dnx ... --version <pin> --yes` (downloads on first launch, cached after; verified against SDK 10.0.302, incl. that `--version` after the package id is consumed by dnx, not forwarded to the tool).
+  `mise build:unity:pack` packs the nupkg into `mcp/dist/` (gitignored); `mise publish:unity:nuget` pushes it, MANUAL like npm publishing, no CI publish.
+  Release-day ordering: merging the release PR bumps the dnx version pins in git, so publish the nupkg to NuGet right after; installs and reconnects resolve the pinned version from NuGet and fail until it exists (`check:plugin-sync` verifies the pins and package id offline, publish existence it cannot).
+  NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV ONLY) runs the server from sources via `dotnet run --project`, so every `/mcp` reconnect rebuilds and serves the current code. dnx is deliberately NOT used for local dev: it caches the extracted tool by version, so a rebuilt nupkg under an unchanged version would keep serving stale bits.
+  The lefthook pre-commit runs `dotnet test` on staged C# changes; CI builds the solution and runs the tests.
 - `vendor/unity-mono/`: Unity's mono fork, pinned to branch `unity-6000.6-mbe`, as a **sparse, shallow, blob-filtered clone** containing only `mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft/` (~75 files, MIT).
   The branch choice is provenance only: the `mcs/class/Mono.Debugger.Soft` tree hash is IDENTICAL across `unity-2022.3-mbe` (CS2's Unity is 2022.3.71f1), `unity-6000.6-mbe`, and `unity-main` (verified 2026-07-17); Unity only evolves the agent side.
   We track the newest release branch so the pin follows any future client fixes; the SDB wire protocol is version-negotiated at attach, so one client serves all Mono-era Unity agents.
@@ -73,6 +80,7 @@ Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (th
 
 - Discover the SDB port by scanning the game process's listen ports in 56000-56999 (`status` does this); the agent picks it dynamically (no fixed formula) and the port drifts between runs.
   If nothing lands in that range, `SdbDiscovery.PickSdbPort` falls back to the highest listen port at or above 56000, so a further drift still resolves.
+  Arbitrary apps (Rider, Steam, ...) also hold ephemeral ports at or above 56000, so unfiltered discovery can list them as fallback candidates; `UnitySession` prefers strict in-range candidates and treats fallback ones as noise when one exists (surfaced live 2026-07: attach refused with 7 "candidates", only Cities2 in-range).
   CS2 also listens on 9444 (Gameface CDP; both channels coexist) and 55000 (PlayerConnection), both well below the SDB range.
 - The agent pushes a `VM_START` composite event at attach; pump it before touching the suspend state (see `SdbSession.Connect`).
   Suspends are **counted**: resume in a loop until "not suspended" to guarantee the game runs (see `SdbSession`).
@@ -89,7 +97,8 @@ Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (th
 
 ## Preferred agent behavior
 
-- After changing `mcp/` or `sdb/` sources, run `mise build:unity:mcp`; the running `unity` MCP server keeps serving the old (rename-swapped) exe, so ask the user to hit Reconnect in `/mcp` whenever you need the new build. Ask in plain text and end your turn: the user cannot run `/mcp` while an AskUserQuestion prompt is pending.
+- After changing `mcp/` or `sdb/` sources, the running `unity` MCP server keeps serving the old build; ask the user to hit Reconnect in `/mcp` whenever you need the new one (the root `.mcp.json` launches via `dotnet run`, so the reconnect itself rebuilds from sources). Ask in plain text and end your turn: the user cannot run `/mcp` while an AskUserQuestion prompt is pending.
+- Both launch paths wrap the server (`dotnet dnx` for installs, `dotnet run` for dev), and killing the wrapper does not reliably kill the server: a `/mcp` reconnect can leave the previous tree alive (observed 2026-07), holding the exclusive SDB slot and build-output locks. The server therefore ties its lifetime to its own wrapper (`ParentWatchdog` in `mcp/`: watches the parent pid, stops the host when it dies; never touches other processes, so concurrent servers for two games/harnesses are safe), and the dev server builds into its own `bin/mcp-run/` (the `--property:BaseOutputPath` arg in the root `.mcp.json`) so builds/tests never collide with a running server. If a lock or attach refusal still appears, look for stray `unity-devtools-mcp` processes.
 - Store hard-won facts about SDB/Unity internals in memory.
 
 ## Boundaries

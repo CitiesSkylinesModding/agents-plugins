@@ -1,7 +1,8 @@
 {
   "mcpServers": {
     "unity": {
-      "command": "${CLAUDE_PLUGIN_ROOT:-.}/mcp/dist/unity-devtools-mcp.exe",
+      "command": "dotnet",
+      "args": ["dnx", "CitiesSkylinesModding.UnityDevtools.Mcp", "--version", "0.1.0", "--yes"],
       "env": {
         "UNITY_MCP_HOST": "${UNITY_MCP_HOST:-}",
         "UNITY_MCP_PORT": "${UNITY_MCP_PORT:-}",

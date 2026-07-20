@@ -42,13 +42,18 @@ Component access covers unmanaged `IComponentData` only; managed (class) compone
 `ecs_buffer_edit` `add` clones element 0 as its template (an empty buffer cannot seed a new element) and overrides one field via `set`.
 Entity-typed fields and arguments are written as `index:version` text.
 
-## Invoking game code
+## Evaluating C# in the game
 
-`invoke` runs on the game's main thread: `target: "static"` for a static method on any type, `target: "system"` for an instance method on a managed ECS system.
-Arguments are text tokens coerced to the resolved method's parameter types: numbers/bools/enums per the signature, `index[:version]` for an Entity parameter, `em` for an EntityManager parameter, `out-int` / `out-entity` placeholders for out parameters, raw text for string parameters.
-Same-arity overloads are tried until one signature accepts the tokens; complex parameter types (structs, objects) are out of reach, so keep to primitive-ish signatures.
-Static calls report every argument's value after the call; that is how out-parameter results come back (verified on CS2: `BuildingUtils.GetAddress` with `em`, an Entity, and two out placeholders).
-Methods match by name and argument count; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
+`eval` runs a C# statement sequence on the game's main thread, like an IDE debugger: `var` declarations, expression statements, and assignments; the final expression's value is the result (its trailing semicolon is optional).
+Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
+Generic methods take explicit type arguments: `em.GetComponentData<Game.Citizens.HouseholdMember>(entity(123, 1))`.
+Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(Game.UI.NameSystem)).SetCustomName(entity(123, 1), "New Name")`.
+Structs build with initializer syntax (`new Game.Citizens.HouseholdMember { m_Household = h }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
+`out var x` declares a local the call writes; later statements can read it (verified pattern on CS2: `Game.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`).
+Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
+One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
+Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
+On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns (depth-3 formatting), so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
 ## Writes are live
 

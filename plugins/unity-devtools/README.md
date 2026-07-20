@@ -3,11 +3,12 @@
 # 🔬 unity-devtools
 
 **Give your agent a live line into a running Unity Mono development build:
-reflect types, invoke C#, and read & write ECS state, with no code injection.**
+reflect types, evaluate C# expressions, and read & write ECS state, with no code injection.**
 
 Generic tooling: works with **any** dev-Mono Unity game exposing the Mono Soft Debugger (SDB)
 agent, not just Cities: Skylines II.
 
+[![nuget](https://img.shields.io/nuget/v/CitiesSkylinesModding.UnityDevtools.Mcp?label=nuget)](https://www.nuget.org/packages/CitiesSkylinesModding.UnityDevtools.Mcp)
 [![dotnet](https://img.shields.io/badge/.NET-10-blueviolet)](#requirements)
 [![platform](https://img.shields.io/badge/platform-Windows-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
@@ -22,8 +23,8 @@ agent, not just Cities: Skylines II.
 The plugin ships **unity-devtools-mcp**, a C# MCP server that attaches to the game's **Mono Soft
 Debugger** agent, the same channel an IDE debugger uses, and drives the game from the outside:
 no mod, no DLL, no game modification. Through live mirror invokes it resolves types, calls
-methods on the game's main thread, and queries, reads, and writes Unity **ECS** entities,
-components, and dynamic buffers, in the running simulation.
+methods, and queries, reads, and writes Unity **ECS** entities, components, and dynamic
+buffers, in the running simulation.
 
 It also ships the **`unity-driving` skill**: the operating manual for the tools, field-verified
 procedures for the session lifecycle, suspend windows, entity identity, and the traps the tool
@@ -60,10 +61,10 @@ Short, abridged transcripts, replayed from real live sessions against Cities: Sk
 > **You:** Rename one of my high schools after you, go ahead.
 >
 > **Agent:** `ecs_query` on `Game.Buildings.School` with
-> `label: Game.UI.NameSystem:GetRenderedLabelName` lists the six schools with their in-game
-> names: "Winchelsea", "Leechburg", "Fowey"… Then `invoke` on the game's own name system,
-> `target: system`, `Game.UI.NameSystem.SetCustomName` with the entity and the new name. Reading
-> the label back returns `"Claude High School"`, and it is on the map.
+> `label: Game.UI.NameSystem:GetRenderedLabelName` lists the six schools with their in-game names:
+> "Winchelsea", "Leechburg", "Fowey"… Then one `eval` calls the game's own name system:
+> `world.GetExistingSystemManaged(typeof(Game.UI.NameSystem))` with `.SetCustomName(entity, name)`.
+> Reading the label back returns `"Claude High School"`, and it is on the map.
 
 ### "We need money"
 
@@ -78,27 +79,28 @@ Short, abridged transcripts, replayed from real live sessions against Cities: Sk
 
 > **You:** Unpause at max speed and jump the clock six hours; I want to see the evening commute.
 >
-> **Agent:** `invoke` on `Game.Simulation.SimulationSystem`: `get_selectedSpeed` reads `0`, the
-> city is paused. `set_selectedSpeed` to 4x unpauses it, and a beat later `get_smoothSpeed`
-> reads `1.83`: that is the eased, actual speed caught mid-climb, so the simulation is genuinely
-> running, not just flagged. Then `Game.Simulation.TimeSystem.DebugAdvanceTime` jumps the clock
-> six hours: `get_normalizedTime` moves from `0.42` (mid-morning) to `0.67` (early evening).
+> **Agent:** `eval` grabs the simulation system via
+> `world.GetExistingSystemManaged(typeof(Game.Simulation.SimulationSystem))`: its `selectedSpeed`
+> reads `0`, the city is paused. Assigning `selectedSpeed = 4` unpauses it, and a beat later
+> `smoothSpeed` reads `1.83`: that is the eased, actual speed caught mid-climb, so the simulation is
+> genuinely running, not just flagged. Then `Game.Simulation.TimeSystem.DebugAdvanceTime` jumps the
+> clock six hours: `normalizedTime` moves from `0.42` (mid-morning) to `0.67` (early evening).
 > Evening rush incoming.
 
 ## Tools
 
 Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 
-| Tool                                      | What it does                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `status`                                  | Find dev-Mono game processes and their SDB port (no attach) + session state.               |
-| `suspend` / `resume`                      | Hold the game frozen across calls: a consistency window for multi-step edits.              |
-| `detach`                                  | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic.               |
-| `find_types`                              | Resolve a type live by fully-qualified name; optionally list its members.                  |
-| `invoke`                                  | Call a static method (with out-params) or a managed ECS system method, on the main thread. |
-| `ecs_query`                               | Count/list entities having ALL given components, optionally labeled via a system call.     |
-| `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component.                               |
-| `ecs_get_buffer` / `ecs_buffer_edit`      | Read, append to, or remove from a `DynamicBuffer`.                                         |
+| Tool                                      | What it does                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `status`                                  | Find dev-Mono game processes and their SDB port (no attach) + session state.           |
+| `suspend` / `resume`                      | Hold the game frozen across calls: a consistency window for multi-step edits.          |
+| `detach`                                  | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic.           |
+| `find_types`                              | Resolve a type live by fully-qualified name; optionally list its members.              |
+| `eval`                                    | Evaluate a C# statement sequence against the live game, like an IDE debugger would.    |
+| `ecs_query`                               | Count/list entities having ALL given components, optionally labeled via a system call. |
+| `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component.                           |
+| `ecs_get_buffer` / `ecs_buffer_edit`      | Read, append to, or remove from a `DynamicBuffer`.                                     |
 
 There is no "attach" tool: the first tool that needs the VM attaches lazily, the session persists,
 and a dropped connection (or game restart) re-discovers and reattaches on the next call.
@@ -108,6 +110,9 @@ and a dropped connection (or game restart) re-discovers and reattaches on the ne
 - **Mono Soft Debugger protocol**, the wire protocol behind "Attach to Unity" in your IDE. The
   server embeds Unity's own `Mono.Debugger.Soft` client and talks to the game's SDB agent
   directly.
+- **Client-side C# evaluation**: SDB has no expression-evaluation command, so `eval` parses your
+  C# with Roslyn (parse-only) and interprets it as a sequence of mirror primitives (member reads,
+  property getters, invokes, indexers), the way IDE debuggers evaluate watch expressions.
 - **The game keeps running** between calls; each operation opens a brief suspend window around
   itself (invokes need a suspended VM). The `suspend`/`resume` tools hold a window across calls
   when several reads/writes must see one consistent state; the game is fully frozen meanwhile.
@@ -121,8 +126,10 @@ and a dropped connection (or game restart) re-discovers and reattaches on the ne
 - **A Unity game running as a development Mono build** with the SDB agent live (for
   Cities: Skylines II: a dev build; a retail build exposes no SDB port and cannot be driven).
 - **Windows** (process/port discovery is netstat-based for now).
-- **The .NET 10 runtime** to launch the server. No build step: the plugin launches a committed
-  single-file executable, version-locked to the plugin.
+- **The .NET 10 SDK** to launch the server. No build step: the plugin launches the
+  [`CitiesSkylinesModding.UnityDevtools.Mcp`](https://www.nuget.org/packages/CitiesSkylinesModding.UnityDevtools.Mcp)
+  NuGet dotnet tool through `dotnet dnx`, version-pinned to the plugin (downloaded on first
+  launch, cached after).
 
 ## Install
 

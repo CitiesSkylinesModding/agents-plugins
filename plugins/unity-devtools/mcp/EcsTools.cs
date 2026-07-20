@@ -11,8 +11,8 @@ namespace UnityDevtools.Mcp;
 /// <summary>
 /// ECS inspection and mutation tools: entity queries, component read/write, and dynamic-buffer
 /// access, all over live SDB invokes.
-/// Writes hit the running simulation; hold a suspend window (see the suspend tool) when
-/// consistency across several writes matters.
+/// Writes hit the running simulation; hold a suspend window (see the suspend tool) when consistency
+/// across several writes matters.
 /// </summary>
 [McpServerToolType]
 [UsedImplicitly]
@@ -53,7 +53,7 @@ public sealed class EcsTools(UnitySession session) {
         Value? labelSystem = null;
         MethodMirror? labelMethod = null;
 
-        if (label != null) {
+        if (label is not null) {
           var parts = label.Split(':');
 
           if (parts.Length != 2) {
@@ -74,7 +74,9 @@ public sealed class EcsTools(UnitySession session) {
             arr.GetValues(0, take)
               .Select(e => new EcsEntityInfo {
                   Entity = inv.Format(e),
-                  Label = labelSystem != null ? inv.Format(inv.Invoke(labelSystem, labelMethod, e)) : null
+                  Label = labelSystem is not null
+                    ? inv.Format(inv.Invoke(labelSystem, labelMethod, e))
+                    : null
                 }
               )
           );
@@ -233,68 +235,75 @@ public sealed class EcsTools(UnitySession session) {
     return ToolGuard.Run(() => session.Run(Operation));
 
     EcsBufferEditResult Operation(SdbContext ctx) {
-        var inv = ctx.Invoker;
-        var ecs = ctx.Ecs(world);
-        var elemType = inv.ResolveType(elementType);
-        var (entityIndex, entityVersion) = Ecs.ParseEntitySpec(entity);
-        var e = EcsTools.RequireEntity(ecs, entityIndex, entityVersion ?? 1);
-        var buf = ecs.GetBuffer(e, elemType);
-        var length = ecs.BufferLength(buf);
+      var inv = ctx.Invoker;
+      var ecs = ctx.Ecs(world);
 
-        switch (op) {
-          case "add": {
-            if (set == null) {
-              throw new McpException("op \"add\" requires set=\"<field>=<value>\"");
-            }
+      var elemType = inv.ResolveType(elementType);
+      var (entityIndex, entityVersion) = Ecs.ParseEntitySpec(entity);
+      var e = EcsTools.RequireEntity(ecs, entityIndex, entityVersion ?? 1);
+      var buf = ecs.GetBuffer(e, elemType);
+      var length = ecs.BufferLength(buf);
 
-            if (length == 0) {
-              throw new McpException("buffer is empty; add clones element 0 as the template for new elements");
-            }
-
-            var eq = set.IndexOf('=', StringComparison.Ordinal);
-
-            if (eq <= 0) {
-              throw new McpException("set expects \"<field>=<value>\"");
-            }
-
-            var fieldInfo = Ecs.RequireField(elemType, set[..eq]);
-            var element = (StructMirror) inv.Invoke(buf, "get_Item", inv.Prim(0));
-
-            element[fieldInfo.Name] = ecs.ParseFieldValue(fieldInfo.FieldType, set[(eq + 1)..]);
-            _ = inv.Invoke(buf, "Add", element);
-
-            return new EcsBufferEditResult {
-              World = ecs.WorldName,
-              Entity = inv.Format(e),
-              Element = inv.Format(element, 3),
-              NewLength = ecs.BufferLength(buf)
-            };
+      switch (op) {
+        case "add": {
+          if (set is null) {
+            throw new McpException("op \"add\" requires set=\"<field>=<value>\"");
           }
 
-          case "remove_at": {
-            if (index is not {} at) {
-              throw new McpException("op \"remove_at\" requires index");
-            }
-
-            if (at < 0 || at >= length) {
-              throw new McpException($"index {at.ToString(CultureInfo.InvariantCulture)} out of range " + $"(buffer length {length.ToString(CultureInfo.InvariantCulture)})");
-            }
-
-            var removed = inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(at)), 3);
-
-            _ = inv.Invoke(buf, "RemoveAt", inv.Prim(at));
-
-            return new EcsBufferEditResult {
-              World = ecs.WorldName,
-              Entity = inv.Format(e),
-              Element = removed,
-              NewLength = ecs.BufferLength(buf)
-            };
+          if (length == 0) {
+            throw new McpException(
+              "buffer is empty; add clones element 0 as the template for new elements"
+            );
           }
 
-          default: throw new McpException("op must be \"add\" or \"remove_at\"");
+          var eq = set.IndexOf('=', StringComparison.Ordinal);
+
+          if (eq <= 0) {
+            throw new McpException("set expects \"<field>=<value>\"");
+          }
+
+          var fieldInfo = Ecs.RequireField(elemType, set[..eq]);
+          var element = (StructMirror) inv.Invoke(buf, "get_Item", inv.Prim(0));
+
+          element[fieldInfo.Name] = ecs.ParseFieldValue(fieldInfo.FieldType, set[(eq + 1)..]);
+
+          _ = inv.Invoke(buf, "Add", element);
+
+          return new EcsBufferEditResult {
+            World = ecs.WorldName,
+            Entity = inv.Format(e),
+            Element = inv.Format(element, 3),
+            NewLength = ecs.BufferLength(buf)
+          };
         }
+
+        case "remove_at": {
+          if (index is not {} at) {
+            throw new McpException("op \"remove_at\" requires index");
+          }
+
+          if (at < 0 || at >= length) {
+            throw new McpException(
+              $"index {at.ToString(CultureInfo.InvariantCulture)} out of range " +
+              $"(buffer length {length.ToString(CultureInfo.InvariantCulture)})"
+            );
+          }
+
+          var removed = inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(at)), 3);
+
+          _ = inv.Invoke(buf, "RemoveAt", inv.Prim(at));
+
+          return new EcsBufferEditResult {
+            World = ecs.WorldName,
+            Entity = inv.Format(e),
+            Element = removed,
+            NewLength = ecs.BufferLength(buf)
+          };
+        }
+
+        default: throw new McpException("op must be \"add\" or \"remove_at\"");
       }
+    }
   }
 
   /// <summary>

@@ -21,6 +21,29 @@
     <RootNamespace>UnityDevtools.Mcp</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!--
+      Shipped as a NuGet dotnet tool, launched by the plugin configs through
+      `dotnet dnx CitiesSkylinesModding.UnityDevtools.Mcp` (version-pinned, auto-confirmed; users
+      need the .NET 10 SDK).
+      Publishing is manual: `mise build:unity:pack` then `mise publish:unity:nuget`.
+    -->
+    <PackAsTool>true</PackAsTool>
+    <PackageId>CitiesSkylinesModding.UnityDevtools.Mcp</PackageId>
+    <ToolCommandName>unity-devtools-mcp</ToolCommandName>
+    <Authors>Morgan Touverey Quilling</Authors>
+    <Description>MCP server driving a running Unity Mono development build over the Mono Soft Debugger protocol: process discovery, live type reflection, C# expression evaluation, and ECS entity/component/buffer read-write. Part of the unity-devtools agent plugin.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CitiesSkylinesModding/agents-plugins</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CitiesSkylinesModding/agents-plugins</RepositoryUrl>
+    <PackageTags>unity;mono;soft-debugger;sdb;ecs;unity-entities;game-modding;debugger;mcp</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../sdb/UnityDevtools.Sdb.csproj" />
   </ItemGroup>

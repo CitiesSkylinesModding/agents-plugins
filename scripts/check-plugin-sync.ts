@@ -34,6 +34,7 @@ function checkPlugin(pluginRoot: string): void {
   checkSharedManifestFields(pluginRoot, claudeManifest, codexManifest);
   checkVersionAnchor(pluginRoot, claudeManifest);
   checkCodexMcpConfig(pluginRoot);
+  checkMcpVersionPins(pluginRoot);
 }
 
 function checkSharedManifestFields(
@@ -113,13 +114,19 @@ function checkCodexMcpConfig(pluginRoot: string): void {
     `The "${serverKey}" server in ${pluginRoot}/.codex-plugin/mcp.json must set "cwd": ".".`
   );
 
-  // The committed artifact the server launches: args[0] when a runtime carries it (gameface's
-  // node bundle), else the command itself (unity's exe).
   assert.ok(
     typeof command == 'string',
     `The "${serverKey}" server in ${pluginRoot}/.codex-plugin/mcp.json must set "command".`
   );
 
+  // Dnx-launched servers ship as a NuGet dotnet tool: there is no committed artifact to check
+  // (the version pin is checked by checkMcpVersionPins instead).
+  if (isDnxLaunch(command, args)) {
+    return;
+  }
+
+  // The committed artifact the server launches: args[0] when a runtime carries it (gameface's node
+  // bundle), else the command itself.
   let artifactRelativePath = command;
 
   if (args != null) {
@@ -146,6 +153,164 @@ function checkCodexMcpConfig(pluginRoot: string): void {
     `${pluginRoot}/.codex-plugin/mcp.json points at "${artifactRelativePath}", which does not ` +
       `exist under ${pluginRoot}. Is the committed artifact missing?`
   );
+}
+
+function isDnxLaunch(command: unknown, args: unknown): boolean {
+  return command == 'dotnet' && Array.isArray(args) && args[0] == 'dnx';
+}
+
+// Both harness configs launch the dnx-shipped server with an explicit version pin
+// (`dotnet dnx <packageId> --version <pin> --yes`); release-please syncs the pins via
+// extra-files, so a drift from the mcp anchor means a hand edit bypassed the release process.
+// Publish existence cannot be checked offline; release-day ordering matters instead: after
+// merging the release PR (which bumps the pins), publish the nupkg to NuGet BEFORE reconnecting
+// or announcing, since installs resolve the pinned version from NuGet and fail until it exists.
+function checkMcpVersionPins(pluginRoot: string): void {
+  for (const configPath of [`${pluginRoot}/.mcp.json`, `${pluginRoot}/.codex-plugin/mcp.json`]) {
+    if (!existsSync(path.join(repoRoot, configPath))) {
+      continue;
+    }
+
+    const servers = readJsonObject(configPath).mcpServers;
+
+    assert.ok(
+      typeof servers == 'object' && servers != null,
+      `${configPath} must declare a camelCase "mcpServers" object.`
+    );
+
+    for (const [serverKey, server] of Object.entries(servers)) {
+      assert.ok(
+        typeof server == 'object' && server != null,
+        `The "${serverKey}" server in ${configPath} must be an object.`
+      );
+
+      const { command, args } = server as Record<string, unknown>;
+
+      if (!isDnxLaunch(command, args)) {
+        continue;
+      }
+
+      const argList = args as unknown[];
+
+      // The launched package id must be the one the csproj actually packs: a typo'd or drifted
+      // id passes every offline check and fails at every user's first connect.
+      assert.equal(
+        argList[1],
+        readDnxPackageId(pluginRoot),
+        `The "${serverKey}" server in ${configPath} launches a dnx package ID different from ` +
+          `the <PackageId> in ${pluginRoot}/mcp's csproj.`
+      );
+
+      const versionFlagIndex = argList.indexOf('--version');
+
+      assert.ok(
+        versionFlagIndex > 0 && typeof argList[versionFlagIndex + 1] == 'string',
+        `The "${serverKey}" server in ${configPath} must pin the tool version with ` +
+          `"--version <version>".`
+      );
+
+      // Release-please rewrites the pin through a fixed JSONPath (args[N]); assert the slot we
+      // just validated positionally is the same one it rewrites, so an arg reorder cannot
+      // silently decouple the two encodings.
+      assert.equal(
+        versionFlagIndex + 1,
+        releasePleasePinIndex(configPath, serverKey),
+        `The "--version" pin in ${configPath} sits at args[${versionFlagIndex + 1}], but ` +
+          `release-please-config.json rewrites a different args slot.`
+      );
+
+      const anchor = readJsonObject(`${pluginRoot}/mcp/package.json`);
+
+      assert.equal(
+        argList[versionFlagIndex + 1],
+        anchor.version,
+        `The "${serverKey}" server in ${configPath} pins a version different from ` +
+          `${pluginRoot}/mcp/package.json (the release-please anchor).`
+      );
+    }
+  }
+}
+
+// Finds the args index release-please's extra-files entry rewrites for this config's server pin.
+function releasePleasePinIndex(configPath: string, serverKey: string): number {
+  const { packages } = readJsonObject('release-please-config.json');
+
+  assert.ok(
+    typeof packages == 'object' && packages != null,
+    `release-please-config.json must declare "packages".`
+  );
+
+  for (const [packageDir, pkg] of Object.entries(packages)) {
+    if (typeof pkg != 'object' || pkg == null) {
+      continue;
+    }
+
+    const extraFiles = (pkg as Record<string, unknown>)['extra-files'];
+
+    if (!Array.isArray(extraFiles)) {
+      continue;
+    }
+
+    for (const entry of extraFiles) {
+      if (typeof entry != 'object' || entry == null) {
+        continue;
+      }
+
+      const { path: entryPath, jsonpath } = entry as Record<string, unknown>;
+
+      if (typeof entryPath != 'string' || typeof jsonpath != 'string') {
+        continue;
+      }
+
+      // A leading "/" means repo-root-relative; otherwise the path resolves against the
+      // release-please package directory.
+      const resolved = entryPath.startsWith('/')
+        ? entryPath.slice(1)
+        : `${packageDir}/${entryPath}`;
+
+      if (resolved != configPath) {
+        continue;
+      }
+
+      const match = jsonpath.match(/^\$\.mcpServers\.(?<key>[^.]+)\.args\[(?<index>\d+)\]$/u);
+
+      if (match?.groups?.key == serverKey && match.groups.index != null) {
+        return Number(match.groups.index);
+      }
+    }
+  }
+
+  return assert.fail(
+    `release-please-config.json has no extra-file rewriting the "${serverKey}" dnx version pin ` +
+      `in ${configPath}; the pin would go stale on release.`
+  );
+}
+
+function readDnxPackageId(pluginRoot: string): string {
+  const mcpDir = path.join(repoRoot, pluginRoot, 'mcp');
+
+  const csprojNames = readdirSync(mcpDir).filter(name => name.endsWith('.csproj'));
+
+  assert.equal(
+    csprojNames.length,
+    1,
+    `${pluginRoot}/mcp must contain exactly one csproj to read the dnx <PackageId> from.`
+  );
+
+  const [csprojName] = csprojNames;
+
+  assert.ok(csprojName != null, `${pluginRoot}/mcp has no csproj.`);
+
+  const packageId = readFileSync(path.join(mcpDir, csprojName), 'utf8').match(
+    /<PackageId>(?<id>[^<]+)<\/PackageId>/u
+  )?.groups?.id;
+
+  assert.ok(
+    packageId != null,
+    `${pluginRoot}/mcp/${csprojName} must declare the <PackageId> the dnx launch targets.`
+  );
+
+  return packageId;
 }
 
 function checkRootVersionAnchor(): void {

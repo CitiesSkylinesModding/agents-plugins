@@ -50,7 +50,7 @@ public sealed class Ecs {
       var world = this.inv.Invoke(all, "get_Item", this.inv.Prim(i));
       var worldName = ((StringMirror) this.inv.GetProperty(world, "Name")).Value;
 
-      if (name == null || worldName == name) {
+      if (name is null || worldName == name) {
         return world;
       }
 
@@ -141,14 +141,14 @@ public sealed class Ecs {
         var e = (StructMirror) v;
 
         if ((int) ((PrimitiveValue) e["Index"]).Value == index &&
-          (version == null || (int) ((PrimitiveValue) e["Version"]).Value == version)) {
+          (version is null || (int) ((PrimitiveValue) e["Version"]).Value == version)) {
           return e;
         }
       }
     }
 
     throw new InvalidOperationException(
-      $"entity {index}{(version != null ? $":{version}" : "")} not found among " +
+      $"entity {index}{(version is not null ? $":{version}" : "")} not found among " +
       $"{arr.Length} entities matching the query"
     );
   }
@@ -222,7 +222,7 @@ public sealed class Ecs {
         .FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)) ??
       throw new InvalidOperationException(
         $"field '{name}' not found on {type.FullName}; " +
-        $"fields: {string.Join(", ", Invoker.InstanceFields(type).Select(f => f.Name))}"
+        $"fields: {Invoker.InstanceFieldNames(type)}"
       );
   }
 
@@ -251,12 +251,11 @@ public sealed class Ecs {
     var typeName = targetType.FullName.TrimEnd('&');
 
     switch (raw) {
-      case "em" when typeName == "Unity.Entities.EntityManager":
-        return entityManager();
-      case "out-entity" when typeName == "Unity.Entities.Entity":
-        return Ecs.MakeEntity(inv, 0, 0);
-      case "out-int" when typeName == "System.Int32":
-        return inv.Prim(0);
+      case "em" when typeName is "Unity.Entities.EntityManager": return entityManager();
+
+      case "out-entity" when typeName is "Unity.Entities.Entity": return Ecs.MakeEntity(inv, 0, 0);
+
+      case "out-int" when typeName is "System.Int32": return inv.Prim(0);
     }
 
     switch (typeName) {
@@ -264,8 +263,8 @@ public sealed class Ecs {
         var (index, version) = Ecs.ParseEntitySpec(raw);
 
         return Ecs.MakeEntity(inv, index, version ?? 1);
-      case "System.String":
-        return inv.Str(raw);
+
+      case "System.String": return inv.Str(raw);
     }
 
     if (targetType.IsEnum) {

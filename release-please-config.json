@@ -58,6 +58,16 @@
         {
           "type": "generic",
           "path": "UnityDevtools.Mcp.csproj"
+        },
+        {
+          "type": "json",
+          "path": "/plugins/unity-devtools/.mcp.json",
+          "jsonpath": "$.mcpServers.unity.args[3]"
+        },
+        {
+          "type": "json",
+          "path": "/plugins/unity-devtools/.codex-plugin/mcp.json",
+          "jsonpath": "$.mcpServers.unity.args[3]"
         }
       ]
     }
