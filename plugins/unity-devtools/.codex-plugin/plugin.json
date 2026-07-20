@@ -1,6 +1,6 @@
 {
   "name": "unity-devtools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Drive a running Unity Mono development build from your coding agent (Claude Code, Codex CLI): ships the unity-devtools-mcp server (process discovery, live type reflection, C# expression evaluation, and ECS entity/component/buffer read-write over the Mono Soft Debugger protocol, no code injection), plus skills.",
   "author": {
     "name": "Morgan Touverey Quilling"
