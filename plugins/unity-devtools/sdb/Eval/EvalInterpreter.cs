@@ -115,7 +115,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       case UnaryExpr unary: {
         var operand = this.Evaluate(unary.Operand);
 
-        var raw = PrimitiveOps.Unary(unary.Op, UnwrapForOps(operand));
+        var raw = PrimitiveOps.Unary(unary.Op, EvalInterpreter.UnwrapForOps(operand));
 
         // `~` is the one unary operator C# defines on (flags) enums; it keeps the enum type.
         return unary.Op == "~" && operand is EnumMirror e ? this.MakeEnum(e.Type, raw) : raw;
@@ -180,7 +180,8 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         // instead.
         if (binary.Op is "+" &&
           (EvalInterpreter.IsCompoundMirror(left) || EvalInterpreter.IsCompoundMirror(right)) &&
-          (UnwrapForOps(left) is string || UnwrapForOps(right) is string)) {
+          (EvalInterpreter.UnwrapForOps(left) is string ||
+            EvalInterpreter.UnwrapForOps(right) is string)) {
           return this.Stringify(left) + this.Stringify(right);
         }
 
@@ -189,7 +190,11 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
           return this.EvaluateMirrorEquality(binary, left, right);
         }
 
-        return PrimitiveOps.Binary(binary.Op, UnwrapForOps(left), UnwrapForOps(right));
+        return PrimitiveOps.Binary(
+          binary.Op,
+          EvalInterpreter.UnwrapForOps(left),
+          EvalInterpreter.UnwrapForOps(right)
+        );
       }
     }
   }
@@ -206,7 +211,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   /// </summary>
   private object EvaluateEnumBinary(BinaryExpr binary, object left, object right) {
     // String concatenation renders the member name (as interpolation does), not the number.
-    if (binary.Op is "+" && (UnwrapForOps(left) is string || UnwrapForOps(right) is string)) {
+    if (binary.Op is "+" &&
+      (EvalInterpreter.UnwrapForOps(left) is string ||
+        EvalInterpreter.UnwrapForOps(right) is string)) {
       return this.Stringify(left) + this.Stringify(right);
     }
 
@@ -222,7 +229,11 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     var enumType = (left as EnumMirror ?? (EnumMirror) right).Type;
 
-    var raw = PrimitiveOps.Binary(binary.Op, UnwrapForOps(left), UnwrapForOps(right));
+    var raw = PrimitiveOps.Binary(
+      binary.Op,
+      EvalInterpreter.UnwrapForOps(left),
+      EvalInterpreter.UnwrapForOps(right)
+    );
 
     // Flags math keeps the enum; so do +/- against a numeric offset (enum minus enum is the
     // underlying distance, as in C#); comparisons fall through as bool.
@@ -270,7 +281,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       }
 
       if (bound is {} b) {
-        return UnwrapForOps(inv.InvokeStatic(b.Method.DeclaringType, b.Method, b.Values));
+        return EvalInterpreter.UnwrapForOps(
+          inv.InvokeStatic(b.Method.DeclaringType, b.Method, b.Values)
+        );
       }
     }
 
@@ -290,7 +303,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       binary.Position
     );
 
-    var equal = UnwrapForOps(
+    var equal = EvalInterpreter.UnwrapForOps(
       inv.Invoke(this.ToMirror(left, binary.Position), equalsMethod, equalsValues)
     ) is true;
 
@@ -298,7 +311,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   }
 
   private bool EvaluateBool(EvalExpr expr) {
-    var value = UnwrapForOps(this.Evaluate(expr));
+    var value = EvalInterpreter.UnwrapForOps(this.Evaluate(expr));
 
     return value is bool b
       ? b
@@ -634,7 +647,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     if (call.Target is null) {
       var bareArgs = call.Args.Select(a =>
           a.Mode == ArgMode.Plain
-            ? UnwrapForOps(this.Evaluate(a.Value))
+            ? EvalInterpreter.UnwrapForOps(this.Evaluate(a.Value))
             : throw new EvalRuntimeException(
               "builtin functions take no out arguments",
               call.Position
@@ -866,7 +879,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     var bare = parameterType.IsByRef ? parameterType.GetElementType() : parameterType;
 
     if (EvalInterpreter.ClrPrimitiveOrNull(bare.FullName) is {} clr) {
-      var argType = UnwrapForOps(arg)?.GetType();
+      var argType = EvalInterpreter.UnwrapForOps(arg)?.GetType();
 
       return argType == clr
         ? 0
@@ -947,7 +960,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     }
 
     long? index = args.Length == 1
-      ? global::UnityDevtools.Sdb.Eval.EvalInterpreter.UnwrapForOps(args[0]) switch {
+      ? EvalInterpreter.UnwrapForOps(args[0]) switch {
         int v => v,
         uint v => v,
         long v => v,
@@ -1332,7 +1345,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     var value = this.Evaluate(cast.Operand);
 
     if (type.IsEnum) {
-      var numeric = UnwrapForOps(value);
+      var numeric = EvalInterpreter.UnwrapForOps(value);
 
       // Strings are IConvertible but not castable in C#.
       return numeric is IConvertible and not string
@@ -1346,7 +1359,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     var clr = EvalInterpreter.ClrPrimitiveOrNull(type.FullName);
 
     if (clr is not null) {
-      var unwrapped = UnwrapForOps(value);
+      var unwrapped = EvalInterpreter.UnwrapForOps(value);
 
       return unwrapped is IConvertible and not string
         ? EvalInterpreter.CastClient(unwrapped, clr)
