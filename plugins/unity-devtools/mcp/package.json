@@ -1,6 +1,6 @@
 {
   "name": "unity-devtools-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "release-please version anchor for the unity-devtools MCP server; the csproj <Version> is synced from this via extra-files. Not a workspace package, never published.",
   "license": "MIT"

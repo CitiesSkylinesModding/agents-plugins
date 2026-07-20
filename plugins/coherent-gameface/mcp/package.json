@@ -1,6 +1,6 @@
 {
   "name": "@csmodding/gameface-devtools-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server that drives a running Coherent Gameface (Cohtml) game UI over a direct Chrome DevTools Protocol connection: evaluate JS, screenshot, inspect and drive the DOM, capture the console, and set JS breakpoints.",
   "keywords": [
     "browser-automation",

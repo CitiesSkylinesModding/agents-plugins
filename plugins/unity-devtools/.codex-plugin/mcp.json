@@ -2,7 +2,13 @@
   "mcpServers": {
     "unity": {
       "command": "dotnet",
-      "args": ["dnx", "CitiesSkylinesModding.UnityDevtools.Mcp", "--version", "0.1.0", "--yes"],
+      "args": [
+        "dnx",
+        "CitiesSkylinesModding.UnityDevtools.Mcp",
+        "--version",
+        "0.2.0",
+        "--yes"
+      ],
       "cwd": "."
     }
   }
