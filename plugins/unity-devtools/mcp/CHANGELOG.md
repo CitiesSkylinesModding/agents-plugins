@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.2.0...unity-devtools-mcp-v0.3.0) (2026-07-20)
+
+
+### Features
+
+* **unity-devtools:** rename NuGet package to UnityDevtools.Mcp and ship a package icon ([4f3c930](https://github.com/CitiesSkylinesModding/agents-plugins/commit/4f3c9301d00119e1a6266a8e81bac03dce6a8875))
+
 ## [0.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.1.0...unity-devtools-mcp-v0.2.0) (2026-07-20)
 
 
