@@ -16,7 +16,12 @@ export default defineConfig({
     'vendor',
     // "release-please" generates CHANGELOG.md files; reformatting them makes CI fail on release PRs
     // (dirty tree after the format check).
-    '**/CHANGELOG.md'
+    '**/CHANGELOG.md',
+    // The release-please json extra-files rewrite the unity dnx version pin here, re-expanding the
+    // "args" array oxfmt would collapse; ignoring these keeps release commits CI-clean, same reason
+    // as the CHANGELOG.md rule above.
+    'plugins/unity-devtools/.mcp.json',
+    'plugins/unity-devtools/.codex-plugin/mcp.json'
   ],
   ...config
 });

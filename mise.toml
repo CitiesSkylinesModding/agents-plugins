@@ -101,6 +101,25 @@ description = "Diff the gameface skill's baked version timeline against the live
 # Network-dependent, so deliberately not part of `mise check` / CI, run manually now and then.
 run = "bun scripts/check-skill-changelog.ts"
 
+# VENDOR TASKS
+# ============
+
+[tasks."vendor:unity:reset"]
+description = "Restore the unity-mono vendored submodule to its lean sparse checkout (only the Mono.Debugger.Soft sources)."
+# Runs inside the submodule so git targets it; assumes the submodule is already initialized.
+dir = "{{config_root}}/plugins/unity-devtools/vendor/unity-mono"
+raw = true
+# git/sparse plumbing, so pin bash: mise defaults to cmd on Windows.
+shell = "bash -c"
+# In-place sparse restore: a re-clone here would leave a standalone repo and de-link the submodule
+# (its working-tree ".git" must stay a gitlink file), so we only re-apply the cone. core.longpaths
+# lets the prune delete the deep vendored paths (e.g. external/llvm-project) on Windows.
+run = '''
+set -e
+git config core.longpaths true
+git sparse-checkout set --cone mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft
+'''
+
 # BUILD TASKS
 # ===========
 
@@ -120,7 +139,11 @@ run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/e
 description = "Pack the unity-devtools MCP server as the CitiesSkylinesModding.UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; publish with publish:unity:nuget)."
 dir = "{{config_root}}"
 raw = true
-run = "dotnet pack plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj -c Release -o plugins/unity-devtools/mcp/dist"
+# bash for the glob-clean; mise defaults to cmd on Windows.
+shell = "bash -c"
+# Wipe dist/ first so a renamed package id or an old version cannot linger and get pushed by the
+# `dist/*.nupkg` glob in publish:unity:nuget.
+run = "rm -rf plugins/unity-devtools/mcp/dist && dotnet pack plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj -c Release -o plugins/unity-devtools/mcp/dist"
 
 # FIX TASKS
 # =========
@@ -173,6 +196,10 @@ run = ["mise check", "mise test", "mise build:unity:pack", "mise publish:unity:n
 description = "Push the packed CitiesSkylinesModding.UnityDevtools.Mcp nupkg to nuget.org (manual, like npm; append --api-key <key> or configure one)."
 dir = "{{config_root}}/plugins/unity-devtools/mcp"
 raw = true
+# bash so `dist/*.nupkg` expands: mise defaults to cmd on Windows, where dotnet nuget push gets the
+# literal glob and fails.
+# `build:unity:pack` keeps dist/ to a single nupkg, so the glob is unambiguous.
+shell = "bash -c"
 run = "dotnet nuget push dist/*.nupkg --source https://api.nuget.org/v3/index.json"
 
 # RUN TASKS

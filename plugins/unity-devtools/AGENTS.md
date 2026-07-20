@@ -73,8 +73,8 @@ Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (th
   The branch choice is provenance only: the `mcs/class/Mono.Debugger.Soft` tree hash is IDENTICAL across `unity-2022.3-mbe` (CS2's Unity is 2022.3.71f1), `unity-6000.6-mbe`, and `unity-main` (verified 2026-07-17); Unity only evolves the agent side.
   We track the newest release branch so the pin follows any future client fixes; the SDB wire protocol is version-negotiated at attach, so one client serves all Mono-era Unity agents.
   The `sdb/` library compiles these sources into its assembly, so `SdbSession` reaches the internal `TcpConnection` directly.
-  After a fresh submodule init, restore the sparse checkout with:
-  `git -C plugins/unity-devtools/vendor/unity-mono sparse-checkout set mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft`
+  Restore the lean sparse checkout with `mise vendor:unity:reset` (an in-place `git sparse-checkout set --cone` with `core.longpaths` so Windows can prune the deep vendored paths; it preserves the submodule gitlink, which a re-clone would break by leaving a standalone repo).
+  Run it after a submodule init, or to recover from a plain `git submodule update` that materialized the FULL tree: that state breaks `mise check` (oxlint then scans the vendored JS/TS under `external/`).
 
 ## SDB gotchas (verified, do not relearn the hard way)
 
