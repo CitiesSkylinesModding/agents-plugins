@@ -96,6 +96,7 @@ async function main(): Promise<void> {
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
         as an inline image.
         Pass a selector to clip the capture to one element; use index to pick among matches.
+        Hangs while the JS debugger is paused; resume (game_debug_step) before capturing.
       `,
       inputSchema: {
         format: z.enum(['png', 'jpeg']).optional().describe(`Image format (default: jpeg)`),
@@ -179,7 +180,7 @@ async function main(): Promise<void> {
       title: `Set an input value in the Gameface UI`,
       description: oneLine`
         Set the value of an input, textarea, or contenteditable element and fire input/change so
-        to simulate user input.
+        the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
         Use index to pick among matches.
       `,
@@ -227,7 +228,9 @@ async function main(): Promise<void> {
       title: `Hover an element in the Gameface UI`,
       description: oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
-        the UI's mouseenter / pointerover handlers (tooltips, hover states) fire.
+        the UI's mouseenter / pointerover JS handlers (tooltips) fire.
+        The CSS :hover state is NOT set (only real game-forwarded mouse input sets it); verify a
+        hover by its DOM effect, never by styling.
         Use index to pick among matches.
       `,
       inputSchema: {
@@ -454,6 +457,8 @@ async function main(): Promise<void> {
       description: oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
         filtered by a url substring.
+        Only scripts parsed after the debugger attached appear (Gameface does not replay
+        scriptParsed); an empty list means attach first, then trigger a view reload to repopulate.
         Use the scriptId with game_debug_source.
       `,
       inputSchema: {

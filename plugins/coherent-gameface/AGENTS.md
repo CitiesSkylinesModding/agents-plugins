@@ -17,7 +17,9 @@ The plugin wears two hats, with distinct names:
 - `.claude-plugin/plugin.json`: Claude Code plugin manifest.
 - `.codex-plugin/plugin.json`: Codex CLI plugin manifest; points `mcpServers` at `.codex-plugin/mcp.json`. Shared fields must match the Claude manifest.
 - `.mcp.json`: wires the `gameface` MCP server for Claude Code plugin installs. Launches the committed bundle with `${GAMEFACE_MCP_RUNTIME:-node}`; node 22.4+ is the sole supported runtime (the env var is an escape hatch).
-- `skills/gameface/`: the Gameface domain-knowledge skill (`SKILL.md`, `references/`, and the `scripts/fetch-doc.mjs` docs extractor). AUTHORING CONVENTION: prose in `skills/**` markdown is written one sentence per line, never wrapped at 100 chars; it costs fewer tokens when loaded into context and keeps diffs line-granular.
+- `skills/gameface/`: the Gameface domain-knowledge skill (`SKILL.md`, `references/`, and the `scripts/fetch-doc.mjs` docs extractor): what the engine supports (layout, events, platform APIs).
+- `skills/gameface-driving/`: the operational skill for driving a live UI with the `game_*` tools: procedures and traps beyond what the tool schemas say. Facts must live in exactly one tier: traps every caller needs go in the tool descriptions (always in context once the tools load, and all a standalone MCP client gets); interpretation and procedure go in the skill.
+- AUTHORING CONVENTION: prose in `skills/**` markdown is written one sentence per line, never wrapped at 100 chars; it costs fewer tokens when loaded into context and keeps diffs line-granular.
 - `mcp/src/`: the MCP server (TypeScript). `mcp/package.json` is the publishable npm package (`@csmodding/gameface-devtools-mcp`); `mcp/README.md` is what npm displays.
   - `server.ts`: entry point; registers tools and connects the stdio transport.
   - `cdp.ts`: direct CDP client (HTTP discovery, WebSocket connection, reconnect, events, onConnect).
@@ -29,7 +31,7 @@ The plugin wears two hats, with distinct names:
 
 ## How the server is built and shipped
 
-The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `dist/server.mjs` (inside the mcp workspace) that runs under node 22.4+ (global `WebSocket` / `fetch` are stable from that version). Bun is dev tooling only (build, package manager); the shipped runtime is node. Unit tests target node 24 and the current LTS.
+The server uses `@modelcontextprotocol/sdk` + `zod`, bundled with `bun build --target=node` into a single `dist/server.mjs` (inside the mcp workspace) that runs under node 22.4+ (global `WebSocket` / `fetch` are stable from that version). Bun is dev tooling only (build, package manager); the shipped runtime is node.
 The SDK/zod are bundled in, so there is NO runtime installation step.
 Those packages are build-time `devDependencies` only.
 The build emits a `#!/usr/bin/env node` banner so the same bundle works as the npm package's `bin` script.
@@ -55,7 +57,7 @@ These were verified against Cities: Skylines II's Gameface UI (Cohtml 1.64.0.7, 
 
 ## Preferred agent behavior
 
-- After changing `mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` whenever you need to get the new build. Ask in plain text and end your turn: the user cannot run `/mcp` while an AskUserQuestion prompt is pending. Server launch/connection failures (e.g. `MCP error -32000: Connection closed`, an SDK process-exit/spawn error, not a CDP error) are diagnosable from the newest `.jsonl` under `%LocalAppData%\claude-cli-nodejs\Cache\C--Users-Morgan-Documents-Projets-coherent-gameface-mcp\mcp-logs-gameface\`.
+- After changing `mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running `gameface` MCP server keeps serving the old bundle after a rebuild; ask the user to hit Reconnect in `/mcp` whenever you need to get the new build. Ask in plain text and end your turn: the user cannot run `/mcp` while an AskUserQuestion prompt is pending. Server launch/connection failures (e.g. `MCP error -32000: Connection closed`, an SDK process-exit/spawn error, not a CDP error) are diagnosable from the newest `.jsonl` under `%LocalAppData%\claude-cli-nodejs\Cache\C--Users-Morgan-Documents-Projets-coherent-gameface-mcp\mcp-logs-gameface\` (`mise dev:mcp-logs` tails and pretty-prints it).
 - Store hard-won facts about Gameface internals in memory.
 - Keep the server generic: no assumptions about a specific game's DOM and APIs beyond the defaults. CS2 is the test target, not a hard dependency.
 - Keep skills and docs generic too (`skills/**`, `docs/`, `README`s): the plugin targets any Gameface application, so write the general behavior as the guidance and the rule. CS2 is where facts are verified, not the lesson: state what holds for any Gameface UI, and keep CS2-only specifics (a concrete DOM path or class, an engine detail like Unity/`Colossal.*`, a binding name such as `menu.setActiveScreen`, a decompiled-source finding) out of the general text. When such a specific genuinely aids understanding, demote it to a clearly labeled example ("verified on CS2: ...") rather than letting it become the framing, and prefer none at all in a section meant as general procedure. The gameface engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain and generic; a particular game's use of it is not.

@@ -20,12 +20,11 @@ No reconnect ritual exists or is needed: the server re-resolves the page target 
 
 ## Finding elements
 
-Text is a durable anchor, and `game_find` is the built-in text search: it scans `querySelectorAll` matches and filters on trimmed `textContent`, taking a `text` plus a `match` mode (`equals` / `contains` / `regex`, case-insensitive by default) and an optional `selector` to scope the scan.
-It returns tag, id, classes, and rect per match, plus three counts that cascade: `unprunedTotal` (raw text matches), `total` (after `deepest` pruning), and `returned` (after `limit`); `total` above `returned` means the `limit` truncated, so narrow the query, while `unprunedTotal` above `total` just shows how many ancestors `deepest` pruned.
-By default it keeps only the innermost match (`deepest`): an element's `textContent` includes its descendants', so a panel and its title button both match the title, and `deepest` prunes the panel; pass `deepest: false` to get the full ancestor chain when you want the enclosing container (finding a panel by its title).
-Set `tag: true` and `game_find` stamps each match with a `data-gf-find` handle and returns ready-to-use `[data-gf-find="N"]` selectors for `game_click` / `game_hover` / `game_screenshot`, which closes the discovery-to-action gap when class names are build-hashed and no unique selector exists.
-Tagging clears every prior `data-gf-find` first, so handles from an earlier `game_find` die on the next tagging call (and on any view reload); re-tag rather than reusing a stale handle.
-When a selector is non-unique but the match order is known, `game_click` / `game_hover` / `game_screenshot` / `game_fill` / `game_type` all take an `index` (default 0, the first match) to pick the Nth match, a lighter alternative to `data-gf-find` tagging; each reports `Matches: N` so you can tell whether the selector was ambiguous, and an out-of-range `index` reports the match count so you can correct it.
+Text is a durable anchor, and `game_find` is the built-in text search; the schema covers its parameters, so what follows is how to read and use it.
+Its three counts cascade: `unprunedTotal` (raw text matches), `total` (after `deepest` pruning), and `returned` (after `limit`); `total` above `returned` means the `limit` truncated, so narrow the query, while `unprunedTotal` above `total` just shows how many ancestors `deepest` pruned.
+`deepest` exists because an element's `textContent` includes its descendants': a panel and its title button both match the title, and `deepest` prunes the panel; pass `deepest: false` when you want the enclosing container (finding a panel by its title).
+`tag: true` handles die on the next tagging call and on any view reload; re-tag rather than reusing a stale handle.
+When a selector is non-unique but the match order is known, the input tools' `index` parameter is a lighter alternative to tagging; each tool reports `Matches: N` so you can tell whether the selector was ambiguous, and an out-of-range `index` reports the match count so you can correct it.
 For a predicate `game_find` cannot express (matching on an attribute, a sibling relation, or computed state), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
 In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `:not()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2); a selector-taking tool erroring that way needs a rewritten selector, not a retry.
@@ -35,15 +34,14 @@ In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `
 Input calls report that events were dispatched, not that the UI reacted; confirm the effect you care about before building on it.
 The cheap confirmations: `game_wait` on a predicate or selector, `game_dom` on the region that should have changed, a clipped screenshot, and `game_console` for exceptions a silent failure left behind.
 `game_click` returns after dispatching the event sequence, before any async handler work; pair it with a wait on the expected outcome.
-`game_hover` fires the JS hover handlers but never sets the CSS `:hover` state, which only real game-forwarded mouse input can set; verify a hover by its DOM effect, never by styling.
 
 ## Keyboard: `game_key` and native-handled keys
 
-`game_key` dispatches a named key (`KeyboardEvent.key`, e.g. `Escape`, `Enter`, `ArrowDown`, `a`, `F5`) as a real bubbling `keydown`+`keyup`, with optional `ctrl`/`shift`/`alt`/`meta` and a repeat `count`, on a `selector` (focused first, `index` picks among matches), else the focused element, else `document`.
-It fires only `keydown`+`keyup` (no `keypress`) and performs NO default action: no character insertion, no Backspace delete, no Tab focus move, no scrolling, so entering text stays `game_type`'s job and `game_key` is for keys a handler interprets (Enter to confirm a dialog, arrows for in-UI list navigation, a UI's own `onKeyDown` shortcut).
+The `game_key` schema covers the mechanics (`keydown`+`keyup` only, no default action, `game_type` for text entry); what it cannot tell you is where a dispatched key actually lands.
+`game_key` is for keys a handler interprets: Enter to confirm a dialog, arrows for in-UI list navigation, a UI's own `onKeyDown` shortcut.
 A dispatched key reaches the UI's JS `onKeyDown` handlers, but not any input the application consumes at the native/engine level, and the two are easy to confuse.
 Games commonly route global navigation and hotkeys (Escape/back, closing a menu or settings screen, tool cancel) through the host's own input system rather than the DOM, so a dispatched key such as `Escape` fires page listeners yet has no effect on that native handling; test per application before relying on a key doing more than reaching a DOM handler.
-The result reports whether a handler called `preventDefault` (the "consumed" signal), but treat that as a hint and confirm the observable effect you care about, not the dispatch.
+The result's `preventDefault` flag is a hint, not proof: confirm the observable effect you care about, not the dispatch.
 Do not hand-roll a `KeyboardEvent` in `game_eval` and expect `.key` to read back: Cohtml derives `key` from the event's `keyCode` and ignores the constructor's `key`, so a handler sees the wrong key unless you `Object.defineProperty` it; `game_key` already forces `key`/`code`/`keyCode`/`which` on every event, so reach for it instead of rolling your own.
 When a key is handled natively and has no DOM path, do not try to fake it: invoke the action the UI's own JS runs for that key instead.
 If the application drives its UI through Gameface's data-binding bridge, that action is usually a binding you can call from `game_eval` (`engine.trigger('<group>.<name>', ...)` or `engine.call`), for example the binding a screen uses to close or navigate.
