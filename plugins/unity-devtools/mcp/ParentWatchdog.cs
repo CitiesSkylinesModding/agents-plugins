@@ -8,11 +8,12 @@ namespace UnityDevtools.Mcp;
 /// <summary>
 /// Shuts the server down when its launching wrapper dies.
 /// Harnesses run this server through a wrapper (<c>dotnet dnx</c> for installs, <c>dotnet run</c>
-/// for local dev), and killing the wrapper does not reliably kill the server: an MCP reconnect can
-/// strand the previous instance, still holding the exclusive SDB debugger slot (and, in dev, file
-/// locks on its build output).
-/// Watching the parent process ties this server's lifetime to its own wrapper without ever touching
-/// another process, so concurrent servers (two games, two harnesses) stay unaffected.
+/// for local dev); not every wrapper shape guarantees the OS takes the server down with it, so
+/// watching the parent process is one of the independent lifetime ties (with
+/// <see cref="StdinWatchdog"/>) that keep an MCP reconnect from stranding the previous instance,
+/// still holding the exclusive SDB debugger slot (and, in dev, file locks on its build output).
+/// It never touches another process, so concurrent servers (two games, two harnesses) stay
+/// unaffected.
 /// </summary>
 internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : BackgroundService {
   protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -49,21 +50,16 @@ internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : Backgr
       return;
     }
 
-    // stderr only: stdout carries the MCP protocol.
-    await Console.Error.WriteLineAsync("launching wrapper exited; shutting down");
+    // Arm first, stop second, log last: graceful shutdown can stall in SDB disposal (a survivor
+    // would keep the exclusive SDB slot, the very situation this watchdog exists to prevent),
+    // and a stderr write can block forever when the client stops draining the pipe, so nothing
+    // blockable may precede the failsafe or the stop request.
+    HardExit.Arm();
 
     lifetime.StopApplication();
 
-    // Failsafe: if graceful shutdown stalls, the survivor would keep the exclusive SDB slot, the
-    // very situation this watchdog exists to prevent. A hard exit is safe for the game: a dying
-    // socket auto-resumes the VM (verified safety net).
-    _ = Task.Delay(TimeSpan.FromSeconds(10), CancellationToken.None)
-      .ContinueWith(
-        _ => Environment.Exit(1),
-        CancellationToken.None,
-        TaskContinuationOptions.None,
-        TaskScheduler.Default
-      );
+    // stderr only, best-effort: stdout carries the MCP protocol.
+    await Console.Error.WriteLineAsync("launching wrapper exited; shutting down");
   }
 
   private static int? ParentPid(Process self) {

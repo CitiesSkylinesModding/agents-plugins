@@ -33,13 +33,23 @@ builder.Services.AddSingleton(_ => new UnitySession(
 // The eval tool's `_` last-result slot lives for the whole server session.
 builder.Services.AddSingleton<EvalState>();
 
-// Dies with the launching wrapper, so an MCP reconnection never strands a stale server holding the
-// exclusive SDB slot (see ParentWatchdog).
+// Dies with the launching wrapper AND with its own stdin, so an MCP reconnection never strands a
+// stale server holding the exclusive SDB slot (see ParentWatchdog and StdinWatchdog); belt and
+// braces on independent signals.
 builder.Services.AddHostedService<ParentWatchdog>();
+builder.Services.AddHostedService<StdinWatchdog>();
 
 builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// EVERY stop gets the hard-exit failsafe, whoever triggered it (the transport's own stdin-EOF
+// handling included): graceful shutdown disposes the SDB session, which can stall forever against
+// an unresponsive debuggee (see HardExit).
+host.Services.GetRequiredService<IHostApplicationLifetime>()
+  .ApplicationStopping.Register(HardExit.Arm);
+
+await host.RunAsync();
 
 return;
 
