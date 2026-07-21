@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.3.0...unity-devtools-mcp-v0.4.0) (2026-07-21)
+
+
+### Features
+
+* **unity-devtools:** add source-level debugging toolset ([26ca77e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/26ca77e85a8456d355c96262f4abfcc109b9bb08))
+
+
+### Bug Fixes
+
+* **unity-devtools-mcp:** guarantee the server dies with its client so MCP reconnects never strand a stale instance ([7afff80](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7afff8024666f89cfb1ef9bc97e483016ddfe30e))
+
 ## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.2.0...unity-devtools-mcp-v0.3.0) (2026-07-20)
 
 
