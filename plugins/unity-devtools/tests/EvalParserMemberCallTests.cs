@@ -24,6 +24,36 @@ public sealed class EvalParserMemberCallTests {
   }
 
   [Fact]
+  public void ParsesThisAsANameRoot() {
+    var name = Assert.IsType<NameExpr>(EvalParserMemberCallTests.ParseSingle("this"));
+
+    Assert.Equal("this", name.Name);
+  }
+
+  [Fact]
+  public void ParsesAMemberChainRootedAtThis() {
+    var chain = Assert.IsType<MemberExpr>(EvalParserMemberCallTests.ParseSingle("this.gameMode"));
+
+    Assert.Equal("gameMode", chain.Name);
+
+    var root = Assert.IsType<NameExpr>(chain.Target);
+
+    Assert.Equal("this", root.Name);
+  }
+
+  [Fact]
+  public void ParsesAnAssignmentThroughThis() {
+    var assignment = Assert.IsType<AssignExpr>(
+      EvalParserMemberCallTests.ParseSingle("this.m_State = 1")
+    );
+
+    var target = Assert.IsType<MemberExpr>(assignment.Target);
+
+    Assert.Equal("m_State", target.Name);
+    Assert.Equal("this", Assert.IsType<NameExpr>(target.Target).Name);
+  }
+
+  [Fact]
   public void ParsesADottedMemberChain() {
     var chain = Assert.IsType<MemberExpr>(
       EvalParserMemberCallTests.ParseSingle("Game.SceneFlow.GameManager.instance")

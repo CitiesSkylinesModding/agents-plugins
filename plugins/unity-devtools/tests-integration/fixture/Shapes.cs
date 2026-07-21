@@ -1,6 +1,6 @@
-using System;
+// ReSharper disable UnusedMember.Global UnusedType.Global UnusedParameter.Global NotAccessedField.Global
 
-// ReSharper disable UnusedMember.Global UnusedType.Global UnusedParameter.Global
+using System;
 
 namespace TestFixture;
 
@@ -71,6 +71,47 @@ public sealed class DerivedThing : BaseThing {
 
 public static class Thrower {
   public static void Boom() => throw new InvalidOperationException("kaboom");
+}
+
+// The debug toolset's moving target: Main calls Tick every loop iteration, so an armed breakpoint
+// hits within milliseconds, with a parameter and a local in frame.
+public static class Ticker {
+  public static int LastTick;
+
+  public static string LastLabel;
+
+  public static void Tick(int n) {
+    var label = "tick:" + n;
+
+    Ticker.LastTick = n;
+    Ticker.LastLabel = label;
+
+    TickBox.Instance.Bump(n);
+  }
+
+  // Thrown AND caught, so exception-break tests always have a throw to catch within a second while
+  // the program itself never dies. FormatException is otherwise unused in the fixture.
+  public static void MaybeThrow(int n) {
+    if (n % 100 is not 99) {
+      return;
+    }
+
+    try {
+      throw new FormatException("tick " + n);
+    }
+    catch (FormatException) {
+      // Swallowed on purpose; the debugger breaks on throw, not on catch.
+    }
+  }
+}
+
+// An instance method in the tick path, so `this`-rooted frame evaluation has a live receiver.
+public sealed class TickBox {
+  public static readonly TickBox Instance = new();
+
+  public int Value;
+
+  public void Bump(int n) => this.Value = n;
 }
 
 public struct Accum {

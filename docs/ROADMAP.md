@@ -57,7 +57,8 @@ missing (no request interception). Surface request/response observation as tools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
 (SDB): discovery, live type reflection, C# expression evaluation, ECS entity/component/buffer
-read-write, through one persistent lazy-attach session.
+read-write, and breakpoint/pause debugging (`debug_*`, `advance`), through one persistent
+lazy-attach session.
 
 ### Cross-platform support
 
@@ -80,25 +81,6 @@ optionally on its `PrefabRef` target, answers "what does this entity carry" in o
 game fall back to offline decompilation to harvest candidates (the driving skill documents that
 workaround). Add a substring/pattern mode over the loaded type list; SDB's `GetTypes` cannot
 search, but enumerating assemblies and their types over mirrors (with a per-session cache) can.
-
-### Deterministic simulation advance (`advance`)
-
-"Let the simulation react, then verify" currently means an eval to unpause, a wall-clock sleep on
-the client, and an eval to re-pause: crude and racy (surfaced live waiting for the attraction
-system to recompute a building's attractiveness from fresh prefab data). Two layers, only one of
-them generic: releasing a held debugger suspend for N seconds and re-taking it is pure SDB and
-fits the server; a game's OWN pause (CS2's simulation speed) is game logic no SDB operation can
-lift, and that was the actual blocker in the live scenario. Keep the game knowledge caller-side:
-`advance` could take optional before/after eval snippets (e.g. the CS2 speed writes), with the
-per-game recipe living in a driving skill, never hardcoded in the server.
-
-### Frame-context evaluation (`debug_evaluate`)
-
-The `eval` tool (shipped) interprets C# client-side over mirror primitives with a pluggable
-binding-scope chain; today only the frameless scope exists (builtins + type roots). The seam is
-there for a breakpoint/pause toolset (twin of gameface's `game_debug_*`): a `StackFrame`-backed
-scope (`StackFrame.GetValues`/`SetValues` exist in the vendored client) would give expressions
-frame locals and `this` with zero grammar or walker changes.
 
 ### Injected in-game helper (exploratory, opt-in)
 

@@ -31,7 +31,7 @@ public sealed class TypeTools(UnitySession session) {
     FindTypesResult Operation(SdbContext ctx) {
       var types = ctx.Vm.GetTypes(fullName, true);
 
-      if (types.Count == 0) {
+      if (types.Count is 0) {
         throw new McpException(
           $"type '{fullName}' not found (the name must be fully qualified; discover names " +
           "offline from the game's Managed assemblies, e.g. with a decompiler)"

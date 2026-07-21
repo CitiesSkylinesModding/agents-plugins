@@ -81,7 +81,7 @@ internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : Backgr
       out _
     );
 
-    return status == 0 ? checked((int) info.InheritedFromUniqueProcessId) : null;
+    return status is 0 ? checked((int) info.InheritedFromUniqueProcessId) : null;
   }
 
   [DllImport("ntdll.dll")]

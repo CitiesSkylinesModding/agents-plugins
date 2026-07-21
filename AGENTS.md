@@ -77,10 +77,12 @@ Rules that matter when committing:
 Never:
 
 - Create a git branch, stage files, or commit work yourself unless the user expressly told you so.
-- Commit secrets, tokens, `.env` files, dumps, or credentials.
+- Commit secrets, tokens, `.env` files, dumps or credentials.
 - Modify generated files unless the generation command was run.
 - Change public API behavior without calling it out.
 - Add large dependencies for small utilities.
+- Reference Cities: Skylines 2 in tools' code, documentation and skills.
+- Reference the coherent-gameface project in the unity-devtools one, and vice versa.
 
 Ask first before:
 

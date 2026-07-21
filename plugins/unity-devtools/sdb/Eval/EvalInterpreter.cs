@@ -47,7 +47,8 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     try {
       outcome = new EvalOutcome {
         Formatted = this.FormatValue(last, 3),
-        TypeName = EvalInterpreter.TypeNameOf(last)
+        TypeName = EvalInterpreter.TypeNameOf(last),
+        Value = last
       };
     }
     catch (Exception ex) {
@@ -118,7 +119,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         var raw = PrimitiveOps.Unary(unary.Op, EvalInterpreter.UnwrapForOps(operand));
 
         // `~` is the one unary operator C# defines on (flags) enums; it keeps the enum type.
-        return unary.Op == "~" && operand is EnumMirror e ? this.MakeEnum(e.Type, raw) : raw;
+        return unary.Op is "~" && operand is EnumMirror e ? this.MakeEnum(e.Type, raw) : raw;
       }
 
       case BinaryExpr binary: return this.EvaluateBinary(binary);
@@ -429,7 +430,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
       case null: throw new EvalRuntimeException($"cannot read '{name}' on null", position);
 
-      case ArrayMirror array when name == "Length": return array.Length;
+      case ArrayMirror array when name is "Length": return array.Length;
 
       case StructMirror or ObjectMirror:
         return this.ReadInstanceMember((Value) target, name, position);
@@ -646,7 +647,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   private object EvaluateCall(CallExpr call) {
     if (call.Target is null) {
       var bareArgs = call.Args.Select(a =>
-          a.Mode == ArgMode.Plain
+          a.Mode is ArgMode.Plain
             ? EvalInterpreter.UnwrapForOps(this.Evaluate(a.Value))
             : throw new EvalRuntimeException(
               "builtin functions take no out arguments",
@@ -683,7 +684,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     var (method, values, outIndexes) = this.BindCall(declaringType, call);
 
-    if (outIndexes.Count == 0) {
+    if (outIndexes.Count is 0) {
       var result = isStatic
         ? inv.InvokeStatic(declaringType, method, values)
         : inv.Invoke(this.ToMirror(target, call.Position), method, values);
@@ -738,7 +739,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     for (var i = 0; i < argc; i++) {
       var argument = call.Args[i];
 
-      if (argument.Mode == ArgMode.Plain) {
+      if (argument.Mode is ArgMode.Plain) {
         continue;
       }
 
@@ -748,7 +749,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         throw new EvalRuntimeException("out arguments must name a local", call.Position);
       }
 
-      if (argument.Mode == ArgMode.Out && !this.locals.ContainsKey(outName.Name)) {
+      if (argument.Mode is ArgMode.Out && !this.locals.ContainsKey(outName.Name)) {
         throw new EvalRuntimeException(
           $"out target '{outName.Name}' is not declared (use `out var name` to declare it)",
           call.Position
@@ -768,7 +769,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     else {
       candidates = inv.FindMethods(declaringType, call.Name, argc);
 
-      if (candidates.Count == 0) {
+      if (candidates.Count is 0) {
         throw new EvalRuntimeException(
           $"method {declaringType.Name}.{call.Name}/{argc} not found",
           call.Position
@@ -779,7 +780,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     var evaluated = new object[argc];
 
     for (var i = 0; i < argc; i++) {
-      if (call.Args[i].Mode == ArgMode.Plain) {
+      if (call.Args[i].Mode is ArgMode.Plain) {
         evaluated[i] = this.Evaluate(call.Args[i].Value);
       }
     }
@@ -892,7 +893,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       return 0;
     }
 
-    return bare.FullName == "System.Object" ? 1000 : 500;
+    return bare.FullName is "System.Object" ? 1000 : 500;
   }
 
   private static int NumericRank(Type clr) {
@@ -937,7 +938,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     var candidates = inv.FindMethods(type, "get_Item", args.Length);
 
-    if (candidates.Count == 0) {
+    if (candidates.Count is 0) {
       throw new EvalRuntimeException($"{type.FullName} has no indexer", position);
     }
 
@@ -952,14 +953,14 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   /// type is accepted, as in C#.
   /// </summary>
   private int ArrayIndexOf(ArrayMirror array, object[] args, int position) {
-    if (array.Rank != 1) {
+    if (array.Rank is not 1) {
       throw new EvalRuntimeException(
         $"rank-{array.Rank} array indexing is not supported (rank 1 only)",
         position
       );
     }
 
-    long? index = args.Length == 1
+    long? index = args.Length is 1
       ? EvalInterpreter.UnwrapForOps(args[0]) switch {
         int v => v,
         uint v => v,
@@ -997,19 +998,19 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       .ToArray();
 
     var candidates = type.GetMethods()
-      .Where(m => m.Name == ".ctor" && m.GetParameters().Length == args.Length)
+      .Where(m => m.Name is ".ctor" && m.GetParameters().Length == args.Length)
       .ToList();
 
     Value instance;
 
-    if (type.IsValueType && args.Length == 0 && candidates.Count == 0) {
+    if (type.IsValueType && args.Length is 0 && candidates.Count is 0) {
       // Zeroed client-side default: no debuggee allocation, fields overwritten locally and
       // serialized on first send (the MakeEntity pattern, generalized). A struct with a declared
       // parameterless constructor must run it instead.
       instance = this.DefaultMirrorFor(type);
     }
     else {
-      if (candidates.Count == 0) {
+      if (candidates.Count is 0) {
         throw new EvalRuntimeException(
           $"no {type.Name} constructor takes {args.Length} argument(s)",
           creation.Position
@@ -1045,8 +1046,22 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         return value;
       }
 
-      case NameExpr name when this.TryScopes(name.Name, out _):
-        throw new EvalRuntimeException($"cannot assign builtin '{name.Name}'", name.Position);
+      case NameExpr name when this.TryScopes(name.Name, out _): {
+        // Writability is probed BEFORE the right side evaluates, so assigning a read-only root
+        // (a builtin) rejects without running RHS side effects, like C#'s compile-time error;
+        // writable scopes (frame locals/parameters) then take the evaluated value.
+        var writable = scopes.FirstOrDefault(s => s.CanSetValue(name.Name));
+
+        if (writable is null) {
+          throw new EvalRuntimeException($"cannot assign builtin '{name.Name}'", name.Position);
+        }
+
+        var value = this.Evaluate(assignment.Value);
+
+        return !writable.TrySetValue(name.Name, value)
+          ? throw new EvalRuntimeException($"cannot assign '{name.Name}'", name.Position)
+          : value;
+      }
 
       case NameExpr name:
         throw new EvalRuntimeException(
@@ -1324,7 +1339,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     var candidates = inv.FindMethods(type, "set_Item", args.Length + 1);
 
-    if (candidates.Count == 0) {
+    if (candidates.Count is 0) {
       throw new EvalRuntimeException($"{type.FullName} has no writable indexer", position);
     }
 
@@ -1388,7 +1403,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     }
 
     // Client-side values: identity and boxing to object are the only meaningful reference casts.
-    return type.FullName == "System.Object" || value.GetType().FullName == type.FullName
+    return type.FullName is "System.Object" || value.GetType().FullName == type.FullName
       ? value
       : throw new EvalRuntimeException(
         $"cannot cast {EvalInterpreter.TypeNameOf(value)} to {type.FullName}",
@@ -1505,7 +1520,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     if (value is TypeRef typeRef) {
       // A bare type where a System.Type is expected: the common typo for typeof(...).
-      return typeName == "System.Type"
+      return typeName is "System.Type"
         ? typeRef.Type.GetTypeObject()
         : throw new EvalRuntimeException(
           $"'{typeRef.Type.FullName}' is a type, not a value",
@@ -1542,9 +1557,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
       case PrimitiveValue p: return this.CoerceClient(p.Value, targetType, position, allowWidening);
 
-      case StringMirror when typeName == "System.String": return mirror;
+      case StringMirror when typeName is "System.String": return mirror;
 
-      case StringMirror when allowWidening && typeName == "System.Object": return mirror;
+      case StringMirror when allowWidening && typeName is "System.Object": return mirror;
 
       default: {
         var mirrorType = mirror switch {
@@ -1564,7 +1579,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         }
 
         if (allowWidening &&
-          (typeName == "System.Object" || bareTarget.IsAssignableFrom(mirrorType))) {
+          (typeName is "System.Object" || bareTarget.IsAssignableFrom(mirrorType))) {
           return mirror;
         }
 
@@ -1837,4 +1852,10 @@ public sealed record EvalOutcome {
   public required string Formatted { get; init; }
 
   public required string TypeName { get; init; }
+
+  /// <summary>
+  /// The raw in-flight result (a mirror or a client-side CLR value), for callers that branch on it
+  /// rather than render it (breakpoint conditions).
+  /// </summary>
+  public object Value { get; init; }
 }

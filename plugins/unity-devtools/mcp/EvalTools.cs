@@ -36,7 +36,8 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     fetched into a `var` local stays a client-side copy, so persist it with
     em.SetComponentData(entity(...), copy).
     The whole sequence runs in one suspend window; combine with the suspend tool for consistency
-    across several eval calls. Attaches lazily.
+    across several eval calls.
+    Attaches lazily.
     """
   )]
   [UsedImplicitly]
@@ -86,7 +87,8 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     }
   }
 
-  private static string FailureReport(EvalFailedException e) {
+  /// <summary>Shared with the debug tools: frame-context evaluation fails the same way.</summary>
+  internal static string FailureReport(EvalFailedException e) {
     var report = new StringBuilder();
 
     _ = report.Append(

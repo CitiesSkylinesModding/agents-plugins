@@ -103,7 +103,7 @@ public static class SdbDiscovery {
       var cols = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
       // TCP <local> <remote> LISTENING <pid>
-      if (cols.Length < 5 || cols[0] != "TCP" || cols[3] != "LISTENING") {
+      if (cols.Length < 5 || cols[0] is not "TCP" || cols[3] is not "LISTENING") {
         continue;
       }
 

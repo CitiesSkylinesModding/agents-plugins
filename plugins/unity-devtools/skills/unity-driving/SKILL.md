@@ -55,6 +55,25 @@ One eval runs in one suspend window; hold `suspend`/`resume` around several eval
 Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns (depth-3 formatting), so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
+## Debugging with breakpoints
+
+Where `eval` reads the game from outside, the `debug_*` tools stop it from inside: arm (`debug_set_breakpoint` / `debug_break_on_exception`), trigger the behavior in game, catch the hit (`debug_wait`), inspect (`debug_pause_state`, `debug_evaluate`), move (`debug_step`), release (`debug_step action=resume`).
+Burst decides what is debuggable: Burst-compiled jobs are native code the Mono debugger cannot see, no frames and no hits on any thread; managed code hits fine, worker threads included.
+Mod code is normally non-Burst, so it just works; to reach the game's own Burst-compiled systems, run the game with Burst compilation disabled (Unity games generally take a `-burst-disable-compilation` launch option) and everything becomes managed and visible.
+A hit freezes the whole game until released, but every other unity tool keeps working against the frozen state (suspends are counted), so inspect at leisure; the UI stops rendering, which is normal, not a crash.
+Arm hot-path breakpoints with a `condition` gating on the instance you care about (an entity index, a parameter value, a field of `this`): false hits release the game automatically, so a method called every frame costs little until YOUR case arrives.
+A condition that fails to evaluate pauses with the error recorded in the pause state; fix the expression and re-arm rather than guessing.
+`debug_evaluate` is `eval` plus the frame: locals, parameters, and `this` resolve and assign like C# variables, `frameIndex` climbs the stack, and `_` is shared with `eval`.
+Method entry (no line) is the only anchor that works without debug info; `debug_locations` is the substitute for source text (SDB carries none), mapping lines to IL offsets and telling you which lines can host a breakpoint.
+Breakpoints die with the connection (game restart, detach): `debug_status` is the ground truth for what is armed, re-arm after any reconnect.
+The cross-plugin loop: the unity and gameface tools drive the same process over separate channels, so arm a breakpoint on a handler, drive the UI to trigger it with the gameface tools (`game_click`, ...), and `debug_wait` catches the hit; while the game sits paused at it, gameface calls that need a live frame loop will stall, so inspect over SDB, resume, then return to the UI.
+
+## Advancing time deterministically
+
+"Let the simulation react, then verify" is `advance`: under a held `suspend` window it releases the game for N real seconds and re-freezes it, replacing the unpause-sleep-repause dance.
+The game's OWN pause (a simulation-speed or pause flag in game state) is game logic no debugger operation can lift; pass `before`/`after` eval snippets to flip it, keeping the per-game recipe on your side.
+With breakpoints armed, `advance` doubles as "run until the next hit, at most N seconds": a hit during the window holds after it returns (`pausedDuringAdvance`), so inspect it before resuming.
+
 ## Writes are live
 
 Every write hits the running simulation immediately and persists; there is no undo.

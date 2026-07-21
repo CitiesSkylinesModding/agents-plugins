@@ -15,9 +15,20 @@ namespace UnityDevtools.Sdb;
 public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   private readonly Lock gate = new();
 
+  /// <summary>
+  /// Guards ONLY the published-state fields (session identity, held count, debug controller) so
+  /// read-only accessors (<see cref="Snapshot"/>, <see cref="DebugOrNull"/>,
+  /// <see cref="HeldSuspendCount"/>) stay live while <see cref="gate"/> is held through a long
+  /// operation (an advance window sleeps up to a minute; debug_status must not block on it).
+  /// Lock order: <see cref="gate"/> then <see cref="stateGate"/>, never the reverse.
+  /// </summary>
+  private readonly Lock stateGate = new();
+
   private SdbSession session;
 
   private Invoker invoker;
+
+  private DebugController debug;
 
   private string attachedHost;
 
@@ -42,7 +53,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         try {
           vm.Suspend();
         }
-        catch (Exception e) when (attempt == 0 && UnitySession.IsDisconnect(e)) {
+        catch (Exception e) when (attempt is 0 && UnitySession.IsDisconnect(e)) {
           // Stale connection detected before the operation ran (typically the game has restarted
           // since the last call): discard and retry once against a freshly discovered endpoint.
           // Only this pre-operation window retries: the operation has had no side effects yet.
@@ -53,10 +64,15 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
         try {
           // The Invoker picks the main thread; build it inside a suspend window where thread
-          // listing is guaranteed to be legal.
+          // listing is guaranteed to be legal. The debug controller is per-attach and idle until
+          // its first request (the pump only starts then).
           this.invoker ??= new Invoker(vm);
 
-          return operation(new SdbContext(vm, this.invoker));
+          lock (this.stateGate) {
+            this.debug ??= new DebugController(vm, this.invoker);
+          }
+
+          return operation(new SdbContext(vm, this.invoker, this.debug));
         }
         catch (Exception e) when (UnitySession.IsDisconnect(e)) {
           // Mid-operation disconnect: the operation may have partially applied in the debuggee,
@@ -91,7 +107,9 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     return this.Run(ctx => {
         ctx.Vm.Suspend();
 
-        return ++this.heldSuspends;
+        lock (this.stateGate) {
+          return ++this.heldSuspends;
+        }
       }
     );
   }
@@ -99,13 +117,15 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   /// <summary>Releases one held suspension; returns the count still held.</summary>
   public int ResumeHold() {
     lock (this.gate) {
-      if (this.heldSuspends == 0) {
+      if (this.heldSuspends is 0) {
         throw new InvalidOperationException("no suspension is held (nothing to resume)");
       }
 
       if (this.session is null) {
         // The connection has died since the hold; the closed socket already resumed the VM.
-        this.heldSuspends = 0;
+        lock (this.stateGate) {
+          this.heldSuspends = 0;
+        }
 
         return 0;
       }
@@ -119,7 +139,9 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         return 0;
       }
 
-      return --this.heldSuspends;
+      lock (this.stateGate) {
+        return --this.heldSuspends;
+      }
     }
   }
 
@@ -139,8 +161,84 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     }
   }
 
-  public UnitySessionSnapshot Snapshot() {
+  /// <summary>
+  /// The current attach's debug surface, or null when not attached (or not yet used); for
+  /// operations that must run WITHOUT a suspend window (waiting, stepping: they need the VM free
+  /// to run, which <see cref="Run{T}"/>'s window would prevent).
+  /// </summary>
+  public DebugController DebugOrNull {
+    get {
+      lock (this.stateGate) {
+        return this.debug;
+      }
+    }
+  }
+
+  /// <summary>Suspensions held via <see cref="SuspendHold"/> (the unified-pause fallback).</summary>
+  public int HeldSuspendCount {
+    get {
+      lock (this.stateGate) {
+        return this.heldSuspends;
+      }
+    }
+  }
+
+  /// <summary>
+  /// Releases EVERY held suspension for the given duration, then re-takes them all: the
+  /// deterministic "let the simulation react" window (a single resume would leave the VM frozen
+  /// whenever more than one hold is stacked). A breakpoint hit during the window pauses the game
+  /// normally (the re-taken holds then stack on top of the event pause).
+  /// VM operations block for the whole window by design (a suspend window opened mid-advance
+  /// would freeze the very frames the caller is trying to let run); status reads stay live
+  /// through <see cref="stateGate"/>.
+  /// Returns whether an event-caused suspension is active (or imminent) after the window.
+  /// </summary>
+  public bool AdvanceHold(TimeSpan duration) {
     lock (this.gate) {
+      if (this.heldSuspends is 0) {
+        throw new InvalidOperationException(
+          "no suspension is held; advance releases a held suspend window (use the suspend tool " +
+          "first)"
+        );
+      }
+
+      // An event-caused suspension (active pause, or a suspending event set the pump is still
+      // classifying) would keep the VM frozen through the whole window, silently advancing
+      // nothing (surfaced live: a hot breakpoint re-hit right after resume).
+      if (this.debug?.HoldsSuspension is true) {
+        throw new InvalidOperationException(
+          "a breakpoint/step/exception pause is holding the game, so the window could not " +
+          "advance anything; release it first (debug_step action=resume)"
+        );
+      }
+
+      var vm = this.session.Vm;
+      var holds = this.heldSuspends;
+
+      try {
+        for (var i = 0; i < holds; i++) {
+          vm.Resume();
+        }
+
+        Thread.Sleep(duration);
+
+        for (var i = 0; i < holds; i++) {
+          vm.Suspend();
+        }
+      }
+      catch (Exception ex) when (UnitySession.IsDisconnect(ex)) {
+        // The hold is gone with the connection; LoseConnection reports it loudly.
+        this.LoseConnection();
+
+        throw;
+      }
+
+      return this.debug?.HoldsSuspension ?? false;
+    }
+  }
+
+  public UnitySessionSnapshot Snapshot() {
+    lock (this.stateGate) {
       return new UnitySessionSnapshot {
         Attached = this.session is not null,
         Host = this.attachedHost,
@@ -161,18 +259,21 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
     var (host, port) = this.ResolveEndpoint();
 
-    this.session = SdbSession.Connect(host, port);
-    this.attachedHost = host;
-    this.attachedPort = port;
+    var connected = SdbSession.Connect(host, port);
 
     // The version info is cached from the attach handshake (no extra round-trip); it lets status
     // report the negotiated SDB protocol (generic invokes need 2.24+).
-    var version = this.session.Vm.Version;
+    var version = connected.Vm.Version;
 
-    this.attachedVmVersion = version.VMVersion;
-    this.attachedProtocol = $"{version.MajorVersion}.{version.MinorVersion}";
+    lock (this.stateGate) {
+      this.session = connected;
+      this.attachedHost = host;
+      this.attachedPort = port;
+      this.attachedVmVersion = version.VMVersion;
+      this.attachedProtocol = $"{version.MajorVersion}.{version.MinorVersion}";
+    }
 
-    return this.session.Vm;
+    return connected.Vm;
   }
 
   private (string Host, int Port) ResolveEndpoint() {
@@ -198,7 +299,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
       )
       .ToList();
 
-    if (inRange.Count == 1) {
+    if (inRange.Count is 1) {
       // ReSharper disable once PossibleInvalidOperationException
       return (host, inRange[0].SdbPort.Value);
     }
@@ -231,15 +332,27 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   /// </summary>
   private void Discard() {
     try {
+      // Clears every debug request BEFORE the session resumes and detaches, so an armed
+      // breakpoint can never re-freeze the game after we let go.
+      this.debug?.Dispose();
+    }
+    catch {
+      // Best-effort; SdbSession.Dispose clears agent-side requests as the safety net.
+    }
+
+    try {
       this.session?.Dispose();
     }
     finally {
-      this.session = null;
-      this.invoker = null;
-      this.attachedHost = null;
-      this.attachedVmVersion = null;
-      this.attachedProtocol = null;
-      this.heldSuspends = 0;
+      lock (this.stateGate) {
+        this.session = null;
+        this.invoker = null;
+        this.debug = null;
+        this.attachedHost = null;
+        this.attachedVmVersion = null;
+        this.attachedProtocol = null;
+        this.heldSuspends = 0;
+      }
     }
   }
 
@@ -261,7 +374,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     }
   }
 
-  private static bool IsDisconnect(Exception e) =>
+  internal static bool IsDisconnect(Exception e) =>
     e is VMDisconnectedException or IOException or SocketException ||
     (e.InnerException is not null && UnitySession.IsDisconnect(e.InnerException));
 }
@@ -300,10 +413,13 @@ public sealed class UnitySessionSnapshot {
 /// <summary>
 /// The live-VM surface handed to one <see cref="UnitySession.Run{T}"/> operation.
 /// </summary>
-public sealed class SdbContext(VirtualMachine vm, Invoker invoker) {
+public sealed class SdbContext(VirtualMachine vm, Invoker invoker, DebugController debug) {
   public VirtualMachine Vm { get; } = vm;
 
   public Invoker Invoker { get; } = invoker;
+
+  /// <summary>The attach's breakpoint/pause surface (idle until its first request).</summary>
+  public DebugController Debug { get; } = debug;
 
   /// <summary>Builds the ECS surface for one operation (world resolved fresh each time).</summary>
   public Ecs Ecs(string worldName = null) => new(this.Invoker, worldName);

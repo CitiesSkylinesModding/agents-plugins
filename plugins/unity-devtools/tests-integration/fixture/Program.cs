@@ -13,7 +13,16 @@ public static class Program {
 
     // Park in a managed loop rather than one infinite sleep: invokes need the main thread at a
     // managed safe point, and a thread blocked forever inside a native wait never reaches one.
+    // Each iteration ticks (so armed breakpoints hit within milliseconds) and periodically
+    // throws-and-catches (so exception breaks have something to catch).
+    var n = 0;
+
     while (true) {
+      Ticker.Tick(n);
+      Ticker.MaybeThrow(n);
+
+      n++;
+
       Thread.Sleep(10);
     }
 

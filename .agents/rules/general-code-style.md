@@ -1,7 +1,7 @@
 ---
 paths:
   - "**/*"
-version: 1.1.0
+version: 1.2.0
 ---
 
 # General Code Style
@@ -12,7 +12,7 @@ These rules are general guidelines applying to every language.
 
 - Let the code breathe: use ample line breaks (but never consecutive) to improve readability, separating logical blocks of code, variable assignment from usage, etc.
 - Never inline `{}` blocks, always break.
-- Avoid passing more than 4 params in a function (unless you can't do otherwise), use an object instead.
+- Passing more than 4 params in a function is discouraged (use an object instead), but keep symmetry above this rule.
 - Never use em dashes (—) in comments, docblocks, and docs, when you see one, remove it. In place, use commas, semicolons, colons, or find a better/simpler formulation.
 - For source files in general, enforce a strict 100-character line length limit, comments included (include docblock formatting in the count).
   Exceptions:

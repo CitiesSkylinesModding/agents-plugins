@@ -38,7 +38,7 @@ public sealed class EcsTools(UnitySession session) {
     return ToolGuard.Run(() => session.Run(Operation));
 
     EcsQueryResult Operation(SdbContext ctx) {
-      if (components.Length == 0) {
+      if (components.Length is 0) {
         throw new McpException("components must contain at least one type name");
       }
 
@@ -56,7 +56,7 @@ public sealed class EcsTools(UnitySession session) {
         if (label is not null) {
           var parts = label.Split(':');
 
-          if (parts.Length != 2) {
+          if (parts.Length is not 2) {
             throw new McpException("label expects \"<systemTypeFullName>:<method>\"");
           }
 
@@ -250,7 +250,7 @@ public sealed class EcsTools(UnitySession session) {
             throw new McpException("op \"add\" requires set=\"<field>=<value>\"");
           }
 
-          if (length == 0) {
+          if (length is 0) {
             throw new McpException(
               "buffer is empty; add clones element 0 as the template for new elements"
             );

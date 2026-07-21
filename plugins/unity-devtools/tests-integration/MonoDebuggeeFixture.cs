@@ -26,6 +26,8 @@ public sealed class MonoDebuggeeFixture : IDisposable {
 
   private Invoker? invoker;
 
+  private DebugController? debug;
+
   public MonoDebuggeeFixture() {
     var mono = MonoDebuggeeFixture.ResolveMono();
 
@@ -42,7 +44,11 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     this.debuggee = Process.Start(
         new ProcessStartInfo {
           FileName = mono,
+
+          // --debug loads the fixture's portable PDB (line tables and local names); without it,
+          // the agent reports AbsentInformation for everything.
           Arguments =
+            "--debug " +
             $"--debugger-agent=transport=dt_socket,address=127.0.0.1:{port},server=y,suspend=y " +
             $"\"{MonoDebuggeeFixture.FixtureExePath()}\"",
           UseShellExecute = false,
@@ -58,7 +64,7 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     using var ready = new ManualResetEventSlim();
 
     this.debuggee.OutputDataReceived += (_, e) => {
-      if (e.Data == "READY") {
+      if (e.Data is "READY") {
         // ReSharper disable once AccessToDisposedClosure
         ready.Set();
       }
@@ -128,7 +134,78 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     }
   }
 
+  /// <summary>
+  /// The debuggee's breakpoint/pause surface, ONE per suite like the session; tests must remove
+  /// their requests and release their pauses (see <see cref="ReleaseDebugger"/>), or every later
+  /// test evaluates against a frozen debuggee.
+  /// </summary>
+  public DebugController Debug {
+    get {
+      Skip.If(this.SkipReason is not null, this.SkipReason);
+
+      if (this.debug is not null) {
+        return this.debug;
+      }
+
+      var vm = this.session!.Vm;
+
+      // Same discipline as Eval: the Invoker lists threads, which needs a suspend window.
+      vm.Suspend();
+
+      try {
+        this.invoker ??= new Invoker(vm);
+        this.debug = new DebugController(vm, this.invoker);
+      }
+      finally {
+        vm.Resume();
+      }
+
+      return this.debug;
+    }
+  }
+
+  /// <summary>
+  /// Evaluates in a frame of the CURRENT pause's thread, through the production frame-scope chain
+  /// (the contract debug_evaluate serves to agents).
+  /// </summary>
+  public EvalOutcome DebugEval(string code, int frameIndex = 0) {
+    var pause = this.Debug.CurrentPause ??
+      throw new InvalidOperationException("not paused; arm and hit a breakpoint first");
+
+    return this.Debug.EvaluateInFrame(
+      EvalParser.Parse(code),
+      pause.Thread,
+      frameIndex,
+      new EvalState(),
+      []
+    );
+  }
+
+  /// <summary>
+  /// Per-test cleanup: removes every debug request, then drains pauses until none appears for a
+  /// settle window.
+  /// The dwell matters: a set the pump matched BEFORE RemoveAll can publish its pause moments AFTER
+  /// a single check, and a leaked pause freezes the shared debuggee for every later test (events
+  /// arriving after RemoveAll match nothing and auto-resume, so a quiet window means quiescence).
+  /// </summary>
+  public void ReleaseDebugger() {
+    if (this.debug is null) {
+      return;
+    }
+
+    _ = this.debug.RemoveAll();
+
+    for (var quiet = 0; quiet < 4; quiet++) {
+      if (this.debug.TryResumeFromPause()) {
+        quiet = -1;
+      }
+
+      Thread.Sleep(50);
+    }
+  }
+
   public void Dispose() {
+    this.debug?.Dispose();
     this.session?.Dispose();
     this.KillDebuggee();
   }
@@ -168,8 +245,9 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   }
 
   /// <summary>
-  /// Resolution order: UNITY_DEVTOOLS_MONO (path to a mono executable) → mono on PATH →
-  /// well-known Windows Unity Editor locations. Null when nothing resolves (tests skip).
+  /// Resolution order: UNITY_DEVTOOLS_MONO (path to a mono executable) → mono on PATH → well-known
+  /// Windows Unity Editor locations.
+  /// Null when nothing resolves (tests skip).
   /// </summary>
   private static string? ResolveMono() {
     var configured = Environment.GetEnvironmentVariable("UNITY_DEVTOOLS_MONO");

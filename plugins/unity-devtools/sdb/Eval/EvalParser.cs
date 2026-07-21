@@ -84,7 +84,7 @@ public static class EvalParser {
           );
         }
 
-        if (local.Declaration.Variables.Count != 1) {
+        if (local.Declaration.Variables.Count is not 1) {
           throw new EvalParseException(
             "unsupported: multiple declarators in one statement (declare one var per statement)",
             statement.SpanStart
@@ -126,6 +126,13 @@ public static class EvalParser {
         case IdentifierNameSyntax identifier:
           return new NameExpr(identifier.Identifier.Text) {
             Position = identifier.SpanStart
+          };
+
+        // `this` rides the name path: the frame scope resolves it like any root (frameless eval
+        // reports it unresolvable with the standard chain-root error).
+        case ThisExpressionSyntax self:
+          return new NameExpr("this") {
+            Position = self.SpanStart
           };
 
         case MemberAccessExpressionSyntax member
@@ -340,7 +347,7 @@ public static class EvalParser {
 
     // Roslyn parses `nameof(x)` as a plain invocation; without this it would surface as a
     // confusing "unknown function 'nameof'" at evaluation time.
-    if (target is null && name == "nameof") {
+    if (target is null && name is "nameof") {
       throw new EvalParseException(
         "unsupported: nameof (write the string literal)",
         invocation.SpanStart

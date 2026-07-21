@@ -12,6 +12,18 @@ public interface IEvalScope {
   bool TryResolveValue(string name, out object value);
 
   bool TryCall(string name, object[] args, out object result);
+
+  /// <summary>
+  /// Whether <see cref="TrySetValue"/> would accept this name; probed BEFORE the assignment's right
+  /// side evaluates, so a read-only target rejects before any side effects run.
+  /// </summary>
+  bool CanSetValue(string name) => false;
+
+  /// <summary>
+  /// Writes a root identifier the scope owns (e.g., a frame local); false when the name is not
+  /// writable through this scope, so assignment falls through the chain.
+  /// </summary>
+  bool TrySetValue(string name, object value) => false;
 }
 
 /// <summary>
@@ -88,11 +100,11 @@ public sealed class BuiltinScope(Invoker inv, Func<Ecs> ecs, EvalState state) : 
     // Version defaults to 1, mirroring the ecs_* tools' `index[:version]` spec.
     if (args.Length is not (1 or 2) ||
       args[0] is not int index ||
-      (args.Length == 2 && args[1] is not int)) {
+      (args.Length is 2 && args[1] is not int)) {
       throw new EvalRuntimeException("entity() expects (int index[, int version = 1])");
     }
 
-    var version = args.Length == 2 ? (int) args[1] : 1;
+    var version = args.Length is 2 ? (int) args[1] : 1;
 
     result = Ecs.MakeEntity(inv, index, version);
 

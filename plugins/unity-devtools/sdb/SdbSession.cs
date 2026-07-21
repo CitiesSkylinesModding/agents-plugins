@@ -19,6 +19,15 @@ public sealed class SdbSession : IDisposable {
   public VirtualMachine Vm { get; }
 
   public void Dispose() {
+    try {
+      // Any armed breakpoint would re-suspend the game after we resume and detach; clear every
+      // agent-side breakpoint first, so letting go really lets the game run.
+      this.Vm.ClearAllBreakpoints();
+    }
+    catch {
+      // Connection already dead; the agent clears its requests on disconnect anyway.
+    }
+
     SdbSession.DrainSuspends(this.Vm);
 
     try {

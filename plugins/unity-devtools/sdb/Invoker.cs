@@ -9,7 +9,9 @@ namespace UnityDevtools.Sdb;
 /// Mirror-level plumbing shared by the ECS commands: type/method resolution, method invocation on
 /// any mirror kind, value construction, and value formatting.
 /// All invokes run on the game's main thread (thread-safety: ECS writes from another thread could
-/// trip the Entities safety system mid-frame).
+/// trip the Entities safety system mid-frame); this holds during breakpoint pauses too, because a
+/// suspended main thread still parks at a managed safe point where invokes work (frame-context
+/// evaluation reads/writes frame slots via plain wire commands, which need no invoke thread).
 /// </summary>
 public sealed class Invoker(VirtualMachine vm) {
   public VirtualMachine Vm { get; } = vm;
@@ -29,7 +31,7 @@ public sealed class Invoker(VirtualMachine vm) {
   public TypeMirror ResolveType(string fullName) {
     var types = this.Vm.GetTypes(fullName, true);
 
-    if (types.Count == 0) {
+    if (types.Count is 0) {
       throw new InvalidOperationException(
         $"type '{fullName}' not found (use a fully-qualified name; see find-types)"
       );
