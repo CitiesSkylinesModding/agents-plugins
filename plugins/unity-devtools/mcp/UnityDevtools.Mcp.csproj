@@ -11,7 +11,6 @@
     <Version>0.3.0</Version>
     <!-- x-release-please-end -->
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- Code-style + CA analysis gate the build; see root .editorconfig. -->

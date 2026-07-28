@@ -5,6 +5,7 @@
 // `PlatformNotSupportedException` on .NET Core anyway).
 
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using JetBrains.Annotations;
 
 namespace System.Runtime.Remoting.Messaging;

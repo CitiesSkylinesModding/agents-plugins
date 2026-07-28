@@ -21,12 +21,12 @@ Everything a plugin ships MUST live inside its `plugins/<name>/` directory (mark
 
 ### C# project settings
 
-Paths are relative to `plugins/unity-devtools/`, which holds every C# project. All of them set `TreatWarningsAsErrors` (a plain build is therefore the C# typecheck/lint) and none is covered by a `Directory.Build.props`.
+Paths are relative to `plugins/unity-devtools/`, which holds every C# project. All of them set `TreatWarningsAsErrors` (a plain build is therefore the C# typecheck/lint), none is covered by a `Directory.Build.props`, and NONE enables `ImplicitUsings`: every file declares its own `using` directives, `System` included, `System.*` first then the rest alphabetical and aliases last.
 
-- `sdb/` (`UnityDevtools.Sdb`): reusable library, net10.0 → C# 14, `Nullable=disable`, `ImplicitUsings=enable`, no analyzers (vendored sources cannot satisfy them), `AllowUnsafeBlocks`, `NoWarn` on SYSLIB0001/SYSLIB0050/CS9258.
-- `mcp/` (`UnityDevtools.Mcp`): console app (stdio MCP server), net10.0 → C# 14, `Nullable=enable`, `ImplicitUsings=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
-- `tests/` and `tests-integration/`: xUnit test projects, net10.0 → C# 14, `Nullable=enable`, `ImplicitUsings=enable`, no analyzers.
-- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest` → C# 14, `Nullable` and `ImplicitUsings` both unset (off), no analyzers.
+- `sdb/` (`UnityDevtools.Sdb`): reusable library, net10.0 → C# 14, `Nullable=disable`, no analyzers (vendored sources cannot satisfy them), `AllowUnsafeBlocks`, `NoWarn` on SYSLIB0001/SYSLIB0050/CS9258.
+- `mcp/` (`UnityDevtools.Mcp`): console app (stdio MCP server), net10.0 → C# 14, `Nullable=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
+- `tests/` and `tests-integration/`: xUnit test projects, net10.0 → C# 14, `Nullable=enable`, no analyzers.
+- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest` → C# 14, `Nullable` unset (off), no analyzers.
 
 ## Repository structure
 

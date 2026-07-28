@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using UnityDevtools.Sdb.Eval;
 using Xunit;
 

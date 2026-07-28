@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.CSharp.RuntimeBinder;
 
 namespace UnityDevtools.Sdb.Eval;

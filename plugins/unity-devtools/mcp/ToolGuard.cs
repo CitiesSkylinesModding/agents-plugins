@@ -1,3 +1,4 @@
+using System;
 using ModelContextProtocol;
 
 namespace UnityDevtools.Mcp;

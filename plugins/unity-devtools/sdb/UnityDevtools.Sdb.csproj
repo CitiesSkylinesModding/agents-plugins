@@ -7,7 +7,6 @@
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <!-- Vendored sources predate nullable annotations; keep the whole library nullable-off. -->
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

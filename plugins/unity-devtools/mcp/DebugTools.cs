@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using JetBrains.Annotations;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;

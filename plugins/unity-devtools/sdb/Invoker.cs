@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
+using System.Threading;
 using Mono.Debugger.Soft;
 using SdbThreadMirror = Mono.Debugger.Soft.ThreadMirror;
 

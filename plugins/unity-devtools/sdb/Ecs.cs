@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Mono.Debugger.Soft;
 
 namespace UnityDevtools.Sdb;

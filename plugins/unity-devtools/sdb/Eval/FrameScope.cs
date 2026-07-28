@@ -1,4 +1,6 @@
+using System;
 using System.Globalization;
+using System.Linq;
 using Mono.Debugger.Soft;
 
 namespace UnityDevtools.Sdb.Eval;
