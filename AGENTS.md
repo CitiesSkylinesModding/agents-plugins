@@ -1,8 +1,10 @@
+<!-- Version: 1.0.0 -->
+
 # AGENTS.md
 
 ## Project overview
 
-`agents-plugins` is the CS Modding marketplace (`csmodding`) of agent plugins for Claude Code and OpenAI Codex CLI. Plugin sources live under `plugins/<name>/`; each plugin's own architecture, gotchas, and agent behaviors are documented in its own `AGENTS.md` (with a `CLAUDE.md` relative symlink to it):
+`agents-plugins` is the CS Modding marketplace (`csmodding`) of agent plugins for Claude Code and OpenAI Codex CLI. Plugin sources live under `plugins/<name>/`; each plugin's own architecture, gotchas and agent behaviors are documented in its own `AGENTS.md` (with a `CLAUDE.md` relative symlink to it):
 
 - `plugins/coherent-gameface/`: the flagship plugin, a generic toolkit for driving a running Coherent Gameface UI (Cohtml) over a direct CDP WebSocket; MCP server (published on npm as `@csmodding/gameface-devtools-mcp`) + skills.
 - `plugins/unity-devtools/`: drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol (SDB); C# MCP server + SDB class library.
@@ -17,6 +19,15 @@ Everything a plugin ships MUST live inside its `plugins/<name>/` directory (mark
 - Bun workspaces: the root `package.json` carries the lint/format tooling (oxfmt/oxlint configs live at the root) and lefthook; the gameface `mcp/` is the only workspace package. One `bun.lock` at the root.
 - .NET 10 SDK: the unity-devtools plugin's C# projects (server, sdb library, tests), grouped by `agents-plugins.slnx` at the repo root; details and C# tooling in that plugin's `AGENTS.md`.
 
+### C# project settings
+
+Paths are relative to `plugins/unity-devtools/`, which holds every C# project. All of them set `TreatWarningsAsErrors` (a plain build is therefore the C# typecheck/lint) and none is covered by a `Directory.Build.props`.
+
+- `sdb/` (`UnityDevtools.Sdb`): reusable library, net10.0 → C# 14, `Nullable=disable`, `ImplicitUsings=enable`, no analyzers (vendored sources cannot satisfy them), `AllowUnsafeBlocks`, `NoWarn` on SYSLIB0001/SYSLIB0050/CS9258.
+- `mcp/` (`UnityDevtools.Mcp`): console app (stdio MCP server), net10.0 → C# 14, `Nullable=enable`, `ImplicitUsings=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
+- `tests/` and `tests-integration/`: xUnit test projects, net10.0 → C# 14, `Nullable=enable`, `ImplicitUsings=enable`, no analyzers.
+- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest` → C# 14, `Nullable` and `ImplicitUsings` both unset (off), no analyzers.
+
 ## Repository structure
 
 - `package.json`: bun workspace root; lint/format tooling and lefthook live here (with `oxfmt.config.ts` / `oxlint.config.ts`).
@@ -25,21 +36,21 @@ Everything a plugin ships MUST live inside its `plugins/<name>/` directory (mark
 - `.mcp.json` (root): LOCAL DEV ONLY; wires the plugins' MCP servers for sessions in this repo (the gameface server from its committed bundle, the unity server from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json` instead; keep them in sync when changing server wiring.
 - `scripts/check-plugin-sync.ts`: consistency check between each plugin's two manifests, run by `mise check` / `mise check:agents` (task `check:plugin-sync`) and by the lefthook pre-commit.
 - `scripts/check-skill-changelog.ts`: freshness check of the gameface skill's baked version timeline against the live Gameface changelog (`mise skills:check-changelog`; network-dependent, not in CI).
+- `.agents/hooks/check-line-length.ts`: PostToolUse hook wired in `.claude/settings.json`; after each edit it reports `.ts`/`.cs` lines over the 100-character limit back to the agent (exit 2). Synced verbatim from the `scrolls` repo (version header at the top), which is why oxlint and oxfmt both ignore `.agents`. Markdown is deliberately out of scope: the docs here are agent-facing and unwrapped by design.
 - `plugins/coherent-gameface/`: the Gameface plugin.
 - `plugins/unity-devtools/`: the Unity plugin.
 - `docs/ROADMAP.md`: planned facets.
 
 ## Commands
 
-You can run `mise tasks` to see the full list of shortcut commands. Do NOT use npx to run commands, always prefer mise shortcuts, or bun/bunx if there is no dedicated mise shortcut.
-
 - `mise build:gameface`: Rebuild the shipped bundle `plugins/coherent-gameface/mcp/dist/server.mjs` (commit the result). (`build:` is a namespace; unity-devtools has its own `build:unity:*` tasks.)
 - `mise test`: Run the .NET test suite (the unity-devtools evaluator's offline parser/operator tests).
 - `mise check:agents`: Verify (read-only) type checking, linting, and formatting, with output optimized for agents. `check:*` write nothing; `mise fix` (or `fix:oxlint` / `fix:oxfmt`) applies the auto-fixes. C# formatting is `mise fix:cs` (no read-only check exists; see `plugins/unity-devtools/AGENTS.md`).
 
-Tip: you can append arguments to mise shortcuts, mise will pass them through, ex. `mise some:task --some-arg`.
+Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).
+Do NOT use npx to run commands; prefer mise shortcuts, or bun/bunx when no shortcut exists.
 
-Always run the appropriate check/test commands after performing changes; but do it at the end of the editing session, not in the middle.
+Always run the appropriate check/test commands after changes, at the end of the editing session rather than mid-flight.
 
 ## Dual-harness plugin architecture (Claude Code + Codex CLI)
 
@@ -80,17 +91,13 @@ Never:
 - Commit secrets, tokens, `.env` files, dumps or credentials.
 - Modify generated files unless the generation command was run.
 - Change public API behavior without calling it out.
-- Add large dependencies for small utilities.
 - Reference Cities: Skylines 2 in tools' code, documentation and skills.
 - Reference the coherent-gameface project in the unity-devtools one, and vice versa.
 
 Ask first before:
 
 - Adding a dependency.
-- Changing database schema.
-- Changing authentication/authorization logic.
 - Reworking architecture.
-- Adding background jobs, queues, or external services.
 - Performing destructive file or data operations.
 
 ## Preferred agent behavior
@@ -100,4 +107,5 @@ Ask first before:
 - Make the smallest safe change, but if you think a refactor is overdue, speak up.
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
-- Propose updates to `AGENTS.md` or `docs/` when you notice a pattern or introduced changes that deserve to be documented for future sessions. Plugin-specific facts belong in that plugin's `AGENTS.md`, repo-wide facts here; every `AGENTS.md` gets a `CLAUDE.md` relative symlink pointing at it.
+- Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
+  Plugin-specific facts belong in that plugin's `AGENTS.md`, repo-wide facts here; every `AGENTS.md` gets a `CLAUDE.md` relative symlink pointing at it.

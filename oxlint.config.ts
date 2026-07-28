@@ -5,7 +5,10 @@ import { defineConfig } from 'oxlint';
 // oxlint-disable-next-line import/no-default-export - oxlint interface
 export default defineConfig({
   extends: [all, agnostic],
-  ignorePatterns: ['dist'],
+  // .agents holds assets synced verbatim from other repos (rules, and the hooks run by
+  // .claude/settings.json); they live outside the tsconfig program, so type-aware rules only see
+  // `error` types there, and fixing them in place would break the next sync.
+  ignorePatterns: ['dist', '.agents'],
   rules: {
     // The server is Node/Bun-only (page-context code is kept self-contained by design and cannot
     // import anything anyway), so Node builtins are fine.

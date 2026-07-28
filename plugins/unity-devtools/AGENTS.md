@@ -47,9 +47,6 @@ Everything below was proven end-to-end by the retired PoC CLI (see git history f
 ## Project layout and commands
 
 Three .NET projects (server, sdb library, tests) plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (build with `dotnet build agents-plugins.slnx`; the repo has no other .NET code).
-Both set `TreatWarningsAsErrors`, so a plain build doubles as the C# typecheck/lint.
-Formatting is `jb cleanupcode` (ReSharper CLI, pinned in `.config/dotnet-tools.json` as `JetBrains.ReSharper.GlobalTools`; standalone, no Rider install needed) honoring the root `.editorconfig` (same-line braces, 2-space, Stroustrup else/catch, file-scoped namespaces, and the `resharper_*` wrapping keys such as dangling `)` that `dotnet format` cannot do): run `mise fix:cs` (after `dotnet tool restore`), which excludes the vendored tree and the generated `obj/` patch. There is no `check:cs`: jb has no read-only/dry-run mode and C# is inert to CI checks, so format C# by running `fix:cs` and committing (Rider uses the same engine + `.editorconfig` live).
-Nullable policy splits along the vendored line: `sdb/` is `Nullable=disable` (the vendored client is nullable-oblivious, its known warnings silenced via `NoWarn`); `mcp/` is nullable-clean (see `.agents/rules/cs-code-style.md`).
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
 - `.claude-plugin/plugin.json` + `.mcp.json`: Claude Code manifest and server wiring (`dotnet dnx UnityDevtools.Mcp --version <pin> --yes`, `UNITY_MCP_*` env passthrough). `dotnet` is the command (not the bare `dnx` shim, a `.cmd` script MCP hosts cannot spawn directly on Windows); the version pin is a standalone args element so release-please can update it (json extra-files on `$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
