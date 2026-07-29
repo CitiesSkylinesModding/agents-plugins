@@ -52,6 +52,21 @@ Further invoke capabilities, all verified live:
   overwriting `Index` / `Version`; no debuggee allocation needed.
 - Managed systems are reachable via `World.GetExistingSystemManaged(Type)`.
 
+Resolving an entity from a bare index, all measured live and all three needed together:
+
+- `EntityManager.GetEntityByEntityIndex(int)` answers in ONE invoke, so no query has to be
+  materialized and scanned to learn an index's live version.
+- It indexes the entity store UNCHECKED. Well past the end it faults, surfacing as an in-game
+  `NullReferenceException`; a negative index quietly returns a garbage entity. `HighestEntityIndex()`
+  gives the inclusive upper bound, and the range belongs client-side, before the call.
+- A free slot — never used, or destroyed — answers `Entity.Null`, so a version of 0 in the returned
+  struct is the exact "nothing lives here" signal. It reads off the mirror already on the wire, which
+  is why no `Exists` round trip is needed to tell a live answer from an empty one.
+
+That the lookup validates nothing is not particular to it: on a build with the collections checks
+compiled out, no `EntityManager` accessor does. See
+[`entities-api-has-no-safety-net-on-player-builds.md`](entities-api-has-no-safety-net-on-player-builds.md).
+
 ## Prevention
 
 Hold a `suspend` window across reads and writes that must see one consistent state; freezing the whole
