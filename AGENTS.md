@@ -4,84 +4,60 @@
 
 ## Project overview
 
-`agents-plugins` is the CS Modding marketplace (`csmodding`) of agent plugins for Claude Code and OpenAI Codex CLI. Plugin sources live under `plugins/<name>/`; each plugin's own architecture, gotchas and agent behaviors are documented in its own `AGENTS.md` (with a `CLAUDE.md` relative symlink to it):
+`agents-plugins` is the CS Modding marketplace (`csmodding`) of agent plugins for Claude Code and OpenAI Codex CLI.
 
-- `plugins/coherent-gameface/`: the flagship plugin, a generic toolkit for driving a running Coherent Gameface UI (Cohtml) over a direct CDP WebSocket; MCP server (published on npm as `@csmodding/gameface-devtools-mcp`) + skills.
-- `plugins/unity-devtools/`: drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol (SDB); C# MCP server + SDB class library.
+- `plugins/coherent-gameface/`: flagship plugin. Drives a running Coherent Gameface UI (Cohtml) over a direct CDP WebSocket; TypeScript MCP server (npm `@csmodding/gameface-devtools-mcp`) + skills.
+- `plugins/unity-devtools/`: drives a running Unity Mono development build over the Mono Soft Debugger protocol (SDB); C# MCP server + SDB class library.
 
-Both plugins are generic toolkits developed and verified against **Cities: Skylines II** as the reference target.
+Both are generic toolkits, developed and verified against **Cities: Skylines II** as the reference target.
+Each plugin documents its own architecture and gotchas in its `AGENTS.md` (with a `CLAUDE.md` symlink).
 
-Everything a plugin ships MUST live inside its `plugins/<name>/` directory (marketplace installs copy only that subtree); that is why each plugin's `mcp/` lives inside the plugin. New plugins get sibling directories and entries in both marketplace files.
+Everything a plugin ships MUST live inside its `plugins/<name>/` directory: marketplace installs copy only that subtree.
+New plugins get a sibling directory and an entry in both marketplace files.
 
 ## Tech stack
 
-- [mise-en-place](https://mise.jdx.dev): A tool to manage dev tools, env vars, and tasks per project.
-- Bun workspaces: the root `package.json` carries the lint/format tooling (oxfmt/oxlint configs live at the root) and lefthook; the gameface `mcp/` is the only workspace package. One `bun.lock` at the root.
-- .NET 10 SDK: the unity-devtools plugin's C# projects (server, sdb library, tests), grouped by `agents-plugins.slnx` at the repo root; details and C# tooling in that plugin's `AGENTS.md`.
-
-### C# project settings
-
-Paths are relative to `plugins/unity-devtools/`, which holds every C# project. All of them set `TreatWarningsAsErrors` (a plain build is therefore the C# typecheck/lint), none is covered by a `Directory.Build.props`, and NONE enables `ImplicitUsings`: every file declares its own `using` directives, `System` included, `System.*` first then the rest alphabetical and aliases last.
-
-- `sdb/` (`UnityDevtools.Sdb`): reusable library, net10.0 → C# 14, `Nullable=disable`, no analyzers (vendored sources cannot satisfy them), `AllowUnsafeBlocks`, `NoWarn` on SYSLIB0001/SYSLIB0050/CS9258.
-- `mcp/` (`UnityDevtools.Mcp`): console app (stdio MCP server), net10.0 → C# 14, `Nullable=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
-- `tests/` and `tests-integration/`: xUnit test projects, net10.0 → C# 14, `Nullable=enable`, no analyzers.
-- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest` → C# 14, `Nullable=enable`, no analyzers.
+- [mise-en-place](https://mise.jdx.dev): dev tools, env vars and tasks.
+- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`) and lefthook; the gameface `mcp/` is the only workspace package, and `bun.lock` lives at the root.
+- .NET 10 SDK: the unity-devtools C# projects, grouped by `agents-plugins.slnx` at the repo root.
 
 ## Repository structure
 
-- `package.json`: bun workspace root; lint/format tooling and lefthook live here (with `oxfmt.config.ts` / `oxlint.config.ts`).
-- `.claude-plugin/marketplace.json`: the Claude Code marketplace file (`csmodding`); each entry's `source` points at a `./plugins/<name>` directory.
-- `.agents/plugins/marketplace.json`: the Codex CLI native marketplace file (object-form `source`, e.g. `{"source": "local", "path": "./plugins/coherent-gameface"}`).
-- `.mcp.json` (root): LOCAL DEV ONLY; wires the plugins' MCP servers for sessions in this repo (the gameface server from its committed bundle, the unity server from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json` instead; keep them in sync when changing server wiring.
-- `scripts/check-plugin-sync.ts`: consistency check between each plugin's two manifests, run by `mise check` / `mise check:agents` (task `check:plugin-sync`) and by the lefthook pre-commit.
-- `scripts/check-skill-changelog.ts`: freshness check of the gameface skill's baked version timeline against the live Gameface changelog (`mise skills:check-changelog`; network-dependent, not in CI).
-- `.agents/hooks/check-line-length.ts`: PostToolUse hook wired in `.claude/settings.json`; after each edit it reports `.ts`/`.cs` lines over the 100-character limit back to the agent (exit 2). Synced verbatim from the `scrolls` repo (version header at the top), which is why oxlint and oxfmt both ignore `.agents`. Markdown is deliberately out of scope: the docs here are agent-facing and unwrapped by design.
-- `plugins/coherent-gameface/`: the Gameface plugin.
-- `plugins/unity-devtools/`: the Unity plugin.
-- `docs/ROADMAP.md`: planned facets.
+- `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
+- `.mcp.json` (root): LOCAL DEV ONLY, wiring both MCP servers for sessions in this repo (gameface from its committed bundle, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
+- `scripts/`: `check-plugin-sync.ts` (manifest consistency, part of `mise check`) and `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI).
+- `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint and oxfmt ignore `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
+- `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites.
 
 ## Commands
 
-- `mise build:gameface`: Rebuild the shipped bundle `plugins/coherent-gameface/mcp/dist/server.mjs` (commit the result). (`build:` is a namespace; unity-devtools has its own `build:unity:*` tasks.)
-- `mise test`: Run the .NET test suite (the unity-devtools evaluator's offline parser/operator tests).
-- `mise check:agents`: Verify (read-only) type checking, linting, and formatting, with output optimized for agents. `check:*` write nothing; `mise fix` (or `fix:oxlint` / `fix:oxfmt`) applies the auto-fixes. C# formatting is `mise fix:cs` (no read-only check exists; see `plugins/unity-devtools/AGENTS.md`).
+- `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
+- `mise test`: the .NET test suite.
+- `mise build:gameface`: rebuild the shipped gameface bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).
 Do NOT use npx to run commands; prefer mise shortcuts, or bun/bunx when no shortcut exists.
 
 Always run the appropriate check/test commands after changes, at the end of the editing session rather than mid-flight.
 
-## Dual-harness plugin architecture (Claude Code + Codex CLI)
+## Dual-harness plugin architecture
 
-Every plugin targets both harnesses from one repo, with one manifest per harness. The mcp configs CANNOT be merged into one file, each harness has a blocker the other does not (verified 2026-07, details below):
+Every plugin ships two manifests, one per harness: `.claude-plugin/plugin.json` + `.mcp.json` for Claude Code, `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json` for Codex CLI.
+The two MCP configs cannot be merged, and a plugin server must work with no env passed at all — read [`docs/solutions/dual-harness-mcp-config.md`](docs/solutions/dual-harness-mcp-config.md) before touching any of these files.
 
-- Claude Code: the plugin's `.claude-plugin/plugin.json` + `.mcp.json` (both under `plugins/<name>/`). Interpolates `${VAR:-default}` (that syntax is Claude Code-specific) but IGNORES `cwd` (anthropics/claude-code#17565), so it relies on `${CLAUDE_PLUGIN_ROOT}` for artifact paths.
-- Codex CLI: `.codex-plugin/plugin.json` (schema is a superset of Claude's; component pointers are `./`-relative paths) + `.codex-plugin/mcp.json`. Codex does NOT interpolate `${VAR}` in MCP command/args (openai/codex#19582, open as of 2026-07) and injects almost no env vars into the MCP child; `PLUGIN_ROOT`/`CLAUDE_PLUGIN_ROOT` exist for hooks ONLY. THE working mechanism is a relative `"cwd"` resolved against the installed plugin root (verified in codex-rs `plugin_config.rs`; same pattern as OpenAI's first-party `codex-security` plugin). Watch #19582: if fixed, the two configs could converge.
-- Codex gotcha: the server-map key must be camelCase `mcpServers`; snake_case silently registers a bogus server.
-- Codex marketplace: native file is `.agents/plugins/marketplace.json` (object-form `source`, e.g. `{"source": "local", "path": "./plugins/coherent-gameface"}`). The legacy fallback that reads `.claude-plugin/marketplace.json` is flaky (#19372), so we ship the native file.
-- Env config on Codex: plugin MCP servers get no env block, so a plugin's server must fall back to built-in defaults there. `~/.codex/config.toml` CANNOT override a plugin-provided server (verified 2026-07: Codex fails with `Error loading config.toml: invalid transport`); the only override path is registering a server manually via `codex mcp add`, which replaces the plugin's copy under the same name.
-- SYNC RULE: shared fields of each plugin's two plugin.json files (name, version, description, author, homepage, repository, license, keywords) must stay identical. `scripts/check-plugin-sync.ts` enforces this (plus that each `.codex-plugin/mcp.json` points at an existing committed artifact) via `mise check:plugin-sync`, wired into `mise check`, `mise check:agents` (so CI gets it), and the lefthook pre-commit. When editing plugin metadata, edit BOTH manifests.
+SYNC RULE: the shared fields of a plugin's two plugin.json files (name, version, description, author, homepage, repository, license, keywords) must stay identical. Edit BOTH; `mise check:plugin-sync` enforces it in `mise check`, CI and the pre-commit.
 
 ## Versioning and releases
 
-release-please (`.github/workflows/release-please.yml`, config in `release-please-config.json` + `.release-please-manifest.json`) maintains a rolling release PR on `main` from Conventional Commits; merging it bumps versions, updates changelogs, tags, and creates GitHub Releases. Release units come in per-plugin pairs, and there is NO root unit (root-only changes never release; bare `vX.Y.Z` tags were dropped before the first release):
+release-please maintains a rolling release PR on `main` from Conventional Commits.
+Each plugin has two release units (the plugin and its mcp) joined by `linked-versions`, so they always share a version; the two plugins version independently and there is no root unit (root-only changes never release).
 
-- **coherent-gameface plugin** (`plugins/coherent-gameface/`): version anchored in that directory's private `package.json` (a release-please anchor, not a workspace package), synced via `extra-files` into the plugin's `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, AND the root `package.json` (leading-`/` extra-file path = repo-root-relative). Tags `coherent-gameface-vX.Y.Z`.
-- **coherent-gameface mcp** (`plugins/coherent-gameface/mcp/`): version in its `package.json`. Tags `gameface-devtools-mcp-vX.Y.Z`.
-- **unity-devtools plugin** (`plugins/unity-devtools/`): same private `package.json` anchor pattern, synced via `extra-files` into its two plugin manifests (NOT the root `package.json`, which follows the flagship plugin). Tags `unity-devtools-vX.Y.Z`.
-- **unity-devtools mcp** (`plugins/unity-devtools/mcp/`): private `package.json` anchor (the server is C#), synced via a `generic` extra-file into the csproj's `<Version>` (block markers `x-release-please-start-version`/`x-release-please-end`), which the server reports at the MCP handshake through the assembly version, AND via `json` extra-files into the `dotnet dnx` version pins of both `.mcp.json` files (`$.mcpServers.unity.args[3]`; the server ships as the `UnityDevtools.Mcp` NuGet dotnet tool). Tags `unity-devtools-mcp-vX.Y.Z`.
+Never hand-edit a version: each unit's number lives in a private `package.json` anchor, and release-please syncs it into the plugin manifests, the unity csproj `<Version>`, and the `dotnet dnx` version pins.
 
-Each pair is grouped by a `linked-versions` plugin (one group per plugin), so the two units of a plugin ALWAYS share the same version and release together; the two plugins version independently of each other. Rationale: release-please attributes each commit file to the DEEPEST matching package path, so without linking, an mcp commit would bump only mcp and never the plugin, even though the `plugin.json` version is Claude Code's update pin that ships the new artifact. Trade-off (accepted): a plugin-only change (e.g. skills) also bumps the mcp version; npm publishing is manual, so unpublished mcp versions are fine.
-
-Rules that matter when committing:
-
-- Commit messages follow Conventional Commits. `feat`/`fix`/`deps` trigger releases; `chore`/`refactor`/`docs` do not. Anything user-facing (skills, server behavior, a plugin's `.mcp.json`) must be committed as `feat` or `fix`.
-- Because of `linked-versions`, any releasable commit under a plugin's directory (mcp or not) bumps BOTH of that plugin's units to the same version.
-- Pre-1.0: `feat` bumps minor, `fix` bumps patch. 1.0.0 only via a deliberate `Release-As:` footer.
-- The gameface server reads its version from the mcp workspace's `package.json` at runtime (no hardcoded version, no rebuild needed on release).
-- Package publishing stays MANUAL (`mise publish` for npm, `mise publish:unity` for NuGet, run by the user). No CI publish job; do not add one.
-- CI (`.github/workflows/ci.yml`) runs `mise check:agents` (read-only; fails on any unformatted or lint-dirty file) + `mise build:gameface`, then `git diff --exit-code` catches a stale committed bundle; it then restores the vendored SDB sources (sparse clone), builds the .NET solution to catch compile errors, and runs `dotnet test` (the unity-devtools evaluator's offline suite). Lefthook pre-commits rebuild and stage the committed gameface bundle when staged files touch `mcp/src/`, and run `dotnet test` when staged files touch the unity C# sources (no committed unity artifact; it ships as a NuGet dotnet tool).
+- Any releasable commit under a plugin's directory bumps BOTH of that plugin's units.
+- Pre-1.0: `feat` bumps minor, `fix` patch. 1.0.0 only via a deliberate `Release-As:` footer.
+- Publishing stays MANUAL (`mise publish` for npm, `mise publish:unity` for NuGet, run by the user). No CI publish job; do not add one.
+- CI runs `mise check:agents` + `mise build:gameface` with `git diff --exit-code` (catching a stale committed bundle), then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the gameface bundle, and runs `dotnet test` on staged C# changes.
 
 ## Boundaries
 
@@ -100,12 +76,23 @@ Ask first before:
 - Reworking architecture.
 - Performing destructive file or data operations.
 
+## Where knowledge goes
+
+Four stores, checked in this order when writing something down:
+
+1. **Code comments**: anything one file owns. If `Invoker.Retrying` implements the retry, the explanation lives there.
+2. **A plugin's `skills/`**: how to drive the tools at runtime. Shipped, agent-facing, generic.
+3. **`docs/solutions/`**: expensive investigations with dead ends, one file per problem, loaded on demand through a pointer placed where the problem bites.
+4. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
+
+An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
+Propose updates whenever you detect drift.
+
 ## Preferred agent behavior
 
 - Start by inspecting existing patterns.
 - Prefer LSP over Grep/Glob/Read for code navigation.
-- Make the smallest safe change, but if you think a refactor is overdue, speak up.
+- Make the smallest safe change, but speak up when a refactor is overdue.
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
-  Plugin-specific facts belong in that plugin's `AGENTS.md`, repo-wide facts here; every `AGENTS.md` gets a `CLAUDE.md` relative symlink pointing at it.
