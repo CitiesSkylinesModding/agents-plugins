@@ -130,33 +130,119 @@ public sealed class Ecs {
   }
 
   /// <summary>
-  /// Finds one entity by Index (and Version when given) among the query's matches.
+  /// Resolves an <c>index[:version]</c> spec to a live entity of this world: the rule every tool
+  /// that TARGETS an entity shares, so naming one means the same thing whichever tool reads it.
+  /// A bare index is resolved to whatever version is live at that index, and an explicit version is
+  /// built client-side then verified, so a stale one fails instead of reading its successor.
+  /// An entity VALUE being written is a different question, answered literally by
+  /// <see cref="CoerceArg" />.
   /// </summary>
-  public StructMirror FindEntity(Value query, int index, int? version) {
-    var arr = this.EntityArray(query);
+  public StructMirror ResolveEntity(string spec) {
+    var (index, version) = Ecs.ParseEntitySpec(spec);
 
-    const int chunk = 4096;
+    // The entity store is indexed UNCHECKED on both paths below: out of range, the by-index lookup
+    // and Exists alike read foreign memory, and far enough out both fault the game with an in-game
+    // NullReferenceException (verified live on both). HighestEntityIndex bounds them, inclusively.
+    var highestIndex = this.FindMember("HighestEntityIndex", 0);
 
-    for (var offset = 0; offset < arr.Length; offset += chunk) {
-      var slice = arr.GetValues(offset, Math.Min(chunk, arr.Length - offset));
+    if (highestIndex is not null) {
+      var highest =
+        (int) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, highestIndex)).Value;
 
-      foreach (var v in slice) {
-        var e = (StructMirror) v;
-
-        if ((int) ((PrimitiveValue) e["Index"]).Value == index &&
-          (version is null || (int) ((PrimitiveValue) e["Version"]).Value == version)) {
-          return e;
-        }
+      if (index < 0 || index > highest) {
+        throw new InvalidOperationException(
+          $"entity index {index} is out of range for world '{this.WorldName}' (valid: 0-{highest})"
+        );
       }
     }
 
+    if (version is {} v) {
+      var named = this.MakeEntity(index, v);
+
+      if (!this.Exists(named)) {
+        throw new InvalidOperationException(
+          $"entity {index}:{v} does not exist (recycled index or wrong version?)"
+        );
+      }
+
+      return named;
+    }
+
+    // Bare-index resolution needs BOTH members: the lookup itself, and the bound that keeps it
+    // inside the store. Without either, refuse rather than resolve unguarded - naming the entity in
+    // full still works, and is the one degradation that cannot crash the game.
+    // Probing beats inferring the version: Unity.Entities reports assembly version 0.0.0.0.
+    var byIndex = this.FindMember("GetEntityByEntityIndex", 1, ["Int32"]);
+
+    if (byIndex is null || highestIndex is null) {
+      var absent = byIndex is null ? "GetEntityByEntityIndex" : "HighestEntityIndex";
+
+      throw new InvalidOperationException(
+        "this target's Unity Entities version cannot resolve a bare entity index " +
+        $"(EntityManager.{absent} is absent); name the entity as \"index:version\""
+      );
+    }
+
+    var live = (StructMirror) this.inv.Invoke(this.EntityManager, byIndex, this.inv.Prim(index));
+
+    // A free slot (never used, or destroyed) answers Entity.Null, whose version is 0 - a version
+    // live entities never carry. The fields are already on the wire, so this costs no invoke.
+    if ((int) ((PrimitiveValue) live["Version"]).Value is 0) {
+      throw new InvalidOperationException(
+        $"no live entity at index {index} in world '{this.WorldName}' (the slot is free)"
+      );
+    }
+
+    return live;
+  }
+
+  /// <summary>
+  /// Probes an EntityManager member, accepting a property in place of a method: the same fact is
+  /// exposed either way across Entities versions, and a getter is reached under its <c>get_</c>
+  /// name. Costs nothing on the wire, since a mirror caches its own member list.
+  /// </summary>
+  private MethodMirror FindMember(string name, int argc, string[] paramTypes = null) =>
+    this.inv.FindMethodOrNull(this.EntityManagerType, name, argc, paramTypes: paramTypes) ??
+    (argc is 0 ? this.inv.FindMethodOrNull(this.EntityManagerType, $"get_{name}", 0) : null);
+
+  private readonly HashSet<(int Index, int Version, TypeMirror Type)> carried = [];
+
+  /// <summary>
+  /// Refuses a component the entity does not carry. The generic accessors derive a chunk offset
+  /// from the archetype, so where the collections safety checks are compiled out they read and
+  /// write memory the entity does not own: verified live, reading an absent component answered a
+  /// plausible all-zero value instead of failing.
+  /// A confirmed pair is remembered, because one read-modify-write asks three times and an
+  /// archetype cannot change under an instance that lives inside a single suspend window.
+  /// </summary>
+  private void RequireComponent(StructMirror entity, TypeMirror componentType) {
+    var key = (
+      Index: (int) ((PrimitiveValue) entity["Index"]).Value,
+      Version: (int) ((PrimitiveValue) entity["Version"]).Value,
+      Type: componentType
+    );
+
+    if (this.carried.Contains(key)) {
+      return;
+    }
+
+    var has = this.inv.FindMethod(this.EntityManagerType, "HasComponent", 1, 1, ["Entity"])
+      .MakeGenericMethod([componentType]);
+
+    if ((bool) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, has, entity)).Value) {
+      _ = this.carried.Add(key);
+
+      return;
+    }
+
     throw new InvalidOperationException(
-      $"entity {index}{(version is not null ? $":{version}" : "")} not found among " +
-      $"{arr.Length} entities matching the query"
+      $"entity {key.Index}:{key.Version} has no {componentType.FullName} component"
     );
   }
 
   public Value GetComponent(StructMirror entity, TypeMirror componentType) {
+    this.RequireComponent(entity, componentType);
+
     var method = this.inv.FindMethod(this.EntityManagerType, "GetComponentData", 1, 1, ["Entity"])
       .MakeGenericMethod([componentType]);
 
@@ -164,6 +250,8 @@ public sealed class Ecs {
   }
 
   public void SetComponent(StructMirror entity, TypeMirror componentType, StructMirror value) {
+    this.RequireComponent(entity, componentType);
+
     var method = this.inv.FindMethod(this.EntityManagerType, "SetComponentData", 2, 1, ["Entity"])
       .MakeGenericMethod([componentType]);
 

@@ -34,13 +34,14 @@ Before writing, run `find_types` with `members`: live field names and types are 
 
 ## Entities and ECS
 
-An entity is `index:version`; the version disambiguates recycled indices, so carry it when you have it (a bare `index` matches any version in component tools, and defaults to version 1 in buffer tools).
+An entity is `index[:version]`, read identically by every ECS tool: a bare `index` resolves to whatever is live at that index, an explicit `index:version` is verified and fails loudly when stale rather than reading the entity that recycled the index.
+Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
 `label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system (verified on CS2: `Game.UI.NameSystem:GetRenderedLabelName`).
 Component access covers unmanaged `IComponentData` only; managed (class) components are out of reach over SDB.
 `ecs_set_component` is a whole-component read-modify-write overriding one field, reporting before and after read back from the game: verification is built in.
 `ecs_buffer_edit` `add` clones element 0 as its template (an empty buffer cannot seed a new element) and overrides one field via `set`.
-Entity-typed fields and arguments are written as `index:version` text.
+An entity you WRITE is never resolved: a component field, a buffer `set`, and eval's `entity(index)` all take the value literally and default the version to 1, so spell those `index:version`.
 
 ## Evaluating C# in the game
 

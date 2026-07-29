@@ -107,25 +107,21 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   /// <c>_</c> persistence across evals.
   /// </summary>
   public EvalOutcome Eval(string code, EvalState? state = null) {
-    Skip.If(this.SkipReason is not null, this.SkipReason);
-
+    var inv = this.Invoker;
     var program = EvalParser.Parse(code);
     var vm = this.session!.Vm;
 
     state ??= new EvalState();
 
-    // Mirror the production suspend window (UnitySession.Run): suspend, build the Invoker inside
-    // the window where thread listing is legal, act, resume.
+    // Mirror the production suspend window (UnitySession.Run): suspend, act, resume.
     vm.Suspend();
 
     try {
-      this.invoker ??= new Invoker(vm);
-
       var interpreter = new EvalInterpreter(
-        this.invoker,
+        inv,
         [
           new BuiltinScope(
-            this.invoker,
+            inv,
             () => throw new InvalidOperationException("no ECS in the fixture debuggee"),
             state
           )
@@ -140,16 +136,15 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   }
 
   /// <summary>
-  /// The debuggee's breakpoint/pause surface, ONE per suite like the session; tests must remove
-  /// their requests and release their pauses (see <see cref="ReleaseDebugger"/>), or every later
-  /// test evaluates against a frozen debuggee.
+  /// The debuggee's invoke surface, ONE per suite like the session, for tests driving
+  /// <see cref="Invoker"/>'s own contract (type and member lookup) rather than the evaluator's.
   /// </summary>
-  public DebugController Debug {
+  public Invoker Invoker {
     get {
       Skip.If(this.SkipReason is not null, this.SkipReason);
 
-      if (this.debug is not null) {
-        return this.debug;
+      if (this.invoker is not null) {
+        return this.invoker;
       }
 
       var vm = this.session!.Vm;
@@ -158,14 +153,26 @@ public sealed class MonoDebuggeeFixture : IDisposable {
       vm.Suspend();
 
       try {
-        this.invoker ??= new Invoker(vm);
-        this.debug = new DebugController(vm, this.invoker);
+        return this.invoker = new Invoker(vm);
       }
       finally {
         vm.Resume();
       }
+    }
+  }
 
-      return this.debug;
+  /// <summary>
+  /// The debuggee's breakpoint/pause surface, ONE per suite like the session; tests must remove
+  /// their requests and release their pauses (see <see cref="ReleaseDebugger"/>), or every later
+  /// test evaluates against a frozen debuggee.
+  /// </summary>
+  public DebugController Debug {
+    get {
+      // Read through the Invoker accessor first: it owns the skip check and the suspend window
+      // the invoker's construction needs.
+      var inv = this.Invoker;
+
+      return this.debug ??= new DebugController(this.session!.Vm, inv);
     }
   }
 

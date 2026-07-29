@@ -20,6 +20,14 @@ namespace UnityDevtools.Mcp;
 [McpServerToolType]
 [UsedImplicitly]
 public sealed class EcsTools(UnitySession session) {
+  /// <summary>
+  /// The one entity-naming rule, worded identically on every tool that takes an entity so agents
+  /// never have to remember which tool interprets a bare index how.
+  /// </summary>
+  private const string EntityParam =
+    "Entity as \"index[:version]\": a bare index resolves to the live entity at that index, an " +
+    "explicit version is verified and fails when stale.";
+
   [McpServerTool(Name = "ecs_query")]
   [Description(
     """
@@ -103,7 +111,6 @@ public sealed class EcsTools(UnitySession session) {
   [Description(
     """
     Read one entity's component and report its field values.
-    The entity's existence is verified, so a wrong index/version fails loudly.
     Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
@@ -111,7 +118,7 @@ public sealed class EcsTools(UnitySession session) {
   public EcsComponentResult GetComponent(
     [Description("Fully-qualified component type name (unmanaged IComponentData).")]
     string component,
-    [Description("Entity as \"index[:version]\"; version omitted matches any.")] string entity,
+    [Description(EcsTools.EntityParam)] string entity,
     [Description("ECS world name; omit for the default world.")] string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
@@ -120,7 +127,7 @@ public sealed class EcsTools(UnitySession session) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
       var compType = inv.ResolveType(component);
-      var e = EcsTools.ResolveEntity(inv, ecs, compType, entity);
+      var e = ecs.ResolveEntity(entity);
 
       return new EcsComponentResult {
         World = ecs.WorldName,
@@ -144,7 +151,7 @@ public sealed class EcsTools(UnitySession session) {
   public EcsSetComponentResult SetComponent(
     [Description("Fully-qualified component type name (unmanaged IComponentData).")]
     string component,
-    [Description("Entity as \"index[:version]\"; version omitted matches any.")] string entity,
+    [Description(EcsTools.EntityParam)] string entity,
     [Description("Field name on the component, case-insensitive.")] string field,
     [Description("New value: primitive/enum as text, or \"index:version\" for an Entity field.")]
     string value,
@@ -156,7 +163,7 @@ public sealed class EcsTools(UnitySession session) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
       var compType = inv.ResolveType(component);
-      var e = EcsTools.ResolveEntity(inv, ecs, compType, entity);
+      var e = ecs.ResolveEntity(entity);
       var fieldInfo = Ecs.RequireField(compType, field);
       var current = (StructMirror) ecs.GetComponent(e, compType);
       var before = inv.Format(current, 3);
@@ -185,7 +192,7 @@ public sealed class EcsTools(UnitySession session) {
   public EcsBufferResult GetBuffer(
     [Description("Fully-qualified buffer element type name (IBufferElementData).")]
     string elementType,
-    [Description("Entity as \"index[:version]\"; version defaults to 1.")] string entity,
+    [Description(EcsTools.EntityParam)] string entity,
     [Description("ECS world name; omit for the default world.")] string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
@@ -193,8 +200,7 @@ public sealed class EcsTools(UnitySession session) {
     EcsBufferResult Operation(SdbContext ctx) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
-      var (index, version) = Ecs.ParseEntitySpec(entity);
-      var e = EcsTools.RequireEntity(ecs, index, version ?? 1);
+      var e = ecs.ResolveEntity(entity);
       var buf = ecs.GetBuffer(e, inv.ResolveType(elementType));
       var length = ecs.BufferLength(buf);
 
@@ -229,7 +235,7 @@ public sealed class EcsTools(UnitySession session) {
     [Description("\"add\" (append, cloned from element 0 + set) or \"remove_at\".")] string op,
     [Description("Fully-qualified buffer element type name (IBufferElementData).")]
     string elementType,
-    [Description("Entity as \"index[:version]\"; version defaults to 1.")] string entity,
+    [Description(EcsTools.EntityParam)] string entity,
     [Description("For add: \"<field>=<value>\" override applied to the cloned element.")]
     string? set = null,
     [Description("For remove_at: element index to remove.")] int? index = null,
@@ -242,8 +248,7 @@ public sealed class EcsTools(UnitySession session) {
       var ecs = ctx.Ecs(world);
 
       var elemType = inv.ResolveType(elementType);
-      var (entityIndex, entityVersion) = Ecs.ParseEntitySpec(entity);
-      var e = EcsTools.RequireEntity(ecs, entityIndex, entityVersion ?? 1);
+      var e = ecs.ResolveEntity(entity);
       var buf = ecs.GetBuffer(e, elemType);
       var length = ecs.BufferLength(buf);
 
@@ -309,42 +314,6 @@ public sealed class EcsTools(UnitySession session) {
     }
   }
 
-  /// <summary>
-  /// Resolves the target entity of a component tool: with a version, builds it client-side and
-  /// verifies existence (no query needed); without one, scans a query on the component type to
-  /// find the live version.
-  /// </summary>
-  private static StructMirror ResolveEntity(
-    Invoker inv,
-    Ecs ecs,
-    TypeMirror compType,
-    string spec
-  ) {
-    var (index, version) = Ecs.ParseEntitySpec(spec);
-
-    if (version is {} v) {
-      return EcsTools.RequireEntity(ecs, index, v);
-    }
-
-    var query = ecs.CreateQuery([compType]);
-
-    try {
-      return ecs.FindEntity(query, index, null);
-    }
-    finally {
-      _ = inv.Invoke(query, "Dispose");
-    }
-  }
-
-  private static StructMirror RequireEntity(Ecs ecs, int index, int version) {
-    var entity = ecs.MakeEntity(index, version);
-
-    return !ecs.Exists(entity)
-      ? throw new McpException(
-        $"entity {index}:{version} does not exist (recycled index or wrong version?)"
-      )
-      : entity;
-  }
 }
 
 /// <summary>Result of the <c>ecs_query</c> tool.</summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -44,7 +45,12 @@ public sealed class Invoker(VirtualMachine vm) {
     return types[0];
   }
 
-  private readonly Dictionary<string, TypeMirror> typeCache = [];
+  /// <summary>
+  /// Concurrent because one Invoker serves BOTH the session's tool operations and the debug pump
+  /// thread, which evaluates breakpoint conditions outside the session's lock (see
+  /// <see cref="DebugController" />). Same for <see cref="methodCache" />.
+  /// </summary>
+  private readonly ConcurrentDictionary<string, TypeMirror> typeCache = new();
 
   /// <summary>
   /// Case-sensitive type lookup (unlike <see cref="ResolveType" />, matching C# name semantics)
@@ -86,17 +92,56 @@ public sealed class Invoker(VirtualMachine vm) {
   /// <paramref name="paramTypes" /> disambiguates overloads by parameter type name, position by
   /// position (e.g. ["Entity"], ["Type", "Int32"]); a null entry matches any.
   /// </summary>
-
-  // CA1822 (mark static): kept an instance member on purpose. It is part of Invoker's cohesive
-  // invoke abstraction and is called as `this.inv.FindMethod(...)` across files; making it static
-  // would churn every call site for no real gain.
-  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public MethodMirror FindMethod(
     TypeMirror type,
     string name,
     int argc,
     int genericArity = 0,
     string[] paramTypes = null
+  ) {
+    return this.FindMethodOrNull(type, name, argc, genericArity, paramTypes) ??
+      throw new InvalidOperationException(
+        $"method {type.Name}.{name}/{argc}{(genericArity > 0 ? $"<{genericArity}>" : "")} not found"
+      );
+  }
+
+  private readonly ConcurrentDictionary<(TypeMirror, string, int, int, string), MethodMirror>
+    methodCache = new();
+
+  /// <summary>
+  /// Non-throwing counterpart of <see cref="FindMethod" /> (same matching rules), returning null
+  /// when nothing matches: the way to probe whether the target's API carries a member before
+  /// calling it, since the versions this plugin drives are not inferable from assembly metadata.
+  /// Hits AND misses are memoized for the lifetime of this attach, since a loaded type never grows
+  /// or loses a method. That saves the repeated scan, not round trips: the mirror caches its own
+  /// method list, so only the first lookup on a type reaches the debuggee either way.
+  /// </summary>
+  public MethodMirror FindMethodOrNull(
+    TypeMirror type,
+    string name,
+    int argc,
+    int genericArity = 0,
+    string[] paramTypes = null
+  ) {
+    var key = (type, name, argc, genericArity, string.Join("|", paramTypes ?? []));
+
+    if (this.methodCache.TryGetValue(key, out var cached)) {
+      return cached;
+    }
+
+    var found = Invoker.SearchMethod(type, name, argc, genericArity, paramTypes);
+
+    this.methodCache[key] = found;
+
+    return found;
+  }
+
+  private static MethodMirror SearchMethod(
+    TypeMirror type,
+    string name,
+    int argc,
+    int genericArity,
+    string[] paramTypes
   ) {
     for (var t = type; t is not null; t = t.BaseType) {
       foreach (var m in t.GetMethods()) {
@@ -121,9 +166,7 @@ public sealed class Invoker(VirtualMachine vm) {
       }
     }
 
-    throw new InvalidOperationException(
-      $"method {type.Name}.{name}/{argc}{(genericArity > 0 ? $"<{genericArity}>" : "")} not found"
-    );
+    return null;
   }
 
   /// <summary>
@@ -131,7 +174,9 @@ public sealed class Invoker(VirtualMachine vm) {
   /// the overload whose signature accepts its arguments.
   /// </summary>
 
-  // CA1822: instance member by design (see FindMethod); part of the invoke plumbing.
+  // CA1822 (mark static): kept an instance member on purpose. It is part of Invoker's cohesive
+  // invoke abstraction and is called as `this.inv.FindMethods(...)` across files; making it static
+  // would churn every call site for no real gain.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public List<MethodMirror> FindMethods(TypeMirror type, string name, int argc) {
     var matches = new List<MethodMirror>();
@@ -154,7 +199,7 @@ public sealed class Invoker(VirtualMachine vm) {
   /// once it re-enters managed code during the frame.
   /// </summary>
 
-  // CA1822: instance member by design (see FindMethod); part of the invoke plumbing.
+  // CA1822: instance member by design (see FindMethods); part of the invoke plumbing.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   private T Retrying<T>(Func<T> invoke) {
     for (var attempt = 0;; attempt++) {
@@ -272,7 +317,7 @@ public sealed class Invoker(VirtualMachine vm) {
   public Value GetStaticProperty(TypeMirror type, string name) =>
     this.InvokeStatic(type, this.FindMethod(type, $"get_{name}", 0));
 
-  // CA1822: instance member by design (see FindMethod); called via this.inv.TypeOf cross-file.
+  // CA1822: instance member by design (see FindMethods); called via this.inv.TypeOf cross-file.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public TypeMirror TypeOf(Value v) {
     return v switch {

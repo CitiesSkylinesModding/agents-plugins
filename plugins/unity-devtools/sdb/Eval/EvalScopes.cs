@@ -98,7 +98,9 @@ public sealed class BuiltinScope(Invoker inv, Func<Ecs> ecs, EvalState state) : 
       return false;
     }
 
-    // Version defaults to 1, mirroring the ecs_* tools' `index[:version]` spec.
+    // Builds the entity literally, like any other written value: version defaults to 1 and nothing
+    // is resolved or verified. The ecs_* tools RESOLVE the entity they target instead, so a bare
+    // index means different things on the two paths - a documented divergence of the eval contract.
     if (args.Length is not (1 or 2) ||
       args[0] is not int index ||
       (args.Length is 2 && args[1] is not int)) {
