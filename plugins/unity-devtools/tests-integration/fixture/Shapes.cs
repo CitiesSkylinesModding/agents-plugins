@@ -10,7 +10,7 @@ public static class Shapes {
   // ReSharper disable once ConvertToConstant.Global - used as a field in tests
   public static readonly string Greeting = "hello";
 
-  public static readonly string NullText = null;
+  public static readonly string? NullText = null;
 
   public static readonly int Answer = 42;
 
@@ -78,7 +78,7 @@ public static class Thrower {
 public static class Ticker {
   public static int LastTick;
 
-  public static string LastLabel;
+  public static string? LastLabel;
 
   public static void Tick(int n) {
     var label = "tick:" + n;
