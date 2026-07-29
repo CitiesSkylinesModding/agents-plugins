@@ -24,9 +24,7 @@ public sealed class InvokerProbeTests(MonoDebuggeeFixture fx) {
   public void ProbingAnAbsentMemberReturnsNullInsteadOfThrowing() {
     var inv = fx.Invoker;
 
-    Assert.Null(
-      inv.FindMethodOrNull(inv.ResolveType("TestFixture.Overloads"), "NoSuchMember", 1)
-    );
+    Assert.Null(inv.FindMethodOrNull(inv.ResolveType("TestFixture.Overloads"), "NoSuchMember", 1));
   }
 
   [SkippableFact]
@@ -65,8 +63,11 @@ public sealed class InvokerProbeTests(MonoDebuggeeFixture fx) {
   public void TheThrowingLookupStillNamesTheMissingMember() {
     var inv = fx.Invoker;
 
-    var ex = Assert.Throws<InvalidOperationException>(() =>
-      inv.FindMethod(inv.ResolveType("TestFixture.Overloads"), "NoSuchMember", 1)
+    var ex = Assert.Throws<InvalidOperationException>(() => inv.FindMethod(
+        inv.ResolveType("TestFixture.Overloads"),
+        "NoSuchMember",
+        1
+      )
     );
 
     Assert.Contains("NoSuchMember", ex.Message, StringComparison.Ordinal);

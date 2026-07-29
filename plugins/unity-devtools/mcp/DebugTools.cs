@@ -47,10 +47,12 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [UsedImplicitly]
   public SetBreakpointResult SetBreakpoint(
     [Description("Fully-qualified type name declaring the method.")] string type,
-    [Description("Method name; every overload matches unless narrowed.")] string method,
-    [Description("Source line to anchor to (needs debug info); omit for method entry.")] int? line =
-      null,
-    [Description("Explicit IL offset escape hatch; wins over line.")] int? ilOffset = null,
+    [Description("Method name; every overload matches unless narrowed.")]
+    string method,
+    [Description("Source line to anchor to (needs debug info); omit for method entry.")]
+    int? line = null,
+    [Description("Explicit IL offset escape hatch; wins over line.")]
+    int? ilOffset = null,
     [Description("Case-insensitive substring to narrow overloads by full signature.")]
     string? signature = null,
     [Description(
@@ -58,7 +60,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
       "false auto-resumes."
     )]
     string? condition = null,
-    [Description("Break from the Nth hit onward; 0 = every hit.")] int hitCount = 0
+    [Description("Break from the Nth hit onward; 0 = every hit.")]
+    int hitCount = 0
   ) {
     return ToolGuard.Run(() => {
         try {
@@ -101,7 +104,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   public SetBreakpointResult BreakOnException(
     [Description("Fully-qualified exception type; omit for all exceptions.")]
     string? exceptionType = null,
-    [Description("Also match subclasses of exceptionType.")] bool includeSubclasses = true
+    [Description("Also match subclasses of exceptionType.")]
+    bool includeSubclasses = true
   ) {
     return ToolGuard.Run(() => session.Run(ctx => new SetBreakpointResult {
           Breakpoints = [ctx.Debug.AddExceptionBreak(exceptionType, includeSubclasses)]
@@ -192,7 +196,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [UsedImplicitly]
   public PauseDetails PauseState(
     [Description("Which frame's variables to list; 0 = top.")] int frameIndex = 0,
-    [Description("Append every thread's name/state and names-only stack.")] bool allThreads = false
+    [Description("Append every thread's name/state and names-only stack.")]
+    bool allThreads = false
   ) {
     return ToolGuard.Run(() => session.Run(ctx => {
           if (ctx.Debug.CurrentPause is {} pause) {
@@ -228,7 +233,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [UsedImplicitly]
   public DebugEvaluateResult Evaluate(
     [Description("C# statement sequence; the final expression's value is the result.")] string code,
-    [Description("Frame whose scope to evaluate in; 0 = top.")] int frameIndex = 0,
+    [Description("Frame whose scope to evaluate in; 0 = top.")]
+    int frameIndex = 0,
     [Description("ECS world name for the em/world builtins; omit for the default world.")]
     string? world = null
   ) {
@@ -433,7 +439,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     string? before = null,
     [Description("Eval snippet run after re-taking the hold (e.g. re-pause the simulation).")]
     string? after = null,
-    [Description("ECS world name for the snippets' em/world builtins.")] string? world = null
+    [Description("ECS world name for the snippets' em/world builtins.")]
+    string? world = null
   ) {
     return ToolGuard.Run(() => {
         if (session.HeldSuspendCount is 0) {

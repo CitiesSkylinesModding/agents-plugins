@@ -191,12 +191,12 @@ resharper_csharp_place_simple_list_pattern_on_single_line = true
 resharper_csharp_place_expr_method_on_single_line = if_owner_is_single_line
 resharper_csharp_place_expr_property_on_single_line = if_owner_is_single_line
 resharper_csharp_place_expr_accessor_on_single_line = if_owner_is_single_line
-resharper_csharp_place_type_constraints_on_same_line = false
+resharper_csharp_place_type_constraints_on_same_line = true
 resharper_csharp_place_constructor_initializer_on_same_line = true
 resharper_csharp_place_linq_into_on_new_line = true
 # Attributes go on their own line above the member; accessor attributes stay inline so
-# single-line auto-props stay one line. A parameter's attribute cannot be broken onto its
-# own line (no ReSharper key controls that).
+# single-line auto-props stay one line. No key places a PARAMETER's attribute, but
+# keep_existing_linebreaks above preserves the break when the author writes one.
 resharper_csharp_place_type_attribute_on_same_line = false
 resharper_csharp_place_method_attribute_on_same_line = false
 resharper_csharp_place_accessorholder_attribute_on_same_line = false
@@ -250,10 +250,13 @@ resharper_csharp_indent_raw_literal_string = do_not_change
 # No trailing comma; ArrangeTrailingCommas strips any existing.
 resharper_csharp_trailing_comma_in_multiline_lists = false
 resharper_csharp_trailing_comma_in_singleline_lists = false
-# Enforce the canonical arrangement (do not keep the author's line breaks).
-resharper_csharp_keep_existing_linebreaks = false
-resharper_csharp_keep_user_linebreaks = false
-resharper_csharp_keep_existing_arrangement = false
+# Keep the author's line breaks. Nothing else preserves a deliberately chopped construct the
+# wrapping rules do not cover (a named-tuple expression has no wrap_* style of its own, so the
+# reformatter otherwise refills it to the line width). ReSharper exposes this one setting under
+# three interchangeable names (keep_existing_linebreaks, keep_user_linebreaks,
+# keep_existing_arrangement); listing it more than once is last-one-wins, so keep exactly one.
+resharper_csharp_keep_existing_linebreaks = true
+# Everything below enforces the canonical arrangement for a construct that has one.
 resharper_csharp_keep_existing_declaration_parens_arrangement = false
 resharper_csharp_keep_existing_invocation_parens_arrangement = false
 resharper_csharp_keep_existing_expr_member_arrangement = false

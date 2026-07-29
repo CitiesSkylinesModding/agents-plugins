@@ -26,7 +26,8 @@ public sealed class TypeTools(UnitySession session) {
   [UsedImplicitly]
   public FindTypesResult FindTypes(
     [Description("Fully-qualified type name, e.g. Unity.Entities.Entity.")] string fullName,
-    [Description("Also list fields, properties, and methods.")] bool members = false
+    [Description("Also list fields, properties, and methods.")]
+    bool members = false
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 

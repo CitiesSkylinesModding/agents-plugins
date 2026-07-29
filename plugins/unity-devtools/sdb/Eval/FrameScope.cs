@@ -277,8 +277,7 @@ public sealed class FrameScope(Invoker inv, ThreadMirror thread, int frameIndex)
   /// Best-effort frame reads: AbsentInformationException (no debug info) and agent errors on
   /// unusual frames (native transitions) mean "nothing resolvable here", not a failure.
   /// </summary>
-  private static T Swallowing<T>(Func<T> read)
-    where T : class {
+  private static T Swallowing<T>(Func<T> read) where T : class {
     try {
       return read();
     }
