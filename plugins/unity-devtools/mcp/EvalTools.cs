@@ -99,17 +99,6 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
       $"{e.Position}: {e.Message}"
     );
 
-    if (e.GameExceptionType is not null) {
-      _ = report.Append(
-        CultureInfo.InvariantCulture,
-        $"\nin-game exception: {e.GameExceptionType}"
-      );
-
-      if (e.GameExceptionMessage is not null) {
-        _ = report.Append(CultureInfo.InvariantCulture, $": {e.GameExceptionMessage}");
-      }
-    }
-
     if (e.Locals.Count <= 0) {
       return report.ToString();
     }

@@ -401,13 +401,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
 
     if (snapshot.Exception is {} thrown) {
       exceptionType = thrown.Type.FullName;
-
-      try {
-        exceptionMessage = (invoker.GetProperty(thrown, "Message") as StringMirror)?.Value;
-      }
-      catch {
-        // Best-effort; the type alone is still actionable.
-      }
+      exceptionMessage = invoker.ReadMessageOrNull(thrown);
     }
 
     return this.BuildDetails(

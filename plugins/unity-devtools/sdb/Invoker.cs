@@ -194,9 +194,25 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
-  /// Runs an <c>invoke</c>, retrying while the agent reports NOT_SUSPENDED: right after attach the
-  /// main thread can still be in native engine code, and it only parks at a suspendable safe point
-  /// once it re-enters managed code during the frame.
+  /// Runs an <c>invoke</c>, unwrapping a debuggee-side throw into a <see cref="GameException" />
+  /// that names the exception the game itself raised.
+  /// Every invoke made on a tool's behalf lands here, which is what makes that naming reach every
+  /// tool alike; only the plugin's own reads of a thrown object go through <see cref="Retrying" />
+  /// bare, so that describing a throw cannot recurse into describing another.
+  /// </summary>
+  private T Invoking<T>(Func<T> invoke) {
+    try {
+      return this.Retrying(invoke);
+    }
+    catch (Exception ex) when (GameException.InvocationIn(ex) is {} invocation) {
+      throw this.DescribeThrow(invocation.Exception, ex);
+    }
+  }
+
+  /// <summary>
+  /// Retries while the agent reports NOT_SUSPENDED: right after attach the main thread can still be
+  /// in native engine code, and it only parks at a suspendable safe point once it re-enters managed
+  /// code during the frame.
   /// </summary>
 
   // CA1822: instance member by design (see FindMethods); part of the invoke plumbing.
@@ -213,6 +229,45 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
+  /// Names the exception the game threw.
+  /// Reading the thrown object costs wire reads made while already reporting a failure, so they are
+  /// best-effort: letting a second failure escape would leave the caller knowing nothing at all
+  /// about the throw.
+  /// A dropped connection is the one exception -- it invalidates the whole session and must stay
+  /// recognizable to <see cref="UnitySession" />.
+  /// </summary>
+  private GameException DescribeThrow(ObjectMirror thrown, Exception cause) {
+    string typeName = null;
+
+    try {
+      typeName = thrown.Type.FullName;
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      // Best-effort, like the message: an unnamed throw is still reported as one.
+    }
+
+    return new GameException(typeName, this.ReadMessageOrNull(thrown), cause);
+  }
+
+  /// <summary>
+  /// Reads an exception mirror's Message, null when it cannot be read.
+  /// The exception's type alone is already actionable, so a failure here is swallowed -- except a
+  /// dropped connection, which the session must still see.
+  /// </summary>
+  public string ReadMessageOrNull(ObjectMirror thrown) {
+    try {
+      var getter = this.FindMethodOrNull(thrown.Type, "get_Message", 0);
+
+      return this.Retrying(() =>
+        (thrown.InvokeMethod(this.MainThread, getter, []) as StringMirror)?.Value
+      );
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      return null;
+    }
+  }
+
+  /// <summary>
   /// Static invoke that also returns out-parameter values
   /// (<see cref="InvokeOptions.ReturnOutArgs"/>).
   /// Pass placeholder values (defaults) for the out parameters.
@@ -222,7 +277,7 @@ public sealed class Invoker(VirtualMachine vm) {
     MethodMirror method,
     params Value[] args
   ) {
-    return this.Retrying(() => type.EndInvokeMethodWithResult(
+    return this.Invoking(() => type.EndInvokeMethodWithResult(
         type.BeginInvokeMethod(
           this.MainThread,
           method,
@@ -243,7 +298,7 @@ public sealed class Invoker(VirtualMachine vm) {
   /// mirror, so a mutating struct method behaves like C# on the caller's variable.
   /// </summary>
   public InvokeResult InvokeWithOutArgs(Value target, MethodMirror method, params Value[] args) {
-    return this.Retrying(() => target switch {
+    return this.Invoking(() => target switch {
         ObjectMirror o => o.EndInvokeMethodWithResult(
           o.BeginInvokeMethod(
             this.MainThread,
@@ -273,7 +328,7 @@ public sealed class Invoker(VirtualMachine vm) {
 
   /// <summary>Constructs a debuggee-side instance through the given constructor.</summary>
   public Value NewInstance(TypeMirror type, MethodMirror ctor, params Value[] args) =>
-    this.Retrying(() => type.NewInstance(this.MainThread, ctor, args));
+    this.Invoking(() => type.NewInstance(this.MainThread, ctor, args));
 
   /// <summary>
   /// Invokes an instance method on whatever mirror kind the target is.
@@ -282,7 +337,7 @@ public sealed class Invoker(VirtualMachine vm) {
   /// mutating struct methods and property setters behave like C# on the caller's variable.
   /// </summary>
   public Value Invoke(Value target, MethodMirror method, params Value[] args) {
-    return this.Retrying(() => target switch {
+    return this.Invoking(() => target switch {
         ObjectMirror o => o.InvokeMethod(this.MainThread, method, args),
         StructMirror s => s.EndInvokeMethodWithResult(
             s.BeginInvokeMethod(
@@ -308,7 +363,7 @@ public sealed class Invoker(VirtualMachine vm) {
     this.InvokeStatic(type, this.FindMethod(type, method, args.Length), args);
 
   public Value InvokeStatic(TypeMirror type, MethodMirror method, params Value[] args) =>
-    this.Retrying(() => type.InvokeMethod(this.MainThread, method, args));
+    this.Invoking(() => type.InvokeMethod(this.MainThread, method, args));
 
   /// <summary>Reads a property through its getter (works on all mirror kinds).</summary>
   public Value GetProperty(Value target, string name) =>

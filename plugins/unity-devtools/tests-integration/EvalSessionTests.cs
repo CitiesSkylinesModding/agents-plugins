@@ -43,8 +43,11 @@ public sealed class EvalSessionTests(MonoDebuggeeFixture fx) {
 
     Assert.Equal(1, ex.StatementIndex);
     Assert.Equal("TestFixture.Thrower.Boom()", ex.StatementSource);
-    Assert.Equal("System.InvalidOperationException", ex.GameExceptionType);
-    Assert.Equal("kaboom", ex.GameExceptionMessage);
+    Assert.Equal("System.InvalidOperationException", ex.Game.TypeName);
+    Assert.Equal("kaboom", ex.Game.ThrownMessage);
+
+    // The failure's own message names the throw too, for the consumers that read only that.
+    Assert.Equal("in-game exception: System.InvalidOperationException: kaboom", ex.Message);
     Assert.Contains(ex.Locals, local => local is { Key: "x", Value: "1" });
   }
 }

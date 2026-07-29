@@ -22,11 +22,11 @@ duplicating it.
 
 **Blocked by:** None — can start immediately.
 
-- [ ] An invoke that throws in the game reports the game's exception type and message, on every tool
+- [x] An invoke that throws in the game reports the game's exception type and message, on every tool
       that invokes, not only the evaluator's.
-- [ ] The message is read best-effort: a thrown object whose `Message` cannot be read still reports
+- [x] The message is read best-effort: a thrown object whose `Message` cannot be read still reports
       its type rather than failing the report.
-- [ ] `eval` and `debug_evaluate` keep their existing richer failure shape (statement source,
+- [x] `eval` and `debug_evaluate` keep their existing richer failure shape (statement source,
       position, locals) and stop carrying their own copy of the unwrap.
-- [ ] The unwrap walks the inner-exception chain, so a wrapped `InvocationException` is still found.
-- [ ] Covered by the integration suite, which has a fixture type that throws on demand.
+- [x] The unwrap walks the inner-exception chain, so a wrapped `InvocationException` is still found.
+- [x] Covered by the integration suite, which has a fixture type that throws on demand.

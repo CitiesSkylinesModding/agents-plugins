@@ -71,6 +71,16 @@ public sealed class DerivedThing : BaseThing {
 
 public static class Thrower {
   public static void Boom() => throw new InvalidOperationException("kaboom");
+
+  public static void BoomUnreadable() => throw new SpitefulException();
+
+  // Same throw behind a bool, for the places that need one (a breakpoint condition).
+  public static bool BoomBool() => throw new InvalidOperationException("kaboom");
+}
+
+// A thrown object whose Message cannot be read: reporting it must fall back to the type alone.
+public sealed class SpitefulException : Exception {
+  public override string Message => throw new InvalidOperationException("no message for you");
 }
 
 // The debug toolset's moving target: Main calls Tick every loop iteration, so an armed breakpoint

@@ -73,5 +73,6 @@ There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV
 ## Boundaries
 
 - Always resume + detach, even on failure.
+- Invoke through `Invoker`, never a mirror directly: a direct invoke opts out of the NOT_SUSPENDED retry and of the in-game-throw unwrap that gives every tool the game's own exception message.
 - Keep it generic: no game-specific type names or behavior in the tool. Discovery goes by SDB-port signature, with `UNITY_MCP_PROCESS` as the user's narrowing knob.
 - Writes mutate live game state: verify a write tool on a scratch entity built through `eval` (`em.CreateEntity` + `em.AddBuffer<T>`, `em.DestroyEntity` when done), and assume a throwaway save otherwise.

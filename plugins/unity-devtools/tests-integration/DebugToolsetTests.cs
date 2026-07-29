@@ -190,6 +190,36 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
     }
   }
 
+  /// <summary>
+  /// The condition error carries the game's own exception: this path reports through the failure's
+  /// message alone, so it is where a report that hid the throw behind a summary would show.
+  /// </summary>
+  [SkippableFact]
+  public void AConditionThrowingInGameRecordsTheGamesException() {
+    try {
+      _ = fx.Debug.AddBreakpoints(
+        new BreakpointSpec {
+          TypeName = "TestFixture.Ticker",
+          MethodName = "Tick",
+          Condition = "TestFixture.Thrower.BoomBool()"
+        }
+      );
+
+      var pause = fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout);
+
+      Assert.NotNull(pause);
+
+      Assert.Contains(
+        "in-game exception: System.InvalidOperationException: kaboom",
+        pause.ConditionError,
+        StringComparison.Ordinal
+      );
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
   [SkippableFact]
   public void StepOverRePausesAsAStep() {
     try {

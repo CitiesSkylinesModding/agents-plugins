@@ -19,7 +19,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   /// <summary>Locals in declaration order (failure reports list them as declared).</summary>
   private readonly OrderedDictionary<string, object> locals = [];
 
-  /// <summary>Enum constants resolved this evaluation (each costs several wire round-trips).</summary>
+  /// <summary>
+  /// Enum constants resolved this evaluation (each costs several wire round-trips).
+  /// </summary>
   private readonly Dictionary<string, EnumMirror> enumConstants = [];
 
   /// <summary>Receiver stack for `?.` chains (the tested value binds the member hole).</summary>
@@ -1790,51 +1792,27 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       ? runtime.Position
       : statement.Position;
 
-    string gameExceptionType = null;
-    string gameExceptionMessage = null;
-
-    if (EvalInterpreter.FindInvocationException(cause) is {} invocation) {
-      var thrown = invocation.Exception;
-
-      gameExceptionType = thrown.Type.FullName;
-
-      try {
-        gameExceptionMessage = (inv.GetProperty(thrown, "Message") as StringMirror)?.Value;
-      }
-      catch {
-        // The message is best-effort; the type alone is still actionable.
-      }
-    }
-
+    // A game throw already renders itself, so the report speaks with its words: whoever reads the
+    // message alone (a breakpoint condition error) gets the game's exception too.
+    // The cause travels along, leaving this report to add only the statement context and locals the
+    // evaluator knows.
     var message = cause switch {
       ObjectCollectedException =>
         "a previous result was garbage-collected after the game resumed; " +
         "re-evaluate it instead of using `_`",
-      InvocationException => "the invoked code threw an exception in the game",
+      GameException game => game.Message,
       _ => cause.Message
     };
 
-    return new EvalFailedException(message) {
+    return new EvalFailedException(message, cause) {
       StatementIndex = statementIndex,
       StatementSource = source,
       Position = position,
-      GameExceptionType = gameExceptionType,
-      GameExceptionMessage = gameExceptionMessage,
       Locals = this.locals.Select(local =>
           new KeyValuePair<string, string>(local.Key, this.FormatLocalSafely(local.Value))
         )
         .ToArray()
     };
-  }
-
-  private static InvocationException FindInvocationException(Exception cause) {
-    for (var ex = cause; ex is not null; ex = ex.InnerException) {
-      if (ex is InvocationException invocation) {
-        return invocation;
-      }
-    }
-
-    return null;
   }
 
   private string FormatLocalSafely(object value) {

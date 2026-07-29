@@ -16,20 +16,22 @@ public sealed class EvalRuntimeException(string message, int position = -1) : Ex
 /// exception when the failure happened debuggee-side, and the locals evaluated so far (shallow),
 /// so the caller can see how far the program got.
 /// </summary>
-public sealed class EvalFailedException(string message) : Exception(message) {
+public sealed class EvalFailedException(string message, Exception cause)
+  : Exception(message, cause) {
   public required int StatementIndex { get; init; }
 
   public required string StatementSource { get; init; }
 
   public required int Position { get; init; }
 
-  /// <summary>The in-game exception's type full name, when the debuggee threw.</summary>
-  public string GameExceptionType { get; init; }
-
   /// <summary>
-  /// The in-game exception's Message, when the debuggee threw and it was readable.
+  /// The game's own exception, when the failure happened debuggee-side; null when it is
+  /// client-side.
+  /// It is read off the cause chain, so it stays whatever the unwrap in
+  /// <see cref="UnityDevtools.Sdb.Invoker" /> produced and this report only adds what the evaluator
+  /// knows.
   /// </summary>
-  public string GameExceptionMessage { get; init; }
+  public GameException Game => GameException.FindIn(this);
 
   /// <summary>
   /// Locals evaluated before the failure, formatted shallow, in declaration order.

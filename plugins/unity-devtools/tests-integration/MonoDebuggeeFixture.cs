@@ -29,8 +29,6 @@ public sealed class MonoDebuggeeFixture : IDisposable {
 
   private readonly SdbSession? session;
 
-  private Invoker? invoker;
-
   private DebugController? debug;
 
   public MonoDebuggeeFixture() {
@@ -107,32 +105,27 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   /// <c>_</c> persistence across evals.
   /// </summary>
   public EvalOutcome Eval(string code, EvalState? state = null) {
-    var inv = this.Invoker;
-    var program = EvalParser.Parse(code);
-    var vm = this.session!.Vm;
+    var evalState = state ?? new EvalState();
 
-    state ??= new EvalState();
+    // Parsing happens inside the window so that the skip check WithInvoker runs first stays the
+    // first thing to fire: a parse error escaping ahead of it would fail a suite that must skip.
+    return this.WithInvoker(inv => {
+        var program = EvalParser.Parse(code);
 
-    // Mirror the production suspend window (UnitySession.Run): suspend, act, resume.
-    vm.Suspend();
+        var interpreter = new EvalInterpreter(
+          inv,
+          [
+            new BuiltinScope(
+              inv,
+              () => throw new InvalidOperationException("no ECS in the fixture debuggee"),
+              evalState
+            )
+          ]
+        );
 
-    try {
-      var interpreter = new EvalInterpreter(
-        inv,
-        [
-          new BuiltinScope(
-            inv,
-            () => throw new InvalidOperationException("no ECS in the fixture debuggee"),
-            state
-          )
-        ]
-      );
-
-      return interpreter.Run(program, state);
-    }
-    finally {
-      vm.Resume();
-    }
+        return interpreter.Run(program, evalState);
+      }
+    );
   }
 
   /// <summary>
@@ -143,8 +136,8 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     get {
       Skip.If(this.SkipReason is not null, this.SkipReason);
 
-      if (this.invoker is not null) {
-        return this.invoker;
+      if (field is not null) {
+        return field;
       }
 
       var vm = this.session!.Vm;
@@ -153,11 +146,29 @@ public sealed class MonoDebuggeeFixture : IDisposable {
       vm.Suspend();
 
       try {
-        return this.invoker = new Invoker(vm);
+        return field = new Invoker(vm);
       }
       finally {
         vm.Resume();
       }
+    }
+  }
+
+  /// <summary>
+  /// Drives the <see cref="Invoker" /> inside the production suspend window, the way
+  /// <c>UnitySession.Run</c> does: suspend, act, resume.
+  /// </summary>
+  public T WithInvoker<T>(Func<Invoker, T> operation) {
+    var inv = this.Invoker;
+    var vm = this.session!.Vm;
+
+    vm.Suspend();
+
+    try {
+      return operation(inv);
+    }
+    finally {
+      vm.Resume();
     }
   }
 
