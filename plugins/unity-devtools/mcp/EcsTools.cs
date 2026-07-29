@@ -201,7 +201,7 @@ public sealed class EcsTools(UnitySession session) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
       var e = ecs.ResolveEntity(entity);
-      var buf = ecs.GetBuffer(e, inv.ResolveType(elementType));
+      var buf = ecs.GetBuffer(e, inv.ResolveType(elementType), isReadOnly: true);
       var length = ecs.BufferLength(buf);
 
       var elements = new List<string>(length);
@@ -249,7 +249,7 @@ public sealed class EcsTools(UnitySession session) {
 
       var elemType = inv.ResolveType(elementType);
       var e = ecs.ResolveEntity(entity);
-      var buf = ecs.GetBuffer(e, elemType);
+      var buf = ecs.GetBuffer(e, elemType, isReadOnly: false);
       var length = ecs.BufferLength(buf);
 
       switch (op) {

@@ -56,16 +56,20 @@ another angle.
 ## Fix
 
 Establish presence client-side before invoking any accessor, and let the refusal name what is
-missing (`Ecs.RequireComponent`):
+missing (`Ecs.RequirePresence`), with the predicate matching the kind asked about -- `HasComponent`
+for a component, `HasBuffer` for a buffer:
 
 ```csharp
-var has = this.inv.FindMethod(this.EntityManagerType, "HasComponent", 1, 1, ["Entity"])
-  .MakeGenericMethod([componentType]);
+var has = this.inv.FindMethod(this.EntityManagerType, hasMethod, 1, 1, ["Entity"])
+  .MakeGenericMethod([type]);
 ```
 
 One invoke, and worth it: it converts fabricated data and a dead game into
 `entity 50397:5 has no Game.Citizens.Citizen component`. Cache the confirmed pair for the operation
 -- a read-modify-write asks three times, and an archetype cannot change inside one suspend window.
+
+Pair it with the access mode: the buffer accessor takes `isReadOnly` from the caller, so only the
+editing tool asks for write. Presence refuses the mistake, read-only bounds what a missed one costs.
 
 ## Prevention
 

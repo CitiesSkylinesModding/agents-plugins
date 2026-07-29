@@ -208,26 +208,35 @@ public sealed class Ecs {
   private readonly HashSet<(int Index, int Version, TypeMirror Type)> carried = [];
 
   /// <summary>
-  /// Refuses a component the entity does not carry. The generic accessors derive a chunk offset
-  /// from the archetype, so where the collections safety checks are compiled out they read and
-  /// write memory the entity does not own: verified live, reading an absent component answered a
-  /// plausible all-zero value instead of failing.
+  /// Refuses a type the entity does not carry, the one gate every accessor below goes through.
+  /// The generic accessors derive a chunk offset from the archetype, so where the collections
+  /// safety checks are compiled out they read and write memory the entity does not own: verified
+  /// live, reading an absent component answered a plausible all-zero value and an absent buffer
+  /// answered length 0, and asking for WRITE access on one degraded the entity store until the game
+  /// died.
+  /// <paramref name="hasMethod" /> is the generic EntityManager predicate for the kind asked about,
+  /// and <paramref name="kind" /> names it in the refusal.
   /// A confirmed pair is remembered, because one read-modify-write asks three times and an
   /// archetype cannot change under an instance that lives inside a single suspend window.
   /// </summary>
-  private void RequireComponent(StructMirror entity, TypeMirror componentType) {
+  private void RequirePresence(
+    StructMirror entity,
+    TypeMirror type,
+    string hasMethod,
+    string kind
+  ) {
     var key = (
       Index: (int) ((PrimitiveValue) entity["Index"]).Value,
       Version: (int) ((PrimitiveValue) entity["Version"]).Value,
-      Type: componentType
+      Type: type
     );
 
     if (this.carried.Contains(key)) {
       return;
     }
 
-    var has = this.inv.FindMethod(this.EntityManagerType, "HasComponent", 1, 1, ["Entity"])
-      .MakeGenericMethod([componentType]);
+    var has = this.inv.FindMethod(this.EntityManagerType, hasMethod, 1, 1, ["Entity"])
+      .MakeGenericMethod([type]);
 
     if ((bool) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, has, entity)).Value) {
       _ = this.carried.Add(key);
@@ -236,12 +245,12 @@ public sealed class Ecs {
     }
 
     throw new InvalidOperationException(
-      $"entity {key.Index}:{key.Version} has no {componentType.FullName} component"
+      $"entity {key.Index}:{key.Version} has no {type.FullName} {kind}"
     );
   }
 
   public Value GetComponent(StructMirror entity, TypeMirror componentType) {
-    this.RequireComponent(entity, componentType);
+    this.RequirePresence(entity, componentType, "HasComponent", "component");
 
     var method = this.inv.FindMethod(this.EntityManagerType, "GetComponentData", 1, 1, ["Entity"])
       .MakeGenericMethod([componentType]);
@@ -250,7 +259,7 @@ public sealed class Ecs {
   }
 
   public void SetComponent(StructMirror entity, TypeMirror componentType, StructMirror value) {
-    this.RequireComponent(entity, componentType);
+    this.RequirePresence(entity, componentType, "HasComponent", "component");
 
     var method = this.inv.FindMethod(this.EntityManagerType, "SetComponentData", 2, 1, ["Entity"])
       .MakeGenericMethod([componentType]);
@@ -294,12 +303,17 @@ public sealed class Ecs {
     );
   }
 
-  /// <summary>Fetches an entity's DynamicBuffer&lt;T&gt; mirror (read-write).</summary>
-  public Value GetBuffer(StructMirror entity, TypeMirror elementType) {
+  /// <summary>
+  /// Fetches an entity's DynamicBuffer&lt;T&gt; mirror, at the narrowest access the caller needs:
+  /// write access is what turns an accessor mistake fatal, so only a path that mutates asks for it.
+  /// </summary>
+  public Value GetBuffer(StructMirror entity, TypeMirror elementType, bool isReadOnly) {
+    this.RequirePresence(entity, elementType, "HasBuffer", "buffer");
+
     var m = this.inv.FindMethod(this.EntityManagerType, "GetBuffer", 2, 1, ["Entity"])
       .MakeGenericMethod([elementType]);
 
-    return this.inv.Invoke(this.EntityManager, m, entity, this.inv.Prim(false));
+    return this.inv.Invoke(this.EntityManager, m, entity, this.inv.Prim(isReadOnly));
   }
 
   public int BufferLength(Value buffer) =>
