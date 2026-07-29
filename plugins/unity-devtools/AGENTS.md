@@ -74,4 +74,4 @@ There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV
 
 - Always resume + detach, even on failure.
 - Keep it generic: no game-specific type names or behavior in the tool. Discovery goes by SDB-port signature, with `UNITY_MCP_PROCESS` as the user's narrowing knob.
-- Writes mutate live game state; assume a throwaway save when testing.
+- Writes mutate live game state: verify a write tool on a scratch entity built through `eval` (`em.CreateEntity` + `em.AddBuffer<T>`, `em.DestroyEntity` when done), and assume a throwaway save otherwise.
