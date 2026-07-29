@@ -82,6 +82,39 @@ game fall back to offline decompilation to harvest candidates (the driving skill
 workaround). Add a substring/pattern mode over the loaded type list; SDB's `GetTypes` cannot
 search, but enumerating assemblies and their types over mirrors (with a per-session cache) can.
 
+### The fixed invoke cost of an ECS operation
+
+Every invoke is a round-trip to a suspended game, so the count per operation is the cost that
+matters. Three avoidable ones sit in the ECS path today, all predating the converged entity
+naming that surfaced them:
+
+- `Ecs.MakeEntity` reads `Entity.Null` off the debuggee purely to obtain a two-int struct template
+  it immediately overwrites client-side. `EvalInterpreter.DefaultMirrorFor` already builds a
+  `StructMirror` client-side with no invoke at all (the vendored constructor is internal to the
+  same assembly), so the same trick applies. This halves the explicit `index:version` path, which
+  the converged rule made the primary one, and also cuts a third invoke off writing an
+  Entity-typed field through `CoerceArg`.
+- `Ecs.PickWorld` already reads each candidate world's `Name` to match it, then the constructor
+  invokes `get_Name` again on the winner. Returning the name it already holds removes that.
+- `Invoker.ResolveType` calls `GetTypes` on every lookup while `FindTypeOrNull`, twelve lines
+  below, has exactly the hit-cache it wants. Worth care rather than a copy: that cache
+  deliberately does not memoize misses, because the debuggee loads assemblies over time.
+
+Together with the per-operation `Ecs` construction (three property invokes re-paid each call,
+since `SdbContext.Ecs` builds a fresh instance), setup is currently about half the round-trips of
+a component read. Any caching of `World` / `EntityManager` across operations has to keep a
+liveness check, since a world can die between calls.
+
+### An `ecs_query` seam in the SDB library
+
+Removing the query-scanning entity lookup left `ecs_query` the sole owner of the whole query
+lifecycle inside the MCP layer: create, `try`/`finally` dispose, paging, and the
+`"<systemTypeFullName>:<method>"` label calling convention, against sibling tools that are
+one-liners over `sdb/`. The layer is meant to hold little logic, and the dispose discipline and
+label convention currently have no home in the library and no integration-test seam. Moving them
+into `Ecs` would give the next consumer of "list the entities matching these components" something
+to call.
+
 ### Injected in-game helper (exploratory, opt-in)
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
