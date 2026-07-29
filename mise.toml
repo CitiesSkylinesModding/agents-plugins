@@ -168,11 +168,11 @@ run = "bun --bun oxfmt"
 [tasks."fix:cs"]
 description = "Format the C# projects in place with jb (ReSharper) cleanupcode, honoring the root .editorconfig. Requires `dotnet tool restore` (pinned in .config/dotnet-tools.json)."
 raw = true
-# jb cleanupcode (same engine as Rider) with the custom "CSModCleanup" profile: applies the
+# jb cleanupcode (same engine as Rider) with the custom "AutoCleanup" profile: applies the
 # resharper_* wrapping dotnet format cannot, and the minor code-style fixes that keep the :warning
 # IDE rules satisfied.
 # Excludes the vendored tree and generated obj/. No --no-build: cleanups need semantics.
-run = "dotnet jb cleanupcode agents-plugins.slnx --profile=\"CSModCleanup\" --settings=\"agents-plugins.sln.DotSettings\" --exclude=\"plugins/unity-devtools/vendor/**;plugins/unity-devtools/sdb/obj/**\""
+run = "dotnet jb cleanupcode agents-plugins.slnx --profile=\"AutoCleanup\" --settings=\"agents-plugins.sln.DotSettings\" --exclude=\"plugins/unity-devtools/vendor/**;plugins/unity-devtools/sdb/obj/**\""
 
 # PUBLISH TASKS
 # =============
