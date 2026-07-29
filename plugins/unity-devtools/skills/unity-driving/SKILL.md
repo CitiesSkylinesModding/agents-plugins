@@ -38,7 +38,9 @@ An entity is `index[:version]`, read identically by every ECS tool: a bare `inde
 Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
 `label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system (verified on CS2: `Game.UI.NameSystem:GetRenderedLabelName`).
-Component access covers unmanaged `IComponentData` only; managed (class) components are out of reach over SDB.
+`ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
+Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
+Enableable components carry `enabled`: read it before concluding a system should have acted on the entity.
 `ecs_set_component` is a whole-component read-modify-write overriding one field, reporting before and after read back from the game: verification is built in.
 `ecs_buffer_edit` `add` clones element 0 as its template (an empty buffer cannot seed a new element) and overrides one field via `set`.
 An entity you WRITE is never resolved: a component field, a buffer `set`, and eval's `entity(index)` all take the value literally and default the version to 1, so spell those `index:version`.

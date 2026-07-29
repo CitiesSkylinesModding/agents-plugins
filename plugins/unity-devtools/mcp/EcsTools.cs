@@ -41,8 +41,10 @@ public sealed class EcsTools(UnitySession session) {
   public EcsQueryResult Query(
     [Description("Fully-qualified component type names; entities must have ALL of them.")]
     string[] components,
-    [Description("Max entities to list (the count is always exact).")] int limit = 10,
-    [Description("ECS world name; omit for the default world.")] string? world = null,
+    [Description("Max entities to list (the count is always exact).")]
+    int limit = 10,
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null,
     [Description("Optional \"<systemTypeFullName>:<method>\" annotation call per entity.")]
     string? label = null
   ) {
@@ -107,6 +109,43 @@ public sealed class EcsTools(UnitySession session) {
     }
   }
 
+  [McpServerTool(Name = "ecs_list_components")]
+  [Description(
+    """
+    List every component type an entity carries: the orient step on an unknown entity, answering
+    what state it holds without guessing type names one at a time.
+    Each entry reports the kind, which says what can read it: "component" -> ecs_get_component,
+    "buffer" -> ecs_get_buffer, "tag" -> no fields to read (presence, and "enabled" when it carries
+    one, IS the state), "shared" and "chunk" -> eval only, "managed" -> out of reach over the
+    debugger.
+    Enableable components also report whether they are currently ENABLED: a disabled component is
+    still carried and still passes a presence check, while the simulation ignores it.
+    Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
+    """
+  )]
+  [UsedImplicitly]
+  public EcsListComponentsResult ListComponents(
+    [Description(EcsTools.EntityParam)] string entity,
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null
+  ) {
+    return ToolGuard.Run(() => session.Run(Operation));
+
+    EcsListComponentsResult Operation(SdbContext ctx) {
+      var ecs = ctx.Ecs(world);
+      var e = ecs.ResolveEntity(entity);
+      var listed = ecs.ListComponents(e);
+
+      return new EcsListComponentsResult {
+        World = ecs.WorldName,
+        Entity = ctx.Invoker.Format(e),
+        Count = listed.Components.Count,
+        Components = listed.Components,
+        EnabledStateNote = listed.EnabledStateNote
+      };
+    }
+  }
+
   [McpServerTool(Name = "ecs_get_component")]
   [Description(
     """
@@ -119,7 +158,8 @@ public sealed class EcsTools(UnitySession session) {
     [Description("Fully-qualified component type name (unmanaged IComponentData).")]
     string component,
     [Description(EcsTools.EntityParam)] string entity,
-    [Description("ECS world name; omit for the default world.")] string? world = null
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 
@@ -152,10 +192,12 @@ public sealed class EcsTools(UnitySession session) {
     [Description("Fully-qualified component type name (unmanaged IComponentData).")]
     string component,
     [Description(EcsTools.EntityParam)] string entity,
-    [Description("Field name on the component, case-insensitive.")] string field,
+    [Description("Field name on the component, case-insensitive.")]
+    string field,
     [Description("New value: primitive/enum as text, or \"index:version\" for an Entity field.")]
     string value,
-    [Description("ECS world name; omit for the default world.")] string? world = null
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 
@@ -193,7 +235,8 @@ public sealed class EcsTools(UnitySession session) {
     [Description("Fully-qualified buffer element type name (IBufferElementData).")]
     string elementType,
     [Description(EcsTools.EntityParam)] string entity,
-    [Description("ECS world name; omit for the default world.")] string? world = null
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 
@@ -238,8 +281,10 @@ public sealed class EcsTools(UnitySession session) {
     [Description(EcsTools.EntityParam)] string entity,
     [Description("For add: \"<field>=<value>\" override applied to the cloned element.")]
     string? set = null,
-    [Description("For remove_at: element index to remove.")] int? index = null,
-    [Description("ECS world name; omit for the default world.")] string? world = null
+    [Description("For remove_at: element index to remove.")]
+    int? index = null,
+    [Description("ECS world name; omit for the default world.")]
+    string? world = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 
@@ -313,7 +358,6 @@ public sealed class EcsTools(UnitySession session) {
       }
     }
   }
-
 }
 
 /// <summary>Result of the <c>ecs_query</c> tool.</summary>
@@ -336,6 +380,20 @@ public sealed record EcsEntityInfo {
   public required string Entity { [UsedImplicitly] get; init; }
 
   public required string? Label { [UsedImplicitly] get; init; }
+}
+
+/// <summary>Result of the <c>ecs_list_components</c> tool: the entity's whole archetype.</summary>
+public sealed record EcsListComponentsResult {
+  public required string World { [UsedImplicitly] get; init; }
+
+  public required string Entity { [UsedImplicitly] get; init; }
+
+  public required int Count { [UsedImplicitly] get; init; }
+
+  public required IReadOnlyList<EntityComponentInfo> Components { [UsedImplicitly] get; init; }
+
+  /// <inheritdoc cref="EntityComponents.EnabledStateNote" />
+  public required string? EnabledStateNote { [UsedImplicitly] get; init; }
 }
 
 /// <summary>Result of the <c>ecs_get_component</c> tool.</summary>

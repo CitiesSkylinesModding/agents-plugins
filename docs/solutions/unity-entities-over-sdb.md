@@ -63,6 +63,24 @@ Resolving an entity from a bare index, all measured live and all three needed to
   struct is the exact "nothing lives here" signal. It reads off the mirror already on the wire, which
   is why no `Exists` round trip is needed to tell a live answer from an empty one.
 
+Reading an entity's whole archetype, measured live:
+
+- `EntityManager.GetComponentTypes(entity, Allocator.Temp)` answers the whole `ComponentType[]` in
+  one invoke. Its allocator parameter is the bare enum, NOT the `AllocatorHandle` that
+  `ToEntityArray` takes on the same target, so the two adjacent call sites legitimately disagree.
+- A component's name must come from `ComponentType.GetManagedType().FullName`. The debug-name paths
+  are dead ends on a shipped build: `ComponentType.ToString()` returns null and
+  `EntityManager.Debug.GetEntityInfo` returns `ComponentTypeInArchetype` placeholders, because the
+  `TypeManager` debug-name table is stripped.
+- Kind comes from the `ComponentType` flag properties, which are not mutually exclusive: a chunk
+  component is also zero-sized on its carrier, a shared component can also be managed. Classify most
+  specific first. The flag bits live on `TypeIndex`, which arrives free on the wire, but their
+  positions are `TypeManager` internals that move between versions -- one property invoke each is
+  the version-safe price.
+- Enabled state is the non-generic `EntityManager.IsComponentEnabled(entity, componentType)`, gated
+  on `ComponentType.IsEnableable` (Entities 1.0+, so probed, not assumed). Ask it only for the kinds
+  the entity itself stores: a shared or chunk component's enabled bit is not the entity's to read.
+
 That the lookup validates nothing is not particular to it: on a build with the collections checks
 compiled out, no `EntityManager` accessor does. See
 [`entities-api-has-no-safety-net-on-player-builds.md`](entities-api-has-no-safety-net-on-player-builds.md).

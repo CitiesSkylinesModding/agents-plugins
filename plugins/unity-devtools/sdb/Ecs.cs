@@ -109,25 +109,32 @@ public sealed class Ecs {
   /// <summary>
   /// Materializes the query's entities as a managed Entity[] in the debuggee (ToEntityArray with
   /// the Temp allocator, then NativeArray.ToArray) and returns its mirror.
-  /// Temp allocations are frame-scoped; no Dispose needed.
   /// </summary>
   public ArrayMirror EntityArray(Value query) {
-    var allocatorType = this.inv.ResolveType("Unity.Collections.Allocator");
-
-    var temp = this.inv.Vm.CreateEnumMirror(allocatorType, this.inv.Prim(2));
-
     var handleType = this.inv.ResolveType("Unity.Collections.AllocatorManager+AllocatorHandle");
 
     var handle = this.inv.InvokeStatic(
       handleType,
       this.inv.FindMethod(handleType, "op_Implicit", 1, paramTypes: ["Allocator"]),
-      temp
+      this.TempAllocator()
     );
 
     var native = this.inv.Invoke(query, "ToEntityArray", handle);
 
     return (ArrayMirror) this.inv.Invoke(native, "ToArray");
   }
+
+  /// <summary>
+  /// The <c>Allocator.Temp</c> enum value (2), which every collection this class asks the game to
+  /// allocate uses: Temp rewinds when the game's frame ends, so none of them needs a Dispose.
+  /// A held suspend window ends no frame, so allocations made under one accumulate until the game
+  /// runs again -- a reason to keep a window short, not to switch allocators.
+  /// </summary>
+  private Value TempAllocator() =>
+    this.inv.Vm.CreateEnumMirror(
+      this.inv.ResolveType("Unity.Collections.Allocator"),
+      this.inv.Prim(2)
+    );
 
   /// <summary>
   /// Resolves an <c>index[:version]</c> spec to a live entity of this world: the rule every tool
@@ -197,13 +204,23 @@ public sealed class Ecs {
   }
 
   /// <summary>
-  /// Probes an EntityManager member, accepting a property in place of a method: the same fact is
-  /// exposed either way across Entities versions, and a getter is reached under its <c>get_</c>
-  /// name. Costs nothing on the wire, since a mirror caches its own member list.
+  /// Probes a member of the target's Entities API, accepting a property in place of a method: the
+  /// same fact is exposed either way across Entities versions, and a getter is reached under its
+  /// <c>get_</c> name. <paramref name="type" /> defaults to the EntityManager, which declares most
+  /// of what is probed here.
+  /// Costs nothing on the wire, since a mirror caches its own member list.
   /// </summary>
-  private MethodMirror FindMember(string name, int argc, string[] paramTypes = null) =>
-    this.inv.FindMethodOrNull(this.EntityManagerType, name, argc, paramTypes: paramTypes) ??
-    (argc is 0 ? this.inv.FindMethodOrNull(this.EntityManagerType, $"get_{name}", 0) : null);
+  private MethodMirror FindMember(
+    string name,
+    int argc,
+    string[] paramTypes = null,
+    TypeMirror type = null
+  ) {
+    var owner = type ?? this.EntityManagerType;
+
+    return this.inv.FindMethodOrNull(owner, name, argc, paramTypes: paramTypes) ??
+      (argc is 0 ? this.inv.FindMethodOrNull(owner, $"get_{name}", 0) : null);
+  }
 
   private readonly HashSet<(int Index, int Version, TypeMirror Type)> carried = [];
 
@@ -266,6 +283,149 @@ public sealed class Ecs {
 
     this.inv.Invoke(this.EntityManager, method, entity, value);
   }
+
+  /// <summary>
+  /// Reports the entity's whole archetype: every component type it carries, the kind of storage
+  /// each uses, and, for the enableable ones, whether they are currently enabled.
+  /// The kind is what tells a caller which accessor can read a type, so a kind no tool can read is
+  /// still listed: state the caller cannot reach is a different answer from state that is absent.
+  /// </summary>
+  public EntityComponents ListComponents(StructMirror entity) {
+    // The allocator parameter is the bare enum here, where ToEntityArray above takes a handle, so
+    // the shape is pinned rather than assumed; probe it, since a version that moved it would
+    // otherwise fail on a member-not-found no caller can act on.
+    var getTypes = this.FindMember("GetComponentTypes", 2, ["Entity", "Allocator"]);
+
+    if (getTypes is null) {
+      throw new InvalidOperationException(
+        "this target's Unity Entities version cannot list an entity's components " +
+        "(EntityManager.GetComponentTypes(Entity, Allocator) is absent)"
+      );
+    }
+
+    var types = this.inv.Invoke(this.EntityManager, getTypes, entity, this.TempAllocator());
+
+    // Materialized as a managed array so every ComponentType crosses the wire in ONE read; the
+    // per-component reads below are where this call's cost actually lives.
+    var arr = (ArrayMirror) this.inv.Invoke(types, "ToArray");
+
+    var componentTypes = arr.GetValues(0, arr.Length);
+
+    // Enabled state costs two members, and either being absent turns the whole column off: a
+    // target that cannot answer must say so, because an unreported state reads as "enabled".
+    var isEnableable = this.FindMember(
+      "IsEnableable",
+      0,
+      type: this.inv.ResolveType("Unity.Entities.ComponentType")
+    );
+
+    var isEnabled = this.FindMember("IsComponentEnabled", 2, ["Entity", "ComponentType"]);
+
+    var absent = isEnableable is null
+      ? "ComponentType.IsEnableable"
+      : isEnabled is null
+        ? "EntityManager.IsComponentEnabled"
+        : null;
+
+    // One absent member disables the column, so the probe the loop consults carries both answers.
+    var enableable = absent is null ? isEnableable : null;
+
+    var components = new List<EntityComponentInfo>(componentTypes.Count);
+
+    foreach (var ct in componentTypes) {
+      var kind = this.KindOf(ct);
+
+      components.Add(
+        new EntityComponentInfo {
+          Name = this.ManagedTypeName(ct),
+          Kind = kind,
+          Enabled = this.EnabledOrNull(entity, ct, kind, enableable, isEnabled)
+        }
+      );
+    }
+
+    return new EntityComponents {
+      Components = components,
+      EnabledStateNote = absent is null
+        ? null
+        : $"this target's Unity Entities version cannot report enabled state ({absent} is " +
+        "absent), so no entry carries one; that is not the same as none being disabled"
+    };
+  }
+
+  /// <summary>
+  /// Whether the component is enabled on the entity, null when the question does not apply: the
+  /// type is not enableable, the target cannot answer (<paramref name="isEnableable" /> null), or
+  /// the kind stores its data outside the entity, where the enabled bit the accessor indexes is not
+  /// the entity's to read.
+  /// The probed member is INVOKED rather than re-reached by name, so a target exposing the fact as
+  /// a method instead of a property is answered rather than thrown at.
+  /// </summary>
+  private bool? EnabledOrNull(
+    StructMirror entity,
+    Value componentType,
+    string kind,
+    MethodMirror isEnableable,
+    MethodMirror isEnabled
+  ) {
+    if (isEnableable is null || kind is "shared" or "chunk") {
+      return null;
+    }
+
+    if (!(bool) ((PrimitiveValue) this.inv.Invoke(componentType, isEnableable)).Value) {
+      return null;
+    }
+
+    var state = this.inv.Invoke(this.EntityManager, isEnabled, entity, componentType);
+
+    return (bool) ((PrimitiveValue) state).Value;
+  }
+
+  private MethodMirror fullNameGetter;
+
+  /// <summary>
+  /// The component's fully-qualified name, read off the managed type it wraps, null when the target
+  /// cannot name it -- one component that answers no name costs its own entry's name, never the
+  /// whole listing.
+  /// The debug-name paths are unusable on a build that strips the TypeManager name table:
+  /// ComponentType.ToString() answers null there, and EntityManager.Debug.GetEntityInfo answers
+  /// ComponentTypeInArchetype placeholders.
+  /// </summary>
+  private string ManagedTypeName(Value componentType) {
+    // A debuggee null arrives as a PrimitiveValue, not as a mirror, so the type test IS the guard.
+    if (this.inv.Invoke(componentType, "GetManagedType") is not ObjectMirror managed) {
+      return null;
+    }
+
+    // Each component answers its OWN Type mirror, and reading a property off a fresh mirror spends
+    // a round trip learning its type first. They all share one concrete runtime class, so the
+    // getter resolved off the first serves every later one for free.
+    this.fullNameGetter ??= this.inv.FindMethod(managed.Type, "get_FullName", 0);
+
+    return (this.inv.Invoke(managed, this.fullNameGetter) as StringMirror)?.Value;
+  }
+
+  /// <summary>
+  /// Names how the component is stored, which is what decides the accessor that can read it.
+  /// The flags are not mutually exclusive -- a shared component can also be managed, a chunk
+  /// component is zero-sized on the entity that carries it -- so this ladder IS the classification,
+  /// most specific first.
+  /// </summary>
+  private string KindOf(Value componentType) =>
+    this.Flag(componentType, "IsBuffer")
+      ? "buffer"
+      : this.Flag(componentType, "IsSharedComponent")
+        ? "shared"
+        : this.Flag(componentType, "IsChunkComponent")
+          ? "chunk"
+          : this.Flag(componentType, "IsManagedComponent")
+            ? "managed"
+            : this.Flag(componentType, "IsZeroSized")
+              ? "tag"
+              : "component";
+
+  private bool Flag(Value componentType, string name) =>
+    (bool) ((PrimitiveValue) this.inv.GetProperty(componentType, name)).Value;
 
   /// <summary>
   /// Builds an Entity value client-side: clones the Entity.Null template StructMirror and
@@ -407,4 +567,40 @@ public sealed class Ecs {
     return (int.Parse(parts[0], CultureInfo.InvariantCulture),
       parts.Length > 1 ? int.Parse(parts[1], CultureInfo.InvariantCulture) : null);
   }
+}
+
+/// <summary>
+/// One component type an entity carries, as listed by <see cref="Ecs.ListComponents"/>.
+/// </summary>
+public sealed class EntityComponentInfo {
+  /// <summary>
+  /// The component's fully-qualified managed type name, null when the target cannot name it.
+  /// </summary>
+  public string Name { get; init; }
+
+  /// <summary>
+  /// How the component is stored, which is what decides how its value can be reached: one of
+  /// "component", "tag", "buffer", "shared", "chunk", "managed".
+  /// </summary>
+  public string Kind { get; init; }
+
+  /// <summary>
+  /// Whether the component is currently enabled; null when the type is not enableable, when its
+  /// kind stores the data outside the entity, or when the target cannot report the state at all
+  /// (see <see cref="EntityComponents.EnabledStateNote"/>).
+  /// A disabled component is still carried by the entity, and still answers a presence check,
+  /// while the simulation ignores it.
+  /// </summary>
+  public bool? Enabled { get; init; }
+}
+
+/// <summary>An entity's whole archetype, as reported by <see cref="Ecs.ListComponents"/>.</summary>
+public sealed class EntityComponents {
+  public IReadOnlyList<EntityComponentInfo> Components { get; init; }
+
+  /// <summary>
+  /// Why no entry carries an enabled state, null when the target reports it.
+  /// Absence of the state must never be read as "nothing is disabled", so it is said out loud.
+  /// </summary>
+  public string EnabledStateNote { get; init; }
 }
