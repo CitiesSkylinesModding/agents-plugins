@@ -29,7 +29,9 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 ## Names and types
 
 Every type parameter wants a fully qualified name (`MyGame.Citizens.Citizen`, not `Citizen`).
-`find_types` resolves one live, case-insensitively; it cannot search by fragment, so harvest candidate names offline from the game's source code and confirm live.
+`find_types` answers naming from either end: `search` turns a concept you can only describe (a mechanic, a system's job) into names harvested from the running process, and `fullName` resolves one you already hold.
+Start broad and narrow on `count`: only the first search pays the harvest, which is the longest single freeze these tools cause, so iterating on a pattern afterwards costs only your reading.
+The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools, the process-name prefix).
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
 
 ## Entities and ECS

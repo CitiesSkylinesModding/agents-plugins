@@ -75,13 +75,6 @@ optionally on its `PrefabRef` target, answers "what does this entity carry" in o
 `EntityManager.GetComponentTypes(e)` is mirror-reachable, and the result composes directly with
 `eval` for the follow-up reads.
 
-### Type search by fragment
-
-`find_types` requires an exact fully-qualified name, so agents without domain knowledge of the
-game fall back to offline decompilation to harvest candidates (the driving skill documents that
-workaround). Add a substring/pattern mode over the loaded type list; SDB's `GetTypes` cannot
-search, but enumerating assemblies and their types over mirrors (with a per-session cache) can.
-
 ### The fixed invoke cost of an ECS operation
 
 Every invoke is a round-trip to a suspended game, so the count per operation is the cost that

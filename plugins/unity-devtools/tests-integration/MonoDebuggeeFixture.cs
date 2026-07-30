@@ -173,6 +173,34 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   }
 
   /// <summary>
+  /// The debuggee's type catalog, ONE per suite like the session, so the harvest is paid once and
+  /// later searches exercise the cached path agents actually hit.
+  /// A test needing a catalog of its own (a different match budget, a fresh harvest count) builds
+  /// one over <see cref="Invoker"/>.
+  /// </summary>
+  public TypeCatalog Types {
+    get {
+      // Read through the Invoker accessor first: it owns the skip check and the suspend window the
+      // invoker's construction needs.
+      var inv = this.Invoker;
+
+      return field ??= new TypeCatalog(inv);
+    }
+  }
+
+  /// <summary>
+  /// Drives the suite's shared catalog inside the production suspend window, like
+  /// <see cref="WithInvoker{T}"/>: every harvest is an invoke, so a search outside a window would
+  /// be illegal.
+  /// </summary>
+  public T WithCatalog<T>(Func<TypeCatalog, T> operation) =>
+    this.WithCatalog(this.Types, operation);
+
+  /// <summary>Same window, for a test driving a catalog of its own.</summary>
+  public T WithCatalog<T>(TypeCatalog catalog, Func<TypeCatalog, T> operation) =>
+    this.WithInvoker(_ => operation(catalog));
+
+  /// <summary>
   /// The debuggee's breakpoint/pause surface, ONE per suite like the session; tests must remove
   /// their requests and release their pauses (see <see cref="ReleaseDebugger"/>), or every later
   /// test evaluates against a frozen debuggee.

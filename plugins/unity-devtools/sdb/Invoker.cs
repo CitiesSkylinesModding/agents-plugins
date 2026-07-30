@@ -45,7 +45,8 @@ public sealed class Invoker(VirtualMachine vm) {
 
     if (types.Count is 0) {
       throw new InvalidOperationException(
-        $"type '{fullName}' not found (use a fully-qualified name; see find-types)"
+        $"type '{fullName}' not found (use a fully-qualified name; find_types resolves one, and " +
+        "its search parameter finds it from a fragment)"
       );
     }
 

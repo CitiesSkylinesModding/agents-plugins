@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -115,7 +115,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
   /// The condition is parsed here so a bad expression fails at set time, not on the first hit.
   /// </summary>
   public IReadOnlyList<BreakpointBinding> AddBreakpoints(BreakpointSpec spec) {
-    var type = this.ResolveTypeByName(spec.TypeName);
+    var type = invoker.ResolveType(spec.TypeName);
 
     var methods = type.GetMethods().Where(m => m.Name == spec.MethodName).ToList();
 
@@ -208,7 +208,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
   /// "uncaught only" mode would never fire.
   /// </summary>
   public BreakpointBinding AddExceptionBreak(string exceptionType, bool includeSubclasses) {
-    var type = exceptionType is null ? null : this.ResolveTypeByName(exceptionType);
+    var type = exceptionType is null ? null : invoker.ResolveType(exceptionType);
 
     var request = vm.CreateExceptionRequest(type, true, true);
 
@@ -471,7 +471,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
     string methodName,
     string signatureContains
   ) {
-    var type = this.ResolveTypeByName(typeName);
+    var type = invoker.ResolveType(typeName);
 
     var methods = type.GetMethods().AsEnumerable();
 
@@ -840,16 +840,6 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
 
       this.EnsurePumpLocked();
     }
-  }
-
-  private TypeMirror ResolveTypeByName(string name) {
-    var types = vm.GetTypes(name, true);
-
-    return types.Count > 0
-      ? types[0]
-      : throw new InvalidOperationException(
-        $"type '{name}' not found (use a fully-qualified name; see find_types)"
-      );
   }
 
   private static (int Offset, string Where, string Warning) ResolveOffset(

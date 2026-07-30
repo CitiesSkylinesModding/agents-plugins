@@ -91,16 +91,16 @@ Short, abridged transcripts, replayed from real live sessions against Cities: Sk
 
 Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 
-| Tool                                      | What it does                                                                           |
-| ----------------------------------------- | -------------------------------------------------------------------------------------- |
-| `status`                                  | Find dev-Mono game processes and their SDB port (no attach) + session state.           |
-| `suspend` / `resume`                      | Hold the game frozen across calls: a consistency window for multi-step edits.          |
-| `detach`                                  | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic.           |
-| `find_types`                              | Resolve a type live by fully-qualified name; optionally list its members.              |
-| `eval`                                    | Evaluate a C# statement sequence against the live game, like an IDE debugger would.    |
-| `ecs_query`                               | Count/list entities having ALL given components, optionally labeled via a system call. |
-| `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component.                           |
-| `ecs_get_buffer` / `ecs_buffer_edit`      | Read, append to, or remove from a `DynamicBuffer`.                                     |
+| Tool                                      | What it does                                                                                    |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `status`                                  | Find dev-Mono game processes and their SDB port (no attach) + session state.                    |
+| `suspend` / `resume`                      | Hold the game frozen across calls: a consistency window for multi-step edits.                   |
+| `detach`                                  | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic.                    |
+| `find_types`                              | Resolve a type live by name, or search every loaded type by regex; optionally list its members. |
+| `eval`                                    | Evaluate a C# statement sequence against the live game, like an IDE debugger would.             |
+| `ecs_query`                               | Count/list entities having ALL given components, optionally labeled via a system call.          |
+| `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component.                                    |
+| `ecs_get_buffer` / `ecs_buffer_edit`      | Read, append to, or remove from a `DynamicBuffer`.                                              |
 
 There is no "attach" tool: the first tool that needs the VM attaches lazily, the session persists,
 and a dropped connection (or game restart) re-discovers and reattaches on the next call.
