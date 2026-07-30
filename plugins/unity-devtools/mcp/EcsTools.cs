@@ -36,6 +36,9 @@ public sealed class EcsTools(UnitySession session) {
     Count and list the entities having ALL the given component types. With label, each listed
     entity is annotated via a one-Entity-arg method on a managed system (e.g. a name system),
     format "<systemTypeFullName>:<method>".
+    Entities tagged Disabled or Prefab are excluded from the match, so a count of 0 means "none
+    the query can see" rather than "none exist"; reach one of those by index with
+    ecs_list_components, which ignores the exclusion.
     Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
