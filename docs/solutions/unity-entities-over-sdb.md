@@ -80,6 +80,12 @@ Reading an entity's whole archetype, measured live:
 - Enabled state is the non-generic `EntityManager.IsComponentEnabled(entity, componentType)`, gated
   on `ComponentType.IsEnableable` (Entities 1.0+, so probed, not assumed). Ask it only for the kinds
   the entity itself stores: a shared or chunk component's enabled bit is not the entity's to read.
+- That name is a label, not a handle back to the type. The generic accessors need a real type, and
+  the only route back from a listed component is a name lookup across the debuggee, which answers
+  the FIRST match: two assemblies declaring the same full name resolve to whichever came first. So
+  a value read off a listed name stays behind the presence gate -- having enumerated a type is not
+  having proven the type you resolved back is the one the entity carries. No reverse mapping
+  shortcuts it: the client exposes `TypeMirror` to type object, never the other way.
 
 That the lookup validates nothing is not particular to it: on a build with the collections checks
 compiled out, no `EntityManager` accessor does. See

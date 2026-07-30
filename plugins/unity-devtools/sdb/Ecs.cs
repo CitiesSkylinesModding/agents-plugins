@@ -289,8 +289,11 @@ public sealed class Ecs {
   /// each uses, and, for the enableable ones, whether they are currently enabled.
   /// The kind is what tells a caller which accessor can read a type, so a kind no tool can read is
   /// still listed: state the caller cannot reach is a different answer from state that is absent.
+  /// With <paramref name="values" />, every entry also carries what is IN the component (see
+  /// <see cref="ValueOf" />), which is a read per component on top of the listing and is why it is
+  /// the caller's choice rather than the default.
   /// </summary>
-  public EntityComponents ListComponents(StructMirror entity) {
+  public EntityComponents ListComponents(StructMirror entity, bool values = false) {
     // The allocator parameter is the bare enum here, where ToEntityArray above takes a handle, so
     // the shape is pinned rather than assumed; probe it, since a version that moved it would
     // otherwise fail on a member-not-found no caller can act on.
@@ -333,13 +336,18 @@ public sealed class Ecs {
     var components = new List<EntityComponentInfo>(componentTypes.Count);
 
     foreach (var ct in componentTypes) {
+      var name = this.ManagedTypeName(ct);
       var kind = this.KindOf(ct);
+
+      var (value, valueError) = values ? this.ValueOf(entity, name, kind) : default;
 
       components.Add(
         new EntityComponentInfo {
-          Name = this.ManagedTypeName(ct),
+          Name = name,
           Kind = kind,
-          Enabled = this.EnabledOrNull(entity, ct, kind, enableable, isEnabled)
+          Enabled = this.EnabledOrNull(entity, ct, kind, enableable, isEnabled),
+          Value = value,
+          ValueError = valueError
         }
       );
     }
@@ -351,6 +359,39 @@ public sealed class Ecs {
         : $"this target's Unity Entities version cannot report enabled state ({absent} is " +
         "absent), so no entry carries one; that is not the same as none being disabled"
     };
+  }
+
+  /// <summary>
+  /// What the component holds, rendered at <see cref="Invoker.ReadDepth" />.
+  /// Only a plain unmanaged component has fields an accessor here can reach; every other kind
+  /// answers its own kind where a value would go, so a caller scanning the column reads "reachable
+  /// another way" rather than an empty cell it could mistake for "carries nothing".
+  /// A read that fails is recorded on the entry alone: one component the game refuses to hand over
+  /// must cost its own value, never the listing the caller asked for.
+  /// </summary>
+  private (string Value, string Error) ValueOf(StructMirror entity, string name, string kind) {
+    if (kind is not "component") {
+      return (kind, null);
+    }
+
+    if (name is null) {
+      return (null, "the target cannot name this component type, so its value cannot be read");
+    }
+
+    try {
+      // The name came off the live type, so the cached case-sensitive lookup hits on its first
+      // probe and serves every later listing free; a name that does NOT resolve costs a probe per
+      // dot instead, uncached, which is the cache's price and falls on this entry alone.
+      // Case narrows the collision ResolveType documents without closing it, so the read keeps
+      // GetComponent's presence gate rather than trusting the listing that named the type.
+      var type = this.inv.FindTypeOrNull(name) ??
+        throw new InvalidOperationException($"type '{name}' no longer resolves on this target");
+
+      return (this.inv.Format(this.GetComponent(entity, type), Invoker.ReadDepth), null);
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      return (null, ex.Message);
+    }
   }
 
   /// <summary>
@@ -592,6 +633,16 @@ public sealed class EntityComponentInfo {
   /// while the simulation ignores it.
   /// </summary>
   public bool? Enabled { get; init; }
+
+  /// <summary>
+  /// The component's field values, null when the caller did not ask for values or when the read
+  /// failed (see <see cref="ValueError" />).
+  /// A kind whose data no accessor here can reach carries its kind instead of a value.
+  /// </summary>
+  public string Value { get; init; }
+
+  /// <summary>Why this entry carries no value, null when it carries one.</summary>
+  public string ValueError { get; init; }
 }
 
 /// <summary>An entity's whole archetype, as reported by <see cref="Ecs.ListComponents"/>.</summary>

@@ -33,6 +33,13 @@ public sealed class Invoker(VirtualMachine vm) {
       threads.OrderBy(t => t.Id).First();
   }
 
+  /// <summary>
+  /// Resolves a type by full name across the whole debuggee, case-insensitively.
+  /// The name is NOT a unique handle: two assemblies can declare the same full name, and matching
+  /// loosely on case widens that further, so this answers the FIRST of the matches.
+  /// A caller that derived the name from a type it already held has therefore not proven it got
+  /// that type back, and must keep whatever check guards what it does next.
+  /// </summary>
   public TypeMirror ResolveType(string fullName) {
     var types = this.Vm.GetTypes(fullName, true);
 
@@ -58,6 +65,8 @@ public sealed class Invoker(VirtualMachine vm) {
   /// right (C# syntax has no '+', runtime names do).
   /// Hits are cached for the lifetime of this attach; misses are NOT, because the debuggee loads
   /// assemblies over time and a type can become resolvable later in the same session.
+  /// Matching on case narrows the name collision <see cref="ResolveType" /> describes without
+  /// closing it, so the same caveat applies: the answer is the first match, not a proven identity.
   /// </summary>
   public TypeMirror FindTypeOrNull(string dotted) {
     if (this.typeCache.TryGetValue(dotted, out var cached)) {
@@ -385,6 +394,14 @@ public sealed class Invoker(VirtualMachine vm) {
   public PrimitiveValue Prim(object value) => this.Vm.CreateValue(value);
 
   public StringMirror Str(string s) => this.Vm.RootDomain.CreateString(s);
+
+  /// <summary>
+  /// The nesting depth every tool that REPORTS a value to the caller renders at, so a component
+  /// read one way is legible exactly as deep as the same component read another way.
+  /// Deep enough for the nested vector and bounds structs game components are built from; anything
+  /// past it is a pointer chase the caller should ask for on purpose.
+  /// </summary>
+  public const int ReadDepth = 3;
 
   /// <summary>Renders a mirrored value as text; structs and boxed structs list fields.</summary>
   public string Format(Value v, int depth = 2) {

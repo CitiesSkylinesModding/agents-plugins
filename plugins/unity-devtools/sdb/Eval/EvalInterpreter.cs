@@ -51,7 +51,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     try {
       outcome = new EvalOutcome {
-        Formatted = this.FormatValue(last, 3),
+        Formatted = this.FormatValue(last, Invoker.ReadDepth),
         TypeName = EvalInterpreter.TypeNameOf(last),
         Value = last
       };

@@ -41,6 +41,8 @@ Carry the version when you have it: it is what catches a recycle between reading
 `ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
 Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
 Enableable components carry `enabled`: read it before concluding a system should have acted on the entity.
+Orient on the shape first; `values=true` adds each `component` entry's contents when the shape is not enough to act on.
+The `Entity`-typed fields it surfaces are handles: pass one back to `ecs_list_components` to dump what it points at. That is how you reach state living on a referenced entity rather than the one you hold (a prefab, an owner).
 `ecs_set_component` is a whole-component read-modify-write overriding one field, reporting before and after read back from the game: verification is built in.
 `ecs_buffer_edit` `add` clones element 0 as its template (an empty buffer cannot seed a new element) and overrides one field via `set`.
 An entity you WRITE is never resolved: a component field, a buffer `set`, and eval's `entity(index)` all take the value literally and default the version to 1, so spell those `index:version`.
@@ -56,7 +58,7 @@ Structs build with initializer syntax (`new Game.Citizens.HouseholdMember { m_Ho
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
-On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns (depth-3 formatting), so end with an interpolation like `$"{a} | {b}"` to read several values at once.
+On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
 ## Debugging with breakpoints
 

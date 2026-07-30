@@ -25,8 +25,10 @@ public sealed class EcsTools(UnitySession session) {
   /// never have to remember which tool interprets a bare index how.
   /// </summary>
   private const string EntityParam =
-    "Entity as \"index[:version]\": a bare index resolves to the live entity at that index, an " +
-    "explicit version is verified and fails when stale.";
+    """
+    Entity as "index[:version]": a bare index resolves to the live entity at that index, an
+    explicit version is verified and fails when stale.
+    """;
 
   [McpServerTool(Name = "ecs_query")]
   [Description(
@@ -120,12 +122,21 @@ public sealed class EcsTools(UnitySession session) {
     debugger.
     Enableable components also report whether they are currently ENABLED: a disabled component is
     still carried and still passes a presence check, while the simulation ignores it.
+    With values, each "component" entry also inlines its field values; every other kind reports
+    its kind where a value would go.
     Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
   [UsedImplicitly]
   public EcsListComponentsResult ListComponents(
     [Description(EcsTools.EntityParam)] string entity,
+    [Description(
+      """
+      Also read each component's field values: an extra read per component, so substantially more
+      expensive than the structural listing.
+      """
+    )]
+    bool values = false,
     [Description("ECS world name; omit for the default world.")]
     string? world = null
   ) {
@@ -134,7 +145,7 @@ public sealed class EcsTools(UnitySession session) {
     EcsListComponentsResult Operation(SdbContext ctx) {
       var ecs = ctx.Ecs(world);
       var e = ecs.ResolveEntity(entity);
-      var listed = ecs.ListComponents(e);
+      var listed = ecs.ListComponents(e, values);
 
       return new EcsListComponentsResult {
         World = ecs.WorldName,
@@ -173,7 +184,7 @@ public sealed class EcsTools(UnitySession session) {
         World = ecs.WorldName,
         Entity = inv.Format(e),
         Component = compType.FullName,
-        Value = inv.Format(ecs.GetComponent(e, compType), 3)
+        Value = inv.Format(ecs.GetComponent(e, compType), Invoker.ReadDepth)
       };
     }
   }
@@ -208,7 +219,7 @@ public sealed class EcsTools(UnitySession session) {
       var e = ecs.ResolveEntity(entity);
       var fieldInfo = Ecs.RequireField(compType, field);
       var current = (StructMirror) ecs.GetComponent(e, compType);
-      var before = inv.Format(current, 3);
+      var before = inv.Format(current, Invoker.ReadDepth);
 
       current[fieldInfo.Name] = ecs.ParseFieldValue(fieldInfo.FieldType, value);
       ecs.SetComponent(e, compType, current);
@@ -218,7 +229,7 @@ public sealed class EcsTools(UnitySession session) {
         Entity = inv.Format(e),
         Component = compType.FullName,
         Before = before,
-        After = inv.Format(ecs.GetComponent(e, compType), 3)
+        After = inv.Format(ecs.GetComponent(e, compType), Invoker.ReadDepth)
       };
     }
   }
@@ -250,7 +261,7 @@ public sealed class EcsTools(UnitySession session) {
       var elements = new List<string>(length);
 
       for (var i = 0; i < length; i++) {
-        elements.Add(inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(i)), 3));
+        elements.Add(inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(i)), Invoker.ReadDepth));
       }
 
       return new EcsBufferResult {
@@ -325,7 +336,7 @@ public sealed class EcsTools(UnitySession session) {
           return new EcsBufferEditResult {
             World = ecs.WorldName,
             Entity = inv.Format(e),
-            Element = inv.Format(element, 3),
+            Element = inv.Format(element, Invoker.ReadDepth),
             NewLength = ecs.BufferLength(buf)
           };
         }
@@ -342,7 +353,7 @@ public sealed class EcsTools(UnitySession session) {
             );
           }
 
-          var removed = inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(at)), 3);
+          var removed = inv.Format(inv.Invoke(buf, "get_Item", inv.Prim(at)), Invoker.ReadDepth);
 
           _ = inv.Invoke(buf, "RemoveAt", inv.Prim(at));
 
