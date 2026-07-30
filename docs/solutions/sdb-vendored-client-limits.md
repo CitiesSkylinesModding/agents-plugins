@@ -4,7 +4,9 @@ area: plugins/unity-devtools/sdb
 symptoms:
   - 'PlatformNotSupportedException on delegate BeginInvoke under modern .NET'
   - 'replies never dispatch when connecting through VirtualMachineManager'
-tags: [sdb, mono-debugger-soft, vendoring, net10]
+  - 'an assembly loaded after the first read never appears in the domain assembly list'
+tags: [sdb, mono-debugger-soft, vendoring, net10, caching]
+updated: 2026-07-30
 ---
 
 # Running Mono's vendored SDB client on .NET 10
@@ -37,6 +39,13 @@ The vendored sources predate .NET Core's removal of remoting-era APIs.
 Compiling the vendored sources **into** this assembly also opens their `internal` surface, which the
 evaluator depends on: default `StructMirror`s are built entirely client-side through the internal
 `StructMirror(vm, type, fields)` ctor.
+
+That surface is also how you invalidate the client's OWN caches, and one of them goes stale silently.
+`AppDomainMirror.GetAssemblies()` memoizes the domain's assembly list and drops it only on an
+`AssemblyLoad` event — which this client never requests — so every read after the first returns the
+first read's list, forever. `TypeCatalog.Refresh` calls the internal
+`VirtualMachine.InvalidateAssemblyCaches()` before enumerating. Nothing at the call site hints that
+it must.
 
 ## Prevention
 

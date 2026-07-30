@@ -31,7 +31,7 @@ Three .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
 - `.claude-plugin/plugin.json` + `.mcp.json`, `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: the two harness manifest sets, both launching `dotnet dnx UnityDevtools.Mcp --version <pin> --yes`. The command is `dotnet`, never the bare `dnx` shim — that is a `.cmd` script MCP hosts cannot spawn on Windows. The version pin is a standalone args element so release-please can update it (`$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
-- `sdb/` (`UnityDevtools.Sdb`): the SDB client library and the PUBLIC surface consumers use, so no other project touches vendored code. It compiles the vendored `Mono.Debugger.Soft` sources — read [`docs/solutions/sdb-vendored-client-limits.md`](../../docs/solutions/sdb-vendored-client-limits.md) before changing anything around them. Its own plumbing: `SdbSession`, `Invoker`, `Ecs`, `UnitySession`, `SdbDiscovery`, `DebugController` + `DebugModel`.
+- `sdb/` (`UnityDevtools.Sdb`): the SDB client library and the PUBLIC surface consumers use, so no other project touches vendored code. It compiles the vendored `Mono.Debugger.Soft` sources — read [`docs/solutions/sdb-vendored-client-limits.md`](../../docs/solutions/sdb-vendored-client-limits.md) before changing anything around them. Its own plumbing: `SdbSession`, `Invoker`, `Ecs`, `UnitySession`, `SdbDiscovery`, `DebugController` + `DebugModel`, `TypeCatalog`.
 - `sdb/Eval/`: the expression evaluator (Roslyn parse-only into an owned AST, then a client-side walker over `Invoker`; operators delegate to the C# runtime binder, so promotion and concat semantics are exactly the language's).
 - `tests/` (`mise test`): offline parser/AST and operator-semantics suite, also in CI and the pre-commit.
 - `tests-integration/`: the evaluator and debug toolset against a real net472 debuggee under Mono — traps in [`docs/solutions/mono-fixture-traps.md`](../../docs/solutions/mono-fixture-traps.md).
@@ -74,5 +74,6 @@ There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV
 
 - Always resume + detach, even on failure.
 - Invoke through `Invoker`, never a mirror directly: a direct invoke opts out of the NOT_SUSPENDED retry and of the in-game-throw unwrap that gives every tool the game's own exception message.
+- `Invoker.Retrying` exists because NOT_SUSPENDED is a normal transient state right after attach, not a fault. Anything caching debuggee state caches only what is a property of the thing itself; a failure that describes the moment propagates, so the next call retries.
 - Keep it generic: no game-specific type names or behavior in the tool. Discovery goes by SDB-port signature, with `UNITY_MCP_PROCESS` as the user's narrowing knob.
 - Writes mutate live game state: verify a write tool on a scratch entity built through `eval` (`em.CreateEntity` + `em.AddBuffer<T>`, `em.DestroyEntity` when done), and assume a throwaway save otherwise.
