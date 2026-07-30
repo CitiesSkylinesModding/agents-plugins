@@ -4,4 +4,6 @@
   <Project Path="plugins/unity-devtools/tests/UnityDevtools.Sdb.Tests.csproj" />
   <Project Path="plugins/unity-devtools/tests-integration/UnityDevtools.Sdb.IntegrationTests.csproj" />
   <Project Path="plugins/unity-devtools/tests-integration/fixture/UnityDevtools.TestFixture.csproj" />
+  <Project Path="plugins/unity-devtools/tests-integration/broken/UnityDevtools.TestFixture.Broken.csproj" />
+  <Project Path="plugins/unity-devtools/tests-integration/missing/UnityDevtools.TestFixture.Missing.csproj" />
 </Solution>

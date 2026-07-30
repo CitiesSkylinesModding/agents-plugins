@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    An assembly that loads while some of its types do not: the catalog's partial type-load recovery
+    has nothing to recover from otherwise, and no real target manufactures the failure on demand.
+    Private=false is the whole trick: the Missing assembly is on the compile-time reference set and
+    NOT copied beside this one, so a debuggee loading this dll from its own output directory resolves
+    the assembly and fails on the types that need the dependency.
+    Not referenced by the debuggee exe either: a test loads it mid-session, so the failure appears
+    exactly where the test wants it.
+    An old LangVersion with no nullable annotations, unlike every other project here: a newer
+    compiler emits attribute types of its own ahead of the authored ones, which would occupy the
+    first slots of the partial array and keep a LEADING gap out of the shape under test.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>TestFixture.Broken</RootNamespace>
+    <AssemblyName>UnityDevtools.TestFixture.Broken</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../missing/UnityDevtools.TestFixture.Missing.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference
+      Include="Microsoft.NETFramework.ReferenceAssemblies"
+      Version="1.0.3"
+      PrivateAssets="all" />
+  </ItemGroup>
+</Project>

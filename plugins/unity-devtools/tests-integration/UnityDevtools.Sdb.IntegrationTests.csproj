@@ -12,8 +12,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
     <RootNamespace>UnityDevtools.Sdb.IntegrationTests</RootNamespace>
-    <!-- The nested debuggee project owns its sources; keep them out of this project's globs. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);fixture/**</DefaultItemExcludes>
+    <!-- The nested debuggee projects own their sources; keep them out of this project's globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);fixture/**;broken/**;missing/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +24,14 @@
     -->
     <ProjectReference
       Include="fixture/UnityDevtools.TestFixture.csproj"
+      ReferenceOutputAssembly="false"
+      SkipGetTargetFrameworkProperties="true" />
+    <!--
+      Built the same way, and loaded into the debuggee by the test that needs an assembly whose type
+      enumeration fails; it drags its own absent-at-run-time dependency along as a build dependency.
+    -->
+    <ProjectReference
+      Include="broken/UnityDevtools.TestFixture.Broken.csproj"
       ReferenceOutputAssembly="false"
       SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>

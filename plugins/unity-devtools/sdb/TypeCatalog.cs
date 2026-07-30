@@ -30,11 +30,18 @@ public sealed class TypeCatalog {
 
   /// <summary>
   /// Per assembly: its display name, its type names still joined as the harvest returned them, and
-  /// why it could not be read (null when it was).
+  /// why its listing has a hole (null when it has none).
   /// Holding the joined text rather than a split array is what keeps a search from allocating
   /// anything until it matches something.
   /// </summary>
   private readonly Dictionary<AssemblyMirror, HeldAssembly> held = new();
+
+  /// <summary>
+  /// The debuggee's <c>string.Join</c>, resolved on the first assembly that actually needs
+  /// harvesting and kept for the attach, like every mirror here: a settled catalog harvests nothing
+  /// and so resolves nothing.
+  /// </summary>
+  private MethodMirror join;
 
   /// <param name="matchBudget">
   /// How long one search may spend matching before it is reported as a runaway pattern.
@@ -83,6 +90,7 @@ public sealed class TypeCatalog {
 
         var name = TypeCatalog.FullName(line);
 
+        // An assembly holding no types at all still enumerates as one empty line.
         if (name.IsEmpty || !Matches(name)) {
           continue;
         }
@@ -111,8 +119,17 @@ public sealed class TypeCatalog {
         )
         .ToList(),
 
-      Unreadable = this.held.Values.Where(a => a.Error is not null)
-        .Select(a => $"{a.Name}: {a.Error}")
+      Incomplete = this.held.Values.Where(a => a.Reason is not null)
+        .Select(a => new IncompleteAssembly {
+            Name = a.Name,
+
+            // Claimed on what came back, not on which failure it was: an assembly whose types ALL
+            // failed to load throws the same partial type-load and recovers nothing, and calling
+            // that "partially read" would tell a caller to stop looking here.
+            IsPartial = a.Types.Length > 0,
+            Reason = a.Reason
+          }
+        )
         .ToList()
     };
 
@@ -186,79 +203,150 @@ public sealed class TypeCatalog {
     // which this client never requests; invalidating by hand is what keeps the list live.
     this.inv.Vm.InvalidateAssemblyCaches();
 
-    // Resolved on the first assembly that actually needs harvesting, and shared by the rest of this
-    // pass: a settled catalog harvests nothing and so resolves nothing.
-    TypeMirror stringType = null;
-    MethodMirror join = null;
-
     foreach (var assembly in domain.GetAssemblies()) {
       if (this.held.ContainsKey(assembly)) {
         continue;
       }
 
-      if (stringType is null) {
-        // Straight from corlib, NOT through ResolveType: this is the catalog's own invariant, not
-        // a name a caller supplied, and ResolveType's failure tells the caller to fix their name
-        // with a search -- which is the call that would be failing.
-        // A miss answers null here rather than throwing, so it is named before it reaches a lookup
-        // that would report it as an unrelated null.
-        stringType = this.inv.Vm.RootDomain.Corlib.GetType("System.String") ??
-          throw new InvalidOperationException(
-            "the debuggee's corlib does not expose System.String, so the type catalog cannot " +
-            "harvest; resolve types by exact name instead"
-          );
+      this.join ??= this.ResolveJoin();
 
-        // Both parameter types are pinned: Join's char-separator overload takes the same arity and
-        // would swallow the separator as a char.
-        join = this.inv.FindMethod(stringType, "Join", 2, paramTypes: ["String", "Object[]"]);
-      }
-
-      this.held[assembly] = this.Harvest(assembly, stringType, join);
+      this.held[assembly] = this.Harvest(assembly);
       this.AssembliesHarvested++;
     }
   }
 
   /// <summary>
-  /// Reads one assembly's type names as a single joined string: without the join, naming each of
-  /// the thousands of types the returned array holds would cost a round trip per type.
-  /// An assembly whose OWN enumeration throws inside the game is held with its reason rather than
-  /// left out: that is a property of the assembly, so re-attempting it on every later search would
-  /// only re-freeze the game, and letting it escape would cost the whole catalog -- and every
-  /// assembly behind it in the domain's order -- instead of only its own names.
+  /// Resolves the debuggee's <c>string.Join(string, object[])</c>.
+  /// Both parameter types are pinned: Join's char-separator overload takes the same arity and would
+  /// swallow the separator as a char.
+  /// The type comes straight from corlib, NOT through ResolveType: this is the catalog's own
+  /// invariant, not a name a caller supplied, and ResolveType's failure tells the caller to fix
+  /// their name with a search -- which is the call that would be failing.
+  /// A miss answers null there rather than throwing, so it is named here before it reaches a lookup
+  /// that would report it as an unrelated null.
+  /// </summary>
+  private MethodMirror ResolveJoin() {
+    var stringType = this.inv.Vm.RootDomain.Corlib.GetType("System.String") ??
+      throw new InvalidOperationException(
+        "the debuggee's corlib does not expose System.String, so the type catalog cannot " +
+        "harvest; resolve types by exact name instead"
+      );
+
+    return this.inv.FindMethod(stringType, "Join", 2, paramTypes: ["String", "Object[]"]);
+  }
+
+  /// <summary>
+  /// Reads one assembly's type names, as far as the game will give them.
+  /// An assembly whose OWN enumeration throws inside the game is held with its reason -- and with
+  /// whatever names the throw still carries -- rather than left out: that is a property of the
+  /// assembly, so re-attempting it on every later search would only re-freeze the game, and letting
+  /// it escape would cost the whole catalog -- and every assembly behind it in the domain's order
+  /// -- instead of only its own names.
   /// The reason travels to the caller, so a hole in the answer is visible rather than silent.
   /// Every other failure propagates UNCACHED, because it describes the moment rather than the
   /// assembly: a main thread still in native code answers NOT_SUSPENDED for whatever is being
   /// harvested when it happens, and holding that would blank the whole catalog for the attach over
   /// a condition the next search would not have hit.
   /// </summary>
-  private HeldAssembly Harvest(AssemblyMirror assembly, TypeMirror stringType, MethodMirror join) {
+  private HeldAssembly Harvest(AssemblyMirror assembly) {
     // Named before anything that can fail, so an unreadable assembly can still say which one it is.
     var name = "<unnamed>";
 
     try {
-      name = assembly.GetName().Name ?? name;
-
-      var types = this.inv.Invoke(assembly.GetAssemblyObject(), "GetTypes");
-
-      var joined = this.inv.InvokeStatic(
-        stringType,
-        join,
-        this.inv.Str(TypeCatalog.Separator),
-        types
-      ) as StringMirror;
+      name = Invoker.SimpleAssemblyName(assembly);
 
       return new HeldAssembly {
         Name = name,
-        Types = joined?.Value ?? ""
+        Types = this.Join(this.inv.Invoke(assembly.GetAssemblyObject(), "GetTypes"))
       };
     }
-    catch (GameException ex) {
+    // Everything that is not a passing condition, not only an in-game throw: the agent answers a
+    // per-assembly error code for an assembly whose id no longer decodes, and those describe the
+    // assembly every bit as much as a throw does.
+    // ONE catch, with the recovery inside it rather than in a filtered clause of its own: an
+    // exception raised in a catch clause does not reach that clause's siblings, so a recovery that
+    // failed in turn would escape with the whole catalog behind it.
+    catch (Exception ex) when (!TypeCatalog.DescribesTheMoment(ex)) {
       return new HeldAssembly {
         Name = name,
-        Types = "",
-        Error = ex.Message
+        Types = ex is GameException game ? this.RecoverPartialLoad(game) : "",
+        Reason = ex.Message
       };
     }
+  }
+
+  /// <summary>
+  /// The names a partial type-load left readable, empty when the failure carries none.
+  /// A partial type-load is the failure a mod author is likeliest to hit and likeliest to be
+  /// exploring: their assembly loaded, and only the types reaching for something this build of the
+  /// game no longer has failed. Two further invokes recover the rest.
+  /// Best-effort by construction: the assembly is already held with the reason it failed, so a
+  /// recovery that fails in turn costs the names it was adding and nothing more. A dropped
+  /// connection is the one exception -- it invalidates the whole session and must stay recognizable
+  /// to <see cref="UnitySession" />.
+  /// </summary>
+  private string RecoverPartialLoad(GameException failure) {
+    if (failure.Thrown is not {} thrown) {
+      return "";
+    }
+
+    try {
+      // Named off the MIRROR, not off the failure's best-effort TypeName: that copy is null
+      // whenever reading it failed, which would strand exactly the assembly this exists for, and a
+      // read that failed once can succeed here.
+      // Matched exactly rather than probed for a Types member: any number of exceptions could
+      // carry something called Types, and rendering one of those would file whatever it holds
+      // under this assembly's name as searchable types.
+      if (thrown.Type.FullName is not "System.Reflection.ReflectionTypeLoadException") {
+        return "";
+      }
+
+      // Nothing guarantees the array is there either: the exception carries whatever it was
+      // constructed with, and Join would hand a null straight back to the game to throw on.
+      // A debuggee-side null arrives MIRRORED, not as a C# null, so testing for one is not enough.
+      var types = this.inv.GetProperty(thrown, "Types");
+
+      var joined = types is null or PrimitiveValue { Value: null } ? "" : this.Join(types);
+
+      // The gaps go here, once, rather than at every later match: it makes the held text exactly
+      // the names that loaded, so "did anything load at all" is just "is it empty" -- which a run
+      // of separators, all that is left of an array where everything failed, would answer wrong.
+      return string.Join(
+        TypeCatalog.Separator,
+        joined.Split(TypeCatalog.Separator, StringSplitOptions.RemoveEmptyEntries)
+      );
+    }
+    catch (Exception ex) when (!TypeCatalog.DescribesTheMoment(ex)) {
+      return "";
+    }
+  }
+
+  /// <summary>
+  /// Whether a failure describes the MOMENT rather than the thing being read: a main thread still
+  /// in native code, a mirror collected under us, the client out of memory, a dropped connection.
+  /// The recovery swallows everything else -- it is an optional extra on top of an assembly already
+  /// held with its reason, so it may not cost more than the names it was adding -- but holding one
+  /// of these would blank the assembly for the whole attach over a condition the next search would
+  /// not have hit.
+  /// </summary>
+  private static bool DescribesTheMoment(Exception failure) =>
+    failure is VMNotSuspendedException or ObjectCollectedException or OutOfMemoryException ||
+    UnitySession.IsDisconnect(failure);
+
+  /// <summary>
+  /// Renders an array of types as one separated string: without the join, naming each of the
+  /// thousands of types such an array holds would cost a round trip per type.
+  /// A slot the debuggee failed to load renders as an empty entry, wherever in the array it sits.
+  /// </summary>
+  private string Join(Value types) {
+    var joined = this.inv.InvokeStatic(
+      this.join.DeclaringType,
+      this.join,
+      this.inv.Str(TypeCatalog.Separator),
+      types
+    ) as StringMirror;
+
+    return joined?.Value ?? "";
   }
 
   private sealed class HeldAssembly {
@@ -266,8 +354,12 @@ public sealed class TypeCatalog {
 
     public string Types { get; init; }
 
-    /// <summary>Why this assembly's types could not be read; null when they were.</summary>
-    public string Error { get; init; }
+    /// <summary>
+    /// What the game said when this assembly's types were enumerated; null when they were, whole.
+    /// Whether ANY of them came back is <see cref="Types" /> being non-empty -- the recovery drops
+    /// the gaps a partial listing carries, so nothing else has to be stored to tell the two apart.
+    /// </summary>
+    public string Reason { get; init; }
   }
 }
 
@@ -279,10 +371,28 @@ public sealed class TypeCatalogSearch {
   public IReadOnlyList<TypeCatalogHit> Hits { get; init; }
 
   /// <summary>
-  /// Assemblies whose types could not be read, each with its reason. A search cannot see into
-  /// these, so an empty answer means "not found HERE" while any of them are listed.
+  /// Assemblies whose type listing has a hole. A search sees less than everything in these, so an
+  /// empty answer means "not found in what could be read" while any of them are listed.
   /// </summary>
-  public IReadOnlyList<string> Unreadable { get; init; }
+  public IReadOnlyList<IncompleteAssembly> Incomplete { get; init; }
+}
+
+/// <summary>An assembly the catalog could not read whole, and how much of it is missing.</summary>
+public sealed class IncompleteAssembly {
+  public string Name { get; init; }
+
+  /// <summary>
+  /// Whether some of its types did load and were therefore searched: a recovered partial type-load
+  /// contributes what it has, where every other failure leaves the assembly with nothing.
+  /// It says what was SEARCHABLE, not what matched.
+  /// </summary>
+  public bool IsPartial { get; init; }
+
+  /// <summary>
+  /// Why the listing is incomplete: the game's own words when it threw enumerating this assembly,
+  /// or this client's when the enumeration could not be made at all.
+  /// </summary>
+  public string Reason { get; init; }
 }
 
 /// <summary>One matched type name, with the live type behind it.</summary>

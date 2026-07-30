@@ -13,6 +13,9 @@ namespace UnityDevtools.Sdb.IntegrationTests;
 /// </summary>
 [Collection(MonoDebuggeeCollection.Name)]
 public sealed class TypeCatalogTests(MonoDebuggeeFixture fx) {
+  /// <summary>Everything in the assembly whose enumeration fails, and nothing else.</summary>
+  private const string PartlyLoadable = "^TestFixture[.]Broken[.]";
+
   [SkippableFact]
   public void SearchingAFragmentFindsTheTypeAndNamesItsAssembly() {
     var found = fx.WithCatalog(c => c.Search("^TestFixture[.]Overloads$", 50));
@@ -131,5 +134,90 @@ public sealed class TypeCatalogTests(MonoDebuggeeFixture fx) {
 
     Assert.Equal("System.Xml.XmlDocument", Assert.Single(found.Hits).FullName);
     Assert.Equal(settled + 1, own.AssembliesHarvested);
+  }
+
+  [SkippableFact]
+  public void AnAssemblyWhoseEnumerationFailsStillContributesTheTypesThatLoaded() {
+    fx.LoadPartlyLoadableAssembly();
+
+    var found = fx.WithCatalog(c => c.Search(TypeCatalogTests.PartlyLoadable, 50));
+
+    // The two that derive from the absent dependency are missing rather than listed under an empty
+    // name, and the two that do not are all there is to find.
+    Assert.Equal(
+      ["TestFixture.Broken.AlsoLoads", "TestFixture.Broken.Loads"],
+      found.Hits.Select(h => h.FullName)
+    );
+
+    Assert.All(found.Hits, h => Assert.NotNull(h.Type));
+  }
+
+  [SkippableFact]
+  public void AnAssemblyWhoseEnumerationFailsIsMarkedPartialWithItsReason() {
+    fx.LoadPartlyLoadableAssembly();
+
+    var found = fx.WithCatalog(c => c.Search(TypeCatalogTests.PartlyLoadable, 50));
+
+    Assert.All(
+      found.Hits,
+      h => Assert.Equal(MonoDebuggeeFixture.PartlyLoadableAssembly, h.Assembly)
+    );
+
+    var reported = Assert.Single(
+      found.Incomplete,
+      i => i.Name == MonoDebuggeeFixture.PartlyLoadableAssembly
+    );
+
+    Assert.True(reported.IsPartial);
+    Assert.Contains("ReflectionTypeLoadException", reported.Reason, StringComparison.Ordinal);
+  }
+
+  [SkippableFact]
+  public void AnAssemblyWhoseEnumerationFailsIsHarvestedOnce() {
+    fx.LoadPartlyLoadableAssembly();
+
+    // Its own catalog, like the mid-session test: the harvest count only means something against a
+    // catalog whose first search is this test's.
+    var own = fx.WithInvoker(inv => new TypeCatalog(inv));
+
+    _ = fx.WithCatalog(own, c => c.Search(TypeCatalogTests.PartlyLoadable, 50));
+
+    var settled = own.AssembliesHarvested;
+
+    var again = fx.WithCatalog(own, c => c.Search(TypeCatalogTests.PartlyLoadable, 50));
+
+    // The recovery is paid once: the assembly is held with what it gave, not re-enumerated by every
+    // later search, and what it gave is still there.
+    Assert.Equal(settled, own.AssembliesHarvested);
+    Assert.Equal(2, again.Count);
+  }
+
+  [SkippableFact]
+  public void AnAssemblyThatRecoveredNothingIsNotReportedAsPartlyRead() {
+    // A dynamic assembly whose types were never created throws the same partial type-load and
+    // carries nothing to recover -- the case that must NOT read as "partially read".
+    // TWO of them on purpose: a single gap joins to the empty string, where adjacent gaps join to
+    // a run of separators that is non-empty while naming nothing.
+    _ = fx.Eval(
+      """
+      var name = new System.Reflection.AssemblyName("UnfinishedDynamicAssembly");
+      var access = System.Reflection.Emit.AssemblyBuilderAccess.Run;
+      var built = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, access);
+      var module = built.DefineDynamicModule("m");
+      var first = module.DefineType("NeverCreated");
+      module.DefineType("NeverCreatedEither")
+      """
+    );
+
+    // What is searched for does not matter here, only that a search harvests: the assemblies it
+    // could not read whole are reported whatever the pattern matched.
+    var found = fx.WithCatalog(c => c.Search("^TestFixture[.]Overloads$", 1));
+
+    var reported = Assert.Single(
+      found.Incomplete,
+      i => i.Name == "UnfinishedDynamicAssembly"
+    );
+
+    Assert.False(reported.IsPartial);
   }
 }

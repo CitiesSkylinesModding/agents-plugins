@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Mono.Debugger.Soft;
@@ -256,7 +257,9 @@ public sealed class Invoker(VirtualMachine vm) {
       // Best-effort, like the message: an unnamed throw is still reported as one.
     }
 
-    return new GameException(typeName, this.ReadMessageOrNull(thrown), cause);
+    return new GameException(typeName, this.ReadMessageOrNull(thrown), cause) {
+      Thrown = thrown
+    };
   }
 
   /// <summary>
@@ -447,6 +450,25 @@ public sealed class Invoker(VirtualMachine vm) {
     );
 
     return $"{type.Name} {{ {string.Join(", ", parts)} }}";
+  }
+
+  /// <summary>
+  /// An assembly's simple name, or a placeholder when it has none this runtime will parse.
+  /// The parse runs CLIENT-side over the display name the wire returned, and .NET rejects a
+  /// malformed one -- a generated name carrying commas or brackets, say -- with a
+  /// FileLoadException. That derives from IOException, which every disconnect check here reads as
+  /// a dropped connection, so letting it escape would discard a live attach and warn the user
+  /// their game state may be half-written, over nothing but a name.
+  /// A wire failure fetching the name is a different exception and still propagates as one.
+  /// </summary>
+  public static string SimpleAssemblyName(AssemblyMirror assembly) {
+    try {
+      return assembly.GetName().Name ?? "<unnamed>";
+    }
+    catch (Exception ex)
+      when (ex is FileLoadException or FileNotFoundException or ArgumentException) {
+      return "<unnamed>";
+    }
   }
 
   public static FieldInfoMirror[] InstanceFields(TypeMirror type) =>

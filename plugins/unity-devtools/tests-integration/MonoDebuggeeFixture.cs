@@ -53,7 +53,7 @@ public sealed class MonoDebuggeeFixture : IDisposable {
           Arguments =
             "--debug " +
             $"--debugger-agent=transport=dt_socket,address=127.0.0.1:{port},server=y,suspend=y " +
-            $"\"{MonoDebuggeeFixture.FixtureExePath()}\"",
+            $"\"{MonoDebuggeeFixture.DebuggeeOutput("fixture", "UnityDevtools.TestFixture.exe")}\"",
           UseShellExecute = false,
           RedirectStandardOutput = true,
           RedirectStandardError = true
@@ -200,6 +200,26 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   public T WithCatalog<T>(TypeCatalog catalog, Func<TypeCatalog, T> operation) =>
     this.WithInvoker(_ => operation(catalog));
 
+  /// <summary>The assembly whose types only partly load, as the catalog reports it.</summary>
+  public const string PartlyLoadableAssembly = "UnityDevtools.TestFixture.Broken";
+
+  /// <summary>
+  /// Puts that assembly in the debuggee: it loads from its own output directory, where the
+  /// dependency half its types derive from is deliberately absent, so loading it succeeds and
+  /// enumerating its types does not.
+  /// One-way for the shared debuggee, like every assembly a test loads, and idempotent: LoadFrom
+  /// answers the one already loaded.
+  /// </summary>
+  public void LoadPartlyLoadableAssembly() {
+    // Forward slashes: the path is spliced into a C# literal the debuggee evaluates, where a
+    // Windows separator would read as an escape.
+    var path = MonoDebuggeeFixture
+      .DebuggeeOutput("broken", $"{MonoDebuggeeFixture.PartlyLoadableAssembly}.dll")
+      .Replace('\\', '/');
+
+    _ = this.Eval($"System.Reflection.Assembly.LoadFrom(\"{path}\")");
+  }
+
   /// <summary>
   /// The debuggee's breakpoint/pause surface, ONE per suite like the session; tests must remove
   /// their requests and release their pauses (see <see cref="ReleaseDebugger"/>), or every later
@@ -345,10 +365,13 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     return port;
   }
 
-  private static string FixtureExePath() {
-    // Own output is tests-integration/bin/<Config>/net10.0/; the fixture exe (built for any test
-    // run by the ReferenceOutputAssembly=false project reference) sits under fixture/bin with the
-    // same configuration.
+  /// <summary>
+  /// A file in a sibling debuggee project's output: own output is
+  /// tests-integration/bin/&lt;Config&gt;/net10.0/, and every net472 project beside it (all built
+  /// for any test run by the ReferenceOutputAssembly=false project references) builds under its
+  /// own bin/ with the same configuration.
+  /// </summary>
+  private static string DebuggeeOutput(string project, string file) {
     var output = new DirectoryInfo(
       AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
     );
@@ -356,18 +379,11 @@ public sealed class MonoDebuggeeFixture : IDisposable {
     var configuration = output.Parent!.Name;
     var projectDir = output.Parent!.Parent!.Parent!.FullName;
 
-    var exe = Path.Combine(
-      projectDir,
-      "fixture",
-      "bin",
-      configuration,
-      "net472",
-      "UnityDevtools.TestFixture.exe"
-    );
+    var path = Path.Combine(projectDir, project, "bin", configuration, "net472", file);
 
-    return File.Exists(exe)
-      ? exe
-      : throw new FileNotFoundException($"fixture exe not found at '{exe}'; build the solution");
+    return File.Exists(path)
+      ? path
+      : throw new FileNotFoundException($"'{file}' not found at '{path}'; build the solution");
   }
 }
 

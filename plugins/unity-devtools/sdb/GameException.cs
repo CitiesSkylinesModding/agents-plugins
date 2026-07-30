@@ -22,6 +22,17 @@ public sealed class GameException(string typeName, string thrownMessage, Excepti
   public string ThrownMessage { get; } = thrownMessage;
 
   /// <summary>
+  /// The exception object itself, for a handler that needs more off it than its type and message --
+  /// the partial type list a failed enumeration carries, say.
+  /// INTERNAL because reading it costs round trips and is only legal inside the suspend window the
+  /// failing call held: a GameException outlives that window (it reaches the tool boundary as an
+  /// error), so this is for the handler on the spot, and the compiler keeps it from travelling
+  /// further than the library that knows the difference.
+  /// Null when the exception was built without one.
+  /// </summary>
+  internal ObjectMirror Thrown { get; init; }
+
+  /// <summary>
   /// The game throw behind a failure, itself or anywhere down its inner-exception chain; null when
   /// the failure is client-side.
   /// This is how a caller that dresses up its own report (the evaluator, with statement source and

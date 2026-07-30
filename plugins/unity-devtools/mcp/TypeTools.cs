@@ -115,7 +115,7 @@ public sealed class TypeTools(UnitySession session) {
       Count = types.Count,
       Omitted = 0,
       Types = types.Select(t =>
-          TypeTools.Describe(t, t.FullName, t.Assembly.GetName().Name ?? "<unknown>", members)
+          TypeTools.Describe(t, t.FullName, Invoker.SimpleAssemblyName(t.Assembly), members)
         )
         .ToArray()
     };
@@ -151,7 +151,16 @@ public sealed class TypeTools(UnitySession session) {
 
       // Surfaced only when there is a hole: an empty result means "no such type" when nothing is
       // listed here, and "not in what could be read" when something is.
-      UnreadableAssemblies = found.Unreadable.Count is 0 ? null : found.Unreadable
+      IncompleteAssemblies = found.Incomplete.Count is 0
+        ? null
+        : found.Incomplete
+          .Select(a => new IncompleteAssemblyDescription {
+              Assembly = a.Name,
+              Partial = a.IsPartial,
+              Reason = a.Reason
+            }
+          )
+          .ToArray()
     };
   }
 
@@ -222,11 +231,32 @@ public sealed record FindTypesResult {
   public required IReadOnlyList<TypeDescription> Types { [UsedImplicitly] get; init; }
 
   /// <summary>
-  /// Assemblies whose types could not be read, each with its reason; absent when there were none.
-  /// A search cannot see into these, so "no match" only means "not in what could be read" while
-  /// any are listed.
+  /// Assemblies the search saw incompletely; absent when every assembly was read whole.
+  /// "No match" only means "not in what could be read" while any are listed.
   /// </summary>
-  public IReadOnlyList<string>? UnreadableAssemblies { [UsedImplicitly] get; init; }
+  public IReadOnlyList<IncompleteAssemblyDescription>? IncompleteAssemblies {
+    [UsedImplicitly] get;
+    init;
+  }
+}
+
+/// <summary>An assembly the search could not read whole, and how much of it is missing.</summary>
+public sealed record IncompleteAssemblyDescription {
+  public required string Assembly { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// True when some of its types were still read and were searched, false when none of them could
+  /// be read at all. It says what was searchable, NOT what matched: a true here with no hit from
+  /// this assembly means your pattern missed the names that were read, where a false means those
+  /// names were never available to match.
+  /// </summary>
+  public required bool Partial { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// Why the listing is incomplete: the game's own words when it threw enumerating this assembly,
+  /// or the debugger's when the enumeration could not be made at all.
+  /// </summary>
+  public required string Reason { [UsedImplicitly] get; init; }
 }
 
 /// <summary>One resolved type; member lists are present only when requested.</summary>
