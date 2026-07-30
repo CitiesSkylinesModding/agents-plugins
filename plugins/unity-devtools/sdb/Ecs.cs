@@ -130,7 +130,7 @@ public sealed class Ecs {
   /// A held suspend window ends no frame, so allocations made under one accumulate until the game
   /// runs again -- a reason to keep a window short, not to switch allocators.
   /// </summary>
-  private Value TempAllocator() =>
+  private EnumMirror TempAllocator() =>
     this.inv.Vm.CreateEnumMirror(
       this.inv.ResolveType("Unity.Collections.Allocator"),
       this.inv.Prim(2)
@@ -147,22 +147,18 @@ public sealed class Ecs {
   public StructMirror ResolveEntity(string spec) {
     var (index, version) = Ecs.ParseEntitySpec(spec);
 
-    // The entity store is indexed UNCHECKED on both paths below: out of range, the by-index lookup
-    // and Exists alike read foreign memory, and far enough out both fault the game with an in-game
-    // NullReferenceException (verified live on both). HighestEntityIndex bounds them, inclusively.
-    var highestIndex = this.FindMember("HighestEntityIndex", 0);
+    var highest = this.HighestEntityIndex();
 
-    if (highestIndex is not null) {
-      var highest =
-        (int) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, highestIndex)).Value;
-
-      if (index < 0 || index > highest) {
-        throw new InvalidOperationException(
-          $"entity index {index} is out of range for world '{this.WorldName}' (valid: 0-{highest})"
-        );
-      }
+    if (highest is {} bound && (index < 0 || index > bound)) {
+      throw new InvalidOperationException(
+        $"entity index {index} is out of range for world '{this.WorldName}' (valid: 0-{bound})"
+      );
     }
 
+    // A named version is verified, not trusted. Where the bound above was unavailable this asks
+    // Exists unguarded, a deliberate floor rather than an oversight: refusing instead would leave a
+    // target that cannot report its bound with no way to name an entity at all. The bare index
+    // below is the path that refuses, because it needs the bound to mean anything.
     if (version is {} v) {
       var named = this.MakeEntity(index, v);
 
@@ -181,7 +177,7 @@ public sealed class Ecs {
     // Probing beats inferring the version: Unity.Entities reports assembly version 0.0.0.0.
     var byIndex = this.FindMember("GetEntityByEntityIndex", 1, ["Int32"]);
 
-    if (byIndex is null || highestIndex is null) {
+    if (byIndex is null || highest is null) {
       var absent = byIndex is null ? "GetEntityByEntityIndex" : "HighestEntityIndex";
 
       throw new InvalidOperationException(
@@ -204,6 +200,20 @@ public sealed class Ecs {
   }
 
   /// <summary>
+  /// The highest index the entity store covers, inclusively; null when the target cannot say.
+  /// Every path that indexes the store goes through this FIRST, because the store is indexed
+  /// UNCHECKED: out of range, the by-index lookup and Exists alike read foreign memory, and far
+  /// enough out both fault the game with an in-game NullReferenceException (verified live on both).
+  /// </summary>
+  private int? HighestEntityIndex() {
+    var member = this.FindMember("HighestEntityIndex", 0);
+
+    return member is null
+      ? null
+      : (int) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, member)).Value;
+  }
+
+  /// <summary>
   /// Probes a member of the target's Entities API, accepting a property in place of a method: the
   /// same fact is exposed either way across Entities versions, and a getter is reached under its
   /// <c>get_</c> name. <paramref name="type" /> defaults to the EntityManager, which declares most
@@ -221,6 +231,15 @@ public sealed class Ecs {
     return this.inv.FindMethodOrNull(owner, name, argc, paramTypes: paramTypes) ??
       (argc is 0 ? this.inv.FindMethodOrNull(owner, $"get_{name}", 0) : null);
   }
+
+  /// <summary>
+  /// An entity's index and version, read off the mirror it already holds, so naming one in a
+  /// message or keying on one costs nothing on the wire.
+  /// </summary>
+  private static (int Index, int Version) Id(StructMirror entity) => (
+    (int) ((PrimitiveValue) entity["Index"]).Value,
+    (int) ((PrimitiveValue) entity["Version"]).Value
+  );
 
   private readonly HashSet<(int Index, int Version, TypeMirror Type)> carried = [];
 
@@ -242,11 +261,8 @@ public sealed class Ecs {
     string hasMethod,
     string kind
   ) {
-    var key = (
-      Index: (int) ((PrimitiveValue) entity["Index"]).Value,
-      Version: (int) ((PrimitiveValue) entity["Version"]).Value,
-      Type: type
-    );
+    var id = Ecs.Id(entity);
+    var key = (id.Index, id.Version, Type: type);
 
     if (this.carried.Contains(key)) {
       return;
@@ -469,6 +485,140 @@ public sealed class Ecs {
     (bool) ((PrimitiveValue) this.inv.GetProperty(componentType, name)).Value;
 
   /// <summary>
+  /// Chases an Entity-typed field of one of the entity's components to the entity it names, which
+  /// is how state that lives on a REFERENCED entity is reached from the one a caller holds.
+  /// <paramref name="spec" /> is <c>componentTypeFullName[:field]</c>, the shape
+  /// <c>system:method</c> already takes elsewhere; the field is optional exactly when the component
+  /// carries a single Entity field, so the common case needs no ceremony.
+  /// The caller names the component, which is what keeps every game's own reference types out of
+  /// this class.
+  /// One level is followed and no more: that bounds the response and makes a reference cycle
+  /// unreachable rather than guarded against.
+  /// </summary>
+  public FollowedReference Follow(StructMirror entity, string spec) {
+    // A caller writes this spec by hand, so space around either half is a typo rather than a name,
+    // and a half that ends up empty named nothing at all.
+    var parts = spec.Split(':').Select(p => p.Trim()).ToArray();
+
+    if (parts.Length > 2 || parts[0].Length is 0) {
+      throw new InvalidOperationException(
+        $"follow expects \"<componentTypeFullName>[:<field>]\", got '{spec}'"
+      );
+    }
+
+    var type = this.inv.ResolveType(parts[0]);
+
+    if (Ecs.Unfollowable(type) is {} storage) {
+      throw new InvalidOperationException(
+        $"follow reads a plain unmanaged component, and {type.FullName} is {storage}; chase an " +
+        "Entity field on a type the listing reports under kind \"component\""
+      );
+    }
+
+    // A trailing colon names no field, so it takes the single-field path below rather than
+    // searching for a field named "".
+    var named = parts.Length is 2 && parts[1].Length > 0 ? parts[1] : null;
+    var field = Ecs.EntityField(type, named);
+
+    // The read's own presence gate is what reports an entity that does not carry the component.
+    var component = (StructMirror) this.GetComponent(entity, type);
+    var target = (StructMirror) component[field.Name];
+
+    // A field can legitimately hold Entity.Null, a reference the game has since destroyed, or an
+    // index this world never covered, and whether it is live is asked in that order: Exists indexes
+    // the store unchecked, so the bound comes first (see HighestEntityIndex).
+    var (index, version) = Ecs.Id(target);
+    var bound = this.HighestEntityIndex();
+    var inStore = bound is not {} highest || (index >= 0 && index <= highest);
+
+    if (!inStore || !this.Exists(target)) {
+      var from = Ecs.Id(entity);
+
+      throw new InvalidOperationException(
+        $"{type.FullName}.{field.Name} on entity {from.Index}:{from.Version} names entity " +
+        $"{index}:{version}, which is not live, so there is nothing to follow"
+      );
+    }
+
+    return new FollowedReference {
+      Component = type.FullName,
+      Field = field.Name,
+      Target = target
+    };
+  }
+
+  /// <summary>
+  /// How a component type is stored when the field read cannot reach it, null when it can.
+  /// The presence gate cannot stand in for this check, and it must run BEFORE the read: the gate
+  /// asks about a type INDEX, which a buffer element shares with a component of the same name, so
+  /// it answers yes for a buffer the entity carries and the read then reinterprets the buffer's
+  /// header as the component's fields -- a fabricated value rather than a failure, on a build with
+  /// the collections checks compiled out (see
+  /// docs/solutions/entities-api-has-no-safety-net-on-player-builds.md).
+  /// A chunk component needs no case here: it IS a plain component type, and the entity carrying it
+  /// as a chunk component answers the presence gate honestly with no (verified live:
+  /// HasChunkComponent true, HasComponent false, on the one entity carrying it).
+  /// The interfaces answer this client-side off a mirror that caches its own list, and they arrive
+  /// as the TRANSITIVE closure: the runtime collects each interface's own interfaces before
+  /// replying, like Type.GetInterfaces(). A marker reached only through a derived interface is
+  /// therefore still seen here, in that one round trip, and the ladder holds whether or not the
+  /// target's Entities version chains these three together.
+  /// </summary>
+  private static string Unfollowable(TypeMirror type) {
+    var interfaces = type.GetInterfaces().Select(i => i.FullName).ToArray();
+
+    // Storage first, in the order KindOf reports it, so a shared component is named shared whether
+    // the game declared it a struct or a class. Being a component at all comes before being a
+    // managed one: a type carrying no marker interface is the caller's own mistake, not a kind.
+    return interfaces.Contains("Unity.Entities.IBufferElementData")
+      ? "a buffer element"
+      : interfaces.Contains("Unity.Entities.ISharedComponentData")
+        ? "shared"
+        : !interfaces.Contains("Unity.Entities.IComponentData")
+          ? "not a component type"
+          : type.IsValueType
+            ? null
+            : "managed";
+  }
+
+  /// <summary>
+  /// Picks the Entity-typed field to chase: the one named, or the component's single one when the
+  /// caller named none.
+  /// Every refusal ends with what could have been named instead, in the style
+  /// <see cref="RequireField" /> sets, because the component's shape is exactly what a caller
+  /// naming it from the outside cannot see.
+  /// </summary>
+  private static FieldInfoMirror EntityField(TypeMirror type, string name) {
+    var candidates = Invoker.InstanceFields(type)
+      .Where(f => f.FieldType.FullName is "Unity.Entities.Entity")
+      .ToArray();
+
+    var choices = candidates.Length is 0
+      ? $"the component carries no Entity-typed field (fields: {Invoker.InstanceFieldNames(type)})"
+      : $"Entity fields: {string.Join(", ", candidates.Select(f => f.Name))}";
+
+    if (name is not null) {
+      var named = Ecs.RequireField(type, name);
+
+      return Array.Exists(candidates, f => f.Name == named.Name)
+        ? named
+        : throw new InvalidOperationException(
+          $"field '{named.Name}' on {type.FullName} is a {named.FieldType.FullName}, not an " +
+          $"Entity; {choices}"
+        );
+    }
+
+    return candidates.Length switch {
+      1 => candidates[0],
+      0 => throw new InvalidOperationException($"{type.FullName} cannot be followed: {choices}"),
+      _ => throw new InvalidOperationException(
+        $"{type.FullName} carries several Entity-typed fields, so follow must name one as " +
+        $"\"{type.FullName}:<field>\"; {choices}"
+      )
+    };
+  }
+
+  /// <summary>
   /// Builds an Entity value client-side: clones the Entity.Null template StructMirror and
   /// overwrites Index/Version (values are serialized from the client copy on send).
   /// Static because it needs no world, only the invoker.
@@ -643,6 +793,21 @@ public sealed class EntityComponentInfo {
 
   /// <summary>Why this entry carries no value, null when it carries one.</summary>
   public string ValueError { get; init; }
+}
+
+/// <summary>
+/// Where <see cref="Ecs.Follow" /> landed, and the reference that led there: the provenance is part
+/// of the answer, since a second archetype means nothing without what pointed at it.
+/// </summary>
+public sealed class FollowedReference {
+  /// <summary>The entity the chased field named, live as of the follow.</summary>
+  public StructMirror Target { get; init; }
+
+  /// <summary>The resolved full name of the component the chased field belongs to.</summary>
+  public string Component { get; init; }
+
+  /// <summary>The chased field's own name, as the component declares it.</summary>
+  public string Field { get; init; }
 }
 
 /// <summary>An entity's whole archetype, as reported by <see cref="Ecs.ListComponents"/>.</summary>

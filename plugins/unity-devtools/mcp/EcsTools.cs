@@ -127,6 +127,8 @@ public sealed class EcsTools(UnitySession session) {
     still carried and still passes a presence check, while the simulation ignores it.
     With values, each "component" entry also inlines its field values; every other kind reports
     its kind where a value would go.
+    With follow, the entity a named component REFERENCES is listed alongside this one: how you
+    reach state that lives on a prefab or an owner rather than on the entity you hold.
     Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
@@ -140,6 +142,15 @@ public sealed class EcsTools(UnitySession session) {
       """
     )]
     bool values = false,
+    [Description(
+      """
+      Chase an Entity-typed field to the entity it names and list it too, under the same values
+      setting, as "<componentTypeFullName>[:<field>]"; the field is optional when the component
+      carries exactly one Entity field.
+      Exactly one level is followed: a longer chain is one call per hop.
+      """
+    )]
+    string? follow = null,
     [Description("ECS world name; omit for the default world.")]
     string? world = null
   ) {
@@ -148,14 +159,37 @@ public sealed class EcsTools(UnitySession session) {
     EcsListComponentsResult Operation(SdbContext ctx) {
       var ecs = ctx.Ecs(world);
       var e = ecs.ResolveEntity(entity);
+
+      // The reference is chased BEFORE the listing it accompanies, because every way a follow can
+      // fail depends on the entity and the spec alone: failing first costs the caller a handful of
+      // reads instead of a whole listing the error then throws away.
+      var chased = follow is null ? null : ecs.Follow(e, follow);
+
       var listed = ecs.ListComponents(e, values);
+
+      EcsFollowedResult? followed = null;
+
+      if (chased is not null) {
+        // The chased entity is listed under the caller's own values setting, and is never itself
+        // followed: one level is what keeps the response bounded and a reference cycle unreachable.
+        var target = ecs.ListComponents(chased.Target, values);
+
+        followed = new EcsFollowedResult {
+          Component = chased.Component,
+          Field = chased.Field,
+          Entity = ctx.Invoker.Format(chased.Target),
+          Count = target.Components.Count,
+          Components = target.Components
+        };
+      }
 
       return new EcsListComponentsResult {
         World = ecs.WorldName,
         Entity = ctx.Invoker.Format(e),
         Count = listed.Components.Count,
         Components = listed.Components,
-        EnabledStateNote = listed.EnabledStateNote
+        EnabledStateNote = listed.EnabledStateNote,
+        Followed = followed
       };
     }
   }
@@ -408,6 +442,30 @@ public sealed record EcsListComponentsResult {
 
   /// <inheritdoc cref="EntityComponents.EnabledStateNote" />
   public required string? EnabledStateNote { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// The referenced entity's archetype, null unless the call asked to follow one.
+  /// </summary>
+  public required EcsFollowedResult? Followed { [UsedImplicitly] get; init; }
+}
+
+/// <summary>
+/// The entity a follow landed on, and the reference that led there.
+/// It carries no enabled-state note of its own: that note reports what the TARGET's Entities
+/// version can answer, so the one at the top level covers this listing too.
+/// </summary>
+public sealed record EcsFollowedResult {
+  /// <inheritdoc cref="FollowedReference.Component" />
+  public required string Component { [UsedImplicitly] get; init; }
+
+  /// <inheritdoc cref="FollowedReference.Field" />
+  public required string Field { [UsedImplicitly] get; init; }
+
+  public required string Entity { [UsedImplicitly] get; init; }
+
+  public required int Count { [UsedImplicitly] get; init; }
+
+  public required IReadOnlyList<EntityComponentInfo> Components { [UsedImplicitly] get; init; }
 }
 
 /// <summary>Result of the <c>ecs_get_component</c> tool.</summary>

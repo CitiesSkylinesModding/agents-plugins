@@ -6,7 +6,7 @@ description: 'Driving a live Unity Mono development build with the unity MCP too
 # Driving a Unity game over SDB
 
 The `unity` tools drive a running Unity Mono development build over the Mono Soft Debugger protocol (SDB); this skill is the procedure the tool schemas cannot carry.
-Everything holds for any dev-Mono Unity game; game-specific facts are labeled (verified on Cities: Skylines II, "CS2").
+Everything holds for any dev-Mono Unity game; the type names in examples are placeholders (`MyGame.…`), so substitute the target's own.
 A retail build exposes no SDB port; only a development Mono build is drivable.
 
 ## Session lifecycle
@@ -28,7 +28,7 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 
 ## Names and types
 
-Every type parameter wants a fully qualified name (`Game.Citizens.Citizen`, not `Citizen`).
+Every type parameter wants a fully qualified name (`MyGame.Citizens.Citizen`, not `Citizen`).
 `find_types` resolves one live, case-insensitively; it cannot search by fragment, so harvest candidate names offline from the game's source code and confirm live.
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
 
@@ -37,13 +37,13 @@ Before writing, run `find_types` with `members`: live field names and types are 
 An entity is `index[:version]`, read identically by every ECS tool: a bare `index` resolves to whatever is live at that index, an explicit `index:version` is verified and fails loudly when stale rather than reading the entity that recycled the index.
 Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
-`label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system (verified on CS2: `Game.UI.NameSystem:GetRenderedLabelName`).
+`label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system, typically the game's name system (`MyGame.UI.NameSystem:GetRenderedLabelName`).
 State on a prefab or a disabled entity is invisible to `ecs_query` (the engine's own `EntityQuery` exclusion), so chase those by following a reference into the tool below rather than by querying for them.
 `ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
 Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
 Enableable components carry `enabled`: read it before concluding a system should have acted on the entity.
 Orient on the shape first; `values=true` adds each `component` entry's contents when the shape is not enough to act on.
-The `Entity`-typed fields it surfaces are handles: pass one back to `ecs_list_components` to dump what it points at. That is how you reach state living on a referenced entity rather than the one you hold (a prefab, an owner).
+State the entity you hold does not carry often lives on one it references, and `follow` chases that reference in the same call, naming the component that holds it: a placed instance whose data sits on its prefab costs one call, not two.
 `ecs_set_component` is a whole-component read-modify-write overriding one field, reporting before and after read back from the game: verification is built in.
 `ecs_buffer_edit` `add` clones element 0 as its template (an empty buffer cannot seed a new element) and overrides one field via `set`.
 An entity you WRITE is never resolved: a component field, a buffer `set`, and eval's `entity(index)` all take the value literally and default the version to 1, so spell those `index:version`.
@@ -52,10 +52,10 @@ An entity you WRITE is never resolved: a component field, a buffer `set`, and ev
 
 `eval` runs a C# statement sequence on the game's main thread, like an IDE debugger: `var` declarations, expression statements, and assignments; the final expression's value is the result (its trailing semicolon is optional).
 Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
-Generic methods take explicit type arguments: `em.GetComponentData<Game.Citizens.HouseholdMember>(entity(123, 1))`.
-Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(Game.UI.NameSystem)).SetCustomName(entity(123, 1), "New Name")`.
-Structs build with initializer syntax (`new Game.Citizens.HouseholdMember { m_Household = h }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
-`out var x` declares a local the call writes; later statements can read it (verified pattern on CS2: `Game.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`).
+Generic methods take explicit type arguments: `em.GetComponentData<MyGame.Citizens.HouseholdMember>(entity(123, 1))`.
+Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.NameSystem)).SetCustomName(entity(123, 1), "New Name")`.
+Structs build with initializer syntax (`new MyGame.Citizens.HouseholdMember { m_Household = h }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
+`out var x` declares a local the call writes; later statements can read it: `MyGame.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`.
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
