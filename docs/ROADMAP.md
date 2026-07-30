@@ -85,8 +85,7 @@ search, but enumerating assemblies and their types over mirrors (with a per-sess
 ### The fixed invoke cost of an ECS operation
 
 Every invoke is a round-trip to a suspended game, so the count per operation is the cost that
-matters. Three avoidable ones sit in the ECS path today, all predating the converged entity
-naming that surfaced them:
+matters. Three avoidable ones predate the converged entity naming that surfaced them:
 
 - `Ecs.MakeEntity` reads `Entity.Null` off the debuggee purely to obtain a two-int struct template
   it immediately overwrites client-side. `EvalInterpreter.DefaultMirrorFor` already builds a
@@ -99,6 +98,25 @@ naming that surfaced them:
 - `Invoker.ResolveType` calls `GetTypes` on every lookup while `FindTypeOrNull`, twelve lines
   below, has exactly the hit-cache it wants. Worth care rather than a copy: that cache
   deliberately does not memoize misses, because the debuggee loads assemblies over time.
+  `Ecs.ValueOf` already routes its per-component lookup around `ResolveType` for this reason,
+  which measures the gap rather than closing it: every other ECS tool still pays.
+
+Two more surfaced with the archetype listing, the first tool to spend a read per component instead
+of one per call, which turns anything charged per type into a multiple of the archetype's size:
+
+- `MethodMirror.MakeGenericMethod` is a wire command (`Method_MakeGenericMethod`), and nothing
+  memoizes what it returns: `Invoker.methodCache` keys the DEFINITION lookup, not the
+  instantiation, so every generic accessor (`HasComponent<T>`, `GetComponentData<T>`,
+  `SetComponentData<T>`, `GetBuffer<T>`) re-instantiates on every single call. A
+  `(definition, type)` memo on `Invoker` would charge each pair one round-trip per attach. Reading
+  an archetype's values pays it twice per component, once for the presence gate and once for the
+  read.
+- `Invoker.Format` renders an enum field through `EnumMirror.StringValue`, which walks the enum's
+  static fields calling `Type.GetValue` one at a time, each its own `Type_GetValues` round-trip. So
+  naming the k-th member costs k of them, and a value matching no single member costs a full scan
+  before falling back to the number, which is what every flags combination does (`BoundsMask.3`,
+  `GeometryFlags.12616099`, seen live). Reading the table in one `Type_GetValues` and memoizing
+  value-to-name per `TypeMirror` makes every later enum format free.
 
 Together with the per-operation `Ecs` construction (three property invokes re-paid each call,
 since `SdbContext.Ecs` builds a fresh instance), setup is currently about half the round-trips of
