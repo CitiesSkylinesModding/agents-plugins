@@ -27,7 +27,7 @@ Two semantics span the whole toolset and no single schema owns them:
 
 ## Project layout
 
-Three .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (`dotnet build agents-plugins.slnx`; the repo has no other .NET code).
+The .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (`dotnet build agents-plugins.slnx`; the repo has no other .NET code).
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
 - `.claude-plugin/plugin.json` + `.mcp.json`, `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: the two harness manifest sets, both launching `dotnet dnx UnityDevtools.Mcp --version <pin> --yes`. The command is `dotnet`, never the bare `dnx` shim — that is a `.cmd` script MCP hosts cannot spawn on Windows. The version pin is a standalone args element so release-please can update it (`$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
@@ -54,6 +54,8 @@ All C# projects live here, none is covered by a `Directory.Build.props`, all set
 - `mcp/`: net10.0, `Nullable=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
 - `tests/`, `tests-integration/`: net10.0 xUnit, `Nullable=enable`, no analyzers.
 - `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest`, `Nullable=enable`, no analyzers.
+- `tests-integration/broken/`: net472 class library, `LangVersion=10.0`, `Nullable=disable`, no analyzers.
+- `tests-integration/missing/`: net472 class library, `LangVersion=latest`, `Nullable=enable`, no analyzers.
 
 ## Distribution
 
@@ -69,6 +71,7 @@ There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV
 - After changing `mcp/` or `sdb/`, the running server keeps serving the old build. Ask the user in plain text to hit Reconnect in `/mcp` (that rebuilds from sources), then end your turn — they cannot run `/mcp` while an AskUserQuestion prompt is pending.
 - After changing MCP **config**, expect one orphaned server per reconnect, still holding the SDB slot and build locks: kill the old `dotnet run` wrapper by hand. Background in [`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`](../../docs/solutions/unity-mcp-server-stranded-on-reconnect.md).
 - Discovery and ECS traps that cost hours: [`docs/solutions/sdb-port-discovery-drift.md`](../../docs/solutions/sdb-port-discovery-drift.md), [`docs/solutions/unity-entities-over-sdb.md`](../../docs/solutions/unity-entities-over-sdb.md).
+- Before reading a value or a throw back from the debuggee, read [`docs/solutions/mono-debuggee-answers-over-sdb.md`](../../docs/solutions/mono-debuggee-answers-over-sdb.md): nulls, sparse arrays and exception messages all answer differently than .NET does, and the .NET reference source is evidence about .NET rather than about this fork.
 
 ## Boundaries
 

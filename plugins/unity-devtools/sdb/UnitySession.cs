@@ -388,6 +388,15 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     }
   }
 
+  /// <summary>
+  /// Whether a failure means the connection is gone.
+  /// It matches on ANY <see cref="IOException" />, which is wider than the socket: a client-side
+  /// parse can raise one too (<c>AssemblyName</c> rejects a malformed display name with a
+  /// FileLoadException), and answering true for one of those discards a live attach and warns the
+  /// user their game state may be half-written, over something that never touched the wire.
+  /// A caller reading debuggee metadata client-side therefore handles its own parse failures rather
+  /// than letting them reach here.
+  /// </summary>
   internal static bool IsDisconnect(Exception e) =>
     e is VMDisconnectedException or IOException or SocketException ||
     (e.InnerException is not null && UnitySession.IsDisconnect(e.InnerException));
