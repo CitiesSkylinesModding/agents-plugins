@@ -5,3 +5,6 @@
 node_modules
 # Machine-specific settings
 *.DotSettings.user
+
+# In-flight specs and tickets: working material, not a record.
+.scratch/
