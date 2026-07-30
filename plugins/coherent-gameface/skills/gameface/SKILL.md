@@ -9,7 +9,7 @@ Gameface renders game UI from HTML/CSS/JS.
 It is powered by Cohtml (the HTML engine) and Renoir (the rendering engine), proprietary technology that is not WebKit, Chromium, or Gecko, and not a WebView.
 JavaScript runs on V8.
 Gameface implements a deliberate subset of HTML5/CSS3 chosen for game-UI performance: an unsupported HTML element is not an error, it lays out as a generic unstyled flex box with no semantics, and unsupported CSS is silently ignored.
-(The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.) This skill was written against docs v3.0.3.1 and verified against Cities: Skylines II (CS2), the worked example throughout.
+(The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.) This skill is written against docs v3.0.3.1, with Cities: Skylines II (CS2) as the worked example throughout.
 
 ## The map and the territory
 

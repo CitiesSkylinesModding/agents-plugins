@@ -1,12 +1,12 @@
 ---
 name: gameface-driving
-description: 'Operating manual for driving a live Gameface UI with the game_* MCP tools: procedures and traps verified on a real game. Load before first use of the input tools (game_click, game_fill, game_type, game_key, game_hover) or of any game_debug_* tool. Also use when verifying UI changes against a running game, when waiting for a mod rebuild to go live in-game, or when a game_* call fails or returns puzzling results. Engine support questions (does this CSS/JS/layout feature exist) belong to the gameface skill.'
+description: 'Operating manual for driving a live Gameface UI with the game_* MCP tools: procedures and traps. Load before first use of the input tools (game_click, game_fill, game_type, game_key, game_hover) or of any game_debug_* tool. Also use when verifying UI changes against a running game, when waiting for a mod rebuild to go live in-game, or when a game_* call fails or returns puzzling results. Engine support questions (does this CSS/JS/layout feature exist) belong to the gameface skill.'
 ---
 
 # Driving a Gameface UI
 
-This skill records field-verified procedure for the `game_*` tools: the facts the tool schemas cannot tell you.
-Everything here was verified live against Cities: Skylines II (CS2, Cohtml 1.64.0.7); facts that may be game-specific are labeled.
+This skill records the procedure for the `game_*` tools: the facts the tool schemas cannot tell you.
+Facts that may be game-specific are labeled; the reference target is Cities: Skylines II (CS2, Cohtml 1.64.0.7).
 For what the engine itself supports (layout, events, missing platform APIs), load the `gameface` skill; this one stays operational.
 
 ## Session start and triage
