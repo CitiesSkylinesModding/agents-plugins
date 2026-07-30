@@ -78,12 +78,13 @@ Ask first before:
 
 ## Where knowledge goes
 
-Four stores, checked in this order when writing something down:
+Five stores, checked in this order when writing something down:
 
 1. **Code comments**: anything one file owns. If `Invoker.Retrying` implements the retry, the explanation lives there.
 2. **A plugin's `skills/`**: how to drive the tools at runtime. Shipped, agent-facing, generic.
 3. **`docs/solutions/`**: expensive investigations with dead ends, one file per problem, loaded on demand through a pointer placed where the problem bites.
-4. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
+4. **`docs/adr/`**: why a choice was made, one record per decision.
+5. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
 
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
 Propose updates whenever you detect drift.
