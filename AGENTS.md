@@ -88,6 +88,9 @@ Four stores, checked in this order when writing something down:
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
 Propose updates whenever you detect drift.
 
+Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).
+If present, load the `writing-great-skills` skill and hold the edit to it before writing any of them.
+
 ## Preferred agent behavior
 
 - Start by inspecting existing patterns.
