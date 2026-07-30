@@ -6,7 +6,9 @@ symptoms:
   - 'ecs_get_buffer reports length 0 for a buffer the entity does not have'
   - 'the game dies a few calls after a buffer tool ran against a wrong element type'
   - 'HighestEntityIndex() throws NullReferenceException while Exists still answers on the same EntityManager'
+  - 'a component read answers plausible fields for a type the entity carries as a BUFFER, and the presence check allowed it'
 tags: [unity-entities, ecs, sdb, invoke, memory-safety]
+updated: 2026-07-30
 ---
 
 # Entities answers for state that is not there, on a build with the checks compiled out
@@ -71,11 +73,33 @@ One invoke, and worth it: it converts fabricated data and a dead game into
 Pair it with the access mode: the buffer accessor takes `isReadOnly` from the caller, so only the
 editing tool asks for write. Presence refuses the mistake, read-only bounds what a missed one costs.
 
+### The gate is not enough when the CALLER names the type
+
+`HasComponent<T>` resolves `T` to a `TypeManager` type index, and a buffer element shares that index
+space with a component of the same name. Ask it about a type the entity carries as a BUFFER and it
+answers yes, so `GetComponentData<T>` proceeds, reads the chunk at component layout, and reinterprets
+the buffer header (pointer, capacity, length) as the struct's fields. The same fabricated value as
+above, reached straight through the gate meant to prevent it -- and reachable from a name the
+archetype listing itself prints.
+
+So a path taking a type name from outside classifies the storage kind FIRST, off the type's marker
+interfaces, and reads only if that says component (`Ecs.Unfollowable`). The interfaces arrive as the
+transitive closure in one round trip, so a marker reached through a derived interface still counts.
+
+A chunk component bounds the rule: it IS a plain component type, so no interface check separates it,
+but the archetype holds it as a distinct `ComponentType` and `HasComponent<T>` answers no on the
+entity carrying it -- `HasChunkComponent<T>` is the yes. There, the presence gate suffices.
+
 ## Prevention
 
 Treat every `EntityManager` accessor as unvalidated. Before adding one: check presence first, and
 pass `isReadOnly: true` on any path that only reads, so a mistake costs a wrong answer instead of
 the user's session.
+
+Where the type comes from the caller rather than from your own code, add the storage-kind check ahead
+of the presence one. The presence predicate answers about an index, not a layout, so it cannot tell a
+buffer element from a component -- and a tool that lists an entity's types hands callers exactly the
+names that expose the difference.
 
 When something does go wrong, the probe that separates the two failure modes is access mode, not
 index: repeat the suspect call with `isReadOnly: true` and see whether it is still fatal.
