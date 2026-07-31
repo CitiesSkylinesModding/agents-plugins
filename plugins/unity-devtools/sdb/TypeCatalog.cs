@@ -260,6 +260,7 @@ public sealed class TypeCatalog {
         Types = this.Join(this.inv.Invoke(assembly.GetAssemblyObject(), "GetTypes"))
       };
     }
+
     // Everything that is not a passing condition, not only an in-game throw: the agent answers a
     // per-assembly error code for an assembly whose id no longer decodes, and those describe the
     // assembly every bit as much as a throw does.
