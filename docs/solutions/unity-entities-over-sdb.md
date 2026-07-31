@@ -5,7 +5,8 @@ symptoms:
   - 'World.All throws when enumerated'
   - 'ToEntityArray overload not found for Allocator'
   - 'Get/SetComponentData reports the type argument violates its constraint'
-tags: [unity-entities, ecs, sdb, invoke]
+tags: [unity-entities, ecs, sdb, invoke, type-index, caching]
+updated: 2026-07-31
 ---
 
 # Reaching Unity Entities through debugger mirrors
@@ -48,8 +49,11 @@ Further invoke capabilities, all verified live:
   returns every argument post-call with `out` values updated.
 - `DynamicBuffer<T>` mutation works through boxed-struct invokes — `get_Item` / `Add` / `RemoveAt` hit
   the live chunk data, not a copy.
-- An `Entity` value can be built client-side by cloning the `Entity.Null` `StructMirror` and
-  overwriting `Index` / `Version`; no debuggee allocation needed.
+- An `Entity` value can be built entirely client-side: a zeroed `StructMirror` of the type, with
+  `Index` and `Version` assigned BY NAME. No debuggee allocation, and no read of `Entity.Null` for a
+  template. Assign by name rather than by position: the mirror's value array is positional, so a
+  hand-built pair bakes in the field declaration order, and a future reordering would swap index and
+  version silently -- a read of the wrong entity rather than an error.
 - Managed systems are reachable via `World.GetExistingSystemManaged(Type)`.
 
 Resolving an entity from a bare index, all measured live and all three needed together:
@@ -72,26 +76,48 @@ Reading an entity's whole archetype, measured live:
   are dead ends on a shipped build: `ComponentType.ToString()` returns null and
   `EntityManager.Debug.GetEntityInfo` returns `ComponentTypeInArchetype` placeholders, because the
   `TypeManager` debug-name table is stripped.
-- Kind comes from the `ComponentType` flag properties, which are not mutually exclusive: a chunk
-  component is also zero-sized on its carrier, a shared component can also be managed. Classify most
-  specific first. The flag bits live on `TypeIndex`, which arrives free on the wire, but their
-  positions are `TypeManager` internals that move between versions -- one property invoke each is
-  the version-safe price.
-- Enabled state is the non-generic `EntityManager.IsComponentEnabled(entity, componentType)`, gated
-  on `ComponentType.IsEnableable` (Entities 1.0+, so probed, not assumed). Ask it only for the kinds
-  the entity itself stores: a shared or chunk component's enabled bit is not the entity's to read.
+- Kind comes from flag bits on `TypeIndex`, which arrives free on the wire. They are not mutually
+  exclusive -- a chunk component is also zero-sized on its carrier, a shared component is also
+  zero-sized -- so the most-specific-first ladder (buffer, shared, chunk, managed, tag, else plain
+  component) IS the classification.
+  Neither hardcode the bit positions nor invoke a property per flag. `TypeManager` declares the
+  masks as public constants that read as ordinary static fields, all six in ONE batched read:
+  `BufferComponentTypeFlag`, `SharedComponentTypeFlag`, `ManagedComponentTypeFlag`,
+  `ChunkComponentTypeFlag`, `ZeroSizeInChunkTypeFlag`, `EnableableComponentFlag` (bits 26, 27, 28,
+  29, 30 and 24 on the reference target). Read them once per attach and decode client-side; when any
+  is missing, abandon the decode wholesale for that attach and walk the property ladder instead,
+  which is correct and merely slower. The policy and its price:
+  [`docs/adr/0001-decode-target-constants-client-side.md`](../adr/0001-decode-target-constants-client-side.md).
+- A chunk component's `TypeIndex` is its plain form's ORed with the chunk flag, so the two are
+  different VALUES. Anything keyed on a type index keys on the RAW one: masking the flags off
+  collapses exactly the distinction a listing depends on.
+- Enabled state is the non-generic `EntityManager.IsComponentEnabled(entity, componentType)`. Which
+  types carry an enabled bit is itself a `TypeIndex` flag, so it decodes with the rest; where it
+  cannot, `ComponentType.IsEnableable` answers it one invoke at a time (Entities 1.0+, so probed,
+  not assumed). Ask only for the kinds the entity itself stores: a shared or chunk component's
+  enabled bit is not the entity's to read.
 - That name is a label, not a handle back to the type. The generic accessors need a real type, and
   the only route back from a listed component is a name lookup across the debuggee, which answers
-  the FIRST match: two assemblies declaring the same full name resolve to whichever came first. So
-  a value read off a listed name stays behind the presence gate -- having enumerated a type is not
-  having proven the type you resolved back is the one the entity carries. No reverse mapping
-  shortcuts it: the client exposes `TypeMirror` to type object, never the other way.
+  the FIRST match: two assemblies declaring the same full name resolve to whichever came first. The
+  client exposes `TypeMirror` to type object, never the other way, so no reverse mapping shortcuts
+  it.
+  Identity IS provable, though, and cheaply: build a `ComponentType` from the resolved type and
+  compare its `TypeIndex` against the listed entry's -- one invoke per type, and the comparison
+  itself is client-side. A listing that has proven identity that way may seed the presence memo
+  rather than re-ask `HasComponent`. A caller that merely NAMED a type has proven nothing and keeps
+  the gate.
 
 That the lookup validates nothing is not particular to it: on a build with the collections checks
 compiled out, no `EntityManager` accessor does. See
 [`entities-api-has-no-safety-net-on-player-builds.md`](entities-api-has-no-safety-net-on-player-builds.md).
 
 ## Prevention
+
+Cross-check a client-side decode against the game's own accessors before it replaces them. No single
+archetype carries all six kinds, so build the `ComponentType`s directly instead of hunting for one:
+`ComponentType.ReadWrite(typeof(T))` reaches five of them and `ComponentType.ChunkComponent<T>()` the
+chunk flavour, then compare each `IsBuffer` / `IsSharedComponent` / ... against the decode of
+`ct.TypeIndex.Value`. Expression evaluation runs the whole check without shipping any code.
 
 Hold a `suspend` window across reads and writes that must see one consistent state; freezing the whole
 game is the only real consistency primitive here.

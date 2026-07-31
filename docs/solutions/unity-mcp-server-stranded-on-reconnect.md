@@ -5,7 +5,9 @@ symptoms:
   - 'attach fails because another debugger client holds the SDB slot'
   - 'MSB3027: could not copy, the file is locked by process (pid)'
   - 'a `unity-devtools-mcp` process survives after /mcp reconnect'
+  - 'Failed to reconnect to unity: -32000'
 tags: [mcp, process-lifetime, shutdown, sdb]
+updated: 2026-07-31
 ---
 
 # A stranded server keeps the exclusive SDB slot after reconnect
@@ -53,3 +55,16 @@ server survives until the harness session itself exits.
 Expect one leaked wrapper+server pair per such reconnect; kill the old `dotnet run` wrapper by hand
 and the server dies with it (the dotnet CLI puts the child in a kill-on-close job object). Watch
 anthropics/claude-code#79740; once fixed, the manual kill goes away.
+
+Whatever the trigger, a stranded wrapper is the FIRST thing to check when a reconnect fails, and it
+has been seen surviving a reconnect that changed only sources:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" |
+  Where-Object { $_.CommandLine -match 'UnityDevtools\.Mcp\.csproj' }
+```
+
+A survivor older than the failed reconnect is the culprit; `Stop-Process -Force` on it is safe for the
+game, because the closed socket auto-resumes the VM. Reconnect again afterwards -- and an immediate
+retry can still land in the ~5 s dying window, so a second attempt is expected rather than a new
+symptom.

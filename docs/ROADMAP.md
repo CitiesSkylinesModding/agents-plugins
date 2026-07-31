@@ -66,55 +66,40 @@ Discovery is netstat-based and Windows-only. Port discovery to Linux/macOS (pars
 `lsof`); the server itself now ships as a platform-agnostic NuGet dotnet tool, so distribution
 needs no per-RID artifacts.
 
-### Entity archetype dump (`ecs_list_components`)
+### Open questions the invoke-cost pass left behind
 
-Discovering where a piece of state lives currently means playing twenty questions with
-`HasComponent<T>` in `eval` (surfaced live hunting for a building's attractiveness, which turned
-out to sit on the prefab, not the building). One call listing every component on an entity, and
-optionally on its `PrefabRef` target, answers "what does this entity carry" in one shot:
-`EntityManager.GetComponentTypes(e)` is mirror-reachable, and the result composes directly with
-`eval` for the follow-up reads.
+Measuring the wire settled the cost model and unsettled some of the reasoning built on it: an invoke
+costs ~1 ms while every other wire command costs ~35-90 µs, so several decisions taken to "save round
+trips" turn out to have saved the cheap kind
+([`docs/solutions/sdb-round-trips-are-not-equal-cost.md`](solutions/sdb-round-trips-are-not-equal-cost.md)).
+Four things deserve a deliberate answer rather than the implicit one they have now.
 
-### The fixed invoke cost of an ECS operation
-
-Every invoke is a round-trip to a suspended game, so the count per operation is the cost that
-matters. Three avoidable ones predate the converged entity naming that surfaced them:
-
-- `Ecs.MakeEntity` reads `Entity.Null` off the debuggee purely to obtain a two-int struct template
-  it immediately overwrites client-side. `EvalInterpreter.DefaultMirrorFor` already builds a
-  `StructMirror` client-side with no invoke at all (the vendored constructor is internal to the
-  same assembly), so the same trick applies. This halves the explicit `index:version` path, which
-  the converged rule made the primary one, and also cuts a third invoke off writing an
-  Entity-typed field through `CoerceArg`.
-- `Ecs.PickWorld` already reads each candidate world's `Name` to match it, then the constructor
-  invokes `get_Name` again on the winner. Returning the name it already holds removes that.
-- `Invoker.ResolveType` calls `GetTypes` on every lookup while `FindTypeOrNull`, twelve lines
-  below, has exactly the hit-cache it wants. Worth care rather than a copy: that cache
-  deliberately does not memoize misses, because the debuggee loads assemblies over time.
-  `Ecs.ValueOf` already routes its per-component lookup around `ResolveType` for this reason,
-  which measures the gap rather than closing it: every other ECS tool still pays.
-
-Two more surfaced with the archetype listing, the first tool to spend a read per component instead
-of one per call, which turns anything charged per type into a multiple of the archetype's size:
-
-- `MethodMirror.MakeGenericMethod` is a wire command (`Method_MakeGenericMethod`), and nothing
-  memoizes what it returns: `Invoker.methodCache` keys the DEFINITION lookup, not the
-  instantiation, so every generic accessor (`HasComponent<T>`, `GetComponentData<T>`,
-  `SetComponentData<T>`, `GetBuffer<T>`) re-instantiates on every single call. A
-  `(definition, type)` memo on `Invoker` would charge each pair one round-trip per attach. Reading
-  an archetype's values pays it twice per component, once for the presence gate and once for the
-  read.
-- `Invoker.Format` renders an enum field through `EnumMirror.StringValue`, which walks the enum's
-  static fields calling `Type.GetValue` one at a time, each its own `Type_GetValues` round-trip. So
-  naming the k-th member costs k of them, and a value matching no single member costs a full scan
-  before falling back to the number, which is what every flags combination does (`BoundsMask.3`,
-  `GeometryFlags.12616099`, seen live). Reading the table in one `Type_GetValues` and memoizing
-  value-to-name per `TypeMirror` makes every later enum format free.
-
-Together with the per-operation `Ecs` construction (three property invokes re-paid each call,
-since `SdbContext.Ecs` builds a fresh instance), setup is currently about half the round-trips of
-a component read. Any caching of `World` / `EntityManager` across operations has to keep a
-liveness check, since a world can die between calls.
+- **Whether to cache the world handle at all.** It nets about one invoke per operation once the
+  `IsCreated` liveness check is paid back, and it buys that by holding an `EntityManager` across
+  operations — a raw pointer into the entity store, on builds where the collections safety checks are
+  compiled out. `EcsCatalog.StillStands` and its `WorldSelection` modes are the most intricate
+  reasoning in the ECS layer and exist only to keep that pointer honest. One invoke is a thin return
+  on the change's sharpest failure mode; dropping the cache and re-selecting per operation is a real
+  option, and the listing wins do not depend on it either way.
+- **A per-operation memo tier on `Invoker`.** Its caches are all per-attach, so it can say "remember
+  for this attach" but has no way to say "remember for this operation". That gap shows: `Ecs.refused`
+  and `Ecs.storeBound` sit on `Ecs` because there is nowhere else to put them, and
+  `Invoker.EnumTableFor` had to choose between latching a failure that describes the moment and
+  re-paying a refused batched read on every rendered value, with no third option. A per-operation
+  scope beside the per-attach one would let each memo state its own lifetime.
+- **Invokes still on the table**, each worth roughly one. `EvalInterpreter.EnumMemberValue` spends two
+  per enum constant through a debuggee-side `Enum.Parse` + `Convert`, and the interpreter is
+  per-operation, so a conditional breakpoint naming a constant re-pays them on every hit — the
+  per-attach enum table already holds those facts and only needs its name-to-value direction exposed.
+  `Ecs.ComponentTypeOf` is memoized for the identity proof but not for `CreateQuery`, so `ecs_query`
+  re-pays `ComponentType.ReadWrite` per named component on every call. `Ecs.fullNameGetter` memoizes a
+  property of loaded code on the per-operation `Ecs`, where every sibling memo of that kind is
+  per-attach.
+- **Whether a storage kind should stay a bare string.** Six literals are produced at two sites and
+  compared at two more, and `Kind is not "component"` is the only guard standing between a
+  buffer-element entry and `GetComponentData`. An `EcsKind` enum rendered to its wire name at the MCP
+  edge makes that comparison checked; it is small, and it is the one place where a typo is a safety
+  problem rather than a bug.
 
 ### An `ecs_query` seam in the SDB library
 

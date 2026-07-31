@@ -5,8 +5,9 @@ symptoms:
   - 'PlatformNotSupportedException on delegate BeginInvoke under modern .NET'
   - 'replies never dispatch when connecting through VirtualMachineManager'
   - 'an assembly loaded after the first read never appears in the domain assembly list'
+  - 'a mirror accessor that looks like a field read turns out to be a round trip per call'
 tags: [sdb, mono-debugger-soft, vendoring, net10, caching]
-updated: 2026-07-30
+updated: 2026-07-31
 ---
 
 # Running Mono's vendored SDB client on .NET 10
@@ -39,6 +40,23 @@ The vendored sources predate .NET Core's removal of remoting-era APIs.
 Compiling the vendored sources **into** this assembly also opens their `internal` surface, which the
 evaluator depends on: default `StructMirror`s are built entirely client-side through the internal
 `StructMirror(vm, type, fields)` ctor.
+
+Which accessors cost the wire is not evident from their neighbours, and two of them read as free
+while charging per call:
+
+- `TypeMirror.GetTypeObject()` re-issues `Type_GetObject` every single time, where the surrounding
+  `GetFields` / `GetMethods` / `GetInterfaces` memoize on the mirror. Every API taking a `System.Type`
+  goes through it, so an unmemoized call inside a per-component loop pays a round trip per component.
+- `EnumMirror.StringValue` walks the enum's static fields one `Type.GetValue` at a time, so naming
+  the k-th member costs k round trips and a value matching no single member costs a full scan before
+  falling back to the number -- which is what every flags combination does. The whole member table
+  instead reads in ONE `GetValues` over the static fields, `const` literals included: they have no
+  storage, and the agent answers them anyway.
+
+That batched read is ALL-OR-NOTHING. `TypeMirror.GetValues` maps `ErrorCode.INVALID_FIELDID` to an
+`ArgumentException` covering the whole call, so one field the agent will not hand over fails every
+other field in the batch. A caller that reads a table this way catches around it, rather than letting
+one unreadable member fail the value the caller actually asked for.
 
 That surface is also how you invalidate the client's OWN caches, and one of them goes stale silently.
 `AppDomainMirror.GetAssemblies()` memoizes the domain's assembly list and drops it only on an

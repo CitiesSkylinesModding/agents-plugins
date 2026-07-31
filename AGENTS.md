@@ -27,7 +27,7 @@ New plugins get a sibling directory and an entry in both marketplace files.
 - `.mcp.json` (root): LOCAL DEV ONLY, wiring both MCP servers for sessions in this repo (gameface from its committed bundle, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
 - `scripts/`: `check-plugin-sync.ts` (manifest consistency, part of `mise check`) and `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI).
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint and oxfmt ignore `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
-- `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites.
+- `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
 
 ## Commands
 
