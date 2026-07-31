@@ -10,18 +10,28 @@ namespace UnityDevtools.Sdb;
 /// ECS operations over SDB invokes: world selection, EntityManager access, entity queries, and
 /// component read/write.
 /// Component access goes through the generic EntityManager.Get/SetComponentData&lt;T&gt;
-/// instantiated live via MakeGenericMethod (protocol 2.24+).
+/// instantiated live (protocol 2.24+).
 /// Instances are only valid while the VM stays suspended and connected; build one per operation.
+/// Staying per-operation is load-bearing rather than incidental: the presence memo below is safe
+/// only because an archetype cannot change under an instance that lives inside one suspend window.
+/// Whatever an ECS operation may remember for LONGER than that lives on the
+/// <see cref="EcsCatalog" /> this is a view over.
 /// </summary>
 public sealed class Ecs {
   private readonly Invoker inv;
 
-  public Ecs(Invoker inv, string worldName = null) {
+  private readonly EcsCatalog catalog;
+
+  public Ecs(Invoker inv, EcsCatalog catalog, string worldName = null) {
     this.inv = inv;
-    this.World = this.PickWorld(worldName);
-    this.WorldName = ((StringMirror) inv.GetProperty(this.World, "Name")).Value;
-    this.EntityManager = inv.GetProperty(this.World, "EntityManager");
-    this.EntityManagerType = inv.TypeOf(this.EntityManager);
+    this.catalog = catalog;
+
+    var world = catalog.WorldFor(worldName);
+
+    this.World = world.World;
+    this.WorldName = world.Name;
+    this.EntityManager = world.EntityManager;
+    this.EntityManagerType = world.EntityManagerType;
   }
 
   public Value World { get; }
@@ -32,38 +42,17 @@ public sealed class Ecs {
 
   public TypeMirror EntityManagerType { get; }
 
-  private Value PickWorld(string name) {
-    var worldType = this.inv.ResolveType("Unity.Entities.World");
+  /// <summary>
+  /// The game's own ComponentType for a component type mirror, which is how a type is named to
+  /// every Entities API that takes one and how its type index is learned.
+  /// </summary>
+  private StructMirror ComponentTypeOf(TypeMirror type) {
+    var ctType = this.inv.ResolveType("Unity.Entities.ComponentType");
 
-    if (name is null) {
-      // The default injection world is the game's main world when set.
-      var def = this.inv.GetStaticProperty(worldType, "DefaultGameObjectInjectionWorld");
-
-      if (def is ObjectMirror) {
-        return def;
-      }
-    }
-
-    // World.All is a boxing-hostile struct collection; enumerate via Count + indexer.
-    var all = this.inv.GetStaticProperty(worldType, "All");
-    var count = (int) ((PrimitiveValue) this.inv.GetProperty(all, "Count")).Value;
-    var names = new List<string>();
-
-    for (var i = 0; i < count; i++) {
-      var world = this.inv.Invoke(all, "get_Item", this.inv.Prim(i));
-      var worldName = ((StringMirror) this.inv.GetProperty(world, "Name")).Value;
-
-      if (name is null || worldName == name) {
-        return world;
-      }
-
-      names.Add(worldName);
-    }
-
-    throw new InvalidOperationException(
-      name is null
-        ? "no ECS worlds are live"
-        : $"world '{name}' not found; live worlds: {string.Join(", ", names)}"
+    return (StructMirror) this.inv.InvokeStatic(
+      ctType,
+      this.inv.FindMethod(ctType, "ReadWrite", 1, paramTypes: ["Type"]),
+      this.inv.TypeObject(type)
     );
   }
 
@@ -71,13 +60,7 @@ public sealed class Ecs {
   public Value CreateQuery(TypeMirror[] componentTypes) {
     var ctType = this.inv.ResolveType("Unity.Entities.ComponentType");
 
-    var cts = componentTypes.Select(t => this.inv.InvokeStatic(
-          ctType,
-          this.inv.FindMethod(ctType, "ReadWrite", 1, paramTypes: ["Type"]),
-          t.GetTypeObject()
-        )
-      )
-      .ToArray();
+    var cts = componentTypes.Select(Value (t) => this.ComponentTypeOf(t)).ToArray();
 
     // ComponentType[] built debuggee-side via Array.CreateInstance + SetValues.
     var arrayType = this.inv.ResolveType("System.Array");
@@ -85,7 +68,7 @@ public sealed class Ecs {
     var arr = (ArrayMirror) this.inv.InvokeStatic(
       arrayType,
       this.inv.FindMethod(arrayType, "CreateInstance", 2, paramTypes: ["Type", "Int32"]),
-      ctType.GetTypeObject(),
+      this.inv.TypeObject(ctType),
       this.inv.Prim(componentTypes.Length)
     );
 
@@ -199,18 +182,33 @@ public sealed class Ecs {
     return live;
   }
 
+  private int? storeBound;
+
+  private bool storeBoundRead;
+
   /// <summary>
   /// The highest index the entity store covers, inclusively; null when the target cannot say.
   /// Every path that indexes the store goes through this FIRST, because the store is indexed
   /// UNCHECKED: out of range, the by-index lookup and Exists alike read foreign memory, and far
   /// enough out both fault the game with an in-game NullReferenceException (verified live on both).
+  /// Read once per instance, which asks nothing of the caller: the store cannot grow while the
+  /// game is suspended, and one instance lives inside one suspend window.
+  /// The flag is what keeps "the target cannot say" distinguishable from "not read yet".
   /// </summary>
   private int? HighestEntityIndex() {
+    if (this.storeBoundRead) {
+      return this.storeBound;
+    }
+
     var member = this.FindMember("HighestEntityIndex", 0);
 
-    return member is null
+    this.storeBound = member is null
       ? null
       : (int) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, member)).Value;
+
+    this.storeBoundRead = true;
+
+    return this.storeBound;
   }
 
   /// <summary>
@@ -236,12 +234,18 @@ public sealed class Ecs {
   /// An entity's index and version, read off the mirror it already holds, so naming one in a
   /// message or keying on one costs nothing on the wire.
   /// </summary>
-  private static (int Index, int Version) Id(StructMirror entity) => (
+  private static (int Index, int Version) Id(StructMirror entity) =>
+  (
     (int) ((PrimitiveValue) entity["Index"]).Value,
     (int) ((PrimitiveValue) entity["Version"]).Value
   );
 
-  private readonly HashSet<(int Index, int Version, TypeMirror Type)> carried = [];
+  /// <summary>
+  /// Entity-and-type pairs whose presence is settled, keyed by the KIND that settled them: a buffer
+  /// element and a component of the same name share a type index, so "carries it as a component" is
+  /// not the same fact as "carries it as a buffer", and one must never answer for the other.
+  /// </summary>
+  private readonly HashSet<(int Index, int Version, TypeMirror Type, string Kind)> carried = [];
 
   /// <summary>
   /// Refuses a type the entity does not carry, the one gate every accessor below goes through.
@@ -262,14 +266,13 @@ public sealed class Ecs {
     string kind
   ) {
     var id = Ecs.Id(entity);
-    var key = (id.Index, id.Version, Type: type);
+    var key = (id.Index, id.Version, Type: type, Kind: kind);
 
     if (this.carried.Contains(key)) {
       return;
     }
 
-    var has = this.inv.FindMethod(this.EntityManagerType, hasMethod, 1, 1, ["Entity"])
-      .MakeGenericMethod([type]);
+    var has = this.Accessor(hasMethod, 1, type);
 
     if ((bool) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, has, entity)).Value) {
       _ = this.carried.Add(key);
@@ -282,22 +285,46 @@ public sealed class Ecs {
     );
   }
 
+  /// <summary>
+  /// Records a type as carried without asking the game, for the one caller that ENUMERATED the
+  /// entity's archetype in this very suspend window: the gate's invariant is then satisfied by
+  /// construction rather than by an invoke that re-establishes what was just read.
+  /// </summary>
+  private void MarkCarried(StructMirror entity, TypeMirror type, string kind) {
+    var id = Ecs.Id(entity);
+
+    _ = this.carried.Add((id.Index, id.Version, type, kind));
+  }
+
+  /// <summary>
+  /// One of the EntityManager's generic accessors, instantiated over the component type; the
+  /// instantiation is memoized for the attach, so a loop over an archetype pays it once per type.
+  /// </summary>
+  private MethodMirror Accessor(string name, int argc, TypeMirror componentType) =>
+    this.inv.Instantiate(
+      this.inv.FindMethod(this.EntityManagerType, name, argc, 1, ["Entity"]),
+      [componentType]
+    );
+
   public Value GetComponent(StructMirror entity, TypeMirror componentType) {
     this.RequirePresence(entity, componentType, "HasComponent", "component");
 
-    var method = this.inv.FindMethod(this.EntityManagerType, "GetComponentData", 1, 1, ["Entity"])
-      .MakeGenericMethod([componentType]);
-
-    return this.inv.Invoke(this.EntityManager, method, entity);
+    return this.inv.Invoke(
+      this.EntityManager,
+      this.Accessor("GetComponentData", 1, componentType),
+      entity
+    );
   }
 
   public void SetComponent(StructMirror entity, TypeMirror componentType, StructMirror value) {
     this.RequirePresence(entity, componentType, "HasComponent", "component");
 
-    var method = this.inv.FindMethod(this.EntityManagerType, "SetComponentData", 2, 1, ["Entity"])
-      .MakeGenericMethod([componentType]);
-
-    this.inv.Invoke(this.EntityManager, method, entity, value);
+    this.inv.Invoke(
+      this.EntityManager,
+      this.Accessor("SetComponentData", 2, componentType),
+      entity,
+      value
+    );
   }
 
   /// <summary>
@@ -306,8 +333,9 @@ public sealed class Ecs {
   /// The kind is what tells a caller which accessor can read a type, so a kind no tool can read is
   /// still listed: state the caller cannot reach is a different answer from state that is absent.
   /// With <paramref name="values" />, every entry also carries what is IN the component (see
-  /// <see cref="ValueOf" />), which is a read per component on top of the listing and is why it is
-  /// the caller's choice rather than the default.
+  /// <see cref="ValueOf" />), which is one read per component on top of the listing.
+  /// What each type index means is remembered for the attach, so listing a second entity spends
+  /// nothing on the types the first one already described.
   /// </summary>
   public EntityComponents ListComponents(StructMirror entity, bool values = false) {
     // The allocator parameter is the bare enum here, where ToEntityArray above takes a handle, so
@@ -330,38 +358,60 @@ public sealed class Ecs {
 
     var componentTypes = arr.GetValues(0, arr.Length);
 
-    // Enabled state costs two members, and either being absent turns the whole column off: a
-    // target that cannot answer must say so, because an unreported state reads as "enabled".
+    var flags = this.catalog.Flags;
+
+    // Enabled state costs a member the target may not have, and its absence turns the whole column
+    // off: a target that cannot answer must say so, because an unreported state reads as "enabled".
+    var isEnabled = this.FindMember("IsComponentEnabled", 2, ["Entity", "ComponentType"]);
+
+    // Whether a type is enableable is one of the bits the index encodes; where it cannot be
+    // decoded it is a property invoke per type instead, and THAT member's absence turns the column
+    // off just the same.
+    // Probing costs nothing on the wire, so it happens whether the masks are expected to answer:
+    // the decode still falls through per type on a target whose index this cannot read.
     var isEnableable = this.FindMember(
       "IsEnableable",
       0,
       type: this.inv.ResolveType("Unity.Entities.ComponentType")
     );
 
-    var isEnabled = this.FindMember("IsComponentEnabled", 2, ["Entity", "ComponentType"]);
-
-    var absent = isEnableable is null
-      ? "ComponentType.IsEnableable"
-      : isEnabled is null
-        ? "EntityManager.IsComponentEnabled"
+    var absent = isEnabled is null
+      ? "EntityManager.IsComponentEnabled"
+      : flags is null && isEnableable is null
+        ? "ComponentType.IsEnableable"
         : null;
 
-    // One absent member disables the column, so the probe the loop consults carries both answers.
-    var enableable = absent is null ? isEnableable : null;
+    // One absent member turns the column off, which the loop reads off enabledGetter being null.
+    var enabledGetter = absent is null ? isEnabled : null;
+    var enableableProbe = absent is null ? isEnableable : null;
 
     var components = new List<EntityComponentInfo>(componentTypes.Count);
 
-    foreach (var ct in componentTypes) {
-      var name = this.ManagedTypeName(ct);
-      var kind = this.KindOf(ct);
+    // Whether a type is enableable can go unanswered per TYPE, not just per target: the decode
+    // needs an index this target may hold in an unreadable shape, and the invoke needs a member it
+    // may not expose. An entry nobody could classify is silent, and silence must be explained.
+    var unclassified = false;
 
-      var (value, valueError) = values ? this.ValueOf(entity, name, kind) : default;
+    foreach (var ct in componentTypes) {
+      var described = this.Describe(ct, flags);
+
+      // With the column off, nothing is asked and nothing is decoded: whatever it would have
+      // learned, no entry could report.
+      var enableable = enabledGetter is null
+        ? null
+        : this.EnableableOrNull(ct, described, flags, enableableProbe);
+
+      unclassified |= absent is null && enableable is null;
+
+      var (value, valueError) = values ? this.ValueOf(entity, described) : default;
 
       components.Add(
         new EntityComponentInfo {
-          Name = name,
-          Kind = kind,
-          Enabled = this.EnabledOrNull(entity, ct, kind, enableable, isEnabled),
+          Name = described.Name,
+          Kind = described.Kind,
+          Enabled = enableable is true
+            ? this.EnabledOrNull(entity, ct, described.Kind, enabledGetter)
+            : null,
           Value = value,
           ValueError = valueError
         }
@@ -370,11 +420,71 @@ public sealed class Ecs {
 
     return new EntityComponents {
       Components = components,
-      EnabledStateNote = absent is null
-        ? null
-        : $"this target's Unity Entities version cannot report enabled state ({absent} is " +
+      EnabledStateNote = absent is not null
+        ? $"this target's Unity Entities version cannot report enabled state ({absent} is " +
         "absent), so no entry carries one; that is not the same as none being disabled"
+        : unclassified
+          ? "this target's Unity Entities version could not tell whether every component type " +
+          "here is enableable, so an entry carrying no enabled state may be one it could not " +
+          "classify rather than one that is not enableable"
+          : null
     };
+  }
+
+  /// <summary>
+  /// Whether the entity carries an enabled bit for this type, null when nothing could say.
+  /// Deliberately NOT memoized with the rest of the description: the answer depends on what this
+  /// target could be asked at the time, so caching it would let one degraded operation speak for
+  /// every later one.
+  /// The decode is free where it applies, and the probe costs the invoke the fallback always cost.
+  /// </summary>
+  private bool? EnableableOrNull(
+    Value componentType,
+    EcsComponentType described,
+    TypeIndexFlags flags,
+    MethodMirror isEnableable
+  ) {
+    // A shared or chunk component keeps its data, and its enabled bit, outside the entity, so the
+    // question does not arise -- and asking it anyway would spend an invoke per such entry on the
+    // fallback path, for an answer no entry can report.
+    if (described.Kind is "shared" or "chunk") {
+      return false;
+    }
+
+    if (flags is not null && described.TypeIndex is {} index) {
+      return flags.IsEnableable(index);
+    }
+
+    return isEnableable is not null ? this.Flag(componentType, isEnableable) : null;
+  }
+
+  /// <summary>
+  /// Works out what one listed ComponentType means, through the attach's memo when the type index
+  /// is readable and from scratch when it is not.
+  /// Everything held here is a property of loaded code, which is what makes remembering it safe.
+  /// </summary>
+  private EcsComponentType Describe(Value componentType, TypeIndexFlags flags) {
+    var typeIndex = Ecs.TypeIndexOf(componentType);
+
+    if (typeIndex is {} known && this.catalog.TryDescribe(known, out var remembered)) {
+      return remembered;
+    }
+
+    // The kind is bits of the index, so the masks serve only where BOTH are in hand; otherwise the
+    // game answers it itself, one property at a time.
+    var described = new EcsComponentType {
+      Name = this.ManagedTypeName(componentType),
+      Kind = typeIndex is {} index && flags is not null
+        ? flags.KindOf(index)
+        : this.InvokedKindOf(componentType),
+      TypeIndex = typeIndex
+    };
+
+    if (typeIndex is {} key) {
+      this.catalog.Remember(key, described);
+    }
+
+    return described;
   }
 
   /// <summary>
@@ -385,23 +495,38 @@ public sealed class Ecs {
   /// A read that fails is recorded on the entry alone: one component the game refuses to hand over
   /// must cost its own value, never the listing the caller asked for.
   /// </summary>
-  private (string Value, string Error) ValueOf(StructMirror entity, string name, string kind) {
-    if (kind is not "component") {
-      return (kind, null);
+  private (string Value, string Error) ValueOf(StructMirror entity, EcsComponentType described) {
+    if (described.Kind is not "component") {
+      return (described.Kind, null);
     }
 
-    if (name is null) {
+    if (described.Name is null) {
       return (null, "the target cannot name this component type, so its value cannot be read");
     }
 
     try {
-      // The name came off the live type, so the cached case-sensitive lookup hits on its first
-      // probe and serves every later listing free; a name that does NOT resolve costs a probe per
-      // dot instead, uncached, which is the cache's price and falls on this entry alone.
-      // Case narrows the collision ResolveType documents without closing it, so the read keeps
-      // GetComponent's presence gate rather than trusting the listing that named the type.
-      var type = this.inv.FindTypeOrNull(name) ??
-        throw new InvalidOperationException($"type '{name}' no longer resolves on this target");
+      TypeMirror type;
+
+      if (described.TypeIndex is {} index) {
+        type = this.ProvenType(described.Name, index) ??
+          throw new InvalidOperationException(
+            $"no loaded type answers to the type index this entity's {described.Name} carries, " +
+            "so a value read off that name would not be this entity's"
+          );
+
+        // The archetype was enumerated in this very suspend window and the type is proven to be
+        // the one the entry named, so the read's own gate has nothing left to establish.
+        this.MarkCarried(entity, type, "component");
+      }
+      else {
+        // A target whose type index this cannot read cannot prove identity either; the read falls
+        // back to the name and keeps the presence gate, which is the weaker check and the only one
+        // left.
+        type = this.inv.FindTypeOrNull(described.Name) ??
+          throw new InvalidOperationException(
+            $"type '{described.Name}' no longer resolves on this target"
+          );
+      }
 
       return (this.inv.Format(this.GetComponent(entity, type), Invoker.ReadDepth), null);
     }
@@ -411,10 +536,87 @@ public sealed class Ecs {
   }
 
   /// <summary>
+  /// Indexes this operation already failed to prove, so one listing does not re-walk the same
+  /// refusal per entity it touches. It dies with the instance, which is what keeps a refusal from
+  /// outliving the moment that produced it.
+  /// </summary>
+  private readonly HashSet<int> refused = [];
+
+  /// <summary>
+  /// The type mirror PROVEN to be the one the listed entry names, null when none is, settled once
+  /// per type per attach.
+  /// The listing hands back a NAME, and a name is a label rather than a handle: resolving one
+  /// answers the first match across the debuggee, so two assemblies declaring the same full name
+  /// would otherwise let a plausible value be read off the wrong type.
+  /// Building a candidate's own ComponentType costs one invoke and settles it, since the indexes
+  /// then compare client-side.
+  /// The candidates come from the case-SENSITIVE lookup, because the name came off a live type and
+  /// matching C# name semantics narrows the field before the proof even runs.
+  /// </summary>
+  private TypeMirror ProvenType(string name, int typeIndex) {
+    if (this.catalog.TryProvenType(typeIndex, out var settled)) {
+      return settled;
+    }
+
+    if (this.refused.Contains(typeIndex)) {
+      return null;
+    }
+
+    var proven = this.ProveIdentity(name, typeIndex);
+
+    // Only a PROVEN identity settles for the attach. A refusal describes the moment rather than the
+    // type -- the name may not resolve yet, and the debuggee loads assemblies over time -- so it is
+    // remembered only for as long as this operation, and the next one asks again.
+    if (proven is null) {
+      _ = this.refused.Add(typeIndex);
+    }
+    else {
+      this.catalog.SettleIdentity(typeIndex, proven);
+    }
+
+    return proven;
+  }
+
+  /// <summary>
+  /// Tests the types the name resolves to until one answers to the index.
+  /// The cached first match is tried on its own first, because a name with no namesake is the whole
+  /// of the common case; only a mismatch pays for the full candidate list, which is exactly the
+  /// collision this proof exists to settle.
+  /// </summary>
+  private TypeMirror ProveIdentity(string name, int typeIndex) {
+    var first = this.inv.FindTypeOrNull(name);
+
+    if (first is null) {
+      return null;
+    }
+
+    if (this.CarriesIndex(first, typeIndex)) {
+      return first;
+    }
+
+    return this.inv.FindTypes(name)
+      .FirstOrDefault(candidate => candidate != first && this.CarriesIndex(candidate, typeIndex));
+  }
+
+  /// <summary>
+  /// Whether the type's own ComponentType carries the given index.
+  /// A type the target's type manager never registered throws instead of answering, and that
+  /// refuses the one candidate rather than the listing.
+  /// </summary>
+  private bool CarriesIndex(TypeMirror type, int typeIndex) {
+    try {
+      return Ecs.TypeIndexOf(this.ComponentTypeOf(type)) == typeIndex;
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      return false;
+    }
+  }
+
+  /// <summary>
   /// Whether the component is enabled on the entity, null when the question does not apply: the
-  /// type is not enableable, the target cannot answer (<paramref name="isEnableable" /> null), or
-  /// the kind stores its data outside the entity, where the enabled bit the accessor indexes is not
-  /// the entity's to read.
+  /// type is not enableable, the target cannot answer (<paramref name="isEnabled" /> null), or the
+  /// kind stores its data outside the entity, where the enabled bit the accessor indexes is not the
+  /// entity's to read.
   /// The probed member is INVOKED rather than re-reached by name, so a target exposing the fact as
   /// a method instead of a property is answered rather than thrown at.
   /// </summary>
@@ -422,14 +624,9 @@ public sealed class Ecs {
     StructMirror entity,
     Value componentType,
     string kind,
-    MethodMirror isEnableable,
     MethodMirror isEnabled
   ) {
-    if (isEnableable is null || kind is "shared" or "chunk") {
-      return null;
-    }
-
-    if (!(bool) ((PrimitiveValue) this.inv.Invoke(componentType, isEnableable)).Value) {
+    if (isEnabled is null || kind is "shared" or "chunk") {
       return null;
     }
 
@@ -463,12 +660,11 @@ public sealed class Ecs {
   }
 
   /// <summary>
-  /// Names how the component is stored, which is what decides the accessor that can read it.
-  /// The flags are not mutually exclusive -- a shared component can also be managed, a chunk
-  /// component is zero-sized on the entity that carries it -- so this ladder IS the classification,
-  /// most specific first.
+  /// Names how the component is stored by asking the game one property at a time, the fallback for
+  /// a target that does not expose the masks <see cref="TypeIndexFlags" /> decodes.
+  /// Correct and slower: it walks the same ladder, in the same order, over the same facts.
   /// </summary>
-  private string KindOf(Value componentType) =>
+  private string InvokedKindOf(Value componentType) =>
     this.Flag(componentType, "IsBuffer")
       ? "buffer"
       : this.Flag(componentType, "IsSharedComponent")
@@ -483,6 +679,36 @@ public sealed class Ecs {
 
   private bool Flag(Value componentType, string name) =>
     (bool) ((PrimitiveValue) this.inv.GetProperty(componentType, name)).Value;
+
+  private bool Flag(Value componentType, MethodMirror getter) =>
+    (bool) ((PrimitiveValue) this.inv.Invoke(componentType, getter)).Value;
+
+  /// <summary>
+  /// A component type's index, read off the mirror the wire already carried, null when this target
+  /// holds it in a shape this cannot read.
+  /// Entities versions disagree on that shape -- a bare int on one, a single-field struct wrapping
+  /// one on another -- so both are accepted and anything else falls back to asking the game.
+  /// </summary>
+  private static int? TypeIndexOf(Value componentType) {
+    return Ecs.FieldOrNull(componentType, "TypeIndex") switch {
+      PrimitiveValue { Value: int bare } => bare,
+      StructMirror wrapper => Ecs.FieldOrNull(wrapper, "Value") is PrimitiveValue { Value: int v }
+        ? v
+        : null,
+      _ => null
+    };
+  }
+
+  /// <summary>
+  /// An instance field off a struct mirror, null when the type declares no such field: the mirror's
+  /// own indexer throws instead, and a shape this does not recognize is a fallback rather than a
+  /// failure.
+  /// </summary>
+  private static Value FieldOrNull(Value mirror, string name) {
+    return mirror is StructMirror s && s.Type.GetField(name) is { IsStatic: false }
+      ? s[name]
+      : null;
+  }
 
   /// <summary>
   /// Chases an Entity-typed field of one of the entity's components to the entity it names, which
@@ -561,15 +787,16 @@ public sealed class Ecs {
   /// The interfaces answer this client-side off a mirror that caches its own list, and they arrive
   /// as the TRANSITIVE closure: the runtime collects each interface's own interfaces before
   /// replying, like Type.GetInterfaces(). A marker reached only through a derived interface is
-  /// therefore still seen here, in that one round trip, and the ladder holds whether or not the
-  /// target's Entities version chains these three together.
+  /// therefore still seen here, in that one round trip, and the ladder holds whether the target's
+  /// Entities version chains these three together.
   /// </summary>
   private static string Unfollowable(TypeMirror type) {
     var interfaces = type.GetInterfaces().Select(i => i.FullName).ToArray();
 
-    // Storage first, in the order KindOf reports it, so a shared component is named shared whether
-    // the game declared it a struct or a class. Being a component at all comes before being a
-    // managed one: a type carrying no marker interface is the caller's own mistake, not a kind.
+    // Storage first, in the order the kind ladder reports it, so a shared component is named
+    // shared whether the game declared it a struct or a class. Being a component at all comes
+    // before being a managed one: a type carrying no marker interface is the caller's own mistake,
+    // not a kind.
     return interfaces.Contains("Unity.Entities.IBufferElementData")
       ? "a buffer element"
       : interfaces.Contains("Unity.Entities.ISharedComponentData")
@@ -619,14 +846,17 @@ public sealed class Ecs {
   }
 
   /// <summary>
-  /// Builds an Entity value client-side: clones the Entity.Null template StructMirror and
-  /// overwrites Index/Version (values are serialized from the client copy on send).
+  /// Builds an Entity value entirely client-side: a zeroed mirror of the type with its two fields
+  /// written, serialized from the client copy on send, so naming an entity asks the game nothing.
+  /// The fields are written BY NAME. A positional build would bake in the declaration order the
+  /// mirror's value array happens to have, and a future reordering would then swap index and
+  /// version silently -- a read of the wrong entity rather than an error.
   /// Static because it needs no world, only the invoker.
   /// </summary>
   public static StructMirror MakeEntity(Invoker inv, int index, int version) {
     var entityType = inv.ResolveType("Unity.Entities.Entity");
 
-    var entity = (StructMirror) inv.GetStaticProperty(entityType, "Null");
+    var entity = (StructMirror) inv.DefaultMirrorFor(entityType);
 
     entity["Index"] = inv.Prim(index);
     entity["Version"] = inv.Prim(version);
@@ -650,7 +880,7 @@ public sealed class Ecs {
     return this.inv.Invoke(
       this.World,
       this.inv.FindMethod(worldType, "GetExistingSystemManaged", 1, paramTypes: ["Type"]),
-      sysType.GetTypeObject()
+      this.inv.TypeObject(sysType)
     );
   }
 
@@ -661,10 +891,12 @@ public sealed class Ecs {
   public Value GetBuffer(StructMirror entity, TypeMirror elementType, bool isReadOnly) {
     this.RequirePresence(entity, elementType, "HasBuffer", "buffer");
 
-    var m = this.inv.FindMethod(this.EntityManagerType, "GetBuffer", 2, 1, ["Entity"])
-      .MakeGenericMethod([elementType]);
-
-    return this.inv.Invoke(this.EntityManager, m, entity, this.inv.Prim(isReadOnly));
+    return this.inv.Invoke(
+      this.EntityManager,
+      this.Accessor("GetBuffer", 2, elementType),
+      entity,
+      this.inv.Prim(isReadOnly)
+    );
   }
 
   public int BufferLength(Value buffer) =>
@@ -704,14 +936,17 @@ public sealed class Ecs {
     Func<Value> entityManager
   ) {
     // Out/ref parameter types surface as "<element>&"; the value sent is the element's.
-    var typeName = targetType.FullName.TrimEnd('&');
+    var target = targetType.IsByRef ? targetType.GetElementType() : targetType;
+    var typeName = target.FullName;
 
     switch (raw) {
       case "em" when typeName is "Unity.Entities.EntityManager": return entityManager();
 
-      case "out-entity" when typeName is "Unity.Entities.Entity": return Ecs.MakeEntity(inv, 0, 0);
-
-      case "out-int" when typeName is "System.Int32": return inv.Prim(0);
+      // An out slot only has to be a well-shaped value of the right type for the call to write
+      // over, which is exactly what the client-side default is.
+      case "out-entity" when typeName is "Unity.Entities.Entity":
+      case "out-int" when typeName is "System.Int32":
+        return inv.DefaultMirrorFor(target);
     }
 
     switch (typeName) {
@@ -723,10 +958,17 @@ public sealed class Ecs {
       case "System.String": return inv.Str(raw);
     }
 
-    if (targetType.IsEnum) {
-      return inv.Vm.CreateEnumMirror(
-        targetType,
-        inv.Prim(int.Parse(raw, CultureInfo.InvariantCulture))
+    if (target.IsEnum) {
+      // Parsed AS the enum's underlying type, which does both jobs at once: the wire value matches
+      // its width, since a byte-backed enum sent as an Int32 is refused outright, and a token that
+      // does not fit is rejected rather than truncated into a different member of the same enum.
+      return inv.MakeEnum(
+        target,
+        Convert.ChangeType(
+          raw,
+          Invoker.ClrPrimitive(target.EnumUnderlyingType.FullName),
+          CultureInfo.InvariantCulture
+        )
       );
     }
 

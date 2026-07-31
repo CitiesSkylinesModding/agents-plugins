@@ -36,6 +36,8 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
   private TypeCatalog types;
 
+  private EcsCatalog ecs;
+
   private string attachedHost;
 
   private int attachedPort;
@@ -71,16 +73,17 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         try {
           // The Invoker picks the main thread; build it inside a suspend window where thread
           // listing is guaranteed to be legal. The debug controller is per-attach and idle until
-          // its first request (the pump only starts then); so is the type catalog, which harvests
-          // nothing until the first search.
+          // its first request (the pump only starts then); so are the two catalogs, which read
+          // nothing until an operation asks them something.
           this.invoker ??= new Invoker(vm);
           this.types ??= new TypeCatalog(this.invoker);
+          this.ecs ??= new EcsCatalog(this.invoker);
 
           lock (this.stateGate) {
             this.debug ??= new DebugController(vm, this.invoker);
           }
 
-          return operation(new SdbContext(vm, this.invoker, this.debug, this.types));
+          return operation(new SdbContext(vm, this.invoker, this.debug, this.types, this.ecs));
         }
         catch (Exception ex) when (UnitySession.IsDisconnect(ex)) {
           // Mid-operation disconnect: the operation may have partially applied in the debuggee,
@@ -359,9 +362,10 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         this.invoker = null;
         this.debug = null;
 
-        // The catalog's names are correlated with this attach's assembly mirrors, so a reattach
-        // re-harvests rather than searching a list the new connection cannot resolve.
+        // Every catalog holds mirrors correlated with this attach, so a reattach rebuilds rather
+        // than answering from handles the new connection cannot resolve.
         this.types = null;
+        this.ecs = null;
         this.attachedHost = null;
         this.attachedVmVersion = null;
         this.attachedProtocol = null;
@@ -440,7 +444,8 @@ public sealed class SdbContext(
   VirtualMachine vm,
   Invoker invoker,
   DebugController debug,
-  TypeCatalog types
+  TypeCatalog types,
+  EcsCatalog ecs
 ) {
   public VirtualMachine Vm { get; } = vm;
 
@@ -452,6 +457,12 @@ public sealed class SdbContext(
   /// <summary>The attach's type catalog (idle until its first search).</summary>
   public TypeCatalog Types { get; } = types;
 
-  /// <summary>Builds the ECS surface for one operation (world resolved fresh each time).</summary>
-  public Ecs Ecs(string worldName = null) => new(this.Invoker, worldName);
+  /// <summary>The attach's ECS catalog (idle until an ECS operation asks it something).</summary>
+  public EcsCatalog EcsCatalog { get; } = ecs;
+
+  /// <summary>
+  /// Builds the ECS surface for one operation, as a view over the attach's catalog: the world it
+  /// selects is revalidated rather than resolved from scratch.
+  /// </summary>
+  public Ecs Ecs(string worldName = null) => new(this.Invoker, this.EcsCatalog, worldName);
 }

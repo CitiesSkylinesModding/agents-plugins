@@ -136,10 +136,7 @@ public sealed class EcsTools(UnitySession session) {
   public EcsListComponentsResult ListComponents(
     [Description(EcsTools.EntityParam)] string entity,
     [Description(
-      """
-      Also read each component's field values: an extra read per component, so substantially more
-      expensive than the structural listing.
-      """
+      "Also read each component's field values: one read per component on top of the listing."
     )]
     bool values = false,
     [Description(
