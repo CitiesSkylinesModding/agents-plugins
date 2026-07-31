@@ -150,14 +150,7 @@ public sealed class FrameScope(Invoker inv, ThreadMirror thread, int frameIndex)
         );
       }
 
-      // The wire value must carry the enum's exact underlying primitive; the unchecked truncating
-      // conversion matches C# enum-cast semantics (and the interpreter's MakeEnum).
-      var underlying = FrameScope.PrimitiveFor(slotType.EnumUnderlyingType.FullName, name);
-
-      return inv.Vm.CreateEnumMirror(
-        slotType,
-        inv.Prim(FrameScope.ConvertUnchecked(value, underlying))
-      );
+      return inv.MakeEnum(slotType, value);
     }
 
     var target = FrameScope.PrimitiveFor(slotType.FullName, name);
@@ -183,24 +176,11 @@ public sealed class FrameScope(Invoker inv, ThreadMirror thread, int frameIndex)
 
   /// <summary>The CLR primitive a slot type maps to; unsupported slot kinds fail loudly.</summary>
   private static Type PrimitiveFor(string fullName, string name) {
-    return fullName switch {
-      "System.Boolean" => typeof(bool),
-      "System.Char" => typeof(char),
-      "System.SByte" => typeof(sbyte),
-      "System.Byte" => typeof(byte),
-      "System.Int16" => typeof(short),
-      "System.UInt16" => typeof(ushort),
-      "System.Int32" => typeof(int),
-      "System.UInt32" => typeof(uint),
-      "System.Int64" => typeof(long),
-      "System.UInt64" => typeof(ulong),
-      "System.Single" => typeof(float),
-      "System.Double" => typeof(double),
-      _ => throw new EvalRuntimeException(
+    return Invoker.ClrPrimitiveOrNull(fullName) ??
+      throw new EvalRuntimeException(
         $"cannot write a client-side value into '{name}' ({fullName}); build the value " +
         "debuggee-side (e.g. with `new`) and assign that"
-      )
-    };
+      );
   }
 
   /// <summary>C#'s implicit numeric widening table (bool and char-as-target excluded).</summary>
@@ -251,26 +231,6 @@ public sealed class FrameScope(Invoker inv, ThreadMirror thread, int frameIndex)
           target == typeof(float) ||
           target == typeof(double))) ||
       (source == typeof(float) && target == typeof(double));
-  }
-
-  /// <summary>Unchecked truncating conversion to an enum's underlying primitive.</summary>
-  private static object ConvertUnchecked(object value, Type underlying) {
-    var wide = value switch {
-      ulong u => unchecked((long) u),
-      char c => c,
-      _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
-    };
-
-    return underlying switch {
-      _ when underlying == typeof(sbyte) => unchecked((sbyte) wide),
-      _ when underlying == typeof(byte) => unchecked((byte) wide),
-      _ when underlying == typeof(short) => unchecked((short) wide),
-      _ when underlying == typeof(ushort) => unchecked((ushort) wide),
-      _ when underlying == typeof(int) => unchecked((int) wide),
-      _ when underlying == typeof(uint) => unchecked((uint) wide),
-      _ when underlying == typeof(long) => wide,
-      _ => unchecked((ulong) wide)
-    };
   }
 
   /// <summary>

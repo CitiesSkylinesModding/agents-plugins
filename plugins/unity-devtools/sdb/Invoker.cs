@@ -40,8 +40,14 @@ public sealed class Invoker(VirtualMachine vm) {
   /// loosely on case widens that further, so this answers the FIRST of the matches.
   /// A caller that derived the name from a type it already held has therefore not proven it got
   /// that type back, and must keep whatever check guards what it does next.
+  /// Hits are cached for the attach, misses are not, exactly as in <see cref="FindTypeOrNull" />
+  /// and for the same reason.
   /// </summary>
   public TypeMirror ResolveType(string fullName) {
+    if (this.looseTypeCache.TryGetValue(fullName, out var cached)) {
+      return cached;
+    }
+
     var types = this.Vm.GetTypes(fullName, true);
 
     if (types.Count is 0) {
@@ -51,8 +57,20 @@ public sealed class Invoker(VirtualMachine vm) {
       );
     }
 
+    this.looseTypeCache[fullName] = types[0];
+
     return types[0];
   }
+
+  /// <summary>
+  /// <see cref="ResolveType" />'s cache, kept apart from <see cref="typeCache" /> rather than
+  /// merged into it: the two lookups answer different questions, and routing the loose one through
+  /// the strict one would start rejecting the casing every tool documents as accepted.
+  /// Ignoring case here mirrors the lookup's own semantics, so two spellings of one name share an
+  /// entry and the cache can never answer something the uncached call would not have.
+  /// </summary>
+  private readonly ConcurrentDictionary<string, TypeMirror> looseTypeCache =
+    new(StringComparer.OrdinalIgnoreCase);
 
   /// <summary>
   /// Concurrent because one Invoker serves BOTH the session's tool operations and the debug pump
@@ -75,21 +93,39 @@ public sealed class Invoker(VirtualMachine vm) {
       return cached;
     }
 
+    var types = this.FindTypes(dotted);
+
+    if (types.Count is 0) {
+      return null;
+    }
+
+    this.typeCache[dotted] = types[0];
+
+    return types[0];
+  }
+
+  /// <summary>
+  /// EVERY loaded type the name resolves to, under <see cref="FindTypeOrNull" />'s matching rules;
+  /// empty when nothing matches.
+  /// A caller that must know WHICH namesake it holds needs the whole list, since the first match is
+  /// an arbitrary one among equals.
+  /// Deliberately uncached: this answers which types are loaded right now, and the debuggee loads
+  /// assemblies over time, so the set grows.
+  /// </summary>
+  public IList<TypeMirror> FindTypes(string dotted) {
     var candidate = dotted;
 
     while (true) {
       var types = this.Vm.GetTypes(candidate, false);
 
       if (types.Count > 0) {
-        this.typeCache[dotted] = types[0];
-
-        return types[0];
+        return types;
       }
 
       var lastDot = candidate.LastIndexOf('.');
 
       if (lastDot < 0) {
-        return null;
+        return [];
       }
 
       candidate = $"{candidate[..lastDot]}+{candidate[(lastDot + 1)..]}";
@@ -178,6 +214,50 @@ public sealed class Invoker(VirtualMachine vm) {
     }
 
     return null;
+  }
+
+  private readonly ConcurrentDictionary<TypeMirror, ObjectMirror> typeObjects = new();
+
+  /// <summary>
+  /// The debuggee-side <c>System.Type</c> for a type mirror, which is how a type is handed to any
+  /// API that takes one.
+  /// The vendored client asks the wire every time, and the object is a property of loaded code, so
+  /// it is memoized for the attach.
+  /// </summary>
+  public ObjectMirror TypeObject(TypeMirror type) {
+    if (this.typeObjects.TryGetValue(type, out var cached)) {
+      return cached;
+    }
+
+    var typeObject = type.GetTypeObject();
+
+    this.typeObjects[type] = typeObject;
+
+    return typeObject;
+  }
+
+  private readonly ConcurrentDictionary<(MethodMirror, string), MethodMirror> instantiationCache =
+    new();
+
+  /// <summary>
+  /// Instantiates a generic method definition over the given type arguments.
+  /// The instantiation is a wire command of its own, and the pair cannot change while the attach
+  /// lives, so a hit is memoized: a loop over an archetype instantiates each accessor once rather
+  /// than once per component.
+  /// A FAILURE is not memoized, because it describes the moment rather than the pair.
+  /// </summary>
+  public MethodMirror Instantiate(MethodMirror definition, TypeMirror[] typeArgs) {
+    var key = (definition, string.Join("|", typeArgs.Select(t => t.Id)));
+
+    if (this.instantiationCache.TryGetValue(key, out var cached)) {
+      return cached;
+    }
+
+    var instantiated = definition.MakeGenericMethod(typeArgs);
+
+    this.instantiationCache[key] = instantiated;
+
+    return instantiated;
   }
 
   /// <summary>
@@ -419,7 +499,7 @@ public sealed class Invoker(VirtualMachine vm) {
 
       case StringMirror s: return $"\"{s.Value}\"";
 
-      case EnumMirror e: return $"{e.Type.Name}.{e.StringValue}";
+      case EnumMirror e: return $"{e.Type.Name}.{this.EnumName(e)}";
 
       case ArrayMirror a: return $"{a.Type.FullName}[{a.Length}]";
 
@@ -450,6 +530,234 @@ public sealed class Invoker(VirtualMachine vm) {
     );
 
     return $"{type.Name} {{ {string.Join(", ", parts)} }}";
+  }
+
+  private readonly ConcurrentDictionary<TypeMirror, EnumTable> enumTables = new();
+
+  /// <summary>
+  /// Names an enum value, through the type's member table read off the target once per attach.
+  /// The naming is done client-side rather than by the vendored client, whose own walk costs a
+  /// wire command per member examined and whose answers are not .NET's (see
+  /// docs/solutions/mono-debuggee-answers-over-sdb.md).
+  /// </summary>
+  public string EnumName(EnumMirror value) {
+    try {
+      var table = this.EnumTableFor(value.Type);
+
+      return table is not null ? table.Render(value.Value) : Invoker.NumberOf(value.Value);
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      // Naming a value is never worth failing the read it was part of: one enum this target
+      // describes oddly must not cost a caller a whole component, or a whole listing.
+      return Invoker.NumberOf(value.Value);
+    }
+  }
+
+  /// <summary>The bare value an enum carries, for when its members cannot be named.</summary>
+  private static string NumberOf(object value) =>
+    value is IFormattable f ? f.ToString(null, CultureInfo.InvariantCulture) : value?.ToString();
+
+  /// <summary>
+  /// Reads static fields of a type in ONE batched read, by name.
+  /// <paramref name="names" /> null takes every static field the type declares.
+  /// A name the type does not declare is simply absent from the answer, so what an incomplete set
+  /// means is left to the caller, which is the only one that knows whether a partial answer is
+  /// usable.
+  /// </summary>
+  public Dictionary<string, Value> StaticFieldValues(
+    TypeMirror type,
+    IReadOnlyCollection<string> names = null
+  ) {
+    var fields = this.Retrying(() =>
+      type.GetFields().Where(f => f.IsStatic && (names is null || names.Contains(f.Name))).ToArray()
+    );
+
+    var read = new Dictionary<string, Value>(fields.Length);
+
+    if (fields.Length is 0) {
+      return read;
+    }
+
+    // Retried like every other wire operation: NOT_SUSPENDED right after attach is a normal
+    // transient, and a caller that memoizes this answer must not memoize one.
+    var values = this.Retrying(() => type.GetValues(fields));
+
+    for (var i = 0; i < fields.Length; i++) {
+      read[fields[i].Name] = values[i];
+    }
+
+    return read;
+  }
+
+  /// <summary>
+  /// An enum type's whole member table, read in ONE batched static-field read and kept for the
+  /// attach: an enum's members are a property of loaded code, which Mono cannot unload.
+  /// Null when the enum cannot be tabulated, which leaves its values rendering as numbers.
+  /// The two ways that happens are memoized differently, and deliberately: an underlying type that
+  /// is not a CLR primitive is a property of the enum, so it settles, while a read the target
+  /// REFUSED describes the moment and is left for the next render to ask again.
+  /// </summary>
+  private EnumTable EnumTableFor(TypeMirror enumType) {
+    if (this.enumTables.TryGetValue(enumType, out var cached)) {
+      return cached;
+    }
+
+    Dictionary<string, Value> statics;
+    Type underlying;
+
+    // The batched read is all-or-nothing: ONE member the target will not hand over fails the whole
+    // set, so the failure is caught here rather than escaping into whatever value was being read.
+    try {
+      underlying = Invoker.ClrPrimitiveOrNull(enumType.EnumUnderlyingType.FullName);
+
+      if (underlying is null) {
+        this.enumTables[enumType] = null;
+
+        return null;
+      }
+
+      statics = this.StaticFieldValues(enumType);
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      return null;
+    }
+
+    var members = new Dictionary<ulong, string>();
+
+    foreach (var (name, value) in statics) {
+      if (value is EnumMirror member) {
+        _ = members.TryAdd(EnumTable.Bits(member.Value, underlying), name);
+      }
+    }
+
+    var table = new EnumTable {
+      Members = members,
+      IsFlags = Invoker.IsFlagsEnum(enumType),
+      Underlying = underlying
+    };
+
+    this.enumTables[enumType] = table;
+
+    return table;
+  }
+
+  /// <summary>
+  /// Whether the enum declares itself as flags, which is what licenses decomposing a value into
+  /// members it merely carries.
+  /// A target that cannot report its attributes answers as a plain enum, which costs the value its
+  /// decomposition and nothing else.
+  /// </summary>
+  private static bool IsFlagsEnum(TypeMirror enumType) {
+    try {
+      return enumType.GetCustomAttributes(false)
+        .Any(a => a.Constructor?.DeclaringType?.FullName is "System.FlagsAttribute");
+    }
+    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      return false;
+    }
+  }
+
+  /// <summary>
+  /// The default value of a mirrored type, built entirely client-side: a zeroed struct is fields
+  /// the client fills in and serializes on first send, so nothing is asked of the debuggee and
+  /// nothing is allocated in it.
+  /// The one owner of that construction, since every caller that needs a placeholder -- a `new`
+  /// with no constructor, an out-parameter slot, an Entity named by index and version -- needs the
+  /// same one.
+  /// </summary>
+  public Value DefaultMirrorFor(TypeMirror type) {
+    if (type.IsEnum) {
+      // The underlying type is a primitive, so the recursion answers a zero of exactly the width
+      // the wire expects for this enum.
+      return this.Vm.CreateEnumMirror(
+        type,
+        (PrimitiveValue) this.DefaultMirrorFor(type.EnumUnderlyingType)
+      );
+    }
+
+    var clr = Invoker.ClrPrimitiveOrNull(type.FullName);
+
+    if (clr is not null) {
+      return this.Prim(
+        clr == typeof(char) ? '\0' : Convert.ChangeType(0, clr, CultureInfo.InvariantCulture)
+      );
+    }
+
+    if (!type.IsValueType) {
+      return this.Vm.CreateValue(null);
+    }
+
+    // The vendored StructMirror constructor is internal to this assembly, which is what makes the
+    // whole client-side build possible.
+    var fields = Invoker.InstanceFields(type);
+
+    return new StructMirror(
+      this.Vm,
+      type,
+      fields.Select(f => this.DefaultMirrorFor(f.FieldType)).ToArray()
+    );
+  }
+
+  /// <summary>
+  /// Builds an enum mirror carrying the given numeric value.
+  /// The wire value must match the enum's underlying primitive EXACTLY, and the conversion is the
+  /// unchecked, truncating cast: C# enum casts wrap rather than range-check, and `~` on a sub-int
+  /// flags enum yields a negative int that must truncate back.
+  /// The one owner of that construction, so a byte-backed enum and an int-backed one are written
+  /// the same way wherever a value is coerced.
+  /// </summary>
+  public EnumMirror MakeEnum(TypeMirror enumType, object numeric) {
+    var underlying = Invoker.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
+
+    return this.Vm.CreateEnumMirror(enumType, this.Prim(Invoker.CastClient(numeric, underlying)));
+  }
+
+  /// <summary>C# cast semantics (truncation, not rounding) via the runtime binder.</summary>
+  public static object CastClient(object value, Type target) {
+    // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
+    return Type.GetTypeCode(target) switch {
+      TypeCode.Int32 => (int) (dynamic) value,
+      TypeCode.UInt32 => (uint) (dynamic) value,
+      TypeCode.Int64 => (long) (dynamic) value,
+      TypeCode.UInt64 => (ulong) (dynamic) value,
+      TypeCode.Int16 => (short) (dynamic) value,
+      TypeCode.UInt16 => (ushort) (dynamic) value,
+      TypeCode.Byte => (byte) (dynamic) value,
+      TypeCode.SByte => (sbyte) (dynamic) value,
+      TypeCode.Single => (float) (dynamic) value,
+      TypeCode.Double => (double) (dynamic) value,
+      TypeCode.Char => (char) (dynamic) value,
+      TypeCode.Boolean => (bool) (dynamic) value,
+      _ => throw new InvalidOperationException($"cannot cast to {target.FullName}")
+    };
+  }
+
+  /// <summary>
+  /// The CLR primitive a mirrored type name stands for; throws when it names something else.
+  /// </summary>
+  public static Type ClrPrimitive(string fullName) =>
+    Invoker.ClrPrimitiveOrNull(fullName) ??
+    throw new InvalidOperationException($"{fullName} is not a primitive type");
+
+  /// <summary>
+  /// The CLR primitive a mirrored type name stands for, null when it names something else.
+  /// </summary>
+  public static Type ClrPrimitiveOrNull(string fullName) {
+    return fullName switch {
+      "System.Int32" => typeof(int),
+      "System.UInt32" => typeof(uint),
+      "System.Int64" => typeof(long),
+      "System.UInt64" => typeof(ulong),
+      "System.Int16" => typeof(short),
+      "System.UInt16" => typeof(ushort),
+      "System.Byte" => typeof(byte),
+      "System.SByte" => typeof(sbyte),
+      "System.Single" => typeof(float),
+      "System.Double" => typeof(double),
+      "System.Boolean" => typeof(bool),
+      "System.Char" => typeof(char),
+      _ => null
+    };
   }
 
   /// <summary>

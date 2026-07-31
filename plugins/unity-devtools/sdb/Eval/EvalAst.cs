@@ -41,7 +41,7 @@ public sealed record MemberExpr(EvalExpr Target, string Name) : EvalExpr;
 /// <summary>
 /// A method call; a null <paramref name="Target" /> is a bare call resolved against the scope
 /// chain (e.g., the <c>entity(index, version)</c> builtin).
-/// Type arguments are fully qualified type names, instantiated live via MakeGenericMethod.
+/// Type arguments are fully qualified type names, instantiated live through the invoker.
 /// </summary>
 public sealed record CallExpr(
   EvalExpr Target,

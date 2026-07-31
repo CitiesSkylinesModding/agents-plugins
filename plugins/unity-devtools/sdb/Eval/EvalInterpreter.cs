@@ -116,7 +116,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       case CastExpr cast: return this.EvaluateCast(cast);
 
       case TypeofExpr typeOf:
-        return this.ResolveType(typeOf.TypeName, typeOf.Position).GetTypeObject();
+        return inv.TypeObject(this.ResolveType(typeOf.TypeName, typeOf.Position));
 
       case UnaryExpr unary: {
         var operand = this.Evaluate(unary.Operand);
@@ -124,7 +124,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         var raw = PrimitiveOps.Unary(unary.Op, EvalInterpreter.UnwrapForOps(operand));
 
         // `~` is the one unary operator C# defines on (flags) enums; it keeps the enum type.
-        return unary.Op is "~" && operand is EnumMirror e ? this.MakeEnum(e.Type, raw) : raw;
+        return unary.Op is "~" && operand is EnumMirror e ? inv.MakeEnum(e.Type, raw) : raw;
       }
 
       case BinaryExpr binary: return this.EvaluateBinary(binary);
@@ -244,8 +244,8 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     // Flags math keeps the enum; so do +/- against a numeric offset (enum minus enum is the
     // underlying distance, as in C#); comparisons fall through as bool.
     return binary.Op switch {
-      "&" or "|" or "^" => this.MakeEnum(enumType, raw),
-      "+" or "-" when !bothEnums => this.MakeEnum(enumType, raw),
+      "&" or "|" or "^" => inv.MakeEnum(enumType, raw),
+      "+" or "-" when !bothEnums => inv.MakeEnum(enumType, raw),
       _ => raw
     };
   }
@@ -596,9 +596,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   }
 
   /// <summary>
-  /// Materializes an enum constant as an EnumMirror. Enum constants are literal fields with no
-  /// static storage, so the value is obtained via a debuggee-side Enum.Parse + Convert instead of
-  /// a static-field read.
+  /// Materializes an enum constant as an EnumMirror, by name, through a debuggee-side Enum.Parse.
   /// </summary>
   private EnumMirror EnumMemberValue(TypeMirror enumType, string name) {
     var key = $"{enumType.FullName}.{name}";
@@ -612,13 +610,13 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     var boxed = inv.InvokeStatic(
       enumClass,
       inv.FindMethod(enumClass, "Parse", 2, paramTypes: ["Type", "String"]),
-      enumType.GetTypeObject(),
+      inv.TypeObject(enumType),
       inv.Str(name)
     );
 
     // Convert through the enum's actual underlying type, so unsigned 64-bit constants survive
     // (a signed pivot would overflow above long.MaxValue).
-    var underlying = EvalInterpreter.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
+    var underlying = Invoker.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
 
     var convert = this.ResolveType("System.Convert", -1);
 
@@ -628,23 +626,11 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       boxed
     );
 
-    var constant = this.MakeEnum(enumType, numeric.Value);
+    var constant = inv.MakeEnum(enumType, numeric.Value);
 
     this.enumConstants[key] = constant;
 
     return constant;
-  }
-
-  private EnumMirror MakeEnum(TypeMirror enumType, object numeric) {
-    // The wire value must match the enum's underlying primitive type exactly; the conversion is
-    // the unchecked, truncating cast (C# enum casts wrap rather than range-check, and `~` on a
-    // sub-int flags enum yields a negative int that must truncate back).
-    var underlying = EvalInterpreter.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
-
-    return inv.Vm.CreateEnumMirror(
-      enumType,
-      inv.Prim(EvalInterpreter.CastClient(numeric, underlying))
-    );
   }
 
   // ---- Calls ----
@@ -769,7 +755,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
       var definition = inv.FindMethod(declaringType, call.Name, argc, call.TypeArgs.Count);
 
-      candidates = [definition.MakeGenericMethod(typeArgs)];
+      candidates = [inv.Instantiate(definition, typeArgs)];
     }
     else {
       candidates = inv.FindMethods(declaringType, call.Name, argc);
@@ -833,7 +819,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
             var parameterType = parameters[i].ParameterType;
 
             values[i] = outIndexes is not null && outIndexes.Contains(i)
-              ? this.DefaultMirrorFor(
+              ? inv.DefaultMirrorFor(
                 parameterType.IsByRef ? parameterType.GetElementType() : parameterType
               )
               : this.CoerceToType(args[i], parameterType, position, allowWidening);
@@ -884,7 +870,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   private int ArgumentCost(object arg, TypeMirror parameterType) {
     var bare = parameterType.IsByRef ? parameterType.GetElementType() : parameterType;
 
-    if (EvalInterpreter.ClrPrimitiveOrNull(bare.FullName) is {} clr) {
+    if (Invoker.ClrPrimitiveOrNull(bare.FullName) is {} clr) {
       var argType = EvalInterpreter.UnwrapForOps(arg)?.GetType();
 
       return argType == clr
@@ -1010,9 +996,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     if (type.IsValueType && args.Length is 0 && candidates.Count is 0) {
       // Zeroed client-side default: no debuggee allocation, fields overwritten locally and
-      // serialized on first send (the MakeEntity pattern, generalized). A struct with a declared
-      // parameterless constructor must run it instead.
-      instance = this.DefaultMirrorFor(type);
+      // serialized on first send. A struct with a declared parameterless constructor must run it
+      // instead.
+      instance = inv.DefaultMirrorFor(type);
     }
     else {
       if (candidates.Count is 0) {
@@ -1369,20 +1355,20 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
       // Strings are IConvertible but not castable in C#.
       return numeric is IConvertible and not string
-        ? this.MakeEnum(type, numeric)
+        ? inv.MakeEnum(type, numeric)
         : throw new EvalRuntimeException(
           $"cannot cast {EvalInterpreter.TypeNameOf(value)} to enum {type.FullName}",
           cast.Position
         );
     }
 
-    var clr = EvalInterpreter.ClrPrimitiveOrNull(type.FullName);
+    var clr = Invoker.ClrPrimitiveOrNull(type.FullName);
 
     if (clr is not null) {
       var unwrapped = EvalInterpreter.UnwrapForOps(value);
 
       return unwrapped is IConvertible and not string
-        ? EvalInterpreter.CastClient(unwrapped, clr)
+        ? Invoker.CastClient(unwrapped, clr)
         : throw new EvalRuntimeException(
           $"cannot cast {EvalInterpreter.TypeNameOf(value)} to {type.FullName}",
           cast.Position
@@ -1414,26 +1400,6 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         $"cannot cast {EvalInterpreter.TypeNameOf(value)} to {type.FullName}",
         cast.Position
       );
-  }
-
-  /// <summary>C# cast semantics (truncation, not rounding) via the runtime binder.</summary>
-  private static object CastClient(object value, Type target) {
-    // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
-    return Type.GetTypeCode(target) switch {
-      TypeCode.Int32 => (int) (dynamic) value,
-      TypeCode.UInt32 => (uint) (dynamic) value,
-      TypeCode.Int64 => (long) (dynamic) value,
-      TypeCode.UInt64 => (ulong) (dynamic) value,
-      TypeCode.Int16 => (short) (dynamic) value,
-      TypeCode.UInt16 => (ushort) (dynamic) value,
-      TypeCode.Byte => (byte) (dynamic) value,
-      TypeCode.SByte => (sbyte) (dynamic) value,
-      TypeCode.Single => (float) (dynamic) value,
-      TypeCode.Double => (double) (dynamic) value,
-      TypeCode.Char => (char) (dynamic) value,
-      TypeCode.Boolean => (bool) (dynamic) value,
-      _ => throw new InvalidOperationException($"cannot cast to {target.FullName}")
-    };
   }
 
   // ---- Types ----
@@ -1497,7 +1463,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       Value mirror => mirror,
       null => inv.Vm.CreateValue(null),
       string s => inv.Str(s),
-      not null when EvalInterpreter.ClrPrimitiveOrNull(value.GetType().FullName) is not null =>
+      not null when Invoker.ClrPrimitiveOrNull(value.GetType().FullName) is not null =>
         inv.Prim(value),
       _ => throw new EvalRuntimeException(
         $"cannot send a {value.GetType().FullName} to the debuggee",
@@ -1526,7 +1492,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     if (value is TypeRef typeRef) {
       // A bare type where a System.Type is expected: the common typo for typeof(...).
       return typeName is "System.Type"
-        ? typeRef.Type.GetTypeObject()
+        ? inv.TypeObject(typeRef.Type)
         : throw new EvalRuntimeException(
           $"'{typeRef.Type.FullName}' is a type, not a value",
           position
@@ -1613,7 +1579,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       // Numeric-to-enum is admitted as a REPL convenience (C# itself would want a cast);
       // strings and bools stay out (no numeric identity to convert).
       return allowWidening && value is IConvertible and not string and not bool
-        ? this.MakeEnum(bareTarget, value)
+        ? inv.MakeEnum(bareTarget, value)
         : throw new EvalRuntimeException(
           $"cannot pass {value.GetType().FullName} as enum {typeName}",
           position
@@ -1634,7 +1600,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         return this.ToMirror(value, position);
     }
 
-    var clr = EvalInterpreter.ClrPrimitiveOrNull(typeName);
+    var clr = Invoker.ClrPrimitiveOrNull(typeName);
 
     if (clr is null) {
       throw new EvalRuntimeException(
@@ -1657,7 +1623,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     if (PrimitiveOps.CanWiden(value.GetType(), clr)) {
       // The cast, not Convert.ChangeType: Char's IConvertible lacks ToSingle/ToDouble, and the
       // cast is what C#'s implicit conversion compiles to anyway.
-      return inv.Prim(EvalInterpreter.CastClient(value, clr));
+      return inv.Prim(Invoker.CastClient(value, clr));
     }
 
     if (EvalInterpreter.IsIntegral(value.GetType()) && EvalInterpreter.IsIntegral(clr)) {
@@ -1690,56 +1656,6 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       TypeCode.Char;
   }
 
-  private static Type ClrPrimitive(string fullName) =>
-    EvalInterpreter.ClrPrimitiveOrNull(fullName) ??
-    throw new InvalidOperationException($"{fullName} is not a primitive type");
-
-  private static Type ClrPrimitiveOrNull(string fullName) {
-    return fullName switch {
-      "System.Int32" => typeof(int),
-      "System.UInt32" => typeof(uint),
-      "System.Int64" => typeof(long),
-      "System.UInt64" => typeof(ulong),
-      "System.Int16" => typeof(short),
-      "System.UInt16" => typeof(ushort),
-      "System.Byte" => typeof(byte),
-      "System.SByte" => typeof(sbyte),
-      "System.Single" => typeof(float),
-      "System.Double" => typeof(double),
-      "System.Boolean" => typeof(bool),
-      "System.Char" => typeof(char),
-      _ => null
-    };
-  }
-
-  /// <summary>Default value for a mirrored type, built entirely client-side.</summary>
-  private Value DefaultMirrorFor(TypeMirror type) {
-    if (type.IsEnum) {
-      return this.MakeEnum(type, 0);
-    }
-
-    var clr = EvalInterpreter.ClrPrimitiveOrNull(type.FullName);
-
-    if (clr is not null) {
-      return inv.Prim(
-        clr == typeof(char) ? '\0' : Convert.ChangeType(0, clr, CultureInfo.InvariantCulture)
-      );
-    }
-
-    if (!type.IsValueType) {
-      return inv.Vm.CreateValue(null);
-    }
-
-    // Client-side default struct: the vendored StructMirror ctor is internal to this assembly.
-    var fields = Invoker.InstanceFields(type);
-
-    return new StructMirror(
-      inv.Vm,
-      type,
-      fields.Select(f => this.DefaultMirrorFor(f.FieldType)).ToArray()
-    );
-  }
-
   // ---- Formatting and reporting ----
 
   private string Stringify(object value) {
@@ -1749,7 +1665,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
       StringMirror s => s.Value,
       PrimitiveValue p => this.Stringify(p.Value),
-      EnumMirror e => e.StringValue,
+      EnumMirror e => inv.EnumName(e),
       Value v => inv.Format(v),
       _ => value.ToString()
     };
