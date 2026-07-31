@@ -619,6 +619,9 @@ public sealed class Invoker(VirtualMachine vm) {
       statics = this.StaticFieldValues(enumType);
     }
     catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
+      // Answered but not latched, so the next render asks again rather than inheriting a refusal
+      // that described a moment. Re-asking is the cheap half of the trade: the batched read is ONE
+      // wire command, not an invoke, and only a target that refuses ever pays it twice.
       return null;
     }
 

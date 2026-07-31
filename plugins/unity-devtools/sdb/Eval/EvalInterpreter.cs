@@ -19,11 +19,6 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   /// <summary>Locals in declaration order (failure reports list them as declared).</summary>
   private readonly OrderedDictionary<string, object> locals = [];
 
-  /// <summary>
-  /// Enum constants resolved this evaluation (each costs several wire round-trips).
-  /// </summary>
-  private readonly Dictionary<string, EnumMirror> enumConstants = [];
-
   /// <summary>Receiver stack for `?.` chains (the tested value binds the member hole).</summary>
   private readonly Stack<object> receivers = new();
 
@@ -559,8 +554,11 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   private object ReadStaticMember(TypeMirror type, string name, int position) {
     var field = type.GetFields().FirstOrDefault(f => f.IsStatic && f.Name == name);
 
+    // An enum member needs no special path: it is a static field like any other, and the agent
+    // answers a `const` literal's value even though it has no storage, as an EnumMirror carrying
+    // the member's full width.
     if (field is not null) {
-      return type.IsEnum ? this.EnumMemberValue(type, name) : type.GetValue(field);
+      return type.GetValue(field);
     }
 
     MethodMirror getter;
@@ -593,44 +591,6 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     return field is not null
       ? field.GetValue(target)
       : throw new EvalRuntimeException($"'{name}' is not a member of {type.FullName}", position);
-  }
-
-  /// <summary>
-  /// Materializes an enum constant as an EnumMirror, by name, through a debuggee-side Enum.Parse.
-  /// </summary>
-  private EnumMirror EnumMemberValue(TypeMirror enumType, string name) {
-    var key = $"{enumType.FullName}.{name}";
-
-    if (this.enumConstants.TryGetValue(key, out var memoized)) {
-      return memoized;
-    }
-
-    var enumClass = this.ResolveType("System.Enum", -1);
-
-    var boxed = inv.InvokeStatic(
-      enumClass,
-      inv.FindMethod(enumClass, "Parse", 2, paramTypes: ["Type", "String"]),
-      inv.TypeObject(enumType),
-      inv.Str(name)
-    );
-
-    // Convert through the enum's actual underlying type, so unsigned 64-bit constants survive
-    // (a signed pivot would overflow above long.MaxValue).
-    var underlying = Invoker.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
-
-    var convert = this.ResolveType("System.Convert", -1);
-
-    var numeric = (PrimitiveValue) inv.InvokeStatic(
-      convert,
-      inv.FindMethod(convert, $"To{underlying.Name}", 1, paramTypes: ["Object"]),
-      boxed
-    );
-
-    var constant = inv.MakeEnum(enumType, numeric.Value);
-
-    this.enumConstants[key] = constant;
-
-    return constant;
   }
 
   // ---- Calls ----

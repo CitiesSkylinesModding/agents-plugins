@@ -61,6 +61,12 @@ public enum Big : ulong {
   Huge = ulong.MaxValue
 }
 
+// The narrow end of the underlying-type range: a member whose value fills its byte, so a constant
+// read at the wrong width shows up as a wrong value rather than as a wrong type.
+public enum Narrow : byte {
+  Full = byte.MaxValue
+}
+
 public class BaseThing {
   public string Name => "base";
 }

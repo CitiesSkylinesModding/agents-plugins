@@ -34,6 +34,22 @@ public sealed class EvalFixtureShapeTests(MonoDebuggeeFixture fx) {
   }
 
   [SkippableFact]
+  public void ByteBackedEnumConstantResolves() {
+    var outcome = fx.Eval("TestFixture.Narrow.Full");
+
+    Assert.Equal("Narrow.Full", outcome.Formatted);
+    Assert.Equal("TestFixture.Narrow", outcome.TypeName);
+  }
+
+  [SkippableFact]
+  public void ByteBackedEnumCastsToItsFullNumericValue() {
+    var outcome = fx.Eval("(byte) TestFixture.Narrow.Full");
+
+    Assert.Equal("255", outcome.Formatted);
+    Assert.Equal("System.Byte", outcome.TypeName);
+  }
+
+  [SkippableFact]
   public void NewMemberShadowingPicksTheMostDerivedOne() {
     Assert.Equal("\"derived\"", fx.Eval("new TestFixture.DerivedThing().Name").Formatted);
   }
