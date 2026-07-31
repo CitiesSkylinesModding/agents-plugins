@@ -45,15 +45,26 @@ public sealed class Ecs {
   /// <summary>
   /// The game's own ComponentType for a component type mirror, which is how a type is named to
   /// every Entities API that takes one and how its type index is learned.
+  /// Built once per attach, so a query naming the same components twice pays the invoke once; a
+  /// type the target's type manager never registered THROWS instead of answering, and that refusal
+  /// describes the moment rather than the type, so it is left for the next call to re-ask.
   /// </summary>
   private StructMirror ComponentTypeOf(TypeMirror type) {
+    if (this.catalog.TryComponentType(type, out var known)) {
+      return known;
+    }
+
     var ctType = this.inv.ResolveType("Unity.Entities.ComponentType");
 
-    return (StructMirror) this.inv.InvokeStatic(
+    var built = (StructMirror) this.inv.InvokeStatic(
       ctType,
       this.inv.FindMethod(ctType, "ReadWrite", 1, paramTypes: ["Type"]),
       this.inv.TypeObject(type)
     );
+
+    this.catalog.RememberComponentType(type, built);
+
+    return built;
   }
 
   /// <summary>Builds an EntityQuery requiring all the given component types (ReadWrite).</summary>
@@ -245,7 +256,7 @@ public sealed class Ecs {
   /// element and a component of the same name share a type index, so "carries it as a component" is
   /// not the same fact as "carries it as a buffer", and one must never answer for the other.
   /// </summary>
-  private readonly HashSet<(int Index, int Version, TypeMirror Type, string Kind)> carried = [];
+  private readonly HashSet<(int Index, int Version, TypeMirror Type, EcsKind Kind)> carried = [];
 
   /// <summary>
   /// Refuses a type the entity does not carry, the one gate every accessor below goes through.
@@ -263,7 +274,7 @@ public sealed class Ecs {
     StructMirror entity,
     TypeMirror type,
     string hasMethod,
-    string kind
+    EcsKind kind
   ) {
     var id = Ecs.Id(entity);
     var key = (id.Index, id.Version, Type: type, Kind: kind);
@@ -281,7 +292,7 @@ public sealed class Ecs {
     }
 
     throw new InvalidOperationException(
-      $"entity {key.Index}:{key.Version} has no {type.FullName} {kind}"
+      $"entity {key.Index}:{key.Version} has no {type.FullName} {kind.Wire}"
     );
   }
 
@@ -290,7 +301,7 @@ public sealed class Ecs {
   /// entity's archetype in this very suspend window: the gate's invariant is then satisfied by
   /// construction rather than by an invoke that re-establishes what was just read.
   /// </summary>
-  private void MarkCarried(StructMirror entity, TypeMirror type, string kind) {
+  private void MarkCarried(StructMirror entity, TypeMirror type, EcsKind kind) {
     var id = Ecs.Id(entity);
 
     _ = this.carried.Add((id.Index, id.Version, type, kind));
@@ -307,7 +318,7 @@ public sealed class Ecs {
     );
 
   public Value GetComponent(StructMirror entity, TypeMirror componentType) {
-    this.RequirePresence(entity, componentType, "HasComponent", "component");
+    this.RequirePresence(entity, componentType, "HasComponent", EcsKind.Component);
 
     return this.inv.Invoke(
       this.EntityManager,
@@ -317,7 +328,7 @@ public sealed class Ecs {
   }
 
   public void SetComponent(StructMirror entity, TypeMirror componentType, StructMirror value) {
-    this.RequirePresence(entity, componentType, "HasComponent", "component");
+    this.RequirePresence(entity, componentType, "HasComponent", EcsKind.Component);
 
     this.inv.Invoke(
       this.EntityManager,
@@ -408,7 +419,7 @@ public sealed class Ecs {
       components.Add(
         new EntityComponentInfo {
           Name = described.Name,
-          Kind = described.Kind,
+          Kind = described.Kind.Wire,
           Enabled = enableable is true
             ? this.EnabledOrNull(entity, ct, described.Kind, enabledGetter)
             : null,
@@ -447,7 +458,7 @@ public sealed class Ecs {
     // A shared or chunk component keeps its data, and its enabled bit, outside the entity, so the
     // question does not arise -- and asking it anyway would spend an invoke per such entry on the
     // fallback path, for an answer no entry can report.
-    if (described.Kind is "shared" or "chunk") {
+    if (described.Kind is EcsKind.Shared or EcsKind.Chunk) {
       return false;
     }
 
@@ -496,8 +507,8 @@ public sealed class Ecs {
   /// must cost its own value, never the listing the caller asked for.
   /// </summary>
   private (string Value, string Error) ValueOf(StructMirror entity, EcsComponentType described) {
-    if (described.Kind is not "component") {
-      return (described.Kind, null);
+    if (described.Kind is not EcsKind.Component) {
+      return (described.Kind.Wire, null);
     }
 
     if (described.Name is null) {
@@ -516,7 +527,7 @@ public sealed class Ecs {
 
         // The archetype was enumerated in this very suspend window and the type is proven to be
         // the one the entry named, so the read's own gate has nothing left to establish.
-        this.MarkCarried(entity, type, "component");
+        this.MarkCarried(entity, type, EcsKind.Component);
       }
       else {
         // A target whose type index this cannot read cannot prove identity either; the read falls
@@ -623,10 +634,10 @@ public sealed class Ecs {
   private bool? EnabledOrNull(
     StructMirror entity,
     Value componentType,
-    string kind,
+    EcsKind kind,
     MethodMirror isEnabled
   ) {
-    if (isEnabled is null || kind is "shared" or "chunk") {
+    if (isEnabled is null || kind is EcsKind.Shared or EcsKind.Chunk) {
       return null;
     }
 
@@ -634,8 +645,6 @@ public sealed class Ecs {
 
     return (bool) ((PrimitiveValue) state).Value;
   }
-
-  private MethodMirror fullNameGetter;
 
   /// <summary>
   /// The component's fully-qualified name, read off the managed type it wraps, null when the target
@@ -651,12 +660,7 @@ public sealed class Ecs {
       return null;
     }
 
-    // Each component answers its OWN Type mirror, and reading a property off a fresh mirror spends
-    // a round trip learning its type first. They all share one concrete runtime class, so the
-    // getter resolved off the first serves every later one for free.
-    this.fullNameGetter ??= this.inv.FindMethod(managed.Type, "get_FullName", 0);
-
-    return (this.inv.Invoke(managed, this.fullNameGetter) as StringMirror)?.Value;
+    return (this.inv.GetProperty(managed, "FullName") as StringMirror)?.Value;
   }
 
   /// <summary>
@@ -664,18 +668,18 @@ public sealed class Ecs {
   /// a target that does not expose the masks <see cref="TypeIndexFlags" /> decodes.
   /// Correct and slower: it walks the same ladder, in the same order, over the same facts.
   /// </summary>
-  private string InvokedKindOf(Value componentType) =>
+  private EcsKind InvokedKindOf(Value componentType) =>
     this.Flag(componentType, "IsBuffer")
-      ? "buffer"
+      ? EcsKind.Buffer
       : this.Flag(componentType, "IsSharedComponent")
-        ? "shared"
+        ? EcsKind.Shared
         : this.Flag(componentType, "IsChunkComponent")
-          ? "chunk"
+          ? EcsKind.Chunk
           : this.Flag(componentType, "IsManagedComponent")
-            ? "managed"
+            ? EcsKind.Managed
             : this.Flag(componentType, "IsZeroSized")
-              ? "tag"
-              : "component";
+              ? EcsKind.Tag
+              : EcsKind.Component;
 
   private bool Flag(Value componentType, string name) =>
     (bool) ((PrimitiveValue) this.inv.GetProperty(componentType, name)).Value;
@@ -737,7 +741,7 @@ public sealed class Ecs {
     if (Ecs.Unfollowable(type) is {} storage) {
       throw new InvalidOperationException(
         $"follow reads a plain unmanaged component, and {type.FullName} is {storage}; chase an " +
-        "Entity field on a type the listing reports under kind \"component\""
+        $"Entity field on a type the listing reports under kind \"{EcsKind.Component.Wire}\""
       );
     }
 
@@ -889,7 +893,7 @@ public sealed class Ecs {
   /// write access is what turns an accessor mistake fatal, so only a path that mutates asks for it.
   /// </summary>
   public Value GetBuffer(StructMirror entity, TypeMirror elementType, bool isReadOnly) {
-    this.RequirePresence(entity, elementType, "HasBuffer", "buffer");
+    this.RequirePresence(entity, elementType, "HasBuffer", EcsKind.Buffer);
 
     return this.inv.Invoke(
       this.EntityManager,

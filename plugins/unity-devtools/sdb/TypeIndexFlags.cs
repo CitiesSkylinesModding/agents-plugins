@@ -76,18 +76,18 @@ public sealed record TypeIndexFlags {
   /// component is zero-sized on the entity that carries it -- so this ladder IS the
   /// classification, most specific first.
   /// </summary>
-  public string KindOf(int typeIndex) {
+  public EcsKind KindOf(int typeIndex) {
     return TypeIndexFlags.IsSet(typeIndex, this.Buffer)
-      ? "buffer"
+      ? EcsKind.Buffer
       : TypeIndexFlags.IsSet(typeIndex, this.Shared)
-        ? "shared"
+        ? EcsKind.Shared
         : TypeIndexFlags.IsSet(typeIndex, this.Chunk)
-          ? "chunk"
+          ? EcsKind.Chunk
           : TypeIndexFlags.IsSet(typeIndex, this.Managed)
-            ? "managed"
+            ? EcsKind.Managed
             : TypeIndexFlags.IsSet(typeIndex, this.ZeroSize)
-              ? "tag"
-              : "component";
+              ? EcsKind.Tag
+              : EcsKind.Component;
   }
 
   /// <summary>Whether the type carries an enabled bit on the entities storing it.</summary>

@@ -53,6 +53,17 @@ while charging per call:
   instead reads in ONE `GetValues` over the static fields, `const` literals included: they have no
   storage, and the agent answers them anyway.
 
+One accessor reads the other way round, free where it looks expensive: **reading a mirror's own type
+costs no round trip.** `ObjectMirror.Type` looks like it might, since its getter falls back to
+`Object_GetInfo` when the type is unset -- but that branch is unreachable for any mirror the decode
+path produced. An object value arrives carrying only its object id, so `VirtualMachine.GetObject`
+issues `Object_GetInfo` EAGERLY while interning the mirror and constructs it with the type already
+set. The cost is paid once per object, at first sight, whether or not anything ever reads the type.
+
+So resolving a getter off a fresh mirror's type is a client-side lookup, and memoizing one across
+mirrors buys nothing -- verified by wire counters, which showed byte-identical traffic with and
+without such a memo.
+
 That batched read is ALL-OR-NOTHING. `TypeMirror.GetValues` maps `ErrorCode.INVALID_FIELDID` to an
 `ArgumentException` covering the whole call, so one field the agent will not hand over fails every
 other field in the batch. A caller that reads a table this way catches around it, rather than letting

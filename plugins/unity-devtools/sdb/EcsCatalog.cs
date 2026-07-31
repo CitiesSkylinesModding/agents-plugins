@@ -5,13 +5,13 @@ using Mono.Debugger.Soft;
 namespace UnityDevtools.Sdb;
 
 /// <summary>
-/// What the ECS layer may remember for a whole attach, in one place so that the lifetime and the
-/// invalidation of every ECS memo are stated together rather than scattered through the plumbing.
-/// Two kinds live here, and they are remembered for different reasons.
-/// The flag masks and the component-type descriptions are properties of loaded code, which Mono
-/// cannot unload, so they simply cannot go stale before the attach ends.
-/// A world handle CAN, and it is a raw pointer into the entity store, so it is revalidated on every
-/// operation instead (see <see cref="WorldFor" />).
+/// What the ECS layer may remember for a whole attach, in one place so that the lifetime of every
+/// ECS memo is stated together rather than scattered through the plumbing.
+/// Everything held here is a property of loaded code or of a debuggee object's own identity --
+/// neither of which Mono can take back before the attach ends -- so nothing here can go stale.
+/// A world's HANDLES are the deliberate exception and are not kept: <see cref="WorldFor" /> selects
+/// them afresh per operation, since an EntityManager held across operations is a raw pointer into
+/// the entity store.
 /// One catalog belongs to one attach and dies with it; nothing here needs a lock, because the ECS
 /// tools reach it only through a session operation and those run one at a time.
 /// </summary>
@@ -96,89 +96,48 @@ public sealed class EcsCatalog(Invoker inv) {
   public void SettleIdentity(int typeIndex, TypeMirror proven) =>
     this.provenTypes[typeIndex] = proven;
 
-  private readonly Dictionary<string, EcsWorld> worlds = [];
+  private readonly Dictionary<TypeMirror, StructMirror> componentTypeStructs = [];
 
   /// <summary>
-  /// Stands in for the default world, which no name selects.
+  /// The game's own ComponentType already built for a type mirror, which every Entities API taking
+  /// one is named through.
+  /// It is a property of loaded code, and one struct mirror serves any number of invokes: its
+  /// fields are re-serialized on each send, so reusing it cannot leak state between calls.
   /// </summary>
-  private const string DefaultWorldKey = "\0default";
+  public bool TryComponentType(TypeMirror type, out StructMirror built) =>
+    this.componentTypeStructs.TryGetValue(type, out built);
+
+  /// <summary>Keeps a built ComponentType for the rest of the attach.</summary>
+  public void RememberComponentType(TypeMirror type, StructMirror built) =>
+    this.componentTypeStructs[type] = built;
 
   /// <summary>
-  /// The world a name selects, with everything reaching it needs, rebuilt whenever the cached one
-  /// no longer stands.
-  /// Revalidating rather than trusting the cache is what makes caching a world safe at all: the
-  /// EntityManager is a single raw pointer into the entity store, and on a build with the
-  /// collections safety checks compiled out, a stale one is a dangling write rather than an error.
-  /// Selection and revalidation live together here because they are one rule: what revalidates a
-  /// cached world is whether SELECTION would still land on it, and only the selector knows that
-  /// (see <see cref="EcsWorld.Selection" />).
+  /// The world a name selects, with everything reaching it needs, selected afresh every operation.
+  /// Re-selecting is what keeps the EntityManager out of this catalog: it is a single raw pointer
+  /// into the entity store, and on a build with the collections safety checks compiled out, one
+  /// held past the moment it was fetched is a dangling write rather than an error.
+  /// It subsumes the checks a cache needed, because those only ever decided whether to REBUILD, and
+  /// the rebuild re-ran this same selection: what selection lands on is what the caller gets.
+  /// What selection cannot answer is a world the target has DISPOSED while its default static still
+  /// points at it -- that handle is returned unchecked, and nothing here can tell. A named world
+  /// cannot hit that, having left <c>World.All</c>: the name fails with the live-world list.
   /// </summary>
   public EcsWorld WorldFor(string name) {
-    var key = name ?? EcsCatalog.DefaultWorldKey;
-
-    if (this.worlds.TryGetValue(key, out var cached) && this.StillStands(cached)) {
-      return cached;
-    }
-
-    var built = this.BuildWorld(name);
-
-    this.worlds[key] = built;
-
-    return built;
-  }
-
-  private bool StillStands(EcsWorld cached) {
-    try {
-      return cached.Selection switch {
-        // Two different questions, and the default world needs both. Identity asks whether
-        // selection would still land here: a reassigned default answers a different mirror (one
-        // mirror per object), while the previous world stays alive and created, so liveness cannot
-        // stand in for it. Liveness asks whether what it lands on is still there: a world disposed
-        // without the static being cleared keeps answering the same mirror, so identity cannot
-        // stand in either. Whichever fails, the handle is rebuilt.
-        WorldSelection.DefaultInjection =>
-          ReferenceEquals(this.DefaultInjectionWorldOrNull(), cached.World) &&
-          this.IsCreated(cached.World),
-
-        WorldSelection.Named => this.IsCreated(cached.World),
-
-        // Selected by scanning because the target named no default world. Whether the scan would
-        // still land here depends on a default having appeared since, so there is nothing cheaper
-        // to ask than the scan itself: this one is deliberately re-selected every operation.
-        _ => false
-      };
-    }
-    catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
-      // A world that cannot answer whether it still stands is not one to keep using: rebuilding
-      // re-runs selection, which either finds a live world or fails with a message about the world
-      // rather than about the revalidation.
-      return false;
-    }
-  }
-
-  private EcsWorld BuildWorld(string name) {
-    var (world, selectedName, selection) = this.PickWorld(name);
+    var (world, selectedName) = this.PickWorld(name);
     var entityManager = inv.GetProperty(world, "EntityManager");
 
     return new EcsWorld {
       World = world,
-
-      // Selection reads a name only where it has to match one, so the default world is still asked
-      // for its own.
-      Name = selectedName ?? ((StringMirror) inv.GetProperty(world, "Name")).Value,
+      Name = selectedName,
       EntityManager = entityManager,
-      EntityManagerType = inv.TypeOf(entityManager),
-      Selection = selection
+      EntityManagerType = inv.TypeOf(entityManager)
     };
   }
 
-  /// <summary>
-  /// Picks the world a name selects, along with the name it read to select it -- null when it
-  /// selected without reading one, which the default world's early exit does.
-  /// </summary>
-  private (Value World, string Name, WorldSelection Selection) PickWorld(string name) {
+  /// <summary>Picks the world a name selects, along with its own name.</summary>
+  private (Value World, string Name) PickWorld(string name) {
     if (name is null && this.DefaultInjectionWorldOrNull() is {} injected) {
-      return (injected, null, WorldSelection.DefaultInjection);
+      return (injected, this.NameOf(injected));
     }
 
     // World.All is a boxing-hostile struct collection; enumerate via Count + indexer.
@@ -188,14 +147,10 @@ public sealed class EcsCatalog(Invoker inv) {
 
     for (var i = 0; i < count; i++) {
       var world = inv.Invoke(all, "get_Item", inv.Prim(i));
-      var worldName = ((StringMirror) inv.GetProperty(world, "Name")).Value;
+      var worldName = this.NameOf(world);
 
-      if (name is null) {
-        return (world, worldName, WorldSelection.DefaultScan);
-      }
-
-      if (worldName == name) {
-        return (world, worldName, WorldSelection.Named);
+      if (name is null || worldName == name) {
+        return (world, worldName);
       }
 
       names.Add(worldName);
@@ -208,14 +163,25 @@ public sealed class EcsCatalog(Invoker inv) {
     );
   }
 
-  /// <summary>
-  /// Whether the world is still created, false when the target cannot say -- which rebuilds the
-  /// handle rather than trusting one whose liveness nothing established.
-  /// </summary>
-  private bool IsCreated(Value world) {
-    var getter = inv.FindMethodOrNull(inv.TypeOf(world), "get_IsCreated", 0);
+  private readonly Dictionary<Value, string> worldNames = [];
 
-    return getter is not null && (bool) ((PrimitiveValue) inv.Invoke(world, getter)).Value;
+  /// <summary>
+  /// A world's own name, remembered for the attach under the mirror that answers it: a world is
+  /// named at construction and keeps that name, and one debuggee object answers one mirror, so the
+  /// key is an identity the client compares without touching the wire.
+  /// Every site wanting a world's name comes through here, which is what makes the scan above pay
+  /// for a name once per world rather than once per operation.
+  /// </summary>
+  private string NameOf(Value world) {
+    if (this.worldNames.TryGetValue(world, out var known)) {
+      return known;
+    }
+
+    var name = ((StringMirror) inv.GetProperty(world, "Name")).Value;
+
+    this.worldNames[world] = name;
+
+    return name;
   }
 
   /// <summary>The game's main world when it sets one, null when it does not.</summary>
@@ -225,24 +191,9 @@ public sealed class EcsCatalog(Invoker inv) {
   private TypeMirror WorldType() => inv.ResolveType("Unity.Entities.World");
 }
 
-/// <summary>How a cached world was selected, which is what decides how it is revalidated.</summary>
-public enum WorldSelection {
-  /// <summary>The default injection world, revalidated by mirror identity.</summary>
-  DefaultInjection,
-
-  /// <summary>Named by the caller and found by scanning, revalidated by liveness.</summary>
-  Named,
-
-  /// <summary>
-  /// The first live world, taken because the target named no default: not revalidatable short of
-  /// re-selecting, so it is never served from cache.
-  /// </summary>
-  DefaultScan
-}
-
 /// <summary>
-/// One world and the handles every ECS operation against it needs, cached together because they
-/// are read together and revalidated together.
+/// One world and the handles every ECS operation against it needs, read together and living exactly
+/// as long as the operation that selected them.
 /// </summary>
 public sealed record EcsWorld {
   public required Value World { get; init; }
@@ -252,8 +203,6 @@ public sealed record EcsWorld {
   public required Value EntityManager { get; init; }
 
   public required TypeMirror EntityManagerType { get; init; }
-
-  public required WorldSelection Selection { get; init; }
 }
 
 /// <summary>
@@ -264,8 +213,8 @@ public sealed record EcsWorld {
 /// degraded operation speak for every later one.
 /// </summary>
 public sealed record EcsComponentType {
-  /// <inheritdoc cref="EntityComponentInfo.Kind" />
-  public required string Kind { get; init; }
+  /// <summary>How the type is stored, which is what decides how its value can be reached.</summary>
+  public required EcsKind Kind { get; init; }
 
   /// <inheritdoc cref="EntityComponentInfo.Name" />
   public required string Name { get; init; }

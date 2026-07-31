@@ -35,33 +35,48 @@ public sealed class TypeIndexFlagsTests {
     TypeIndexFlags.FromConstants(TypeIndexFlagsTests.Constants);
 
   [Theory]
-  [InlineData(TypeIndexFlagsTests.Buffer, "buffer")]
-  [InlineData(TypeIndexFlagsTests.Shared, "shared")]
-  [InlineData(TypeIndexFlagsTests.Chunk, "chunk")]
-  [InlineData(TypeIndexFlagsTests.Managed, "managed")]
-  [InlineData(TypeIndexFlagsTests.ZeroSize, "tag")]
-  public void NamesEachKindFromItsFlagBit(int flag, string kind) {
+  [InlineData(TypeIndexFlagsTests.Buffer, EcsKind.Buffer)]
+  [InlineData(TypeIndexFlagsTests.Shared, EcsKind.Shared)]
+  [InlineData(TypeIndexFlagsTests.Chunk, EcsKind.Chunk)]
+  [InlineData(TypeIndexFlagsTests.Managed, EcsKind.Managed)]
+  [InlineData(TypeIndexFlagsTests.ZeroSize, EcsKind.Tag)]
+  public void NamesEachKindFromItsFlagBit(int flag, EcsKind kind) {
     Assert.Equal(kind, TypeIndexFlagsTests.Flags().KindOf(flag | 1234));
   }
 
   [Fact]
   public void ReportsAComponentWhenNoKindFlagIsSet() {
-    Assert.Equal("component", TypeIndexFlagsTests.Flags().KindOf(1234));
+    Assert.Equal(EcsKind.Component, TypeIndexFlagsTests.Flags().KindOf(1234));
 
-    // The enabled bit is not a kind, so it must not push the answer off "component".
+    // The enabled bit is not a kind, so it must not push the answer off Component.
     Assert.Equal(
-      "component",
+      EcsKind.Component,
       TypeIndexFlagsTests.Flags().KindOf(TypeIndexFlagsTests.Enableable | 1234)
     );
   }
 
   [Theory]
-  [InlineData(TypeIndexFlagsTests.Chunk | TypeIndexFlagsTests.ZeroSize, "chunk")]
-  [InlineData(TypeIndexFlagsTests.Shared | TypeIndexFlagsTests.ZeroSize, "shared")]
-  [InlineData(TypeIndexFlagsTests.Shared | TypeIndexFlagsTests.Managed, "shared")]
-  [InlineData(TypeIndexFlagsTests.Buffer | TypeIndexFlagsTests.Managed, "buffer")]
-  public void KeepsTheMostSpecificKindWhenSeveralFlagsAreSet(int typeIndex, string kind) {
+  [InlineData(TypeIndexFlagsTests.Chunk | TypeIndexFlagsTests.ZeroSize, EcsKind.Chunk)]
+  [InlineData(TypeIndexFlagsTests.Shared | TypeIndexFlagsTests.ZeroSize, EcsKind.Shared)]
+  [InlineData(TypeIndexFlagsTests.Shared | TypeIndexFlagsTests.Managed, EcsKind.Shared)]
+  [InlineData(TypeIndexFlagsTests.Buffer | TypeIndexFlagsTests.Managed, EcsKind.Buffer)]
+  public void KeepsTheMostSpecificKindWhenSeveralFlagsAreSet(int typeIndex, EcsKind kind) {
     Assert.Equal(kind, TypeIndexFlagsTests.Flags().KindOf(typeIndex | 1234));
+  }
+
+  /// <summary>
+  /// The words are the tool's contract: callers route on them, so they are pinned here rather than
+  /// left to whatever the enum's members happen to be called.
+  /// </summary>
+  [Theory]
+  [InlineData(EcsKind.Component, "component")]
+  [InlineData(EcsKind.Tag, "tag")]
+  [InlineData(EcsKind.Buffer, "buffer")]
+  [InlineData(EcsKind.Shared, "shared")]
+  [InlineData(EcsKind.Chunk, "chunk")]
+  [InlineData(EcsKind.Managed, "managed")]
+  public void RendersEachKindToTheWordCallersRouteOn(EcsKind kind, string word) {
+    Assert.Equal(word, kind.Wire);
   }
 
   [Fact]
