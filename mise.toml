@@ -114,9 +114,16 @@ shell = "bash -c"
 # In-place sparse restore: a re-clone here would leave a standalone repo and de-link the submodule
 # (its working-tree ".git" must stay a gitlink file), so we only re-apply the cone. core.longpaths
 # lets the prune delete the deep vendored paths (e.g. external/llvm-project) on Windows.
+# The sparse cone does not apply to mono's own submodules: their working trees survive it, and the
+# prune half-deletes them into a permanently dirty state, so deinit them first. "git submodule
+# status" prefixes an uninitialized submodule with "-", so any other prefix means one is populated;
+# deinit warns loudly about each already-cleared directory, hence the guard.
 run = '''
 set -e
 git config core.longpaths true
+if git submodule status | grep -qv '^-'; then
+  git submodule deinit -f --all
+fi
 git sparse-checkout set --cone mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft
 '''
 
