@@ -36,8 +36,14 @@ run = [
 # Run `mise fix` locally to apply, `mise check` to verify.
 
 [tasks."check"]
-description = "Verify read-only: typescript, oxlint, oxfmt, and plugin-sync. Writes nothing, run `mise fix` to auto-fix."
-run = ["mise check:tsc", "mise check:oxlint", "mise check:oxfmt", "mise check:plugin-sync"]
+description = "Verify read-only: typescript, oxlint, oxfmt, plugin-sync, and skill content. Writes nothing, run `mise fix` to auto-fix."
+run = [
+  "mise check:tsc",
+  "mise check:oxlint",
+  "mise check:oxfmt",
+  "mise check:plugin-sync",
+  "mise check:skill-content"
+]
 
 [tasks."check:tsc"]
 description = "Type-checks the server with tsc (read-only)."
@@ -59,6 +65,10 @@ run = "bun --bun oxlint --deny-warnings"
 description = "Checks that the Claude and Codex plugin manifests stay in sync."
 run = "bun scripts/check-plugin-sync.ts"
 
+[tasks."check:skill-content"]
+description = "Checks the cs2-modding plugin's shipped prose against its own content rules."
+run = "bun scripts/check-skill-content.ts"
+
 # No check:cs: jb cleanupcode (the C# formatter, see fix:cs) has no read-only/dry-run mode, and C#
 # is inert to CI, so there is no read-only C# verify. Run `mise fix:cs` and commit; Rider formats
 # live with the same engine and the same root .editorconfig.
@@ -67,12 +77,13 @@ run = "bun scripts/check-plugin-sync.ts"
 # ====================
 
 [tasks."check:agents"]
-description = "Verify read-only (typescript, oxlint, oxfmt, plugin-sync), output optimized for AI agents. Writes nothing."
+description = "Verify read-only (typescript, oxlint, oxfmt, plugin-sync, skill content), output optimized for AI agents. Writes nothing."
 run = [
   "mise check:agents:tsc",
   "mise check:agents:oxlint",
   "mise check:oxfmt",
-  "mise check:plugin-sync"
+  "mise check:plugin-sync",
+  "mise check:skill-content"
 ]
 
 [tasks."check:agents:tsc"]

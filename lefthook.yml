@@ -31,6 +31,13 @@ pre-commit:
       # The Claude and Codex plugin manifests duplicate shared metadata; keep them in sync.
       glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
       run: mise exec bun -- bun scripts/check-plugin-sync.ts
+    skill-content:
+      # The cs2-modding plugin's shipped prose is a deliverable with no other automated coverage;
+      # the check reads the whole skills tree, so any staged file in it triggers a full pass.
+      glob:
+        - "plugins/cs2-modding/skills/**/*"
+        - "scripts/check-skill-content.ts"
+      run: mise exec bun -- bun scripts/check-skill-content.ts
     oxlint:
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
       run: mise exec bun -- bun --bun oxlint --deny-warnings --no-error-on-unmatched-pattern {staged_files}
