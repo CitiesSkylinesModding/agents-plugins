@@ -45,6 +45,11 @@ One config per harness, each using that harness's working mechanism:
 Codex's plugin.json schema is a superset of Claude's; its component pointers are `./`-relative paths.
 Its marketplace file is `.agents/plugins/marketplace.json` with object-form `source`.
 
+Those component pointers are optional where a default exists. No plugin here declares `"skills"`, and
+none needs to: `plugin_skill_roots` (codex-rs `core-plugins/src/loader.rs`) falls back to
+`<plugin root>/skills` when the key is absent, and a declared path REPLACES that default rather than
+adding to it. First-party OpenAI plugins declare one anyway; that is their style, not a requirement.
+
 ## Prevention
 
 `scripts/check-plugin-sync.ts` (`mise check:plugin-sync`, wired into `mise check` and the pre-commit)
