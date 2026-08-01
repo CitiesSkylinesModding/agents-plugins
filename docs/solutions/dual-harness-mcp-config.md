@@ -48,7 +48,9 @@ Its marketplace file is `.agents/plugins/marketplace.json` with object-form `sou
 ## Prevention
 
 `scripts/check-plugin-sync.ts` (`mise check:plugin-sync`, wired into `mise check` and the pre-commit)
-enforces that the shared fields of the two plugin.json files stay identical and that each
-`.codex-plugin/mcp.json` points at an artifact that exists.
+enforces that the shared fields of the two plugin.json files stay identical, and that a plugin
+declaring a server in its Codex manifest points at an artifact that exists. A knowledge-only plugin
+declares none and ships neither config, which the check also enforces, so a dropped `mcpServers`
+pointer cannot leave a config behind and silently switch the server assertions off.
 
 Watch openai/codex#19582: if `${VAR}` interpolation lands, the two configs can converge into one.

@@ -12,9 +12,9 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
-// Plugin sources live under plugins/<name>/; each carries its own pair of manifests and declares
-// one MCP server whose committed artifact must exist. Plugins are discovered from the directory
-// tree, so a newly added plugin cannot silently escape the check.
+// Plugin sources live under plugins/<name>/; each carries its own pair of manifests, and those
+// that ship an MCP server also carry its configs and the artifact it launches. Plugins are
+// discovered from the directory tree, so a newly added plugin cannot silently escape the check.
 const pluginRoots = readdirSync(path.join(repoRoot, 'plugins'), { withFileTypes: true })
   .filter(entry => entry.isDirectory())
   .map(entry => `plugins/${entry.name}`);
@@ -33,6 +33,17 @@ function checkPlugin(pluginRoot: string): void {
 
   checkSharedManifestFields(pluginRoot, claudeManifest, codexManifest);
   checkVersionAnchor(pluginRoot, claudeManifest);
+
+  // A knowledge-only plugin ships no server, and the mcp assertions below have no config to read.
+  // The Codex manifest's "mcpServers" pointer is what declares a server, so checkNoMcpConfigs
+  // holds the other side: dropping that pointer from a plugin that does ship one would otherwise
+  // switch every server assertion off silently.
+  if (codexManifest.mcpServers == null) {
+    checkNoMcpConfigs(pluginRoot);
+
+    return;
+  }
+
   checkCodexMcpConfig(pluginRoot);
   checkMcpVersionPins(pluginRoot);
 }
@@ -75,6 +86,17 @@ function checkVersionAnchor(pluginRoot: string, claudeManifest: Record<string, u
     `The plugin manifests must carry the same version as ${pluginRoot}/package.json ` +
       `(the release-please anchor).`
   );
+}
+
+function checkNoMcpConfigs(pluginRoot: string): void {
+  for (const configPath of [`${pluginRoot}/.mcp.json`, `${pluginRoot}/.codex-plugin/mcp.json`]) {
+    assert.ok(
+      !existsSync(path.join(repoRoot, configPath)),
+      `${configPath} exists, but ${pluginRoot}/.codex-plugin/plugin.json declares no ` +
+        `"mcpServers" pointer, so Codex would never launch it. A server-less plugin ships ` +
+        `neither config; a plugin with a server declares it in both harness manifests.`
+    );
+  }
 }
 
 function checkCodexMcpConfig(pluginRoot: string): void {
