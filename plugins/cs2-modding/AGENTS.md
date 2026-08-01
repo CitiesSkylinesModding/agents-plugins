@@ -6,7 +6,7 @@
 It is knowledge only: skills and references, no MCP server, no runtime, no shipped code artifacts — no scaffolds, no templates, no generators.
 It is also the one plugin here that names a game on purpose, a deliberate carve-out from the repository's genericity rule, which exists to keep the two _toolkit_ plugins application-agnostic. A game-knowledge product cannot obey it and exist.
 
-Scope is code mods. Loading assets _from code_ belongs here; authoring meshes, textures, maps and editor content does not.
+Scope is code mods on Windows. Loading assets _from code_ belongs here; authoring meshes, textures, maps and editor content does not, and neither does developing on Linux — nobody does, though the build's own macOS and Linux outputs stay documented, since the toolchain emits them unprompted.
 
 The plugin sits above the two toolkit plugins and may point at them, always softly: `unity-devtools` to settle a question against the running game, `coherent-gameface` for the UI engine underneath the frontend.
 Every skill works unchanged when neither is installed.
@@ -23,8 +23,21 @@ Everything under `skills/` is a deliverable held to these rules. Load the `writi
 - **One sentence per line**, as the sibling plugins' skills do.
 - **The mods corpus is input, never output.** It is where techniques and gotchas were learned, and knowledge prose states the technique on its own authority. The single place a mod is named is the setup skill's provisioning catalog, `skills/cs2-modding-setup/references/mod-catalog.md`, which is also the only name list the content lint reads; that file documents the entry shape the lint parses. The lint matches both spellings of every entry — the display name and the `owner/repo` slug — whole-word and case-sensitively, and several display names are ordinary words, so a domain reference heading `## Traffic` trips it while citing nothing. Nothing yet separates the two readings; when it bites, settle it in the catalog, the lint's only input, rather than bending prose around the collision.
 - **Libraries stay unnamed.** Teach the mechanism so an agent can always write the code itself, rather than pointing it at a dependency whose current shape it cannot verify. This governs libraries a mod would _reference_ — community helpers, utility packages, UI toolkits. Components the game or the official toolchain already ships are named as plainly as any game type: an agent cannot write the code that is already there. So are the applications a user runs on their own machine — a decompiler, an editor, an IDE — because a procedure has to say which program to run.
+  One referenced library is named, and only one: the patching library, package id and pinned version, in `skills/cs2-mod-project/SKILL.md`. The game collapses every mod's copy of a same-named assembly into a single loaded one, so the convention only works if every mod types the same identifier, and teaching the mechanism instead would defeat its whole purpose.
 - **Version baseline.** Every reference carries, once, a line reading `Verified against game version <version>.`, so a reader can judge its age against the installed game.
 - **Volatility marker.** A claim that rots — component field names, system names, save-format versions, UI module paths, raycast mask combinations — carries `VOLATILE:` inline, naming what to re-check and how: `(VOLATILE: the field names on this component — re-read it in the decompile.)`. That uppercase token is the only spelling, and durable architectural facts carry none, so `VOLATILE:` greps into the maintenance checklist for the next game version.
+  Every marker you add or remove goes in your closing message to the user, quoted, so they can rule on it there rather than by reading the diff. The maintainer owns which claims count as volatile, and calls that look settled from inside one file are the ones they overturn.
+
+## Fact-checking is its own pass
+
+The agent that wrote a claim cannot audit it, so verifying it is `/review-gate`'s job rather than a private re-read at the end of authoring.
+The gate's finders re-derive each claim from the primary sources — the decompile first, then the installed toolchain and the game's own files — and return the line that proves or disproves it.
+Point them at those sources and at the claims to re-derive; a finder told only to review the prose reads it for plausibility, which is how it was written in the first place.
+
+Aim the pass at over-reach, because that is what authoring produces: a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
+Prose that has gone through a gate has been wrong on exactly these, and none of it read as doubtful.
+
+Corrections earn another `/review-gate`. A rewritten passage is new prose, and the round that fixes the most is the round that introduces the most.
 
 ## Reference families
 
