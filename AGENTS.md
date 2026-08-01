@@ -67,7 +67,7 @@ Never:
 - Commit secrets, tokens, `.env` files, dumps or credentials.
 - Modify generated files unless the generation command was run.
 - Change public API behavior without calling it out.
-- Reference Cities: Skylines 2 in tools' code, documentation and skills.
+- Reference Cities: Skylines 2 in `coherent-gameface` or `unity-devtools` — code, documentation and skills alike, those two stay application-agnostic. `cs2-modding` is the carve-out: a knowledge product about the game that names it throughout, with the reasoning in its own `AGENTS.md`.
 - Reference the coherent-gameface project in the unity-devtools one, and vice versa.
 
 Ask first before:
@@ -91,7 +91,7 @@ Propose updates whenever you detect drift.
 
 Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).
 If present, load the `writing-great-skills` skill and hold the edit to it before writing any of them.
-Its examples name placeholder types (`MyGame.Citizens.Citizen`) rather than the reference target's own, and claim verification against no named game: an example teaches a shape, while a real name invites an agent to try it on a game that never had it.
+In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Citizen`) rather than the reference target's own, and claim verification against no named game: an example teaches a shape, while a real name invites an agent to try it on a game that never had it.
 
 ## Preferred agent behavior
 
