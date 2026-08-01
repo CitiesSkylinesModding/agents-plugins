@@ -1,7 +1,8 @@
 # Roadmap
 
-Planned facets for the `csmodding` marketplace plugins. Both plugins are generic toolkits,
-developed and verified against Cities: Skylines II but application-agnostic.
+Planned facets for the `csmodding` marketplace plugins. The two toolkits are generic, developed and
+verified against Cities: Skylines II but application-agnostic; `cs2-modding` is knowledge about that
+game specifically.
 
 ## coherent-gameface
 
@@ -106,3 +107,16 @@ leak actually bites.
 
 The current surface is ECS + expression evaluation; add tools for the classic Unity object model
 (scene hierarchy, GameObject/MonoBehaviour inspection and mutation).
+
+## cs2-modding
+
+Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
+decompiled game, the wiki and a corpus of open-source mods. Knowledge only: no MCP server, no
+runtime, and no shipped code artifacts.
+
+### Asset, map and editor authoring
+
+Scope is code mods, so loading assets _from code_ is covered and authoring the assets themselves is
+not: meshes, textures, import setup, texture sharing, map creation and the in-game editor. That is a
+GUI and DCC-tool discipline an agent cannot drive, and the mod corpus offers no evidence base for
+it — a possible later facet rather than an omission, and one that would need sources of its own.

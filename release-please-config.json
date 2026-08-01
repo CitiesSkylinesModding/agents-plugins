@@ -70,6 +70,24 @@
           "jsonpath": "$.mcpServers.unity.args[3]"
         }
       ]
+    },
+    "plugins/cs2-modding": {
+      "release-type": "node",
+      "component": "cs2-modding",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   },
   "plugins": [

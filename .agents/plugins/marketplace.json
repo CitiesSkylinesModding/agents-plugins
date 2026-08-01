@@ -19,6 +19,14 @@
         "path": "./plugins/unity-devtools"
       },
       "description": "Drive a running Unity Mono development build from your coding agent over the Mono Soft Debugger protocol: live reflection, method invokes, and ECS read-write, no code injection."
+    },
+    {
+      "name": "cs2-modding",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cs2-modding"
+      },
+      "description": "Teach your coding agent to write Cities: Skylines II code mods: the game's architecture, the modding techniques and the simulation domains behind them, every claim verified against the decompiled game."
     }
   ]
 }
