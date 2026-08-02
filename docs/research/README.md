@@ -58,3 +58,12 @@ A file that read one source reads exactly like one that swept all three, and the
 
 A survey's or an agent's own recommendation is not a decision: the plugin's `AGENTS.md` governs what ships.
 State it as the opinion it is, and leave it out of the verdicts.
+
+## The boundary travels with the file
+
+The authoring agent reads one research file and no source, which is what keeps a mod name out of shipped prose.
+That leaves it without the one thing a research file never states: where the topic stops.
+
+So hand it the boundary and the questions alongside the file, and judge the shipped reference against them rather than against the file alone.
+A file records what was found, so an agent holding it by itself picks its own scope — it writes into a neighbouring reference's territory, or drops a question the file answered in passing.
+Nothing downstream catches either: the content lint checks mod names, the version baseline, the marker spelling and that links resolve, and none of those is coverage.
