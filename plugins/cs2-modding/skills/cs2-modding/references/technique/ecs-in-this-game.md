@@ -452,7 +452,6 @@ if (EntityManager.TryGetComponent(entity, out PrefabRef prefabRef))
 
 These ship with the game rather than coming from anywhere else, and they are the most-used helper surface in this ecosystem by a wide margin.
 Reach for them before writing your own.
-(VOLATILE: the helper method names — re-read the entity extensions class in the decompile.)
 
 ## What this reference hands to others
 
