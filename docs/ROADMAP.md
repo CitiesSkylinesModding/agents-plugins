@@ -103,6 +103,23 @@ restart) and structured try/catch so in-game exceptions come back as data. User-
 lambda execution would come only as a later layer on the same gateway, where the no-unload
 leak actually bites.
 
+### Screenshots as inline images
+
+An `eval` of `UnityEngine.ScreenCapture.CaptureScreenshot(path)` already writes the composited frame
+(3D scene and UI together) to the game machine's disk, verified live; the `unity-driving` skill
+carries the recipe and the freeze interaction that makes it subtle. That covers the normal case
+where the agent shares a machine with the game. What it does not cover is the image arriving in the
+tool result, which a remote game needs and which spares everyone else the read-back.
+
+Two gaps of very different size. Capturing in memory (`CaptureScreenshotAsTexture`, or a
+`RenderTexture` render, then `EncodeToPNG`) only works after end-of-frame, so it needs debuggee-side
+execution and rides on the injected-helper tier above rather than on the evaluator. Returning it is
+the small half: tools here return records the SDK serializes as text and `mcp/` has no image content
+block anywhere, but the `ModelContextProtocol` SDK supports returning `DataContent` with an
+`image/png` mime type. Size the result in pixels rather than bytes, since an image costs the client's
+context in proportion to its pixel area: a downscale knob is the lever worth exposing, and an
+encoder quality setting is not one.
+
 ### GameObject/MonoBehaviour tools
 
 The current surface is ECS + expression evaluation; add tools for the classic Unity object model

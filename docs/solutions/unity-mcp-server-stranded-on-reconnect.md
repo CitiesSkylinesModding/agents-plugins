@@ -6,11 +6,12 @@ symptoms:
   - 'MSB3027: could not copy, the file is locked by process (pid)'
   - 'a `unity-devtools-mcp` process survives after /mcp reconnect'
   - 'Failed to reconnect to unity: -32000'
+  - 'reconnect fails while nothing is connected to the game SDB port'
 tags: [mcp, process-lifetime, shutdown, sdb]
-updated: 2026-07-31
+updated: 2026-08-02
 ---
 
-# A stranded server keeps the exclusive SDB slot after reconnect
+# A stranded server survives a reconnect and blocks the next one
 
 ## Problem
 
@@ -52,19 +53,27 @@ root `.mcp.json`, or a release bumping the dnx version pin) orphans the old proc
 closing its stdin (anthropics/claude-code#79740) — pipes stay open, no signal ever arrives, and the
 server survives until the harness session itself exits.
 
-Expect one leaked wrapper+server pair per such reconnect; kill the old `dotnet run` wrapper by hand
-and the server dies with it (the dotnet CLI puts the child in a kill-on-close job object). Watch
-anthropics/claude-code#79740; once fixed, the manual kill goes away.
+Expect one leaked wrapper+server pair per such reconnect; it has also been seen after a reconnect that
+changed only sources.
 
-Whatever the trigger, a stranded wrapper is the FIRST thing to check when a reconnect fails, and it
-has been seen surviving a reconnect that changed only sources:
+A stranded wrapper is therefore the FIRST thing to check when a reconnect fails — the wrapper, since
+its server child can die and leave it holding the `bin/mcp-run/` locks alone:
 
 ```powershell
 Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" |
   Where-Object { $_.CommandLine -match 'UnityDevtools\.Mcp\.csproj' }
 ```
 
-A survivor older than the failed reconnect is the culprit; `Stop-Process -Force` on it is safe for the
-game, because the closed socket auto-resumes the VM. Reconnect again afterwards -- and an immediate
-retry can still land in the ~5 s dying window, so a second attempt is expected rather than a new
-symptom.
+A survivor older than the failed reconnect is the culprit; `Stop-Process -Force` takes the server with
+it (kill-on-close job object) and is safe for the game, whose VM auto-resumes on the closed socket.
+
+That settles the usual case, where those build locks are the whole story — but not a slot genuinely
+held by another client, which fails identically from the harness. The port `status` reports tells them
+apart:
+
+```powershell
+Get-NetTCPConnection | Where-Object { $_.RemotePort -eq <sdbPort> }
+```
+
+Empty means the slot was free all along. An established connection from an IDE debugger is the case no
+wrapper-killing fixes; free the slot there first.
