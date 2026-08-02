@@ -1,4 +1,5 @@
 /* oxlint-disable node/no-sync -- sequential check script, synchronous IO is intentional. */
+/* oxlint-disable no-console -- the console carries the questions this check cannot decide. */
 
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -37,6 +38,9 @@ checkPointersResolve(shippedFiles);
 // break that, and the leak reads as perfectly natural prose, so nothing but a machine catches it.
 function checkNoModNameLeaks(files: readonly string[]): void {
   const modNames = readModNames();
+  const questions: string[] = [];
+
+  let violation: string | undefined;
 
   for (const file of files) {
     if (file == catalogPath) {
@@ -45,44 +49,85 @@ function checkNoModNameLeaks(files: readonly string[]): void {
 
     const content = readShippedFile(file);
 
-    for (const modName of modNames) {
-      const match = content.match(wholeWordPattern(modName));
+    for (const { name, isBlocking } of modNames) {
+      const match = content.match(wholeWordPattern(name));
 
       if (match?.index == null) {
         continue;
       }
 
-      assert.fail(
-        `${file}:${lineOf(content, match.index)} names the mod "${modName}", which the catalog ` +
-          `lists. The mods corpus is input, never output: state the technique on its own ` +
-          `authority. ${catalogPath} is the only file allowed to name a mod.`
-      );
+      const where = `${file}:${lineOf(content, match.index)}`;
+
+      if (!isBlocking) {
+        questions.push(
+          `${where} writes "${name}", a display name the catalog declares ordinary English. Is ` +
+            `this a credit or your own subject? A credit goes: state the technique on its own ` +
+            `authority. The subject stays, and no prose is bent around the word.`
+        );
+
+        continue;
+      }
+
+      violation ??=
+        `${where} names the mod "${name}", which the catalog lists. The mods corpus is input, ` +
+        `never output: state the technique on its own authority. ${catalogPath} is the only ` +
+        `file allowed to name a mod. Where the word is what your subject calls the thing, the ` +
+        `fix is a catalog declaration ruled by the maintainer, never a reworded sentence.`;
     }
   }
+
+  // Printed before the assertion, so a run that also fails still hands its questions over.
+  for (const question of questions) {
+    console.warn(`WARNING: ${question}`);
+  }
+
+  assert.ok(violation == null, violation);
+}
+
+interface CatalogName {
+  readonly name: string;
+  readonly isBlocking: boolean;
 }
 
 // Both spellings of every catalogued mod: the published display name that a leak would use in
 // prose, and the owner/repo slug that a leak would use in a link.
-function readModNames(): readonly string[] {
+//
+// The two carry different strengths, because a match means different things. Only a slug is
+// unambiguously a citation; a third of the display names are ordinary English, and one that is
+// also what the game's own subject matter calls the thing cannot credit anybody -- no reader takes
+// it for a name. Those are reported as a question instead of enforced, which is why the catalog
+// declares them per entry rather than the lint guessing. Nothing leaves the list either way: the
+// declaration changes what a match costs, not whether the lint looks.
+function readModNames(): readonly CatalogName[] {
   const catalog = readShippedFile(catalogPath);
 
-  // The shape the catalog documents and promises to keep: a "###" heading carrying the display
-  // name, then a "Source:" line whose link text is owner/repo.
-  const displayNames = [...catalog.matchAll(/^### (?<name>.+)$/gmu)].map(match => match[1]);
-  const repoSlugs = [...catalog.matchAll(/^Source: \[(?<slug>[^\]]+)\]/gmu)].map(match => match[1]);
+  // Read entry by entry rather than in file-wide sweeps: a declaration means nothing except
+  // against the heading above it, and pairing each Source line with its own entry is a stricter
+  // guard than counting headings against Source lines, which twenty of each satisfy even when they
+  // belong to different entries.
+  const entries = catalog.split(/^### /mu).slice(1);
 
-  assert.ok(displayNames.length > 0, `${catalogPath} declares no "###" mod entries to read.`);
+  assert.ok(entries.length > 0, `${catalogPath} declares no "###" mod entries to read.`);
 
-  // An entry whose heading or Source line drifts out of that shape is invisible to the check, and
-  // silently shrinking the name list is the one failure that would let a leak through unnoticed.
-  assert.equal(
-    repoSlugs.length,
-    displayNames.length,
-    `${catalogPath} has ${displayNames.length} "###" entries but ${repoSlugs.length} "Source: ` +
-      `[owner/repo](...)" lines. Every entry needs both, or the missing one escapes this check.`
-  );
+  return entries.flatMap(entry => {
+    const [displayName = '', ...bodyLines] = entry.split('\n');
+    const body = bodyLines.join('\n');
+    const slug = body.match(/^Source: \[(?<slug>[^\]]+)\]/mu)?.groups?.slug;
 
-  return [...displayNames, ...repoSlugs].filter(name => name != null);
+    // An entry that drops either spelling takes it off the name list, and silently shrinking that
+    // list is the one failure that would let a leak through unnoticed.
+    assert.ok(
+      displayName.length > 0 && slug != null,
+      `${catalogPath} has an entry ("${displayName}") that is not a "###" display name followed ` +
+        `by a "Source: [owner/repo](...)" line. Every entry needs both, or the missing spelling ` +
+        `escapes this check.`
+    );
+
+    return [
+      { name: slug, isBlocking: true },
+      { name: displayName, isBlocking: !/^Ordinary word:/mu.test(body) }
+    ];
+  });
 }
 
 // Every reference states, once, the game version its facts were verified against, so a reader can
