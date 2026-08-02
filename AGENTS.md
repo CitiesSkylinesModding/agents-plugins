@@ -88,7 +88,11 @@ Five stores, checked in this order when writing something down:
 5. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
 
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
+
 Propose updates whenever you detect drift.
+
+`.scratch/` is working material and gitignored, so nothing tracked may cite a path inside it — a pointer from `docs/` or from a plugin into a scratch file dangles the moment the feature closes and its folder goes. Move the fact into one of the five stores instead.
+For the same reason a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
 
 Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).
 If present, load the `writing-great-skills` skill and hold the edit to it before writing any of them.
