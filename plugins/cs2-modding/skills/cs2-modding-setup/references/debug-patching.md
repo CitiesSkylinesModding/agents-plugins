@@ -16,7 +16,7 @@ Read it off the game:
 (Get-Item "$env:CSII_INSTALLATIONPATH\Cities2.exe").VersionInfo.ProductVersion
 ```
 
-(VOLATILE: the game's Unity version moves with game updates — read it from the executable rather than trusting a number written down anywhere.)
+(VOLATILE: the game's Unity version — the executable itself, which is the only copy that tracks a game update; a number written down anywhere else is a snapshot.)
 
 Install exactly that editor version through Unity Hub, with Windows build support, when it is not already present.
 Only the one file below is taken from it.

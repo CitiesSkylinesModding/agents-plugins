@@ -56,7 +56,7 @@ So a mod that wants a component on every instance of a prefab overrides `GetArch
 Neither needs a system.
 
 Archetypes built this way are cached on the prefab-data components and read from inside a job through a `ComponentLookup`, which is how a job spawns a fully-formed instance without touching the `EntityManager`.
-(VOLATILE: the prefab-data types that cache an archetype — `ArchetypeData`, `ObjectData`, `NetData`, `NetLaneArchetypeData` — and the `Created`/`Updated` seeding; re-read the prefab archetype refresh in the decompile.)
+(VOLATILE: the prefab-data types that cache an archetype — `ArchetypeData`, `ObjectData`, `NetData`, `NetLaneArchetypeData` — and the `Created`/`Updated` seeding; the prefab archetype refresh.)
 
 **`EntityManager.CreateArchetype` called directly** is, in the overwhelming majority of the game's several hundred call sites, a one-shot **event archetype**: two or three types, built in `OnCreate`, stashed in an `EntityArchetype` field, and spawned from inside a job through a command buffer.
 
@@ -99,7 +99,7 @@ if (chunk.GetSharedComponent(m_UpdateFrameType).m_Index != m_UpdateFrameIndex)
 
 A fork of a vanilla per-frame system inherits whichever the original used, and copying the in-job test verbatim is correct.
 What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
-(VOLATILE: the five shared-component type names, `UpdateFrame`, `UpdateFrameData.m_UpdateGroupIndex`, the sixteen-bucket count and the 128-entity chunk maximum — re-grep `ISharedComponentData` and re-read the chunk constants in the decompile.)
+(VOLATILE: the five shared-component type names, `UpdateFrame`, `UpdateFrameData.m_UpdateGroupIndex`, the sixteen-bucket count and the 128-entity chunk maximum — the `ISharedComponentData` implementors, and the chunk constants.)
 
 ## The query APIs, and what decides between them
 
@@ -274,7 +274,7 @@ Toggle from a job through the command buffer:
 m_CommandBuffer.SetComponentEnabled<BicycleOwner>(unfilteredChunkIndex, citizen, true);
 ```
 
-(VOLATILE: this list of twelve — re-grep `IEnableableComponent` over the game assembly. The set has grown across versions, and one of its members reached vanilla only after mods had shipped their own component of the same name.)
+(VOLATILE: this list of twelve — the `IEnableableComponent` implementors across the game assembly. The set has grown across versions, and one of its members reached vanilla only after mods had shipped their own component of the same name.)
 
 ## Command buffers: twelve named barriers, and one contract
 
@@ -334,7 +334,7 @@ A call through a variable typed as the base class therefore binds to the base me
 So a mod that stores barriers in an `EntityCommandBufferSystem`-typed dictionary, or hands one to a generic helper, has traded a loud failure for a silent one.
 Hold the concrete barrier type everywhere.
 
-(VOLATILE: the twelve barrier type names and the exception message string — re-read the vanilla system-order class and the safe command buffer base in the decompile.)
+(VOLATILE: the twelve barrier type names and the exception message string — the vanilla system-order class, and the safe command buffer base.)
 
 ## The universal tags, and the protocol they carry
 
@@ -378,7 +378,7 @@ The tool pipeline works entirely on `Temp` copies, and the apply systems read `m
 **Nearly every game query excludes it**, and `None = { Deleted, Temp }` is the canonical pair: a query that forgets it will see the player's uncommitted hover preview as a real building.
 `Hidden` is its sibling for the same reason.
 
-(VOLATILE: all fourteen tag type names above, the six-member type set the cleanup system strips, and `Temp`'s field names — re-read the common and tools namespaces in the decompile.)
+(VOLATILE: all fourteen tag type names above, the six-member type set the cleanup system strips, and `Temp`'s field names — the common and tools namespaces.)
 
 ## Declaring components of your own
 
@@ -435,7 +435,7 @@ public struct MyPloppedMarker : IComponentData, IQueryTypeParameter, IEmptySeria
 Most mod components deliberately implement neither and are rebuilt on load, which is the cheaper and safer default: a component in a save is a compatibility obligation forever.
 The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to `save-serialization`, and you want it before the first release, not after.
 
-(VOLATILE: the serializer selection above and the two game types that opt out of persisting enabled state — re-read the component serializer library in the decompile.)
+(VOLATILE: the serializer selection above and the two game types that opt out of persisting enabled state — the component serializer library.)
 
 ## The helper extensions the game already ships
 

@@ -49,7 +49,7 @@ Other gates the asset passes before `OnLoad` is reached, each failing to a disti
 - every assembly reference must resolve, or the mod is refused with a missed-dependencies state;
 - an asset that ships a copy of a game assembly beside itself is **skipped** with a warning reading `Assembly "{0}" is in-game assembly and it should NOT be shipped with mod "{1}"`.
 
-(VOLATILE: the mod-state names — `Unknown`, `Loaded`, `Disposed`, `IsNotModWarning`, `IsNotUniqueWarning`, `GeneralError`, `MissedDependenciesError`, `LoadAssemblyError`, `LoadAssemblyReferenceError` — re-read `ModInfo.State` in the decompile; they are also the localisation keys the failure dialog interpolates.)
+(VOLATILE: the mod-state names — `Unknown`, `Loaded`, `Disposed`, `IsNotModWarning`, `IsNotUniqueWarning`, `GeneralError`, `MissedDependenciesError`, `LoadAssemblyError`, `LoadAssemblyReferenceError` — `ModInfo.State`; they are also the localisation keys the failure dialog interpolates.)
 
 ## The mod class is never constructed; its systems are
 
@@ -131,7 +131,7 @@ Three rules follow, and they are the ones to act on.
    Nothing runs "before the phase" or "after the phase" despite the names.
    The offsets are far larger than the registration counter ever reaches — vanilla makes on the order of a thousand registrations in total — so the bands never interleave: every `UpdateBefore` in a phase runs before every `UpdateAt`, and every `UpdateAt` before every `UpdateAfter`.
    Choosing among the three chooses a band within one phase, and only that.
-   (VOLATILE: the ±1,000,000 band offset, and the `AllowBarrier` and `ModificationBarrierN` type names below — re-read `UpdateSystem`'s registration methods and the vanilla system-order class.)
+   (VOLATILE: the ±1,000,000 band offset, and the `AllowBarrier` and `ModificationBarrierN` type names below — `UpdateSystem`'s registration methods, and the vanilla system-order class.)
 2. **Within a band, registration order is execution order.**
    The index is a plain counter and is the only tiebreak after phase, so two systems a mod registers with `UpdateAt` into the same phase run in the order the `OnLoad` body calls them.
 3. **A mod always registers after all of vanilla**, because the vanilla registration pass is step 3 of boot and `OnLoad` is step 4.
@@ -349,7 +349,7 @@ So there are four distinct failure surfaces, and "the silent disable" is exactly
 The mod-loading logger suppresses its errors from the UI, so an `OnLoad` failure is louder in the log than on screen.
 Reading those log files is `diagnostics`.
 
-(VOLATILE: all five log-message strings above, the mod-initialisation error string, the per-frame update error string, and the `SceneFlow` logger name — re-read `GameSystemBase`'s hook wrappers, `UpdateSystem.Update` and the mod manager.)
+(VOLATILE: all five log-message strings above, the mod-initialisation error string, the per-frame update error string, and the `SceneFlow` logger name — `GameSystemBase`'s hook wrappers, `UpdateSystem.Update`, and the mod manager.)
 
 ## Disabling a vanilla system and slotting a fork into its place
 

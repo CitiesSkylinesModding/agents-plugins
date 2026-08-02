@@ -62,7 +62,7 @@ Both members of each pair are `IBufferElementData` and both bind in a query.
 Reading the wrong one gives you the list of prefabs a building is _made of_ when you wanted the entities it _has_, or the reverse, with no error anywhere.
 **Fully qualify a short name that appears on both sides**, in queries and in lookups alike.
 
-(VOLATILE: the 111-name collision count and the four `Sub*` pairs — recompute by comparing the prefab namespace's type names against the other game namespaces in the decompile.)
+(VOLATILE: the 111-name collision count and the four `Sub*` pairs — a count derived by comparing the prefab namespace's type names against the other game namespaces.)
 
 ## The archetype declaration hooks, and what each populates
 
@@ -113,7 +113,7 @@ Overriding either of the first two is the whole mechanism for putting a componen
 Call `base` first, then add.
 An authoring component whose two overrides are both **empty** is a supported and useful shape: it contributes nothing to the ECS and exists purely as a managed marker you test with `prefab.Has<T>()`, which is exactly what the vanilla obsolete-identifiers component is.
 
-(VOLATILE: the six `RefreshArchetype` destinations and their component names, and `NetData.m_NodeArchetype` / `m_EdgeArchetype` — re-grep `void Get[A-Za-z]*Components\(HashSet<ComponentType>` over the prefab namespace in the decompile.)
+(VOLATILE: the six `RefreshArchetype` destinations and their component names, and `NetData.m_NodeArchetype` / `m_EdgeArchetype` — the prefab namespace, where `void Get[A-Za-z]*Components\(HashSet<ComponentType>` finds them.)
 
 ## What `PrefabSystem` exposes for lookup
 
@@ -179,7 +179,7 @@ Reading the authoring layer is not only about baselines.
 Some authoring components have **no `*Data` counterpart at all** — the colour-properties component that declares which colour channels may be modified externally is one — so the managed object is the only place that information exists.
 Anything cataloguing assets rather than reading simulation state lives there too: the UI object, theme object, asset-pack item, content prerequisite, spawn-location and LOD-properties components are all authoring-only.
 
-(VOLATILE: the prefab system's member names and signatures, and the authoring-side accessor names on `PrefabBase` — re-read the prefab system's lookup region in the decompile.)
+(VOLATILE: the prefab system's member names and signatures, and the authoring-side accessor names on `PrefabBase` — the prefab system's lookup region.)
 
 ## What `PrefabSystem` exposes for mutation
 
@@ -207,7 +207,7 @@ They are conveniences over `EntityManager`, and going through the `EntityManager
 
 `AddUnlockRequirement(unlocker, unlocked)` is the one domain-specific mutator, appending to the unlock-requirement buffer and warning when either side is not unlockable.
 
-(VOLATILE: the mutator names above and the negative index sentinel `-1000000000` — re-read the prefab system's registry region in the decompile.)
+(VOLATILE: the mutator names above and the negative index sentinel `-1000000000` — the prefab system's registry region.)
 
 ## What initialises prefab data, and when
 
@@ -249,7 +249,7 @@ updateSystem.UpdateAfter<MyParcelInitializeSystem, ObjectInitializeSystem>(
 Build the query in the vanilla shape — `WithAll<PrefabData, Created>()` plus read-write access to what you write — gate on it, and finish by adding `Updated` to the query so the systems that consume that tag see the change.
 Anchoring, and the silence that follows a wrong phase argument, belong to `mod-lifecycle-and-ordering`.
 
-(VOLATILE: the 23-system prefab-update list and its order, and the `GeometryFlags` member names — re-read the vanilla system-order class and the object initialize system in the decompile.)
+(VOLATILE: the 23-system prefab-update list and its order, and the `GeometryFlags` member names — the vanilla system-order class, and the object initialize system.)
 
 ## Editing a prefab: what reaches placed buildings, and what does not
 
@@ -291,7 +291,7 @@ So "does my edit reach placed buildings" is answered by reading the systems that
 Do it only knowing which systems read the field, what caches exist behind it, and which invariant the value participates in; a computed runtime value written from outside is where side effects come from.
 Where asking the player to rebuild is acceptable, it is both easier and safe, and every _new_ building is already handled by the prefab-entity edit.
 
-(VOLATILE: the workplace initialize system's two query descs and its `Modification5` registration, the three prefab-namespace systems that consume `Updated`, and the 292/210 lookup counts — re-read the workplace initialize system and re-grep `.m_Prefab]` over the simulation namespace.)
+(VOLATILE: the workplace initialize system's two query descs and its `Modification5` registration, the three prefab-namespace systems that consume `Updated`, and the 292/210 lookup counts — the workplace initialize system, and `.m_Prefab]` across the simulation namespace.)
 
 ## Editing vanilla prefabs in bulk, and tagging them for your own queries
 
@@ -316,7 +316,7 @@ Such a tag is deliberately _not_ an archetype-hook component: it never reaches a
 A bulk edit the player can turn on and off is driven by a control rather than by the phase walk, so it runs from the loading-complete hook for the initial application and directly from the settings page for a mid-session toggle.
 That is the arrangement that needs the authoring baseline above: without it, a second toggle restores your own first write.
 
-(VOLATILE: `PlaceableObjectData.m_ConstructionCost` and the `PlantData` component name — re-read them in the decompile.)
+(VOLATILE: `PlaceableObjectData.m_ConstructionCost` and the `PlantData` component name — both in the prefab namespace.)
 
 ## Synthesising a new prefab type
 
@@ -383,7 +383,7 @@ The game detects that condition and logs it, but only from `PrefabBase.OnEnable`
 
 When you copy a UI object across, **null its group** unless you want your prefab to join the original's toolbar group.
 
-(VOLATILE: `Clone`'s two stripped JSON keys and the `isBuiltin` / `isPackaged` / `isReadOnly` property chain — re-read `PrefabBase` in the decompile.)
+(VOLATILE: `Clone`'s two stripped JSON keys and the `isBuiltin` / `isPackaged` / `isReadOnly` property chain — `PrefabBase` itself.)
 
 ## Regenerating a prefab in place, and what that leaves stale
 
@@ -417,7 +417,7 @@ Two practical costs come with the technique.
 Whether calling this on a **vanilla** prefab is safe is not established: nothing forbids it, and nothing in the wild exercises it.
 Treat it as a technique for prefabs you minted yourself until you have tested otherwise against a running game.
 
-(VOLATILE: the replacement system's 14-component query list and the three types its instance-archetype reconciliation covers — re-read the replacement system in the decompile.)
+(VOLATILE: the replacement system's 14-component query list and the three types its instance-archetype reconciliation covers — the replacement system.)
 
 ## Prefab identity, and where the collisions come from
 
@@ -455,7 +455,7 @@ Every prefab entity's `LoadedIndex` buffer is then cleared and refilled, so it e
 Prefabs a save references and the install no longer has get a negative index and a placeholder name for display.
 The format itself is `save-serialization`.
 
-(VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — re-read the prefab id type and the prefab system's serialization region in the decompile.)
+(VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — the prefab id type, and the prefab system's serialization region.)
 
 ## Loading an asset from code
 
@@ -492,7 +492,7 @@ The same call shape stores geometry, locale and image assets.
 
 Note the boundary once more: producing the content of a texture, mesh or surface is asset authoring and out of scope here; storing and retrieving one through this API is not.
 
-(VOLATILE: the `IAssetDatabase` and `ILocalAssetDatabase` member lists and the four `AssetDatabase` statics — re-read both interfaces in the decompile.)
+(VOLATILE: the `IAssetDatabase` and `ILocalAssetDatabase` member lists and the four `AssetDatabase` statics — both interfaces, and the database type itself.)
 
 ## Serving your own files over the game's resource scheme
 
@@ -526,7 +526,7 @@ The thumbnail chain is the one to know: icon if set, else a placeholder when thu
 
 The Cohtml side of the frontend is `ui-and-frontend`.
 
-(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, and `AddHostLocation`'s signature — re-read the UI system and the default resource handler in the decompile.)
+(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, and `AddHostLocation`'s signature — the UI system, and the default resource handler.)
 
 ## What this reference hands to others
 

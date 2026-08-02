@@ -71,4 +71,4 @@ Publishing runs its own path checks and then the publisher, over the folder this
 - Add a target with `BeforeTargets` or `AfterTargets` to insert work — `AfterTargets="DeployWIP"` is the documented place to copy extra files into the deploy folder, and where a UI build or any other extra artifact belongs.
 - Add a target after `ModPostProcessorConfig` or `ModPublisherConfig` to rewrite the arguments those stages pass, starting from the defaults they built.
 
-(VOLATILE: the target names above — read `Mod.targets` in `%CSII_TOOLPATH%` when one does not fire, since the toolchain owns them.)
+(VOLATILE: the target names above — `Mod.targets` in `%CSII_TOOLPATH%`, which the toolchain owns rather than the game.)

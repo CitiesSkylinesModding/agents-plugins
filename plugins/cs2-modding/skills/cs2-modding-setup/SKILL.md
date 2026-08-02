@@ -1,6 +1,6 @@
 ---
 name: cs2-modding-setup
-description: 'Provisions and maintains the local ground truth for Cities: Skylines II mod development. Use when the user asks to be set up for CS2 modding, when a game update left their decompile stale, when they ask which mods are worth reading for a problem, when the in-game debug menu or the UI debugging port turns out to be unavailable, or when another skill finds no decompile recorded.'
+description: 'Provisions and maintains the local ground truth for Cities: Skylines II mod development. Use when the user asks to be set up for CS2 modding, when the decompile needs creating or updating, when they ask which mods are worth reading for a problem, when the in-game debug menu or the UI debugging port turns out to be unavailable, or when another skill finds no decompile recorded.'
 ---
 
 # Setting up a Cities: Skylines II modding environment
