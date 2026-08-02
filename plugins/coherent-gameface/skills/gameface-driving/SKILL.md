@@ -11,7 +11,9 @@ For what the engine itself supports (layout, events, missing platform APIs), loa
 
 ## Session start and triage
 
-Screenshot first (jpeg, quality around 60) and orient before acting: menus, dialogs, or a loading screen change what is safe to click.
+Screenshot first and orient before acting: menus, dialogs, or a loading screen change what is safe to click.
+A capture holds the UI view alone: the application's own rendering never reaches it, and every transparent region comes back flat white, so an expanse of white is the normal backdrop of a HUD rather than a blank or broken UI.
+Read the application's state from what its UI displays, never from the scene behind it.
 When any tool fails, run `game_status` before retrying; it settles whether the endpoint is reachable and which engine and page answered.
 Read the page identity from `target.url` (for example `assetdb://gameui/index.html`).
 A dead endpoint mid-session usually means the game crashed or was closed.
@@ -32,7 +34,8 @@ In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `
 ## Act, then verify
 
 Input calls report that events were dispatched, not that the UI reacted; confirm the effect you care about before building on it.
-The cheap confirmations: `game_wait` on a predicate or selector, `game_dom` on the region that should have changed, a clipped screenshot, and `game_console` for exceptions a silent failure left behind.
+The cheap confirmations: `game_wait` on a predicate or selector, `game_dom` on the region that should have changed, a screenshot clipped to that region with `game_screenshot`'s `selector`, and `game_console` for exceptions a silent failure left behind.
+Clipping is what makes a screenshot cheap: pass the selector of the region you are verifying, and keep the full viewport for orienting, where you do not yet know what to clip to.
 `game_click` returns after dispatching the event sequence, before any async handler work; pair it with a wait on the expected outcome.
 
 ## Keyboard: `game_key` and native-handled keys

@@ -276,7 +276,9 @@ export async function gameScreenshot(
   client: CdpClient,
   options: GameScreenshotOptions = {}
 ): Promise<CallToolResult> {
-  const { format = 'jpeg', quality, selector, index = 0 } = options;
+  // PNG by default: the capture is the UI layer alone (flat fills and small text, no 3D scene),
+  // so lossless costs little payload and spares the glyphs JPEG rings around.
+  const { format = 'png', quality, selector, index = 0 } = options;
 
   try {
     await client.ensureDomain('Page');

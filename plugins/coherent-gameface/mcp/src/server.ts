@@ -96,16 +96,24 @@ async function main(): Promise<void> {
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
         as an inline image.
         Pass a selector to clip the capture to one element; use index to pick among matches.
+        Clipping is the only lever on what the image costs you in context: that cost tracks the
+        pixel area captured, never the encoded file size.
         Hangs while the JS debugger is paused; resume (game_debug_step) before capturing.
       `,
       inputSchema: {
-        format: z.enum(['png', 'jpeg']).optional().describe(`Image format (default: jpeg)`),
+        format: z.enum(['png', 'jpeg']).optional().describe(`Image format (default: png)`),
         quality: z
           .number()
           .min(1)
           .max(100)
           .optional()
-          .describe(`JPEG quality 1-100 (only used when format is jpeg; default 80)`),
+          .describe(
+            oneLine`
+              JPEG quality 1-100 (only used when format is jpeg; default 80).
+              Trades fidelity for transfer bytes; lowering it leaves the image's context cost
+              unchanged.
+            `
+          ),
         selector: z
           .string()
           .optional()

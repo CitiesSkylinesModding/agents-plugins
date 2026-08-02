@@ -31076,7 +31076,7 @@ async function gameEval(client, expression, awaitPromise = false) {
   }
 }
 async function gameScreenshot(client, options = {}) {
-  const { format = "jpeg", quality, selector, index = 0 } = options;
+  const { format = "png", quality, selector, index = 0 } = options;
   try {
     await client.ensureDomain("Page");
     const params = { format };
@@ -32012,11 +32012,17 @@ async function main() {
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
         as an inline image.
         Pass a selector to clip the capture to one element; use index to pick among matches.
+        Clipping is the only lever on what the image costs you in context: that cost tracks the
+        pixel area captured, never the encoded file size.
         Hangs while the JS debugger is paused; resume (game_debug_step) before capturing.
       `,
     inputSchema: {
-      format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: jpeg)`),
-      quality: exports_external.number().min(1).max(100).optional().describe(`JPEG quality 1-100 (only used when format is jpeg; default 80)`),
+      format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
+      quality: exports_external.number().min(1).max(100).optional().describe(import_common_tags4.oneLine`
+              JPEG quality 1-100 (only used when format is jpeg; default 80).
+              Trades fidelity for transfer bytes; lowering it leaves the image's context cost
+              unchanged.
+            `),
       selector: exports_external.string().optional().describe(`If set, clip the screenshot to this element's bounding box`),
       index: exports_external.number().int().min(0).optional().describe(`Which match to clip to when several exist (default: 0)`)
     }
