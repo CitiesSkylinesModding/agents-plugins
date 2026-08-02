@@ -58,6 +58,7 @@ Clone an alpha branch rather than the default one: the architectural changes wor
 Typed raycast wrappers registered with the game's own raycast system.
 Overlay rendering dispatched per entity kind, with the draw and update passes as jobs.
 Cross-mod integration by reflection over loaded assemblies rather than a compile-time reference, so a missing sibling mod costs nothing.
+Emitting the game's own placement definitions by hand for every selected entity and each of its sub-nets and sub-areas, switching one flag field between relocate, delete, hidden and recreate, rather than using the definition helper its base class offers.
 
 ### Area Bucket
 
@@ -107,6 +108,7 @@ Source: [AlphaGaming7780/ExtraDetailingTools](https://github.com/AlphaGaming7780
 A reusable generic base for adding custom snap modes to any tool.
 A batched custom raycast where several callers share one pass per frame, keyed by context.
 Runtime bridging to another mod through a dedicated bridge class.
+A port of the game's own selection-definition builder that branches on what the selected entity is and emits the matching definition kind for each — network course, object, area nodes, route waypoints, notification icon, aggregate elements — which is the widest coverage of that mechanism outside the game itself.
 
 ### Platter
 
@@ -119,6 +121,7 @@ Deserialize-phase jobs that rebuild the links between mod entities and game enti
 Rewriting a vanilla system's private entity query at runtime so stock code skips the mod's entities — the most aggressive compatibility technique in the corpus, and worth reading as much for its risk as for its power.
 Prefab-data initialisation systems anchored immediately after the vanilla initializer whose output they overwrite, which is the readable way to correct derived prefab data rather than fight for it.
 Hand-built input actions registered by reflection, because scroll bindings are not exposed.
+Taking a placement definition away from its vanilla consumer by removing the creation component from a system spliced immediately before that consumer, played back synchronously because a phase barrier would land after the consumer has already run.
 An in-engine test scenario system, debug-only.
 
 ### Traffic
@@ -133,6 +136,8 @@ Registering a system frames after the mod loaded, from a deferred main-thread ca
 A custom raycast system registered in the raycast phase.
 Rebindable actions declared as settings attributes and consumed by the tool.
 Migrating another mod's saved data on load, and detecting an incompatible build of it by scanning loaded assemblies.
+Its own placement-definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of that protocol to a new kind.
+An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
 
 ## Replacing a vanilla system instead of patching it
 
@@ -255,6 +260,7 @@ Palettes as the mod's own prefab type, building their components in the prefab l
 Burst jobs for "apply within a radius" against both transforms and curves.
 One of its own components shadows a vanilla component of the same name that arrived later, and the source has both in use side by side, which is the readable case for namespace-qualifying every component a mod shares a name with.
 Three tools that decline every prefab — `TrySetPrefab` returns false and `GetPrefab` returns null — so they are reachable only from the mod's own UI and cost the toolbar nothing wherever they sit in the tool list.
+Emitting a selection definition against an existing entity so the game hands back a temporary copy the mod can edit, which is how it applies a colour through the placement pipeline instead of writing the live entity.
 
 ### Write Everywhere
 
@@ -283,6 +289,8 @@ Custom serializable components recording state that must survive a save, paired 
 Soft integration with another mod through a bridge type located by reflection, with no hard dependency in either direction.
 Cloning a vanilla prefab component by component and rebuilding its UI component from scratch rather than copying it, with the clearest comment in this corpus on why a clone must not keep a reference to its source.
 Remembering the previously active tool by subscribing to the tool system's tool-changed event rather than latching it at activation, which is the only form that survives an activation the tool did not initiate.
+Suppressing a placement error by setting a disable flag on the error's own prefab rather than by patching the validation system, paired with a restore system in a later phase that runs once and switches itself off.
+The corpus's largest definition rewriter, walking a whole run of net-course definitions in order and writing each course's end elevation into the next course's start to force a constant slope.
 
 ### Better Bulldozer
 
