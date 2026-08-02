@@ -38,6 +38,10 @@ Point them at those sources and at the claims to re-derive; a finder told only t
 Aim the pass at over-reach, because that is what authoring produces: a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
 Prose that has gone through a gate has been wrong on exactly these, and none of it read as doubtful.
 
+A reference contradicting a shipped sibling is the normal output of partitioning one subject: the slices overlap, and a topic that owns a mechanism reads its source more closely than one that merely mentions it.
+Fix it in the pass that found it — re-derive the claim from the decompile, then correct every file carrying the wrong version, a reference whose own work is long finished included.
+Deferring the correction to a follow-up drops it.
+
 Corrections earn another `/review-gate`. A rewritten passage is new prose, and the round that fixes the most is the round that introduces the most.
 The way a correction goes wrong is over-correction: a vague rule rewritten into a precise one that is wrong, a permission narrowed to a whitelist tighter than what was ruled, a mechanism invented to justify a rule that was already justified.
 Prefer scoping or restoring the sentence you have over generalising it, and where a fix needs a claim the sources do not carry, drop the claim rather than the fix.
