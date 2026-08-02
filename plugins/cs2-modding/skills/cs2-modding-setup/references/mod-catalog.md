@@ -69,6 +69,7 @@ Source: [Cmyna/AreaBucket](https://github.com/Cmyna/AreaBucket)
 Terrain-only raycasting by narrowing the raycast type mask.
 A preview entity path that renders an outline before anything is committed.
 Its own native containers and a line-sweep intersection pass, which is what reading it costs and what it teaches.
+Each job owns its component and buffer lookups behind an assign-once and a refresh-per-update method, which is the clearest hand-written form of the type-handle discipline the source generator otherwise supplies.
 No runtime patching anywhere.
 
 ### Network Tools
@@ -156,6 +157,7 @@ Reimplementing the game's time model, deriving ticks per day from the vanilla co
 The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval, which is what puts a fork on the same simulation frames as the original.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A versioned serializable component for per-citizen state, with a fallback path that reads saves written by older versions.
+Carries the game's own generated type-handle struct into each fork and refreshes every handle by hand at the top of the update, which is what a forked system must do once the source generator is no longer writing that code for it.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
 
 ## Prefabs and assets from code
@@ -233,6 +235,7 @@ Read-only; it changes no rules.
 **Demonstrates:** The two module-registry calls a UI mod needs — appending a panel to a named region, and extending the selected-info section list with its own sections.
 Reading simulation state cheaply: a job gated on whether the panel is visible, with an update interval so the query runs only every few hundred ticks — on its simulation-phase systems, since an interval on a UI-phase system does nothing, and this source carries examples of both.
 Replacing the game's own JSON binding output by returning false from a prefix, when the vanilla writer truncates what the panel needs.
+The corpus's only source-generated per-entity job, which is the proof that the Entities source generators the official toolchain ships do work in a mod project.
 
 ### Recolor
 
@@ -245,6 +248,7 @@ The corpus's deepest ordering chain — three systems anchored by type after one
 Per-instance colour as a serializable buffer element with hand-written read and write.
 Palettes as the mod's own prefab type, building their components in the prefab lifecycle methods and cross-referencing vanilla theme and zone prefabs for filtering.
 Burst jobs for "apply within a radius" against both transforms and curves.
+One of its own components shadows a vanilla component of the same name that arrived later, and the source has both in use side by side, which is the readable case for namespace-qualifying every component a mod shares a name with.
 
 ### Write Everywhere
 
@@ -257,6 +261,7 @@ Burst-compiled glyph layout writing vertices into a native queue, on top of a ha
 Loading meshes from disk at runtime and composing per-entity materials.
 Attaching mod data to game entities by owner back-reference instead of spawning a parallel object graph.
 Versioned serialization with an explicit migration scheme.
+The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
 
 ## Error checks, overrides and save-safe state
