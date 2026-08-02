@@ -108,6 +108,7 @@ Source: [AlphaGaming7780/ExtraDetailingTools](https://github.com/AlphaGaming7780
 A reusable generic base for adding custom snap modes to any tool.
 A batched custom raycast where several callers share one pass per frame, keyed by context.
 Runtime bridging to another mod through a dedicated bridge class.
+Declaring its own input usage string beside the built-in ones, so its transform-tool actions are not reported as conflicting with vanilla bindings they share keys with.
 A port of the game's own selection-definition builder that branches on what the selected entity is and emits the matching definition kind for each — network course, object, area nodes, route waypoints, notification icon, aggregate elements — which is the widest coverage of that mechanism outside the game itself.
 
 ### Platter
@@ -134,7 +135,8 @@ Source: [krzychu124/Traffic](https://github.com/krzychu124/Traffic)
 Disabling the vanilla lane system and taking over its slot, with no patching anywhere in the codebase.
 Registering a system frames after the mod loaded, from a deferred main-thread callback, which is how it disables another mod's system once that mod is known to be present.
 A custom raycast system registered in the raycast phase.
-Rebindable actions declared as settings attributes and consumed by the tool.
+Rebindable actions declared as settings attributes and consumed by the tool, scoped with its own usage strings beside the built-in ones.
+Letting the player choose, from the settings screen, between the mod's own bindings and watchers that keep them equal to the vanilla apply and cancel bindings.
 Migrating another mod's saved data on load, and detecting an incompatible build of it by scanning loaded assemblies.
 Its own placement-definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of that protocol to a new kind.
 An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
@@ -289,6 +291,7 @@ Custom serializable components recording state that must survive a save, paired 
 Soft integration with another mod through a bridge type located by reflection, with no hard dependency in either direction.
 Cloning a vanilla prefab component by component and rebuilding its UI component from scratch rather than copying it, with the clearest comment in this corpus on why a clone must not keep a reference to its source.
 Remembering the previously active tool by subscribing to the tool system's tool-changed event rather than latching it at activation, which is the only form that survives an activation the tool did not initiate.
+Mimicking a vanilla binding declaratively, so a mod action sits on a button the game reserves and follows the player's rebinds, including the two-property form that mimics an axis.
 Suppressing a placement error by setting a disable flag on the error's own prefab rather than by patching the validation system, paired with a restore system in a later phase that runs once and switches itself off.
 The corpus's largest definition rewriter, walking a whole run of net-course definitions in order and writing each course's end elevation into the next course's start to force a constant slope.
 
