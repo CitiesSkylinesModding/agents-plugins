@@ -44,6 +44,40 @@ A later decomposition that renames or splits one of them leaves a stale name her
 
 ## Ruled
 
+### Usage contexts scope the conflict a mod author sees and not the one that disables their action
+
+**Sources.** `Mod Key Binding` (https://cs2.paradoxwikis.com/Mod_Key_Binding, fetched live 2026-08-03) states "Conflict detection uses usage strings" and "Custom usage strings prevent conflicts based on matching action sets", listing four defaults — Default, Overlay, Tool, CancelableTool.
+Six of twenty corpus repositories declare custom or narrowed usages and clearly believe them to be the scoping mechanism: `Traffic/Code/ModSettings.Keybindings.cs:23-31` puts nine actions on `"Traffic.Tool.LaneConnector"` and `"Traffic.Tool.Priorities"`, `ExtraDetailingTools/MOD/Settings.cs:11-14` on `"EDT.InTransformTool"`, `CS2-MoveIt/Code/MoveIt/Settings/Settings.cs:16-35` puts all twenty of its actions on `"MoveIt_Input"`, and `Anarchy/Anarchy/Settings/AnarchyModSettings.cs:23-25`, `CS2-NetworkTools/NetworkTools.Mod/Settings/Settings.cs:17-27` and `NodeController/NodeController/Setting.Keybindings.cs:9-15` narrow theirs to `Usages.kToolUsage`.
+
+**Established.** The decompile splits the wiki's claim in two, and the halves point opposite ways.
+Usage-aware: `ProxyBinding.hasConflicts` and `ProxyBinding.conflicts` call `ProxyBinding.ConflictsWith(x, y, checkUsage: true)`, which requires `Usages.TestAny(x.usages, y.usages)` on top of a matching device and control path (`src/Game/Game.Input/ProxyBinding.cs:447/492`, `:680-698`).
+Those two feed the warning triangle on the options row (`src/Game/Game.UI.Menu/InputBindingField.cs:54-64`) and the per-map conflict notification (`src/Game/Game.Input/InputManager.cs:1389-1435`).
+Usage-blind: the pass that actually disables an action goes through `InputManager.HasConflicts`, which calls `ConflictsWith(x, y, checkUsage: false)` (`InputManager.cs:718-755`, the call at `:746`), and `InputConflictResolution.ResolveConflicts` turns a hit into `ProxyAction.ApplyState(false, ...)` and a real `InputAction.Disable()` (`src/Game/Game.Input/InputConflictResolution.cs:138-198`, `src/Game/Game.Input/ProxyAction.cs:577-599`).
+What does scope the disable is enablement: `ResolveConflicts` only pairs actions whose `preResolvedEnable` is currently true (`InputConflictResolution.cs:148-182`), and that is decided by the action's map, its activators and its input barriers (`ProxyAction.UpdateState`, `ProxyAction.cs:524-575`).
+A grep of `src/Game/` outside `Game.Input` and `Game.Settings` returns no other consumer of `Usages` at 1.6.0f1, and the default set is five members rather than the wiki's four (`BuiltInUsages.DefaultSet = 0x41E`, `src/Game/Game.Input/BuiltInUsages.cs:20`).
+What could not be established is whether a usage has any effect this pipeline cannot see. `Usages` values for built-in actions are deserialized from the input asset rather than from source (`src/Game/Game.Input/CompositeInstance.cs:128/261`), the frontend receives each binding's conflict list as JSON (`InputBindingField.cs:76-81`) and may act on it, and this pipeline cannot run the game.
+
+**Needs a ruling on.** What the `settings-and-input` reference teaches a reader to expect from a usage string.
+Three options and each costs something.
+Teach the wiki's model — declare usages so your binding only conflicts inside its own context: matches what seven of twenty mods do and what every reader will find written elsewhere, and it is contradicted by the one code path that decides whether their action fires.
+Teach the proven model — a usage narrows the warning the player sees and nothing else, and a mod binding that shares a control path with a currently-enabled vanilla binding is disabled whatever its usages say: correct on the evidence, and it tells a reader that a technique the whole corpus uses does not do what they think, on the strength of one `checkUsage: false` argument.
+Teach both halves as two mechanisms with the same name — usages for the diagnostic, enablement for the runtime — and hand the reader `shouldBeEnabled` gated on the mod's own state as the thing that actually scopes an action: honest and actionable, at the price of being the only place in this plugin that tells a reader a wiki page and a corpus practice are both wrong about the same fact.
+What turns on it is a reader's whole model of why their hotkey stopped working, which is the single most common runtime complaint this area produces, and the notification the game pushes names their mod by name.
+The ruling goes into the research file for `settings-and-input`, and touches `custom-tools` only if that reference also states why a tool's inherited apply and cancel actions are exempt from this.
+
+**Ruling (2026-08-03, ticket 14).** The third option, in `settings-and-input`: both halves ship as two mechanisms that happen to share a name, and `shouldBeEnabled` gated on the mod's own state is what the reference hands the reader as the thing that scopes an action at runtime.
+
+A usage narrows the conflict the player is _shown_ — the warning triangle on the options row and the per-map notification — and at 1.6.0f1 that is the whole of its effect anywhere this pipeline can look.
+The pass that disables an action ignores usages entirely, pairs any two currently-enabled actions that share a control path, and always resolves against the mod.
+Neither half may ship alone, which is what makes this the third option rather than a softened first or second: the wiki's model alone leaves a reader debugging a dead hotkey against a mechanism that never touched it, and the proven half alone tells them a practice seven of twenty mods follow does nothing, without handing them the one that works.
+
+The correction ships in this plugin's own voice rather than hedged, because the two halves are separately verifiable and were separately verified — `checkUsage: true` at the two `ProxyBinding` call sites, `checkUsage: false` at the single `InputManager.HasConflicts` one, and `State.enabled` reading `preResolvedEnable && !m_HasConflict`.
+The reference states the split as a fact about the code. It does not argue with the wiki page, and it does not characterise what other mods do — the corpus is input here as everywhere, and "seven mods believe otherwise" is not a sentence shipped prose can carry.
+
+The limit the entry recorded travels into the prose rather than being argued away.
+Built-in actions' usages are deserialized from an input asset that is not decompiled source, and the frontend receives each binding's conflict list as JSON and may act on it.
+So what ships is a claim about what disables an action in C#, which is the half a reader can act on, and it carries the volatility marker: the next version's sweep re-checks whether that argument is still `false`.
+
 ### One mod in twenty stamps an empty prefab on its own entities, and the reason it gives cannot be verified
 
 **Sources.** `Traffic/Code/Helpers/FakePrefab.cs:9-10` is a `PrefabBase` subclass whose own comment states its purpose: "used purely for vanilla validation workaround with custom entites interacting with vanilla ones".
