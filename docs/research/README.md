@@ -7,7 +7,7 @@ An authoring agent then reads that one file, without the sources, and writes the
 What lives here:
 
 - `conflicts.md` — every disagreement no agent may settle alone, waiting for the maintainer's ruling.
-  Read its open entries before starting a topic they touch, append there rather than deciding, and follow the entry shape it documents.
+  Read the entries naming your topic before you start, ruled as well as open, append there rather than deciding, and follow the entry shape it documents.
 - `survey-decompile-moddable-surface.md`, `survey-mods-techniques.md`, `survey-wiki-inventory.md` — one orientation survey per source, produced during the interview that became the spec.
   They predate these conventions and carry no per-claim verdicts.
   Read the ones your topic touches before you start: they exist so no topic agent begins cold.
@@ -35,6 +35,10 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   The decompile is ground truth and wins by default; a verdict going the other way carries the evidence that overturned it.
   Record it even when it is unsurprising — a claim marked verified reads differently from one nobody checked.
   A verdict settles a fact, and only a fact: what no source can settle, the question whose answer changes the product, and the judgement about what ships that can remain even once the facts are in all go to `conflicts.md` instead.
+- **A ruling, wherever one came back**, opening with `**Ruled (<date>, <where it was made>; conflicts.md).**` on the finding it governs.
+  The maintainer writes it, not you: your part is the evidence they rule on.
+  It restates the decision and what the reference owes because of it, rather than pointing back at the entry, since the authoring agent reads this file and never `conflicts.md`.
+  It sits at the finding rather than in a section of its own, so the passage it governs cannot be authored without it.
 - **What rots**, opening with `Rots:` on the claim it qualifies.
   Flag each claim you judge version-volatile — component and system names, field names, save-format versions, UI module paths, raycast masks — naming what to re-check and the path to re-check it against.
   The author of the reference turns these into its shipped volatility markers, and cannot otherwise tell which claim is architecture and which is a field name that moved.
