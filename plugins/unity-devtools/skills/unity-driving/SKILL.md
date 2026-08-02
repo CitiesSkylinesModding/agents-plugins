@@ -63,6 +63,15 @@ One eval runs in one suspend window; hold `suspend`/`resume` around several eval
 Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
+## Seeing the game
+
+One `eval` of `UnityEngine.ScreenCapture.CaptureScreenshot(path)` writes a PNG of the composited frame, 3D scene and UI together; the API is engine-level, so every Unity build carries it.
+Build an absolute path from `UnityEngine.Application.persistentDataPath`, since a relative one resolves per platform.
+The call is a request rather than a capture: it returns `null` at once and a rendered frame is what fulfils it.
+A game that renders nothing therefore produces no file — under a held `suspend`, or when the window is minimized and the game does not run in background — and the image, once a frame arrives, shows that later frame rather than the moment you asked.
+`advance` is the way to spend a frame without giving up a held window.
+The file lands on the machine running the game and no tool here reads it back, so opening it is your own filesystem's job and only works when you share that machine.
+
 ## Debugging with breakpoints
 
 Where `eval` reads the game from outside, the `debug_*` tools stop it from inside: arm (`debug_set_breakpoint` / `debug_break_on_exception`), trigger the behavior in game, catch the hit (`debug_wait`), inspect (`debug_pause_state`, `debug_evaluate`), move (`debug_step`), release (`debug_step action=resume`).
