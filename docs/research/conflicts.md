@@ -64,10 +64,12 @@ Its numbers are from a build nobody can reach.
 **Established.** All three columns with no counterpart on the live page are live game concepts in 1.6.0f1 rather than pre-launch relics: workplace complexity is an enum at `src/Game/Game.Prefabs/WorkplaceComplexity.cs:3-8`, carried on `src/Game/Game.Prefabs/Workplace.cs:22` and consumed at `src/Game/Game.Prefabs/ZonePrefabInitializeSystem.cs:140`; the circular flag is read as `GeometryFlags.Circular` at `src/Game/Game.Areas/ValidationHelpers.cs:233`; garbage accumulation is a field at `src/Game/Game.Prefabs/ConsumptionData.cs:17`.
 The schema survived the launch; only the values did not.
 
-**Needs a ruling on.** Whether a domain reference may borrow the columns at all, given the decompile carries the same concepts as named types and can be cited directly.
+**Needs a ruling on.** Whether a mechanics reference may borrow the columns at all, given the decompile carries the same concepts as named types and can be cited directly.
 What the page adds is that it gathers them into one table, which the decompile never does — and that convenience is the whole of its value.
 The risk runs one way: a reader who follows the link for the schema lands on stale values presented exactly like current ones.
-The ruling goes into the research file for the city-services domain, and binds any domain topic tempted to borrow a wiki table.
+The ruling goes into the research files of the seven topics that borrow a wiki stat table: `city-services-and-coverage`, which this page's own data belongs to, plus `zoning-buildings-and-land-value`, `economy-and-companies`, `roads-and-traffic`, `transportation-and-vehicles`, `city-state-and-progression` and `citizens-and-households`.
+They are listed by name rather than by a rule, because the rule would have to be resolved against a source list this directory does not hold, and an entry naming its topics is what this file's own shape asks for.
+A later decomposition that renames or splits one of them leaves a stale name here, which is a visible problem; a rule nobody can resolve is not.
 
 ## Ruled
 

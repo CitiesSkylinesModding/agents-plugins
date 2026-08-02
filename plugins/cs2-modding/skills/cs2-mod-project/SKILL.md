@@ -63,7 +63,7 @@ Without it MSBuild copies that assembly into the build output, the deploy stage 
 The game notices, skips the offending file and logs `Assembly "X" is in-game assembly and it should NOT be shipped with mod "Y"`.
 Packages the mod genuinely depends on are the opposite case: they have to land next to the mod assembly to resolve at runtime, so leave those copying.
 
-**The patching library is pinned by community agreement.**
+**Harmony, the patching library, is pinned by community agreement.**
 
 ```xml
 <PackageReference Include="Lib.Harmony" Version="2.2.2" />

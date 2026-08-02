@@ -39,10 +39,15 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   Flag each claim you judge version-volatile — component and system names, field names, save-format versions, UI module paths, raycast masks — naming what to re-check and the path to re-check it against.
   The author of the reference turns these into its shipped volatility markers, and cannot otherwise tell which claim is architecture and which is a field name that moved.
   Write `Rots:` rather than the shipped marker's own spelling: that marker is greppable as the next version's maintenance checklist precisely because it appears in shipped prose and nowhere else, and a staging file wearing it would put unshipped claims on the list.
-- **The bridge.** For a technique topic, the domains that exercise it; for a domain topic, the techniques a change there needs, cited like anything else.
-  A file returning only mechanism or only mechanics has done half the job, and that connection is the thing no other source provides.
+- **The bridge.** For a technique topic, the mechanics topics that exercise it; for a mechanics topic, the techniques a change there needs, cited like anything else.
+  A file returning only technique or only mechanics has done half the job, and that connection is the thing no other source provides.
 - **The dead ends.** What was searched and came back empty, what was ruled out and how.
   A dead end left unwritten is walked again by the next agent at the same cost.
+
+**The corpus reaches a technique topic and a mechanics topic differently.**
+`survey-mods-techniques.md` is organised technique-first and carries no mechanics section, and the setup skill's catalog certifies what a mod's source _demonstrates_ — techniques, not mechanics.
+So a mechanics topic reads a catalogued mod for the one thing no other source gives: which vanilla systems and components that mod had to disable, fork or query to change the behaviour.
+Match on an entry's `Demonstrates` half rather than its `Does` half, as that catalog itself directs, and where no entry's `Demonstrates` names systems in your area, sweep it anyway and record the dead end rather than reaching for a mod whose subject merely sounds close.
 
 Done when each of the three sources has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, whose bot challenge often wins — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
 A file that read one source reads exactly like one that swept all three, and the agent writing the reference cannot see what was never looked at.

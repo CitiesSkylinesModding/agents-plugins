@@ -17,7 +17,7 @@
     {
       "name": "cs2-modding",
       "source": "./plugins/cs2-modding",
-      "description": "Teach your coding agent to write Cities: Skylines II code mods: the game's architecture, the modding techniques and the simulation domains behind them, every claim verified against the decompiled game."
+      "description": "Teach your coding agent to write Cities: Skylines II code mods: the game's architecture, the modding techniques and the game mechanics behind them, every claim verified against the decompiled game."
     }
   ]
 }
