@@ -44,6 +44,30 @@ A later decomposition that renames or splits one of them leaves a stale name her
 
 ## Ruled
 
+### A job interface the toolchain supports, the game never uses, and one mod in twenty proves works
+
+**Sources.** `survey-mods-techniques.md:154` states that "source-generated `IJobEntity` doesn't play well with the modding toolchain, so everyone hand-writes `IJobChunk` with `ArchetypeChunk` + `ComponentTypeHandle<T>`." That was the twelve-repository pass and it carries no verdict.
+The decompiled game declares 771 `IJobChunk` structs and zero `IJobEntity` structs (`ecs-in-this-game.md`, "The job interface").
+
+**Established.** The survey's stated reason is wrong at 1.6.0f1, and the practice it describes is real anyway.
+The official toolchain wires all twelve Entities source generators as Roslyn analyzers, `JobEntityGenerator.dll` among them, and hard-errors if the directory is missing (`C:\Users\Morgan\AppData\LocalLow\Colossal Order\Cities Skylines II\.cache\Modding\Mod.props:63-74`, `Mod.targets:85-87`).
+One corpus mod uses `IJobEntity` end to end and ships: `InfoLoom/InfoLoom/Systems/DemographicsData/Demographics.cs:22/51/77/390`, a `partial struct … : IJobEntity` inside a `partial class … : GameSystemBase`, scheduled with the generated `job.Schedule(query, Dependency)`.
+So it compiles, it runs, and it is used once in twenty repositories against 172 `IJobChunk` declarations.
+The countervailing facts are equally solid: a `IJobEntity` body cannot see the chunk, so it cannot do the per-chunk early exit the game's simulation systems rest on (`src/Game/Game.Simulation/AgingSystem.cs:68-71`), cannot read a shared component, and — the practical one — cannot be produced by copying a decompiled vanilla job, which is where the corpus's dominant technique starts.
+
+**Needs a ruling on.** Whether the shipped technique reference teaches `IJobEntity` at all, and if so in what position.
+Three options and each costs something. Teach `IJobChunk` only: the reference is then silent about an interface that works, and an agent that reaches for it from stock-ECS habit gets no guidance on the `partial` requirement or the loss of chunk access. Teach both with `IJobChunk` as the default: honest, but doubles the job material in a reference whose readers mostly need one shape. Teach `IJobEntity` as the modern default: contradicts every line of game code an agent will read next, and stops the fork-a-vanilla-system technique from being a paste, since the body being forked is always `IJobChunk` and a rewrite has to replace the chunk-level early exit, the chunk-scoped accessors and `unfilteredChunkIndex` with per-entity equivalents that do not exist.
+What turns on it is not correctness but whether the reference reads as a description of _this codebase_ or as a description of Unity ECS, which is the distinction the whole plugin exists on.
+The ruling goes into the research file for `ecs-in-this-game`, and touches `performance-and-memory` only if the chunk-level early exit is argued there as well.
+
+**Ruling (2026-08-02, ticket 10).** The third option, in `ecs-in-this-game`: the per-entity job interface is the default the reference teaches for new mod code, on the stated ground that it is the more modern replacement for the chunk interface.
+
+The reference states the discrepancy plainly rather than papering over it — the game itself is `IJobChunk` throughout, so every line of vanilla code the reader opens next is written the other way, and that gap is a fact about the codebase's age rather than a reason to follow it.
+Both interfaces therefore ship. `IJobChunk` is taught well enough to read vanilla source and to fork it, because the fork technique starts from a decompiled body and that body is always `IJobChunk`; what it loses to the per-entity form is the chunk-level early exit, the chunk-scoped accessors and `unfilteredChunkIndex` as a parallel command buffer's sort key, and the reference names all three so a reader converting a fork knows what has no per-entity equivalent.
+The `partial` requirement on both the job struct and its enclosing system ships with it, since that is what the generator needs and its absence is the first thing an agent hits.
+
+The entry's own "Needs a ruling on" paragraph overstated one cost before this was ruled, and was corrected in place: the per-entity default does not disable the fork technique, it stops the fork from being a paste.
+
 ### Launch flags: `-developerMode` or `--developerMode`
 
 **Sources.** The wiki contradicts itself across two pages: `Developer mode` (https://cs2.paradoxwikis.com/Developer_mode) writes the single-dash `-developerMode`, `Launch Parameters` (https://cs2.paradoxwikis.com/Launch_Parameters) the double-dash `--developerMode`.
