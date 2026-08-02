@@ -254,6 +254,7 @@ Per-instance colour as a serializable buffer element with hand-written read and 
 Palettes as the mod's own prefab type, building their components in the prefab lifecycle methods and cross-referencing vanilla theme and zone prefabs for filtering.
 Burst jobs for "apply within a radius" against both transforms and curves.
 One of its own components shadows a vanilla component of the same name that arrived later, and the source has both in use side by side, which is the readable case for namespace-qualifying every component a mod shares a name with.
+Three tools that decline every prefab — `TrySetPrefab` returns false and `GetPrefab` returns null — so they are reachable only from the mod's own UI and cost the toolbar nothing wherever they sit in the tool list.
 
 ### Write Everywhere
 
@@ -281,6 +282,7 @@ Source: [yenyang/Anarchy](https://github.com/yenyang/Anarchy)
 Custom serializable components recording state that must survive a save, paired with query-and-command-buffer systems that strip and restore vanilla components at scale.
 Soft integration with another mod through a bridge type located by reflection, with no hard dependency in either direction.
 Cloning a vanilla prefab component by component and rebuilding its UI component from scratch rather than copying it, with the clearest comment in this corpus on why a clone must not keep a reference to its source.
+Remembering the previously active tool by subscribing to the tool system's tool-changed event rather than latching it at activation, which is the only form that survives an activation the tool did not initiate.
 
 ### Better Bulldozer
 
@@ -292,3 +294,4 @@ Source: [yenyang/BetterBulldozer](https://github.com/yenyang/BetterBulldozer)
 A secondary tool that masquerades as the bulldozer by delegating its prefab methods to the vanilla one, so it needs no toolbar entry of its own.
 Serializable records that make a destructive edit reversible.
 The reason "permanent" removal needs records at all: the game's own systems keep recreating sub-elements from the asset definition, so the mod re-detects and re-deletes them rather than deleting once.
+Reinserting its two tools at the front of the tool list once loading has completed, which is later than the tool's own creation and therefore wins any race with a mod that reorders at `OnCreate`.
