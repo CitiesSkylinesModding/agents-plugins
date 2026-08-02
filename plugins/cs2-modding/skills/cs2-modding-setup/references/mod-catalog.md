@@ -130,6 +130,7 @@ Source: [krzychu124/Traffic](https://github.com/krzychu124/Traffic)
 
 **Demonstrates:** The reference example of save-data migration: a version constant, per-version repair jobs, and validation passes that fix or drop data an older version wrote.
 Disabling the vanilla lane system and taking over its slot, with no patching anywhere in the codebase.
+Registering a system frames after the mod loaded, from a deferred main-thread callback, which is how it disables another mod's system once that mod is known to be present.
 A custom raycast system registered in the raycast phase.
 Rebindable actions declared as settings attributes and consumed by the tool.
 Migrating another mod's saved data on load, and detecting an incompatible build of it by scanning loaded assemblies.
@@ -155,6 +156,7 @@ Source: [ruzbeh0/Time2Work](https://github.com/ruzbeh0/Time2Work)
 
 **Demonstrates:** Substitution at the largest scale here: roughly a dozen vanilla simulation systems disabled and replaced.
 Reimplementing the game's time model, deriving ticks per day from the vanilla constant scaled by a factor, which is where to look for how the simulation's time units actually work.
+The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval, which is what puts a fork on the same simulation frames as the original.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A versioned serializable component for per-citizen state, with a fallback path that reads saves written by older versions.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
@@ -184,6 +186,7 @@ Building prefabs at runtime, attaching components, saving them as assets and reg
 Driving the texture importer directly to turn image files into texture assets, with per-file locking against concurrent imports.
 Mapping arbitrary JSON keys onto shader properties.
 Content hashing to skip unchanged assets on the next load, and per-asset error handling so one malformed user folder does not fail the batch.
+Marshalling work back to the main thread from a background import, including blocking a worker on a frame count, which is the corpus's most demanding use of the main-thread dispatcher.
 
 ### Water Features
 
@@ -191,7 +194,8 @@ Source: [yenyang/Water_Features](https://github.com/yenyang/Water_Features)
 
 **Does:** An in-game water tool for placing and reshaping streams, rivers, lakes and seas, plus optional detention and retention basins, seasonal stream flow tied to climate, and waves and tides.
 
-**Demonstrates:** The save-safety pattern worth copying — a before-serialize system that collapses the mod's custom state back into vanilla fields, so the save loads correctly for someone who removes the mod.
+**Demonstrates:** The save-safety pattern worth copying — a before-serialize system that collapses the mod's custom state back into vanilla fields, so the save loads correctly for someone who removes the mod, with the restoring half registered behind the writer so the running session keeps its state.
+Registering the same systems into three phases, so one implementation serves the simulation, the editor and the save pipeline.
 Registering custom prefabs at load, gated by whether the game is in game or editor mode.
 One tool serving both game and editor by branching on the tool system's action mode.
 Burst jobs that tag vanilla simulation entities with the mod's own components through a command buffer.
@@ -230,7 +234,7 @@ Source: [bruceyboy24804/InfoLoom](https://github.com/bruceyboy24804/InfoLoom)
 Read-only; it changes no rules.
 
 **Demonstrates:** The two module-registry calls a UI mod needs — appending a panel to a named region, and extending the selected-info section list with its own sections.
-Reading simulation state cheaply: a job gated on whether the panel is visible, with an update interval so the query runs only every few hundred ticks.
+Reading simulation state cheaply: a job gated on whether the panel is visible, with an update interval so the query runs only every few hundred ticks — on its simulation-phase systems, since an interval on a UI-phase system does nothing, and this source carries examples of both.
 Replacing the game's own JSON binding output by returning false from a prefix, when the vanilla writer truncates what the panel needs.
 
 ### Recolor
@@ -240,6 +244,7 @@ Source: [yenyang/Recolor](https://github.com/yenyang/Recolor)
 **Does:** Recolours individual placed buildings, vehicles, props and lane fences from a section in the selected-info panel, or in bulk with a painter tool over a radius, and manages shareable colour palettes.
 
 **Demonstrates:** Extending the selected-info panel through a base class rather than a patch, and shipping no patches at all.
+The corpus's deepest ordering chain — three systems anchored by type after one vanilla system, and a fourth anchored after one of those, which is the readable example of anchoring resolving recursively.
 Per-instance colour as a serializable buffer element with hand-written read and write.
 Palettes as the mod's own prefab type, building their components in the prefab lifecycle methods and cross-referencing vanilla theme and zone prefabs for filtering.
 Burst jobs for "apply within a radius" against both transforms and curves.
