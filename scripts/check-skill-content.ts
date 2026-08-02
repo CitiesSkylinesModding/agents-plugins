@@ -24,6 +24,19 @@ const skillsRoot = 'plugins/cs2-modding/skills';
 // source of the name list and the one file exempt from the no-leak rule.
 const catalogPath = `${skillsRoot}/cs2-modding-setup/references/mod-catalog.md`;
 
+// Display names that are also ordinary English: what the game's own subject matter calls the
+// thing, which no reader takes for a name, so shipped prose writing one credits nobody. Their
+// match is reported rather than enforced; every other display name, and every owner/repo slug,
+// still fails the check.
+//
+// The list lives here and not beside the entry it exempts, because the catalog ships to an agent
+// provisioning a mod corpus and a lint's own policy is nothing to that reader. Adding to it is the
+// maintainer's call, and the trigger is this check failing on a word a reference's subject
+// genuinely owns -- its wiki hub, its info view, a heading it cannot avoid writing. The test is
+// whether the word carries the mod's identity: "Traffic" is what the game simulates, while
+// "Node Controller" and "Advanced Line Tool" are names a reader can only read as names.
+const ordinaryWordNames: ReadonlySet<string> = new Set(['Traffic']);
+
 const shippedFiles = listFilesRecursively(skillsRoot);
 
 assert.ok(shippedFiles.length > 0, `No shipped files found under ${skillsRoot}.`);
@@ -60,7 +73,7 @@ function checkNoModNameLeaks(files: readonly string[]): void {
 
       if (!isBlocking) {
         questions.push(
-          `${where} writes "${name}", a display name the catalog declares ordinary English. Is ` +
+          `${where} writes "${name}", a display name this check treats as ordinary English. Is ` +
             `this a credit or your own subject? A credit goes: state the technique on its own ` +
             `authority. The subject stays, and no prose is bent around the word.`
         );
@@ -72,7 +85,8 @@ function checkNoModNameLeaks(files: readonly string[]): void {
         `${where} names the mod "${name}", which the catalog lists. The mods corpus is input, ` +
         `never output: state the technique on its own authority. ${catalogPath} is the only ` +
         `file allowed to name a mod. Where the word is what your subject calls the thing, the ` +
-        `fix is a catalog declaration ruled by the maintainer, never a reworded sentence.`;
+        `fix is the maintainer adding it to this check's ordinary-word list, never a reworded ` +
+        `sentence.`;
     }
   }
 
@@ -92,27 +106,25 @@ interface CatalogName {
 // Both spellings of every catalogued mod: the published display name that a leak would use in
 // prose, and the owner/repo slug that a leak would use in a link.
 //
-// The two carry different strengths, because a match means different things. Only a slug is
-// unambiguously a citation; a third of the display names are ordinary English, and one that is
-// also what the game's own subject matter calls the thing cannot credit anybody -- no reader takes
-// it for a name. Those are reported as a question instead of enforced, which is why the catalog
-// declares them per entry rather than the lint guessing. Nothing leaves the list either way: the
-// declaration changes what a match costs, not whether the lint looks.
+// Nothing leaves the list when a name is declared ordinary: the declaration changes what a match
+// costs, not whether the lint looks.
+//
+// The catalog carries no word about any of this. It ships to an agent provisioning a mod corpus,
+// so the shape read here is a contract this file states and that file only has to keep: a "###"
+// heading carrying the display name, and a "Source:" line whose link text is owner/repo.
 function readModNames(): readonly CatalogName[] {
   const catalog = readShippedFile(catalogPath);
 
-  // Read entry by entry rather than in file-wide sweeps: a declaration means nothing except
-  // against the heading above it, and pairing each Source line with its own entry is a stricter
-  // guard than counting headings against Source lines, which twenty of each satisfy even when they
-  // belong to different entries.
+  // Read entry by entry rather than in file-wide sweeps: pairing each Source line with the heading
+  // above it is a stricter guard than counting headings against Source lines, which twenty of each
+  // satisfy even when they belong to different entries.
   const entries = catalog.split(/^### /mu).slice(1);
 
   assert.ok(entries.length > 0, `${catalogPath} declares no "###" mod entries to read.`);
 
-  return entries.flatMap(entry => {
+  const names = entries.flatMap(entry => {
     const [displayName = '', ...bodyLines] = entry.split('\n');
-    const body = bodyLines.join('\n');
-    const slug = body.match(/^Source: \[(?<slug>[^\]]+)\]/mu)?.groups?.slug;
+    const slug = bodyLines.join('\n').match(/^Source: \[(?<slug>[^\]]+)\]/mu)?.groups?.slug;
 
     // An entry that drops either spelling takes it off the name list, and silently shrinking that
     // list is the one failure that would let a leak through unnoticed.
@@ -125,9 +137,20 @@ function readModNames(): readonly CatalogName[] {
 
     return [
       { name: slug, isBlocking: true },
-      { name: displayName, isBlocking: !/^Ordinary word:/mu.test(body) }
+      { name: displayName, isBlocking: !ordinaryWordNames.has(displayName) }
     ];
   });
+
+  // A declared word no entry carries is dead policy, and it reads as protection that is not there.
+  for (const declared of ordinaryWordNames) {
+    assert.ok(
+      names.some(({ name }) => name == declared),
+      `"${declared}" is declared an ordinary word, but ${catalogPath} has no "###" entry under ` +
+        `that name. Drop it here, or match it to the name the entry now carries.`
+    );
+  }
+
+  return names;
 }
 
 // Every reference states, once, the game version its facts were verified against, so a reader can

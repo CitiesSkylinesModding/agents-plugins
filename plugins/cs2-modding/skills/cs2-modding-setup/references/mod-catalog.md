@@ -10,19 +10,7 @@ Treat the list as provisioning input on that basis, and read a mod's own reposit
 
 Each entry separates what the mod **does** for a player from what its source **demonstrates** to a mod author.
 Match on the second when answering "what should I read for X".
-
-Every entry keeps the same shape, because this file is also the only list of mod names the content lint reads: a `###` heading carrying the published display name, a `Source:` line whose link text is `owner/repo`, then `**Does:**` and `**Demonstrates:**`.
-An entry may add plain note lines under `Source:` where cloning it takes more than the default branch.
-Both spellings of a name are therefore extractable from here, and an entry that moves its heading or its `Source:` line out of that shape is invisible to the lint.
-
-The lint reads the two spellings at different strengths, because a match means different things.
-An `owner/repo` slug in shipped prose is a citation and nothing else, so it fails the check outright, and so does a display name by default.
-An entry whose display name is also an ordinary word — what the game's own subject matter calls the thing, which no reader would take for a name — declares that with an `Ordinary word:` note under its `Source:` line, and the lint then reports that name as a question naming the file and line rather than as a violation.
-Nothing leaves the name list; the declaration changes what a match costs, not whether the lint looks.
-
-Adding one is the maintainer's call, and the trigger is a lint failure rather than a hunch.
-When the check fires on a word a reference's own subject owns — its wiki hub, its info view, a heading it cannot avoid writing — the fix goes here rather than into prose bent around the word, so report the collision and stop rather than rewording.
-The test is whether the word carries the mod's identity: `Traffic` is what the game simulates, while `Node Controller` and `Advanced Line Tool` are names a reader can only read as names, and those keep failing.
+An entry carrying a plain note under its `Source:` line needs more than a default-branch clone, and that note says what.
 
 ## Provisioning a corpus
 
@@ -134,8 +122,6 @@ An in-engine test scenario system, debug-only.
 ### Traffic
 
 Source: [krzychu124/Traffic](https://github.com/krzychu124/Traffic)
-
-Ordinary word: this is what the game simulates and what its own wiki hub, info view and headings call it, so a reference writing the word is describing the road network rather than crediting this mod.
 
 **Does:** A lane connector for rewiring turning lanes at an intersection and a priorities tool for yield and stop rules, with modifier keys selecting unsafe, track-only, road-only or shared connections.
 
