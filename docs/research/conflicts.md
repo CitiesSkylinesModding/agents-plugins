@@ -44,6 +44,34 @@ A later decomposition that renames or splits one of them leaves a stale name her
 
 ## Ruled
 
+### Six mods insert themselves at the front of the tool list, and the reference cannot teach that to all of them
+
+**Sources.** `ToolSystem.ActivatePrefabTool` walks `ToolSystem.tools` in order and stops at the first tool whose `TrySetPrefab` returns `true` (`src/Game/Game.Tools/ToolSystem.cs:263-278`), so list position is prefab-claim priority and index 0 has first refusal on everything the toolbar hands out.
+`ToolBaseSystem.OnCreate` appends every tool to the end of that list (`ToolBaseSystem.cs:315`), and the vanilla eleven are registered first (`src/Game/Game.Common/SystemOrder.cs:699-709`), so a mod tool starts last.
+Six repositories therefore remove and reinsert themselves: `LineTool-CS2/Code/Systems/LineToolSystem.cs:579-607`, `AreaBucket/Systems/AreaBucketToolSystem.cs:198-199` and `AreaBucket/Systems/AreaReplacementToolSystem/AreaReplacementToolSystem.cs:72-73`, `CS2-NetworkTools/NetworkTools.Mod/Systems/Tools/Base/BaseToolSystem.cs:381-382` and `Systems/Tools/PrefabCache/PrefabCacheToolSystem.cs:46-47`, `Tree_Controller/Tree_Controller/Tools/TreeControllerTool.cs:363-364`, `BetterBulldozer/BetterBulldozer/Systems/BetterBulldozerUISystem.cs:365-368`.
+
+**Established.** The collision is already real and already unsolved in the wild, and the corpus says so in its own source.
+`LineTool-CS2/Code/Systems/LineToolSystem.cs:599` reads `toolList[0].toolID` and, finding the literal string `"Tree Controller Tool"`, inserts itself at index 1 instead of 0 — a hard-coded deference to one named competitor, which works only because that competitor exists and only for that one competitor.
+The two mods reordering at `OnGameLoadingComplete` rather than `OnCreate` (Tree Controller and Better Bulldozer) win against everyone reordering at `OnCreate`, and neither says that is why.
+`ExtraDetailingTools/MOD/Systems/Tools/GrassToolSystem.cs:111-113` shows the restrained form nobody else uses: it reads `tools.IndexOf(objectToolSystem)` and takes exactly that slot, so it precedes the one tool it needs to precede and nothing else.
+What makes index 0 survivable at all is the `TrySetPrefab` gate: `LineTool` claims a prefab only while `m_ToolSystem.activeTool == this` (`:468-482`) and `Recolor` claims nothing ever (`Recolor/Recolor/Systems/Tools/ColorPainterToolSystem.Main.cs:130-133`), so both cost the tools behind them nothing.
+A tool at index 0 that answers `true` broadly takes the toolbar away from every tool after it, and no mechanism in the game arbitrates.
+
+**Needs a ruling on.** Whether the `custom-tools` reference teaches front-of-list insertion at all, and in what form.
+Three options and each costs something. Teach it plainly, as six of twenty mods do it: every agent-written tool then reaches for index 0, and the first two such mods a user installs fight over the toolbar with no diagnostic. Teach it only bound to the cooperative gate — insert at the front, and make `TrySetPrefab` return `true` only while already active — which is what the two mods actually sitting there do, and which makes the position harmless but also makes it useless for the case it exists for, a tool that wants to claim a prefab kind the vanilla tools already claim. Teach the restrained form as the default and index 0 as the exception: correct, and it asks a reader to know which vanilla tool they must precede, which the reference would then have to tell them.
+The timing question rides along: reordering at `OnGameLoadingComplete` beats reordering at `OnCreate`, so whichever form ships also picks a hook, and picking the later hook is picking to win the race against mods that picked the earlier one.
+The ruling goes into the research file for `custom-tools`, and touches nothing else — no other topic owns `ToolSystem.tools`.
+
+**Ruling (2026-08-02, ticket 12).** The third option, in `custom-tools`: the restrained form is the default the reference teaches, and index 0 ships as an exception bound to the cooperative gate.
+A tool takes the slot of the one tool it must precede, read back with `tools.IndexOf(...)`, rather than the front of the list.
+
+The cost the question attached to that option dissolves on the evidence the same pass produced: it objected that a reader has to know which vanilla tool they must precede, and the vanilla list order is a readable eleven-name registration table (`SystemOrder.cs:699-709`) the reference bakes anyway.
+Index 0 stays teachable for the case it exists for — claiming a prefab kind a vanilla tool already claims — with the gate stated as its condition rather than as advice: return `true` from `TrySetPrefab` only while already active, which is what both mods actually sitting there do, and which is why they cost the tools behind them nothing.
+
+The ruling also settles the timing question rather than answering it, and that is the reason to prefer it over the other two.
+A position stated relative to a tool does not need to win a race: a mod inserting at index 0 after you does not stop you preceding the object tool, so the reference ships `OnCreate` and says why no later hook is needed.
+Teaching `OnGameLoadingComplete` would have been teaching an agent to beat other mods to the front, and the first two tools written from that instruction fight each other.
+
 ### A job interface the toolchain supports, the game never uses, and one mod in twenty proves works
 
 **Sources.** `survey-mods-techniques.md:154` states that "source-generated `IJobEntity` doesn't play well with the modding toolchain, so everyone hand-writes `IJobChunk` with `ArchetypeChunk` + `ComponentTypeHandle<T>`." That was the twelve-repository pass and it carries no verdict.
