@@ -289,7 +289,7 @@ What a tool needs from it is the flag set.
 **`TempFlags : uint`** — `Create = 1`, `Delete = 2`, `IsLast = 4`, `Essential = 8`, `Dragging = 0x10`, `Select = 0x20`, `Modify = 0x40`, `Regenerate = 0x80`, `Replace = 0x100`, `Upgrade = 0x200`, `Hidden = 0x400`, `Parent = 0x800`, `Combine = 0x1000`, `RemoveCost = 0x2000`, `Optional = 0x4000`, `Cancel = 0x8000`, `SubDetail = 0x10000`, `Duplicate = 0x20000`.
 
 `Hidden` is a zero-size tag put on the **original** entity so the preview can stand in for it: the generation systems add it, the apply family removes it on commit, and the clear system removes it on discard.
-`Error` is another zero-size tag, added by the validation system in `ModificationEnd`, and it is the only thing `ToolBaseSystem` keeps a query for.
+`Error` is another zero-size tag, added in `ModificationEnd` by `ValidationSystem.Components` — a separate system spliced after `ValidationSystem`, which produces the error records but tags nothing itself — and it is the only thing `ToolBaseSystem` keeps a query for.
 The error data itself carries the temp entity, the permanent entity, a position, an `ErrorType` — thirty causes plus `None` and `Count` — and an `ErrorSeverity`: `None`, `Override`, `Warning`, `Error`, `Cancel`, `CancelError`.
 
 (VOLATILE: the `TempFlags`, `ErrorType` and `ErrorSeverity` member sets — the tools namespace.)
@@ -307,8 +307,9 @@ Its update helper is the readable statement of the three modes:
 - the first control point → `Clear`, and rebuild;
 - subsequent frames → `None`, unless the control point actually moved, and `Clear` again when it did.
 
-Its apply path checks `GetAllowApply()`, plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing destroys the definition entities in the same frame the apply systems consume them.**
+Its apply path checks `GetAllowApply()`, plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing sweeps away the definitions that produced the previews being committed, and creates none to replace them.**
 `DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` is a protected helper on the base class that destroys every entity in the query through the barrier's parallel writer, and `GetDefinitionQuery()` is the query it expects: `{CreationDefinition}` excluding `Updated`.
+That exclusion means the sweep always runs one frame behind: it matches the previous frame's definitions, never the ones just emitted, so exactly one generation is alive at a time — `placement-definitions` owns the lifetime.
 
 What goes _into_ a definition, and what the generation systems make of it, is `placement-definitions`.
 
