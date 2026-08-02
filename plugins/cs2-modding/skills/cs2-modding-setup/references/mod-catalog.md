@@ -117,6 +117,7 @@ Source: [lucarager/CS2-Platter](https://github.com/lucarager/CS2-Platter)
 **Demonstrates:** Custom prefab subclasses and runtime prefab variant generation.
 Deserialize-phase jobs that rebuild the links between mod entities and game entities after a load.
 Rewriting a vanilla system's private entity query at runtime so stock code skips the mod's entities — the most aggressive compatibility technique in the corpus, and worth reading as much for its risk as for its power.
+Prefab-data initialisation systems anchored immediately after the vanilla initializer whose output they overwrite, which is the readable way to correct derived prefab data rather than fight for it.
 Hand-built input actions registered by reflection, because scroll bindings are not exposed.
 An in-engine test scenario system, debug-only.
 
@@ -173,6 +174,8 @@ Custom roads are saved inside the city and travel with it.
 Versioned custom save serialization with migration constants and post-load repair of invalid references.
 Mimicking the built-in apply and cancel bindings by copying them from the input manager, so a custom tool obeys the user's remaps.
 Registering roughly fifteen systems across specific phases, which is a readable map of where prefab, serialize and tool work has to sit.
+Regenerating a live prefab in place, which replaces the prefab entity outright, so the mod tags the outgoing one, throttles the rebuild, and clears the stale entity out of a vanilla system's private dictionary that the engine's own reference sweep cannot reach.
+A null-checking wrapper around the generic prefab lookup, which otherwise reports success while handing back null whenever the requested type does not match.
 
 ### Extra Assets Importer
 
@@ -195,7 +198,7 @@ Source: [yenyang/Water_Features](https://github.com/yenyang/Water_Features)
 
 **Demonstrates:** The save-safety pattern worth copying — a before-serialize system that collapses the mod's custom state back into vanilla fields, so the save loads correctly for someone who removes the mod, with the restoring half registered behind the writer so the running session keeps its state.
 Registering the same systems into three phases, so one implementation serves the simulation, the editor and the save pipeline.
-Registering custom prefabs at load, gated by whether the game is in game or editor mode.
+Registering custom prefabs at load, gated by whether the game is in game or editor mode, from a preload hook on a system it creates but never gives a phase — the timing answer for prefab work that has to happen before a game loads and after the asset database is populated.
 One tool serving both game and editor by branching on the tool system's action mode.
 Burst jobs that tag vanilla simulation entities with the mod's own components through a command buffer.
 
@@ -207,6 +210,7 @@ Source: [yenyang/Tree_Controller](https://github.com/yenyang/Tree_Controller)
 
 **Demonstrates:** Rewriting object definitions after the tool creates them and before the game consumes them — the interception point for changing what a tool places without touching the tool.
 Modifying existing prefabs at load, adding a missing component and zeroing a cost field.
+Restoring the original value by reading it back off the authoring prefab object rather than off the prefab entity it overwrote, which is the corpus's only worked example of treating the authoring layer as the vanilla baseline.
 A "safely remove" system that resets custom model state on demand, because some of this state is not safe to leave in a save.
 Extending brush strength past the vanilla cap with a single targeted patch.
 
@@ -224,6 +228,7 @@ This is the injection point, and the mod ships no patches at all.
 Prefab indexing split into one processor class per category, discovered by reflection and instantiated at startup.
 Full rebuild on load versus incremental updates driven by created and updated queries.
 An extension hook that lets any other mod contribute a search predicate, found by reflection with no shared assembly.
+Deriving hundreds of new prefabs from the loaded asset database by cherry-picking a few components off each original instead of cloning it, sharing the mesh reference, and declaring obsolete identifiers so a rename migrates saves.
 
 ### Info Loom
 
@@ -275,6 +280,7 @@ Source: [yenyang/Anarchy](https://github.com/yenyang/Anarchy)
 **Demonstrates:** Widening a tool's raycast layer mask from a postfix on its raycast initialization — the smallest useful example of tool interception.
 Custom serializable components recording state that must survive a save, paired with query-and-command-buffer systems that strip and restore vanilla components at scale.
 Soft integration with another mod through a bridge type located by reflection, with no hard dependency in either direction.
+Cloning a vanilla prefab component by component and rebuilding its UI component from scratch rather than copying it, with the clearest comment in this corpus on why a clone must not keep a reference to its source.
 
 ### Better Bulldozer
 
