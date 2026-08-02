@@ -1,0 +1,417 @@
+# Placement definitions
+
+**Baseline.** Decompiled game 1.6.0f1; mod corpus read 2026-08-02 at the commits the 20-repository checkout carried; wiki fetched live 2026-08-02 (the bot challenge did not fire, and the wiki turned out to hold nothing on this topic — see `## Dead ends`).
+
+## Findings
+
+### A tool emits definition entities, and never touches the world
+
+The whole seam is one component. `CreationDefinition : IComponentData, IQueryTypeParameter` carries seven fields and nothing else (`src/Game/Game.Tools/CreationDefinition.cs:5-19`): `Entity m_Prefab` (`:7`), `Entity m_SubPrefab` (`:9`), `Entity m_Original` (`:11`), `Entity m_Owner` (`:13`), `Entity m_Attached` (`:15`), `CreationFlags m_Flags` (`:17`), `int m_RandomSeed` (`:19`).
+It is a **request**, not a result: an entity carrying it describes something the game should create, delete, move or select, and a later system does the work.
+
+`prefabs-and-assets.md:428` already establishes the fact a definition author gets wrong first, and it holds at 1.6.0f1: `m_Prefab` and `m_SubPrefab` are prefab **entities**, not `PrefabBase` objects, and the archetype the resulting instance gets is `ObjectData.m_Archetype` on that prefab entity.
+
+**The minimal definition is three components and no archetype.** Every producer in the game builds it the same way, through a command buffer: `CreateEntity()`, then `AddComponent(CreationDefinition)`, `AddComponent(<kind component>)` and `AddComponent(default(Updated))`.
+The canonical site is `ObjectToolBaseSystem.CreateDefinitionsJob.UpdateObject` — `Entity e = m_CommandBuffer.CreateEntity()` at `src/Game/Game.Tools/ObjectToolBaseSystem.cs:1108` and the three adds at `:1270-1272`.
+`EntityManager.CreateArchetype` is used for a definition in exactly two places in `src/Game/`, both in the simulation rather than in a tool (below); no tool ever declares a definition archetype.
+
+**`Updated` is load-bearing and not decoration.** Every consumer's query requires it (see the table below), and `Game.Common.CleanUpSystem` strips it — along with `Created`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated` — from every tagged entity at the `Cleanup` phase, at the end of the frame (`src/Game/Game.Common/CleanUpSystem.cs:24-32/48-56`; `ecs-in-this-game.md:345-351` records the protocol).
+So a definition is visible to its consumer for exactly the frame it was created in.
+
+Rots: the `CreationDefinition` field set and the `Updated` requirement on the consumers — re-read `src/Game/Game.Tools/CreationDefinition.cs` and the `m_DefinitionQuery` assignments in `src/Game/Game.Tools/Generate*System.cs`.
+
+### The kind component decides the consumer, and there are nine of them
+
+A `CreationDefinition` alone does nothing. What is created is decided by the **second** component on the definition entity, and each one is claimed by exactly one system.
+
+| Kind component                                                                  | Consumer                      | Phase                                 | Consumer query                                                                                                 |
+| ------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ObjectDefinition` (`src/Game/Game.Tools/ObjectDefinition.cs:6-33`)             | `GenerateObjectsSystem`       | `Modification1` (`SystemOrder.cs:95`) | `{CreationDefinition, Updated}` + `Any = {ObjectDefinition, NetCourse}` (`GenerateObjectsSystem.cs:1721-1733`) |
+| `NetCourse` (`src/Game/Game.Tools/NetCourse.cs:7-20`)                           | `GenerateNodesSystem`         | `Modification1` (`:96`)               | same `All`, `Any = {NetCourse, ObjectDefinition}` (`GenerateNodesSystem.cs:2016-2028`)                         |
+| `NetCourse`                                                                     | `GenerateEdgesSystem`         | `Modification2` (`:111`)              | `{CreationDefinition, NetCourse, Updated}` (`GenerateEdgesSystem.cs:2111-2118`)                                |
+| `Zoning` (`src/Game/Game.Tools/Zoning.cs:6-11`)                                 | `GenerateZonesSystem`         | `Modification1` (`:97`)               | `{CreationDefinition, Zoning, Updated}` (`GenerateZonesSystem.cs:569`)                                         |
+| `Game.Areas.Node` buffer (`src/Game/Game.Areas/Node.cs:9-13`)                   | `GenerateAreasSystem`         | `Modification1` (`:98`)               | `{CreationDefinition, Node, Updated}` (`GenerateAreasSystem.cs:532`)                                           |
+| `WaypointDefinition` buffer (`src/Game/Game.Routes/WaypointDefinition.cs:7-13`) | `GenerateWaypointsSystem`     | `Modification1` (`:99`)               | `{CreationDefinition, WaypointDefinition, Updated}` (`GenerateWaypointsSystem.cs:600`)                         |
+| `WaypointDefinition` buffer                                                     | `GenerateRoutesSystem`        | `Modification2` (`:112`)              | same triple (`GenerateRoutesSystem.cs:211`)                                                                    |
+| `IconDefinition` (`src/Game/Game.Tools/IconDefinition.cs:7-15`)                 | `GenerateNotificationsSystem` | `Modification1` (`:100`)              | `{CreationDefinition, Updated}` + `Any = {IconDefinition}` (`GenerateNotificationsSystem.cs:149-157`)          |
+| `BrushDefinition` (`src/Game/Game.Tools/BrushDefinition.cs:7-23`)               | `GenerateBrushesSystem`       | `Modification1` (`:101`)              | `{CreationDefinition, Updated}` + `Any = {BrushDefinition}` (`GenerateBrushesSystem.cs:158-166`)               |
+| `AggregateElement` buffer (`src/Game/Game.Net/AggregateElement.cs:8-10`)        | `GenerateAggregatesSystem`    | `Modification1` (`:102`)              | `{CreationDefinition, AggregateElement, Updated}` (`GenerateAggregatesSystem.cs:174`)                          |
+| `WaterSourceDefinition` (`src/Game/Game.Tools/WaterSourceDefinition.cs:6-21`)   | `GenerateWaterSourcesSystem`  | `Modification1` (`:103`)              | `{CreationDefinition, Updated}` + `Any = {WaterSourceDefinition}` (`GenerateWaterSourcesSystem.cs:122-130`)    |
+
+Two more components ride along rather than selecting a consumer.
+`OwnerDefinition { Entity m_Prefab; float3 m_Position; quaternion m_Rotation; }` (`src/Game/Game.Tools/OwnerDefinition.cs:7-13`) names an owner that **does not exist yet** — a sub-object of a building being placed points at the building's own definition rather than at an entity, which is what lets a whole composite be described before any of it is created.
+`ColorDefinition { Color32 m_Color; }` (`src/Game/Game.Tools/ColorDefinition.cs:6-8`) is read only by `GenerateRoutesSystem` (`:38/60`) and written only by `RouteToolSystem` (`:572`); it colours a transport line.
+
+`NetCourse` is the richest kind: two `CoursePos` endpoints plus a `Bezier4x3 m_Curve`, `float2 m_Elevation`, `float m_Length` and `int m_FixedIndex` (`NetCourse.cs:9-19`). `CoursePos` carries `m_Entity`, `m_Position`, `m_Rotation`, `m_Elevation`, `m_CourseDelta`, `m_SplitPosition`, `CoursePosFlags m_Flags`, `m_ParentMesh` (`src/Game/Game.Tools/CoursePos.cs:8-22`), and `CoursePosFlags : uint` has fifteen members — `IsFirst = 1`, `IsLast = 2`, `HalfAlign = 4`, `IsParallel = 8`, `IsRight = 0x10`, `IsLeft = 0x20`, `IsFixed = 0x40`, `FreeHeight = 0x80`, `LeftTransition = 0x100`, `RightTransition = 0x200`, `ForceElevatedNode = 0x400`, `ForceElevatedEdge = 0x800`, `DisableMerge = 0x1000`, `IsGrid = 0x2000`, `DontCreate = 0x4000` (`src/Game/Game.Tools/CoursePosFlags.cs:6-22`).
+
+`ObjectDefinition`'s thirteen fields are `m_Position`, `m_LocalPosition`, `m_Scale`, `m_Rotation`, `m_LocalRotation`, `m_Elevation`, `m_Intensity`, `m_Age`, `m_IsDecoration`, `m_ParentMesh`, `m_GroupIndex`, `m_Probability`, `m_PrefabSubIndex` (`ObjectDefinition.cs:8-32`). The vanilla producer seeds `m_Probability = 100`, `m_PrefabSubIndex = -1`, `m_Scale = 1f`, `m_Intensity = 1f` and `m_ParentMesh = -1` for a free-standing object (`ObjectToolBaseSystem.cs:1129-1138`), which are the non-zero defaults a hand-built definition has to reproduce.
+
+`ZoningFlags : uint` — `FloodFill = 1`, `Marquee = 2`, `Zone = 4`, `Dezone = 8`, `Paint = 0x10`, `Overwrite = 0x20` (`src/Game/Game.Tools/ZoningFlags.cs:6-13`).
+
+Rots: every type name and member above, and each consumer's phase registration — re-read `src/Game/Game.Tools/` and `src/Game/Game.Common/SystemOrder.cs:94-112`.
+
+### `CreationFlags`, and the one flag that changes everything
+
+`CreationFlags : uint` has twenty members (`src/Game/Game.Tools/CreationFlags.cs:6-27`): `Permanent = 1`, `Select = 2`, `Delete = 4`, `Attach = 8`, `Upgrade = 0x10`, `Relocate = 0x20`, `Invert = 0x40`, `Align = 0x80`, `Hidden = 0x100`, `Parent = 0x200`, `Dragging = 0x400`, `Recreate = 0x800`, `Optional = 0x1000`, `Lowered = 0x2000`, `Native = 0x4000`, `Construction = 0x8000`, `SubElevation = 0x10000`, `Duplicate = 0x20000`, `Repair = 0x40000`, `Stamping = 0x80000`.
+
+**`Permanent` is the flag that decides whether a definition produces a preview at all.** `GenerateObjectsSystem` builds a `Temp` component for the entity it is about to create, then attaches it only when the flag is absent: `if ((definitionData.m_Flags & CreationFlags.Permanent) == 0) { m_CommandBuffer.AddComponent(jobIndex, e, component2); ... }` (`src/Game/Game.Tools/GenerateObjectsSystem.cs:1281-1292`, and the same test on the recreate path at `:1131`).
+A definition without `Permanent` becomes a `Temp` preview waiting for `ApplyTool`; a definition **with** `Permanent` becomes a real, committed entity in the same pass, with no preview, no validation icon and no apply step. That is how the simulation uses the pipeline (below).
+
+The rest of the flags are read by the consumer and translated into `TempFlags` and into components on the created entity. The mapping, all in `GenerateObjectsSystem`'s `CreationData` handler:
+
+| `CreationFlags`                                   | Effect                                                                                                                        | Line                       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `Delete`                                          | `TempFlags.Delete`, and a refund computed from the original's `Recent` component                                              | `:998-1005`                |
+| `Select`                                          | `TempFlags.Select`; with `Dragging`, also `TempFlags.Dragging`                                                                | `:1006-1013`               |
+| `Relocate`                                        | `TempFlags.Modify` plus a relocation cost when the transform actually moved                                                   | `:1016-1032`               |
+| `Upgrade`                                         | `TempFlags.Upgrade` plus an upgrade cost diffed against the original prefab's cost                                            | `:1033-1056`               |
+| `Duplicate`                                       | `TempFlags.Duplicate`                                                                                                         | `:1057-1060`               |
+| `Repair`                                          | a rebuild cost, only when the original carries `Destroyed`; also suppresses copying `Damaged`/`Destroyed` onto the new entity | `:1061-1071`, `:1270-1280` |
+| `Parent`                                          | `TempFlags.Parent`                                                                                                            | `:1072-1075`               |
+| `Optional`                                        | `TempFlags.Optional` on a create                                                                                              | `:1081-1084`               |
+| `Lowered`                                         | `ElevationFlags.Lowered`                                                                                                      | `:1099-1102`               |
+| `Attach`                                          | an `Attached` component built from `m_Attached`                                                                               | `:1120-1125`, `:1266-1269` |
+| `Native`                                          | a `Native` component                                                                                                          | `:1294-1297`               |
+| `Construction`                                    | routes the new building through the under-construction path                                                                   | `:1408`                    |
+| neither `Delete` nor `Select` nor an `m_Original` | `TempFlags.Create` and a cost equal to the construction cost                                                                  | `:1078-1089`               |
+
+**`m_RandomSeed` outlives the definition.** `GenerateObjectsSystem` writes `new PseudoRandomSeed((ushort)definitionData.m_RandomSeed)` onto the created entity whenever the original had none (`:1174`, and `:1372` on the create path), so the definition's seed becomes the entity's permanent variation seed. `ecs-in-this-game.md:373` records `PseudoRandomSeed` itself. Rewriting `m_RandomSeed` on a definition therefore changes what the placed thing looks like forever, not just this frame.
+
+Rots: the `CreationFlags` member set and the flag-to-`TempFlags` mapping — re-read `src/Game/Game.Tools/CreationFlags.cs` and `GenerateObjectsSystem.cs:965-1300`.
+
+### What a definition turns into, and what happens to the entity it stands in for
+
+The consumer does not modify the definition; it creates or revives a **separate** entity and leaves the definition alone.
+
+On the create path, `GenerateObjectsSystem` spawns an entity from the prefab's archetype and stacks on it: the `Temp` it built from the flags (`src/Game/Game.Tools/GenerateObjectsSystem.cs:1281-1284`), a `Transform` from `ObjectDefinition.m_Position`/`m_Rotation`, a `Game.Objects.Elevation` when the definition asks for one (`:1298-1300`), a `PseudoRandomSeed` from `m_RandomSeed` (`:1372`), `Attached` when `CreationFlags.Attach` is set (`:1266-1269`), a `Surface` for a physical geometry (`:1255-1265`), and `Damaged`/`Destroyed` copied off the original unless `Repair` is set (`:1270-1280`).
+On the revive path — where a previous frame's preview entity is reused rather than respawned — it removes `Deleted`, adds `Updated` and overwrites the same components in place (`:1104-1180`).
+
+**The original is hidden rather than removed.** When `definitionData.m_Original` is non-null, the very first thing the consumer does is `AddComponent(m_Original, default(Hidden))` and `AddComponent(m_Original, default(BatchesUpdated))` (`:965-969`). `Hidden` is a zero-size tag (`src/Game/Game.Tools/Hidden.cs:7`); the `Apply*System` family removes it on commit and `ToolClearSystem` removes it on discard, which `custom-tools.md:224/230` records from the tool side. So the visual illusion of "moving" something is a hidden original plus a `Temp` standing in front of it, and both halves are decided by one `Entity` field on the definition.
+
+That is the whole downstream contract, and it is why rewriting a definition is enough: everything the placed entity ends up carrying is derived from the definition plus the prefab entity it names, with nothing carried over from the tool.
+
+Rots: the component list the consumer stacks onto the created entity — re-read `GenerateObjectsSystem.cs:1104-1300`.
+
+### The window: `ToolUpdate` emits, `Modification1` consumes, and the frame boundary sits between
+
+`SystemOrder.Initialize` places both drivers in `MainLoop`, `ToolSystem` first and `ModificationSystem` five lines later (`src/Game/Game.Common/SystemOrder.cs:57` and `:60`).
+`ToolSystem.OnUpdate` drives `PreTool`, then `ToolUpdate` through its private `ToolUpdate()`, then `PostTool` (`src/Game/Game.Tools/ToolSystem.cs:250-260`, `:308-327`).
+`ModificationSystem.OnUpdate` then drives all eight modification phases in declaration order, `Modification1` first and `ModificationEnd` last (`src/Game/Game.Common/ModificationSystem.cs:17-27`).
+
+So within one frame:
+
+```
+MainLoop
+  ToolSystem            PreTool     OriginalDeletedSystem                       (SystemOrder.cs:698)
+                        ToolUpdate  the eleven tools -> definitions emitted
+                                    ToolOutputSystem -> ClearTool | ApplyTool   (:694, ToolOutputSystem.cs:22-30)
+                                    ToolOutputBarrier playback                  (:695)
+                        PostTool    ToolFeedbackSystem, CourseSplitSystem, ...  (:721-725)
+                                    ToolReadyBarrier playback                   (:697)
+  ModificationSystem    Modification1   Generate{Objects,Nodes,Zones,Areas,Waypoints,
+                                        Notifications,Brushes,Aggregates,WaterSources}
+                        Modification2   GenerateEdgesSystem, GenerateRoutesSystem
+                        ...
+                        ModificationEnd ValidationSystem, then ValidationSystem.Components
+Cleanup                 CleanUpSystem -- strips Updated, destroys Deleted
+LateUpdate              SimulationSystem -> GameSimulation
+```
+
+**The rewrite window is everything between the `ToolOutputBarrier` playback and the consumer.** In practice that is three places, and the corpus uses all three:
+
+- the front band of `Modification1`, which is where a mod's `UpdateBefore<T>(Modification1)` lands — after the phase's `AllowBarrier` and ahead of every vanilla `UpdateAt` in it (`mod-lifecycle-and-ordering.md:122-126`). Anarchy and Better Bulldozer and Tree Controller all sit here.
+- spliced immediately before one named consumer, with `UpdateBefore<Mine, GenerateXSystem>(Modification1)`. Platter does this.
+- a later modification phase, for a kind whose consumer runs later or which needs the vanilla `Temp` entities to already exist. Traffic runs its own generator at `Modification3`.
+
+`PostTool` is a fourth place, and the game itself uses it: `CourseSplitSystem` queries `{CreationDefinition, NetCourse, Updated}` and rewrites those definitions through `ToolReadyBarrier` (`src/Game/Game.Tools/CourseSplitSystem.cs:4034-4035`, barrier at `:4010/4029/4124/4138`, registered at `SystemOrder.cs:723`).
+Its file runs to 4228 lines, making it the largest piece of definition-rewriting code anywhere, vanilla or modded; its job is to split one drawn course wherever it crosses an existing node.
+That is the sanctioned home for a definition rewriter and no mod in twenty repositories uses it — `ecs-in-this-game.md:335` records `ToolReadyBarrier` at zero corpus uses, and this sweep did not change that.
+
+**Ruled (2026-08-02, ticket 13; conflicts.md).** Both windows ship, and `Modification1` is the default the reference teaches.
+A definition rewriter goes in the front band of `Modification1`, and the synchronous-playback rule ships as a hard requirement rather than as advice: `ModificationBarrier1` plays back at the end of the phase, after the consumers have already read, so a rewrite queued into it lands too late, and the write goes through `EntityManager` or through an `Allocator.Temp` buffer the system plays back itself before returning.
+`PostTool` with `ToolReadyBarrier` is named beside it as the window the game's own definition rewriter uses, carrying the property that makes it worth knowing — that barrier plays back before the modification phases, so the rewrite can be a scheduled job rather than a main-thread loop — and carrying its status in the same breath: this plugin found no mod using it and cannot run the game, so what ships is the architecture rather than a tested path.
+That second claim takes the shipped volatility marker, so the next version's sweep re-checks both whether the window is still open and whether anyone has since used it; the `Modification1` default and the barrier timing behind it are architecture and take no marker.
+Naming the vanilla window at all is this plugin's stated value — being the first source to say it exists — and making it the default would be teaching an untested path, which is exactly why it is not the default.
+
+**Verdict on the survey's stated window.** `survey-mods-techniques.md:144` says mods "insert a system in `Modification1`–`Modification3`". The range is right as a range and wrong as a description of what mods actually do.
+The census across all 20 repositories: `UpdateBefore<T>(Modification1)` — `Anarchy/Anarchy/AnarchyMod.cs:146` and `:147`, `BetterBulldozer/BetterBulldozer/BetterBulldozerMod.cs:122`, `Tree_Controller/Tree_Controller/TreeControllerMod.cs:119`; `UpdateBefore<T, GenerateZonesSystem>(Modification1)` — `CS2-Platter/Platter/PlatterMod.cs:218`; `UpdateAt<T>(Modification3)` — `Traffic/Code/Mod.cs:85` and `:86`. Nothing at `Modification2`, and nothing in the `UpdateAt` band of `Modification1`, which would be too late for `GenerateObjectsSystem`.
+The distinction the survey misses is the **band** rather than the phase: `UpdateAt<T>(Modification1)` places a mod system after every vanilla `UpdateAt` in that phase (`mod-lifecycle-and-ordering.md:122-126`), so it sees definitions the object generator has already consumed. Four of the five `Modification1` registrations in the corpus use `UpdateBefore` and the fifth splices; none uses `UpdateAt`.
+
+Rots: the phase membership of every system named in the diagram — re-read `src/Game/Game.Common/SystemOrder.cs:94-112/693-725`.
+
+### The query shape that catches a definition in flight
+
+The corpus has converged on one shape, expressed with `SystemAPI.QueryBuilder()`:
+
+```csharp
+m_ObjectDefinitionQuery = SystemAPI.QueryBuilder()
+    .WithAllRW<ObjectDefinition>()
+    .WithAll<CreationDefinition, Updated>()
+    .WithNone<Deleted, Overridden>()
+    .Build();
+```
+
+Verbatim at `Anarchy/Anarchy/Systems/ObjectElevation/ElevateObjectDefinitionSystem.cs:51-55`, with `WithAllRW<NetCourse>()` at `Anarchy/Anarchy/Systems/NetworkAnarchy/NetworkDefinitionSystem.cs:58-62`, and with both definition components read-write at `Tree_Controller/Tree_Controller/Systems/TreeObjectDefinitionSystem.cs:68-72`.
+Better Bulldozer writes the same thing as an `EntityQueryDesc` — `All = {CreationDefinition, Updated}`, `None = {Deleted, Overridden}` (`BetterBulldozer/BetterBulldozer/Systems/AutomaticallyRemoveManicuredGrassSurfaceSystem.cs:51-66`).
+Traffic's is `All = {CreationDefinition, ConnectionDefinition, Updated}`, `None = {Deleted}` (`Traffic/Code/Systems/LaneConnections/GenerateLaneConnectionsSystem.cs:31-36`).
+Every one of them ends with `RequireForUpdate(query)`.
+
+**Verdict on the two exclusions, which the seed survey reproduced without checking.** `survey-mods-techniques.md:144` gives the shape with `WithNone<Deleted, Overridden>()` as the pattern. Against the decompile the two are not equivalent:
+
+- `Deleted` **is** reachable on a definition entity and excluding it is a real filter. `ZoneSpawnSystem` and `AreaSpawnSystem` build their definitions from an archetype that includes `Deleted` at birth — `CreateArchetype(CreationDefinition, ObjectDefinition, Updated, Deleted)` (`src/Game/Game.Simulation/ZoneSpawnSystem.cs:1090`, `src/Game/Game.Simulation/AreaSpawnSystem.cs:777`), spawned at `:664` and `:586`. The vanilla consumers' queries do not exclude `Deleted`, so those definitions are consumed normally; a mod that excludes it is choosing to leave the simulation's own placements alone, which is almost always what it wants.
+- `Overridden` is **not** reachable on a definition entity. A grep across `src/Game/Game.Tools/` finds exactly one writer, `ToolApplySystem.cs:57`, and it adds `Overridden` to the `Temp` chunk set at `ApplyTool`, never to a definition. The exclusion is harmless and inert. It is worth keeping only as documentation that the author knew the difference between a definition and a `Temp`.
+
+The vanilla side uses a different shape for a different purpose. `ToolBaseSystem.GetDefinitionQuery()` is `{CreationDefinition}` with `Exclude<Updated>` (`src/Game/Game.Tools/ToolBaseSystem.cs:689-692`) — the **complement**, matching only stale definitions from a previous frame, which is what `DestroyDefinitions` sweeps (`:506-519`).
+
+Rots: the `Overridden` writer count and the `Deleted`-carrying spawn archetypes — re-check `src/Game/Game.Tools/ToolApplySystem.cs:54-58` and `src/Game/Game.Simulation/ZoneSpawnSystem.cs:1090`.
+
+### Rewriting a definition, and why the barrier choice is the whole trick
+
+**Three write shapes appear in the corpus, and the one thing they have in common is that none of them uses a modification barrier for the rewrite.**
+
+Direct `EntityManager` writes on the main thread: `Tree_Controller/Tree_Controller/Systems/TreeObjectDefinitionSystem.cs:117/150` calls `EntityManager.SetComponentData(entity, currentCreationDefinition)` and `SetComponentData(entity, currentObjectDefinition)` inside a `foreach` over `ToEntityArray(Allocator.Temp)`.
+
+A locally allocated `EntityCommandBuffer` played back before the system returns: `Anarchy/Anarchy/Systems/ObjectElevation/ElevateObjectDefinitionSystem.cs:77` allocates `new EntityCommandBuffer(Allocator.Temp)`, fills it in the loop, and calls `buffer.Playback(EntityManager); buffer.Dispose();` at `:120-121`. `NetworkDefinitionSystem.cs:78/92/112` is the same, twice in one update.
+
+A job whose command buffer is likewise local and played back inside `OnUpdate`: `CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs:46` allocates `new EntityCommandBuffer(Allocator.Temp)`, schedules `FillBlocksListJob` against it, then `fillBlocksListJob.Complete(); commandBuffer.Playback(EntityManager); commandBuffer.Dispose();` at `:63-65`. Only the _second_ job, which creates zone blocks rather than editing definitions, is given `ModificationBarrier1` (`:74/79`).
+
+**The reason is timing, and it is the single fact a definition-rewriting mod most needs.** `ModificationBarrier1` is registered `UpdateAfter<ModificationBarrier1>(Modification1)` (`SystemOrder.cs:86`), so it plays back at the **end** of the phase — after `GenerateObjectsSystem`, `GenerateZonesSystem` and the rest have already read the definitions. A rewrite queued into that barrier lands after the consumer has consumed. `ecs-in-this-game.md:283` tabulates the barrier playback points; the consequence for this topic is that a definition rewriter has to write synchronously, either through `EntityManager` or through an `Allocator.Temp` buffer it plays back itself.
+
+**What gets rewritten, in ascending order of how much it changes.**
+
+`ObjectDefinition.m_Elevation` and `m_Position.y`, to raise or lower what the object tool is about to place (`ElevateObjectDefinitionSystem.cs:104-116`), with a `StackData` special case that adjusts only the position because a stacked prop measures elevation differently (`:106-114`). The system bails out entirely unless the active tool is `ObjectToolSystem` in Create, Brush, Line, Curve or Stamp mode, or a tool whose `toolID` is the literal string `"Line Tool"` (`:65-72`).
+
+`NetCourse`'s two `CoursePos` endpoints, to force a constant slope across a run of courses: `NetworkDefinitionSystem.ProcessNetCourses` walks the array of definitions in order and writes each course's end elevation into the next course's start (`Anarchy/Anarchy/Systems/NetworkAnarchy/NetworkDefinitionSystem.cs:295-377`), with a parallel-course variant at `:378-457`. It is the largest definition rewriter in the corpus.
+
+`CreationDefinition.m_Prefab`, which changes **what the game builds** without the tool ever knowing: `Tree_Controller/Tree_Controller/Systems/TreeObjectDefinitionSystem.cs:96-117` picks a different tree prefab per definition from the mod's own brush weighting, seeding a `Unity.Mathematics.Random` from `currentCreationDefinition.m_RandomSeed` so the substitution is stable, then writes the definition back at `:117`. It also rewrites `ObjectDefinition.m_Age` from the chosen tree state (`:139-150`). This is the technique in its strongest form: the vanilla object tool, the vanilla toolbar, the vanilla preview, and a different tree.
+
+Rots: the `"Line Tool"` string test and the `ObjectToolSystem.Mode` member names both mods branch on — re-check `src/Game/Game.Tools/ObjectToolSystem.cs` for the mode enum.
+
+### Suppressing a placement: destroy the definition, or take its `CreationDefinition` away
+
+Two forms, and they differ in what the vanilla consumer sees.
+
+**Destroy the entity.** `BetterBulldozer/BetterBulldozer/Systems/AutomaticallyRemoveManicuredGrassSurfaceSystem.cs:137-141` compares `currentCreationDefinition.m_Prefab` against a cached `NativeList<Entity>` of grass-surface prefab entities and calls `EntityManager.DestroyEntity(entity)` on any that match, so the surface a building would have brought with it is never created. The system is registered `UpdateBefore<...>(Modification1)` (`BetterBulldozer/BetterBulldozer/BetterBulldozerMod.cs:122`) and starts `Enabled = false`, turning itself on in `OnGameLoadingComplete`.
+Tree Controller does the same for a different reason: `TreeObjectDefinitionSystem.cs:168-213` destroys brush definitions that fall outside a circular radius or fail a slope filter, which is how it constrains a square vanilla brush to a round one.
+
+**Strip the `CreationDefinition` and keep the rest.** `CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs:142` calls `m_CommandBuffer.RemoveComponent<CreationDefinition>(unfilteredChunkIndex, entity)` after deciding it will handle the zoning itself, so the vanilla `GenerateZonesSystem` no longer matches the entity while the mod's own code still holds the `Zoning` data it read out of it. The registration is `UpdateBefore<P_GenerateZonesSystem, GenerateZonesSystem>(SystemUpdatePhase.Modification1)` with the reason in a comment (`CS2-Platter/Platter/PlatterMod.cs:217-218`), and the removal only fires when the mod actually found parcels under the cursor (`:128-142`), so ordinary zoning still goes down the vanilla path.
+
+Both depend on the synchronous-playback rule above.
+
+### Definitions are not a tool-only mechanism, and that is why they carry `Permanent`
+
+Six systems outside `Game.Tools` produce or read definitions, and they are the reason `CreationFlags.Permanent` exists.
+
+`BuildingConstructionSystem` (registered at `GameSimulation`, `SystemOrder.cs:585`) emits a `CreationDefinition` with `m_Owner` set and `CreationFlags.Permanent` for each of a finished building's sub-areas (`src/Game/Game.Simulation/BuildingConstructionSystem.cs:372-378`) and for each of its sub-nets (`:439-445`, inside `CreateSubNet` at `:436`).
+`ZoneSpawnSystem` (`SystemOrder.cs:544`) does the same for a growable it is about to spawn: `Permanent | Construction` on the building itself (`src/Game/Game.Simulation/ZoneSpawnSystem.cs:623-628`), plain `Permanent` on its sub-areas (`:740-746`) and sub-nets (`:822-828`).
+`AreaSpawnSystem` (`SystemOrder.cs:581`) matches, at `src/Game/Game.Simulation/AreaSpawnSystem.cs:448/519/570`.
+`Game.Prefabs.ReplacePrefabSystem` emits `Permanent` definitions when swapping a prefab under existing instances (`src/Game/Game.Prefabs/ReplacePrefabSystem.cs:366-373`, `:482`).
+`Game.Objects.PlaceholderSystem` (registered `UpdateAfter` in `Deserialize`, `SystemOrder.cs:882`) resolves a placeholder into a concrete variation with `Permanent | Native` (`src/Game/Game.Objects/PlaceholderSystem.cs:110-120`).
+
+**These run in a different phase from the tools, and that is what makes the one-frame lifetime work.** `GameSimulation` is driven from `SimulationSystem` in `LateUpdate` (`SystemOrder.cs:75`), i.e. _after_ the frame's `MainLoop` has already run its modification phases. So a definition the simulation emits in frame N is consumed at `Modification1` of frame N+1, still carrying `Updated`; the `Deleted` baked into its archetype then has `CleanUpSystem` destroy it at the end of that frame. Exactly one consumption, no sweep needed.
+
+Two systems **read** definitions rather than producing them, and both are worth knowing because they make a hand-built definition look right without any extra work.
+`GuideLinesSystem`, at `Rendering` (`SystemOrder.cs:680`), queries `All = {CreationDefinition}` with `Any = {NetCourse, WaypointDefinition, Zoning, Game.Areas.Node, ObjectDefinition}` (`src/Game/Game.Rendering/GuideLinesSystem.cs:2637-2649`) and draws the placement guides and distance labels from it.
+`NetCourseTooltipSystem`, at `UITooltip` (`SystemOrder.cs:923`), queries `{CreationDefinition, NetCourse}` (`src/Game/Game.UI.Tooltip/NetCourseTooltipSystem.cs:54`) and shows the length and elevation readout.
+A mod tool that emits a well-formed `NetCourse` definition gets both for free.
+
+`Game.Serialization.ClearSystem` lists `CreationDefinition` among the component types whose entities are destroyed on load (`src/Game/Game.Serialization/ClearSystem.cs:43`), which is the statement that a definition never survives a save.
+
+Rots: the producer list and their phases — re-grep `CreationDefinition` across `src/Game/` outside `Game.Tools/`.
+
+### Who destroys a definition, and the sweep that runs even when no tool is active
+
+A definition entity is not destroyed by its consumer. None of the `Generate*System` family removes or destroys anything on the definition side.
+
+Tool-emitted definitions are swept by the tool itself, one frame late. `ToolBaseSystem.DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` schedules an `IJobChunk` that destroys every entity in the group through the barrier's parallel writer (`src/Game/Game.Tools/ToolBaseSystem.cs:506-519`), and the group is `GetDefinitionQuery()` — `{CreationDefinition}` with `Exclude<Updated>` (`:689-692`). Because `CleanUpSystem` strips `Updated` at the end of each frame, that query matches precisely last frame's definitions, so a tool that calls `DestroyDefinitions` before creating this frame's definitions leaves exactly one generation alive.
+Every vanilla tool does: `ZoneToolSystem.cs:975`, `RouteToolSystem.cs:2291`, `TerrainToolSystem.cs:692`, `WaterToolSystem.cs:829`, and `BulldozeToolSystem`'s three call sites that `custom-tools.md:243` records.
+
+**`DefaultToolSystem` sweeps too, and its query is global.** `DefaultToolSystem.UpdateDefinitions` opens with `DestroyDefinitions(m_DefinitionQuery, m_ToolOutputBarrier, inputDeps)` (`src/Game/Game.Tools/DefaultToolSystem.cs:1101`, query assigned from `GetDefinitionQuery()` at `:707`). Since `GetDefinitionQuery` filters on nothing but `CreationDefinition` and the absence of `Updated`, the fallback tool cleans up any stale definition in the world, including one a mod left behind. It is the only garbage collector this mechanism has.
+
+`DefaultToolSystem` is also a definition **producer**, and for a purpose that is easy to miss: `AddEntity` emits a `CreationDefinition` carrying only `m_Original` plus `CreationFlags.Select`, or `Parent | Duplicate` for a parent (`DefaultToolSystem.cs:173-187`). That is how the selection highlight works — a `Select` definition becomes a `Temp` with `TempFlags.Select` standing in for the real entity. The same call site attaches an `IconDefinition` (`:365`) and an `AggregateElement` buffer (`:370`), which is where those two kinds come from.
+
+### Producing a definition by hand: the sanctioned helper, and what a fork of it drops
+
+`ObjectToolBaseSystem` exists for one method. `protected JobHandle CreateDefinitions(...)` takes 23 parameters and schedules the private `CreateDefinitionsJob` (`src/Game/Game.Tools/ObjectToolBaseSystem.cs:2363-2452`, job struct at `:35`), wiring roughly seventy `ComponentLookup`/`BufferLookup` handles plus `m_ObjectSearchSystem.GetStaticSearchTree`, `m_WaterSystem.GetSurfaceData`, `m_TerrainSystem.GetHeightData` and `m_ToolOutputBarrier.CreateCommandBuffer`, then registers itself as a reader of all three and calls `AddJobHandleForProducer` (`:2448-2451`). Only two call sites exist in the game: `ObjectToolSystem.cs:4353` and `UpgradeToolSystem.cs:288`.
+`custom-tools.md:16-19` covers the choice of base class; what belongs here is what the job actually emits.
+
+**The job's job is composition.** Its `Execute` (`:453`) resolves the control points into a placement, then walks the prefab's structure: `UpdateObject` (`:1101`) emits the definition for one object and then recurses through `UpdateSubObjects` (`:1447`), `UpdateSubNets` (`:1715`) and `UpdateSubAreas` (`:1976`), threading an `OwnerDefinition` down so every sub-element points at its not-yet-created parent (`:1267-1271`). `CreateCurve` (`:689`) spreads objects along a bezier for line and curve modes; `CreateBrushes` (`:790`) scatters them under a brush, iterating `m_ObjectSearchTree` at `:888` to avoid what is already there. `ClearAreaHelpers.FillClearAreas`/`InitClearAreas` build the lot-clearing triangles (`:558/559/569/570/597-599`, `ClearAreaData` at `src/Game/Game.Tools/ClearAreaData.cs:5-11`). Placeholder resolution (`GetVariationData`, `:652`), attachment resolution (`UpdateAttachedParent`, `:1304`) and the lowered-parent test (`IsLoweredParent`, `:1415`) round it out.
+That is what "vanilla-quality preview" means concretely: not rendering, which no tool does, but a definition tree complete enough that `GenerateObjectsSystem` produces the same `Temp` entities the vanilla tool would.
+
+**The corpus's one full fork tells you which parts are optional.** `LineTool-CS2/Code/Systems/CreateDefinitions.cs` is a `[BurstCompile]` struct with a header comment admitting the provenance — `"Substantial portions derived from game code"` (`:7-10`) — 1419 lines and 63 injected `m_*` fields, wired one by one at `LineTool-CS2/Code/Systems/LineToolSystem.cs:1035-1099` and then run with `definitions.Execute()` on the main thread (`:1099`) rather than scheduled.
+It keeps the recursion — `UpdateObject` (`:409`), `UpdateSubObjects` (`:709`), `CreateSubNet` (`:824`), `UpdateSubNets` (`:974`), `UpdateSubAreas` (`:1253`), `UpdateAttachedParent` (`:607`), `IsLoweredParent` (`:674`), `GetVariationData` (`:345`), `CheckParentPrefab` (`:387`), `HasEdgeStartOrEnd` (`:1397`) — and the clear-area plumbing.
+It drops, verified by grep against the file: `m_BrushPrefab`, `m_PrefabBrushData` and `CreateBrushes` entirely; `m_ObjectSearchTree`, which the vanilla job uses only inside `CreateBrushes`; `m_Snap`, `m_Distance`, `m_DeltaTime`; `m_Removing` and `m_Stamping`; `m_DecorationMode`; `m_LaneEditor`; `m_TransformPrefab`, so it never sets `CreationDefinition.m_SubPrefab`; `m_AttachmentData` and `m_ServiceUpgradeData`. It also collapses the vanilla `NativeList<ControlPoint> m_ControlPoints` to a single `ControlPoint m_ControlPoint` (`:55`, read at `:162`) and calls the whole thing once per placed object instead of once per gesture.
+The residue is a create-only, single-point, no-brush, no-snap definition producer — which is exactly the shape a mod needs when it owns the spacing itself.
+
+**Verdict on the survey's exemplar note.** `survey-mods-techniques.md:148` calls the file "a Burst-compiled copy of the game's own definition-creation job" with "~60 `ComponentLookup`/`BufferLookup` fields wired in `LineToolSystem.cs:1035-1100`", and names it "the reference for 'my tool must produce vanilla-quality previews'". Verified: the wiring block is `:1035-1099`, the injected field count is 63, and the header comment at `:7-10` says so itself.
+The characterisation "copy" overstates it in one direction and understates it in another, and both matter to a reader deciding whether to fork. It is not a copy — a third of the vanilla job's surface is gone, listed above, and what is gone is precisely the part driven by tool state (brush, snap, removal, stamping) rather than by prefab structure. And it is more than a copy in the sense that matters: the part it kept is the recursive walk over sub-objects, sub-nets, sub-lanes and sub-areas, and that walk is what "vanilla-quality" actually means, because it is what makes a placed building bring its own driveway and lawn.
+
+`ControlPoint` is the input side of that seam: `m_Position`, `m_HitPosition`, `m_Direction`, `m_HitDirection`, `m_Rotation`, `m_OriginalEntity`, `m_SnapPriority`, `m_ElementIndex`, `m_CurvePosition`, `m_Elevation`, plus `Equals` and an `EqualsIgnoreHit` that compares with a 0.001 tolerance (`src/Game/Game.Tools/ControlPoint.cs:8-46`). `LocalTransformCache` (`src/Game/Game.Tools/LocalTransformCache.cs:7-19`) is how an existing entity's `m_Probability` and `m_PrefabSubIndex` survive a rebuild — `UpdateObject` reads it back off the original at `ObjectToolBaseSystem.cs:1159-1164`.
+
+**Hand-building a definition without the helper is the corpus norm, and there is a clean template for each kind.**
+Net course: `CS2-NetworkTools/NetworkTools.Mod/Systems/Tools/Utils/NetCourseEmitter.cs:16-60`, a static `EmitPreview(ref EntityCommandBuffer, in EdgeConfig, CreationFlags, Entity original)` shared by three of that mod's tools, which sets `m_FixedIndex = -1`, both `m_CourseDelta` endpoints to 0 and 1, and both `m_ParentMesh` to -1.
+Object, from an existing entity: `Recolor/Recolor/Systems/Tools/ColorPainterToolSystem.Jobs.cs:88-184`, which emits `CreationFlags.Select` with `m_Original` set, copies the entity's `PseudoRandomSeed` into `m_RandomSeed` (`:114-117`), resolves an `EditorContainer` owner into `m_Prefab`/`m_SubPrefab` (`:94-107`), and adds a `NetCourse` instead when the target is a lane (`:146-181`) — a definition emitted purely to obtain a `Temp` copy it can recolour.
+Delete: `BulldozeToolSystem.AddEntity` (`src/Game/Game.Tools/BulldozeToolSystem.cs:732-750`) is the vanilla template — `m_Original` set, `m_Prefab` left null, `CreationFlags.Delete`.
+Relocate, delete, duplicate and their sub-elements: `CS2-MoveIt/Code/MoveIt/Tool/MoveItToolSystem.Jobs.cs:515-570`, whose `ProcessCreationDefinition` switches between `Relocate`, `Delete`, `Hidden` and `Recreate | Parent` off one `m_CreationFlags` field, with per-sub-net and per-sub-area definitions (`:224/244`) each given an `OwnerDefinition` built from the owner's live transform (`:627-640`).
+Area: `AreaBucket/Utils/AreaDefinitionCreation.cs:45-52` is a two-line `WithCreationDefinition(ecb, entity, prefab)` beside an `AsDynamicBufferNodes` that fills the `Game.Areas.Node` buffer and closes the ring (`:14-43`).
+Brush: `ExtraDetailingTools/MOD/Systems/Tools/GrassToolSystem.cs:401-436`, which also writes a mod component onto the **brush prefab entity** the definition names (`:427-430`) — extra data passed to the mod's own consumer through the prefab rather than through the definition.
+
+**One corpus site covers six kinds at once, and it is a port of the vanilla selection path.** `ExtraDetailingTools/MOD/Systems/Tools/TransformGizmoTool.cs:191-395` is `AddEntity(Entity, Entity, OwnerDefinition, bool isParent, bool attachParentCreated)` with the same signature and near-identical body as `DefaultToolSystem.AddEntity` (`src/Game/Game.Tools/DefaultToolSystem.cs:173-187`). It branches on what the original entity is and attaches the matching kind: a `NetCourse` for an `Edge` (`:219-231`, with a second shape for a `Node` at `:240`), an `ObjectDefinition` for anything with a transform (`:270-335`), a `Game.Areas.Node` buffer copied wholesale for an area (`:357-361`), a `WaypointDefinition` buffer rebuilt from the route's `RouteWaypoint` buffer (`:364-381`), an `IconDefinition` constructed from the entity's live `Icon` (`:384`), and an `AggregateElement` buffer copied wholesale (`:389-392`). It recurses into sub-areas with an `OwnerDefinition` built from the parent's prefab and transform (`:338-352`), and it adds the `CreationDefinition` last (`:393`), after the kind component, which is the ordering the vanilla original also uses.
+Its one deliberate divergence: the `CreationFlags.Select` branch is gated on the mod's own `AllowHighlight` field (`:138`, set per entity at `:1658`) rather than unconditional (`:202`), so the gizmo can build a definition tree without lighting the selection up.
+
+### A mod can add a definition kind of its own
+
+Traffic runs a complete parallel pipeline, and it is the proof that the protocol is open rather than a fixed list of nine.
+
+The definition kind is `ConnectionDefinition : IComponentData`, a mod type carrying `edge`, `owner`, `node`, `laneIndex`, `carriagewayAndGroup`, `lanePosition` and a `ConnectionFlags flags` enum of `Modify | Create | Remove | Highlight | Essential` (`Traffic/Code/Components/LaneConnections/ConnectionDefinition.cs:7-30`).
+Its tool emits it exactly the way a vanilla tool emits `ObjectDefinition`: `commandBuffer.CreateEntity()`, `AddComponent<CreationDefinition>`, `AddComponent<ConnectionDefinition>`, `AddComponent(default(Updated))`, then a `TempLaneConnection` buffer (`Traffic/Code/Tools/LaneConnectorToolSystem.CreateDefinitionsJob.cs:213-233/296`, repeated at `:309-329/415` and `:468-488`).
+The consumers are spliced beside their vanilla counterparts rather than merely placed in a phase (`Traffic/Code/Mod.cs`): `GenerateLaneConnectionsSystem` at `Modification3` (`:85`) — later than `Modification1` because it needs the vanilla `Temp` nodes to exist, which its second query `{Node, Temp, Updated}` reads (`GenerateLaneConnectionsSystem.cs:26-30`); `ApplyLaneConnectionsSystem` as `UpdateBefore<..., ApplyNetSystem>(ApplyTool)` (`:93`); `TrafficToolClearSystem` at `ClearTool` (`:95`); and its own `Traffic.Tools.ValidationSystem` as `UpdateAfter<..., Game.Tools.ValidationSystem>(ModificationEnd)` (`:89`).
+That is the vanilla four-stage shape — generate, validate, clear, apply — reproduced for a kind the game has never heard of.
+
+Traffic's validation feeds back into the vanilla error protocol rather than replacing it: it adds `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity **and** to `temp.m_Original` (`Traffic/Code/Tools/ValidationSystem.ValidateLaneConnectorTool.cs:167-172/316-321/376`), alongside its own `ToolFeedbackInfo` buffer and a `ToolActionBlocked` tag (`:82/104/234/239`). Its two tools then override `GetAllowApply()` to test `_toolFeedbackQuery.IsEmptyIgnoreFilter` as well as the vanilla error query (`Traffic/Code/Tools/LaneConnectorToolSystem.cs:551-555`, `PriorityToolSystem.cs:257-261`; `custom-tools.md:234-238` covers that override from the tool side).
+
+### The empty prefab that satisfies vanilla validation
+
+`Traffic/Code/Helpers/FakePrefab.cs:12-25` is a `PrefabBase` subclass with no fields and no behaviour, whose two overrides add a single mod marker component to the prefab entity and to the instance archetype (`:17/23`). Its own comment is the whole rationale: _"used purely for vanilla validation workaround with custom entites interacting with vanilla ones"_ (`:9-11`).
+
+It is created and registered in `PreDeserialize`, not `OnLoad`: `ModDefaultsSystem : GameSystemBase, IPreDeserialize` instantiates it with `ScriptableObject.CreateInstance<FakePrefab>()`, names it `"Traffic.FakePrefab"`, sets `active = true`, and calls `_prefabSystem.AddPrefab` then `_prefabSystem.TryGetEntity` into a static field (`Traffic/Code/Systems/ModDefaultsSystem.cs:26-48`), registered as `UpdateBefore<PreDeserialize<ModDefaultsSystem>>(SystemUpdatePhase.Deserialize)` (`Traffic/Code/Mod.cs:101`).
+The entity is then stamped as `PrefabRef` onto every entity the mod creates: at generate time (`Traffic/Code/Systems/LaneConnections/GenerateLaneConnectionsSystem.MapTempConnectionsJob.cs:65`), at apply time (`ApplyLaneConnectionsSystem.HandleTempEntitiesJob.cs:453`) and when syncing loaded data (`SyncCustomLaneConnectionsSystem.SyncConnectionsJob.cs:169`).
+
+**Why the hook is `PreDeserialize` is provable, and it is the strongest part of the story.** Every entity carrying a `PrefabRef` and not `Temp` or `Deleted` is matched by `PrimaryPrefabReferencesSystem.m_PrefabRefQuery` (`src/Game/Game.Serialization/PrimaryPrefabReferencesSystem.cs:392`), whose `FixPrefabRefJob` remaps each non-null reference through `PrefabReferences.Check(ref Entity)` (`:37-49`). That method indexes `m_PrefabData[prefab]` with no `TryGetComponent` and no guard (`src/Game/Game.Serialization/PrefabReferences.cs:61-83`). So the entity a mod points its `PrefabRef` at must be a registered prefab entity carrying `PrefabData` by the time the load pass runs, and `PreDeserialize` is the last hook before it does.
+
+**What fails without a `PrefabRef` at all is not fully settled from the sources**, and the honest form of the claim is worth stating. The candidate site is `ValidationSystem`'s `ValidateEntitiesJob`, which for any chunk carrying `Game.Objects.Object` takes `chunk.GetNativeArray(ref m_ChunkType.m_PrefabRef)` and then indexes it positionally against the chunk's entity count — `PrefabRef prefabRef = nativeArray7[i];` at `src/Game/Game.Tools/ValidationSystem.cs:809`, inside `for (int i = 0; i < nativeArray.Length; i++)` at `:802`. A matching chunk without `PrefabRef` yields an empty array and an out-of-range index inside a Burst job. Traffic's own connection entities carry neither `Game.Objects.Object` nor `Game.Tools.Temp`, so that particular site is not the one its comment refers to, and no other unconditional site was found. What is established: the mod treats the reference as mandatory in its own load-time repair pass too, logging `"Missing PrefabRef in {modifiedConnections} entity! Adding with {fakePrefabEntity}"` and adding one (`Traffic/Code/Systems/Serialization/TrafficDataMigrationSystem.ValidateLoadedDataJob.cs:420-429`), and correcting any that points elsewhere (`:425-428`).
+
+**Traffic is the only repository in twenty that does this.** A grep for `: PrefabBase` across the corpus returns twelve subclasses; the other eleven are real prefabs with real content — `NT_ToolPrefab`, `PalettePrefab`, `PaletteSubCategoryPrefab`, `LaneGroupPrefab`, `WaterSourcePrefab` and the rest.
+
+**Ruled (2026-08-02, ticket 13; conflicts.md).** The reference teaches the narrow provable rule, and names the broad practice beside it as a practice rather than as a rule.
+What ships as a rule is the half the sources settle: an entity that carries a `PrefabRef` must point at a prefab entity registered through `PrefabSystem.AddPrefab` by the time the load pass runs, because the remap indexes `PrefabData` on that entity with no guard, and the pre-deserialize hook is the last place to register it.
+Beside that, the empty-prefab technique itself — a content-free prefab class created and registered in that hook and stamped onto every entity the mod creates — ships as what one mod does and why it believes it has to, with the limit of the evidence in the sentence rather than left out of it: the vanilla site that faults on an entity carrying no `PrefabRef` at all was looked for across the tools, serialization and prefab code and not found.
+That is one hedge in shipped prose, in a plugin whose references otherwise state mechanisms flat, and it is the intended outcome here.
+What the reader is deciding is an entity archetype — the most expensive thing to change once a save format depends on it, since adding the reference late means a migration and adding it needlessly means a dead component in every save — so the difference between what was proven and what was believed is the thing they most need from us.
+Neither half may ship without the other: the narrow rule alone drops the case the technique exists for, and the broad practice alone would state one author's belief in this plugin's own voice.
+
+**Verdict on the survey's account.** `survey-mods-techniques.md:473` describes the technique as "an empty `PrefabBase` whose only job is to satisfy vanilla validation", created in `IPreDeserialize.PreDeserialize` and stamped onto mod-created entities as their `PrefabRef`. Every element of that is verified against the source at the lines above, and the survey's quoted comment is accurate.
+What the survey does not have, and what a reference needs, is the two facts that make the technique reproducible rather than cargo-cult: the prefab must be **registered through `PrefabSystem.AddPrefab`** so that the entity carries `PrefabData`, because the load-time remap indexes that component without a guard; and `PreDeserialize` is the hook for that reason and not because the entity happens to be created there.
+The survey also cites a single stamping site (`ApplyLaneConnectionsSystem.cs:92`); there are three, and one of them is the load-time repair pass, which is the evidence that the reference is treated as mandatory rather than convenient.
+
+Rots: `PrefabReferences.Check`'s unguarded `m_PrefabData[prefab]` and the `m_PrefabRefQuery` exclusions — re-read `src/Game/Game.Serialization/PrefabReferences.cs:61-83` and `PrimaryPrefabReferencesSystem.cs:392`.
+
+### A tool error is a prefab, an enum member and three tag components
+
+The question "how are tool errors suppressed" cannot be answered without first knowing that **a tool error is baked as a prefab**, and that the prefab type lives in `Game.Prefabs` rather than anywhere under `Game.Tools`. A sweep confined to the tools directory finds the enum and the tags and misses the switch.
+
+`ToolError : ComponentBase` is a prefab component with a `ComponentMenu` binding it to `NotificationIconPrefab` (`src/Game/Game.Prefabs/ToolError.cs:8-9`). It carries an `ErrorType m_Error` and three booleans — `m_TemporaryOnly`, `m_DisableInGame`, `m_DisableInEditor` (`:11-17`) — and its `Initialize` folds them into the runtime component `ToolErrorData { ErrorType m_Error; ToolErrorFlags m_Flags; }` on the prefab entity (`:28-47`, component at `src/Game/Game.Prefabs/ToolErrorData.cs:6-11`).
+`ToolErrorFlags` is **not** a `[Flags]` enum despite being used as a bitmask: `TemporaryOnly = 1`, `DisableInGame = 2`, `DisableInEditor = 4` (`src/Game/Game.Prefabs/ToolErrorFlags.cs:3-8`).
+The host is a `NotificationIconPrefab` — a texture, a description, a target description, a display size, a pulsate amplitude and an `m_EnabledByDefault` (`src/Game/Game.Prefabs/NotificationIconPrefab.cs:12-24`) — which contributes `NotificationIconData` and `NotificationIconDisplayData` to the prefab entity (`:26-31`). That pairing is why every query for tool-error prefabs is `{NotificationIconData, ToolErrorData}`.
+
+`ErrorType` is a plain enum of thirty causes between `None = 0` and `Count = 31` (`src/Game/Game.Tools/ErrorType.cs:3-36`): `OverlapExisting`, `InvalidShape`, `NotEnoughMoney`, `PathfindFailed`, `NoRoadAccess`, `NoCarAccess`, `NoPedestrianAccess`, `LongDistance`, `TightCurve`, `NoTrainAccess`, `NoTrackAccess`, `AlreadyUpgraded`, `InWater`, `NoCargoAccess`, `NoWater`, `ExceedsCityLimits`, `NotOnShoreline`, `AlreadyExists`, `ShortDistance`, `LowElevation`, `SmallArea`, `SteepSlope`, `ExceedsLotLimits`, `NotOnBorder`, `NoGroundWater`, `OnFire`, `NoPortAccess`, `NotEnoughClearance`, `NoBicycleAccess`, `NotEditable`.
+`ErrorSeverity` has six levels: `None`, `Override`, `Warning`, `Error`, `Cancel`, `CancelError` (`src/Game/Game.Tools/ErrorSeverity.cs:3-10`), and `ErrorData { m_TempEntity, m_PermanentEntity, m_Position, m_ErrorType, m_ErrorSeverity }` is the in-flight record (`src/Game/Game.Tools/ErrorData.cs:6-16`).
+
+**`ValidationSystem` is the only producer, and it runs at `ModificationEnd`** (`SystemOrder.cs:264`), with its nested `ValidationSystem.Components` spliced immediately after it (`:265`). Its update fires only when a `Temp` set exists: the guard is `m_UpdatedQuery` — `{Temp, Updated}` excluding `Deleted`, `Relative`, `Moving`, `Stopped` — or its editor twin (`ValidationSystem.cs:1819-1820`, tested at `:1829-1831`).
+Three things happen in order:
+
+1. `FillErrorPrefabsJob` runs over `m_ToolErrorPrefabQuery` = `{NotificationIconData, ToolErrorData}` (`:1822`) and fills a `NativeArray<Entity>` of length 31 — one slot per `ErrorType` — indexed as `m_ErrorPrefabs[(int)toolErrorData.m_Error] = value`, **skipping any prefab whose flags carry the disable bit for the current mode**: `ToolErrorFlags toolErrorFlags = (m_EditorMode ? ToolErrorFlags.DisableInEditor : ToolErrorFlags.DisableInGame); if ((toolErrorData.m_Flags & toolErrorFlags) == 0)` (`:1202-1230`, array allocated at `:1838`).
+2. The validation jobs enqueue `ErrorData` records into two `NativeQueue`s.
+3. `ProcessValidationResultsJob.ProcessError` dequeues each one and opens with `if (!(m_ErrorPrefabs[(int)error.m_ErrorType] != Entity.Null) || CancelOptional(...)) { return; }` (`:1536-1540`). A severity at or above `Cancel` cancels the `Temp` entity; otherwise an icon is added through `IconCommandBuffer.Add(..., isTemp: true)` (`:1420/1424`) and the entity is recorded in an `m_ErrorMap` of entity to severity (`:1555-1566`, `AddError` at `:1689-1702`).
+4. `ValidationSystem.Components` turns that map into components. `UpdateComponentsJob` removes stale `Error`, `Warning` and `Override` tags and adds the current ones through `ModificationEndBarrier`, tagging everything it touches `BatchesUpdated` (`:346-470`; query `Any = {Error, Warning, Override}`, `None = {Deleted}` at `:547-556`).
+
+The three tags are zero-size: `Error` (`src/Game/Game.Tools/Error.cs:7`), `Warning` (`Warning.cs:7`), `Override` (`Override.cs:7`).
+`ToolApplySystem` reads two of them at `ApplyTool`: a chunk carrying `Warning` gets `Deleted`, a chunk carrying `Override` gets `Updated` and `Overridden` (`src/Game/Game.Tools/ToolApplySystem.cs:50-58`).
+`ToolBaseSystem.GetAllowApply()` reads only `Error`, through its `m_ErrorQuery` (`custom-tools.md:231/234-236`).
+
+**One refinement to the sibling file, so the two references do not disagree.** `custom-tools.md:231` attributes the `Error` tag to `ValidationSystem` at `ValidationSystem.cs:468`. That line is inside the nested `public class ValidationSystem.Components : GameSystemBase` (declared at `:321`), which is a **separate system** registered separately (`SystemOrder.cs:265`) and using a different barrier. The distinction matters exactly once, and it is the case a mod hits: `ValidationSystem` itself does not tag anything, so a mod system spliced `UpdateAfter<Mine, ValidationSystem>(ModificationEnd)` — which is what Traffic does (`Traffic/Code/Mod.cs:89`) — still runs after `Components` has already added and removed this frame's tags, because two systems anchored on the same target are spliced in their own registration order and vanilla registers first (`mod-lifecycle-and-ordering.md:118/124/135`). **Verdict on that ordering, settled by the orchestrator's pass under this ticket.** It is provable rather than merely derived, and it holds.
+`UpdateAfter<SystemType, OtherType>` files the registration into `m_RefMap[other]`, a `List<SystemData>` keyed by the anchor (`src/Game/Game/UpdateSystem.cs:160-163`, `Register` at `:261-273`), stamping it `++m_AddIndex + 1000000` — the back-band offset, so positive.
+`AddSystemUpdate` sorts that list (`:373-376`) by `SystemData.CompareTo`, which is phase then `m_AddIndex` (`:29-36`), emits the negatively-indexed entries — the `UpdateBefore` splices — ahead of the anchor, breaks at the first non-negative index (`:384-388`), emits the anchor, then emits the rest in the same order (`:409-411`).
+So two systems spliced after one anchor run in registration order, and vanilla's registrations all happen in `SystemOrder.Initialize` before any mod's `OnLoad`.
+A mod's `UpdateAfter<Mine, ValidationSystem>(ModificationEnd)` therefore lands after `ValidationSystem.Components`, which is what Traffic's own behaviour assumes: it adds its `Error` tags at that point and expects them to hold for the frame, which they could not if `Components` ran afterwards and found them absent from its map.
+
+Rots: the thirty `ErrorType` members, the `ToolErrorFlags` members, the hard-coded array length 31 at `ValidationSystem.cs:1838`, and the `{NotificationIconData, ToolErrorData}` query — re-read `src/Game/Game.Tools/ErrorType.cs`, `src/Game/Game.Prefabs/ToolErrorFlags.cs` and `ValidationSystem.cs:1200-1240`.
+
+### Turning a tool error off means editing its prefab, and putting it back afterwards
+
+Step 3 above is the lever: `ProcessError` returns immediately when the error's prefab slot is `Entity.Null`, so **an error type whose prefab was skipped in step 1 produces no icon, no cancel, no `Error` tag and therefore no apply block**. Setting `ToolErrorFlags.DisableInGame` on a `ToolErrorData` component is the whole suppression mechanism, and it requires no patching and no forked system.
+
+Anarchy — whose entire premise is suppressing placement errors — implements it as a pair (`Anarchy/Anarchy/AnarchyMod.cs:132-133`):
+
+`DisableToolErrorsSystem`, registered `UpdateAt<...>(SystemUpdatePhase.Modification5)`, queries `{ToolErrorData, NotificationIconData}` (`Anarchy/Anarchy/Systems/ErrorChecks/DisableToolErrorsSystem.cs:50-61`), reads the list of `ErrorType` values the user has switched off from its UI system (`:94`, `AnarchyUISystem.GetAllowableErrorTypes` at `Anarchy/Anarchy/Systems/Common/AnarchyUISystem.cs:202-224`), ORs `DisableInGame | DisableInEditor` into each matching prefab's `ToolErrorData`, and writes it back through `ModificationBarrier5` (`:73/86-88/108-110`). It bails out when `m_ToolSystem.activeTool.toolID == null` (`:68-71`), and it handles `ErrorType.AlreadyExists` separately by looking the prefab up by name — `new PrefabID("NotificationIconPrefab", "Already Exists")` (`:77-91`) — which is the readable proof that these prefabs are ordinary named assets.
+
+`EnableToolErrorsSystem`, registered `UpdateAt<...>(SystemUpdatePhase.ModificationEnd)`, clears the flags again through `ModificationEndBarrier` and then sets `Enabled = false` on itself, so it runs exactly once per disable (`Anarchy/Anarchy/Systems/ErrorChecks/EnableToolErrorsSystem.cs:74-110`, self-disable at `:109`, off from birth at `:55`, re-armed by the other system at `DisableToolErrorsSystem.cs:116`). It keeps a four-member exclusion list of errors that carry `DisableInEditor` by default and must not be re-enabled there — `AlreadyExists`, `AlreadyUpgraded`, `ExceedsCityLimits`, `NoWater` (`:29-34`) — and never re-enables `ExceedsLotLimits` in game (`:83-84`).
+
+**The phases are chosen and not incidental.** `Modification5` runs before `ModificationEnd`, and `ModificationBarrier5` plays back at the end of `Modification5` (`SystemOrder.cs:92`), so the cleared flags are already committed by the time `FillErrorPrefabsJob` reads them. The restore runs in `ModificationEnd` through a barrier that plays back at the end of that phase (`:93`), i.e. after `ValidationSystem` has finished with them. The pair leaves the prefabs untouched outside a single phase gap, which is what makes the technique safe to leave installed.
+
+The complementary move — reusing a vanilla error prefab rather than disabling it — is Traffic's: it scans the same `{NotificationIconData, ToolErrorData}` query for the one whose `m_Error == ErrorType.TightCurve` and caches its entity to raise its own icons with (`Traffic/Code/Tools/ValidationSystem.cs:49/56-76`).
+
+**Verdict on the survey's account.** `survey-mods-techniques.md:494` describes the technique as "Disable tool errors by mutating the error _prefabs_, not the tools", naming the query, the ORed flags, the paired restore system at `ModificationEnd`, and "no patching involved". Every clause is verified at the lines above.
+Two things it leaves out are the ones that make the technique teachable. The first is **why it works at all** — nothing about setting a flag on a prefab implies an error disappears until you know that `FillErrorPrefabsJob` skips the prefab and `ProcessError` returns early on a null slot (`ValidationSystem.cs:1220-1228`, `:1538`), which means the suppression is total: no icon, no cancel, no `Error` tag, no apply block, and no other system involved.
+The second is the **phase pairing as a constraint rather than a detail**: the disable must be committed before `ModificationEnd`, which is what `Modification5` plus `ModificationBarrier5` buys, and the restore must be queued into a barrier that plays back after `ValidationSystem` has read the flags, which is what `ModificationEnd` plus `ModificationEndBarrier` buys. Either half in the wrong phase silently does nothing or leaves the errors off permanently.
+The survey's line range for the disable system (`:63-118`) is off by one at the top; the query it names is built at `:50-61`.
+
+### Catalog gaps found
+
+**`Anarchy` demonstrates the error-prefab technique, which is its whole premise, and its entry does not name it.**
+`plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md:281-285` names the raycast postfix, the serializable state components, the reflection bridge, the prefab clone and the tool-changed subscription — nothing about errors.
+Sentence to add: "Suppressing a placement error by setting a disable flag on the error's own prefab rather than by patching the validation system, paired with a restore system in a later phase that runs once and switches itself off."
+Source: `Anarchy/Anarchy/Systems/ErrorChecks/DisableToolErrorsSystem.cs:50-113` and `Anarchy/Anarchy/Systems/ErrorChecks/EnableToolErrorsSystem.cs:74-110`, registered at `Anarchy/Anarchy/AnarchyMod.cs:132-133`.
+
+**`Anarchy` also demonstrates definition rewriting on the network side, and the catalog credits only Tree Controller with the technique.**
+Sentence to add: "The corpus's largest definition rewriter, walking a whole run of net-course definitions in order and writing each course's end elevation into the next course's start to force a constant slope."
+Source: `Anarchy/Anarchy/Systems/NetworkAnarchy/NetworkDefinitionSystem.cs:295-457`, registered at `AnarchyMod.cs:147`.
+
+**`Traffic` demonstrates an empty prefab created purely to satisfy vanilla load-time validation, and its entry does not say so.**
+`mod-catalog.md:130-135` names save-data migration, system substitution, deferred registration, the raycast system, settings-declared actions and foreign-mod migration.
+Sentence to add: "An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve."
+Source: `Traffic/Code/Helpers/FakePrefab.cs:8-25`, created at `Traffic/Code/Systems/ModDefaultsSystem.cs:26-48`, stamped at `Traffic/Code/Systems/LaneConnections/ApplyLaneConnectionsSystem.HandleTempEntitiesJob.cs:453`.
+
+**`Traffic` also demonstrates a definition kind of its own with a full generate/validate/clear/apply pipeline, which no entry in the catalog names.**
+Sentence to add: "Its own definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of the placement-definition protocol to a new kind."
+Source: `Traffic/Code/Components/LaneConnections/ConnectionDefinition.cs:7-30`, emitted at `Traffic/Code/Tools/LaneConnectorToolSystem.CreateDefinitionsJob.cs:213-233`, registered at `Traffic/Code/Mod.cs:85/89/93/95`.
+
+**`Platter` demonstrates intercepting a definition before its vanilla consumer, and its entry does not say so.**
+`mod-catalog.md:117-123` names prefab subclasses, deserialize-phase relinking, query rewriting, prefab-data anchoring, reflected input actions and the test scenario system.
+Sentence to add: "Taking a definition away from the vanilla consumer by removing its creation component from a system spliced immediately before that consumer, with the removal played back synchronously because a phase barrier would land after the consumer has already run."
+Source: `CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs:46/63-65/142`, registered at `CS2-Platter/Platter/PlatterMod.cs:217-218`.
+
+**`Move It` demonstrates hand-emitted definitions for relocation and deletion, and its entry credits it only with "the fullest tool lifecycle".**
+`mod-catalog.md:57-60`.
+Sentence to add: "Emitting the game's own placement definitions by hand for every selected entity and each of its sub-nets and sub-areas, switching one flag field between relocate, delete, hidden and recreate, rather than using the object tool base class's definition helper it inherits."
+Source: `CS2-MoveIt/Code/MoveIt/Tool/MoveItToolSystem.Jobs.cs:515-570`, with the sub-element definitions at `:211-245` and the owner definitions at `:627-640`.
+
+**`Extra Detailing Tools` demonstrates the widest definition-kind coverage in the corpus, and its entry does not say so.**
+`mod-catalog.md:106-110` names the two snap-related patches, the generic snap base, the batched raycast and the mod bridge.
+Sentence to add: "A port of the game's own selection-definition builder that branches on what the selected entity is and emits the matching definition kind for each — network course, object, area nodes, route waypoints, notification icon, aggregate elements — which is the widest coverage of that mechanism outside the game itself."
+Source: `ExtraDetailingTools/MOD/Systems/Tools/TransformGizmoTool.cs:191-395`, against the vanilla original at `src/Game/Game.Tools/DefaultToolSystem.cs:173-187`.
+
+**`Recolor` demonstrates emitting a definition purely to obtain a temporary copy of an existing entity, and its entry does not say so.**
+`mod-catalog.md:251-257`.
+Sentence to add: "Emitting a selection definition against an existing entity so the game hands back a temporary copy the mod can edit, which is how it applies a colour through the placement pipeline instead of writing the live entity."
+Source: `Recolor/Recolor/Systems/Tools/ColorPainterToolSystem.Jobs.cs:88-184`.
+
+**Not a gap.** `Advanced Line Tool`'s entry already names its `CreateDefinitions` port and says placed objects go through the same definition path as vanilla, sub-objects and sub-nets included (`mod-catalog.md:44`). `Tree Controller`'s already names definition rewriting as the interception point for changing what a tool places (`:211`). `Area Bucket`'s already names emitting an area definition and the preview-entity path (`:68/70`). `Network Tools`' already names the output-mode switch between writing preview definitions and mutating the network directly (`:83`). `Better Bulldozer`'s destroy-the-definition system is close enough to Tree Controller's named technique that a second sentence would restate rather than add.
+
+## Bridge
+
+This is a technique topic, so the bridge runs mostly to mechanics. The four the ticket named — `custom-tools`, `prefabs-and-assets`, `zoning-buildings-and-land-value`, `roads-and-traffic` — are all supported by the sources, none had to be dropped, and the sweep produced one more strong enough to assert (`environment-and-pollution`) and two recorded rather than claimed.
+
+- **`custom-tools`** is the sibling technique topic and the boundary this file was split along, so it is a bridge in the strict sense: neither reference is complete without the other. It owns the tool base classes, the tool list, the raycast, `ApplyMode`, snapping, overlays, tooltips and the input actions; this file owns what a tool emits once it has decided, and what happens to that emission afterwards. Three seams join them and each is cited on both sides. `ObjectToolBaseSystem` — `custom-tools.md:16-19` gives the rule for choosing that base class, and the finding above gives what its single helper actually produces. `ApplyMode` — `custom-tools.md:217-227` gives the three-value state machine and the `Clear`/`Apply` phase dispatch, and this file gives why a tool destroys its definitions in the same frame it commits them (`ToolBaseSystem.cs:506-519/689-692`). `GetAllowApply()` — `custom-tools.md:234-238` gives the gate, and the error findings above give what fills `m_ErrorQuery` in the first place.
+- **`zoning-buildings-and-land-value`** is reached twice over. The zone tool's definition kind is `Zoning { Quad3 m_Position; ZoningFlags m_Flags; }` consumed by `GenerateZonesSystem` at `Modification1` (`src/Game/Game.Tools/Zoning.cs:6-11`, `GenerateZonesSystem.cs:569`, `SystemOrder.cs:97`), so every act of zoning and dezoning passes through a definition. And growth itself does: `ZoneSpawnSystem` emits a `CreationDefinition` with `CreationFlags.Permanent | CreationFlags.Construction` for the building it is about to spawn, plus plain `Permanent` definitions for its sub-areas and sub-nets (`src/Game/Game.Simulation/ZoneSpawnSystem.cs:623-628/740-746/822-828`), and `BuildingConstructionSystem` does the same when construction finishes (`src/Game/Game.Simulation/BuildingConstructionSystem.cs:372-378/439-445`). A mod that wants to change what grows on a lot has a second seam here that has nothing to do with any tool. The corpus's worked example is `CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs`, which intercepts the zone tool's definitions to zone its own parcels.
+- **`roads-and-traffic`** owns `NetCourse`, the richest definition kind, and both of its consumers: `GenerateNodesSystem` at `Modification1` and `GenerateEdgesSystem` at `Modification2` (`SystemOrder.cs:96/111`). `CoursePosFlags`' fifteen members are all network concepts — `ForceElevatedNode`, `ForceElevatedEdge`, `DisableMerge`, `LeftTransition`, `RightTransition`, `IsParallel` (`src/Game/Game.Tools/CoursePosFlags.cs:6-22`) — and `CourseSplitSystem`, the game's own definition rewriter, exists to split courses at intersections (`src/Game/Game.Tools/CourseSplitSystem.cs:4034`). The corpus's two deepest definition users are both here: `Anarchy`'s constant-slope rewriter and `CS2-NetworkTools`' shared `NetCourseEmitter`, and Traffic's whole lane-connection pipeline is a network mechanic expressed as a new definition kind.
+- **`prefabs-and-assets`** is on the other side of the same seam and already declares this bridge from its end (`prefabs-and-assets.md:428`). Two facts travel both ways: `CreationDefinition.m_Prefab` and `m_SubPrefab` are prefab entities, and `PlaceableObjectData` and `ObjectGeometryData` are what the definition producer reads off them — `ObjectToolBaseSystem.cs:1143-1150` reads `PlaceableObjectData.m_Flags` for `PlacementFlags.HasProbability` and copies `m_DefaultProbability` into the definition. The error prefabs of the last finding are prefabs too, authored as `NotificationIconPrefab` plus a `ToolError` component (`src/Game/Game.Prefabs/ToolError.cs:8-22`), which is why they can be found by `PrefabID` and edited at runtime.
+- **`environment-and-pollution`** has two definition kinds to itself, reached through the terraforming and water half of its territory rather than through pollution.
+  (The sweep first wrote this bridge as a `terrain-and-water` topic; no such reference exists in the approved structure, and `environment-and-pollution`'s boundary claims landscaping, surfaces and terrain. Corrected under ticket 13.) `BrushDefinition` carries the terrain tool's line, angle, size, strength, time and target (`src/Game/Game.Tools/BrushDefinition.cs:7-23`) and is consumed by `GenerateBrushesSystem` (`SystemOrder.cs:101`), emitted by `TerrainToolSystem.cs:72-76`. `WaterSourceDefinition` carries position, constant depth, radius, multiplier, pollution, height and source id (`src/Game/Game.Tools/WaterSourceDefinition.cs:6-21`), consumed by `GenerateWaterSourcesSystem` (`:103`), emitted by `WaterToolSystem.cs:194-199` with two shapes behind an `m_useLegacy` switch (`:84/117`). `ExtraDetailingTools/MOD/Systems/Tools/GrassToolSystem.cs:401-436` is the corpus's brush-definition producer.
+
+Two more have real evidence and are recorded as such rather than asserted as primary, because neither area was swept.
+
+- **`city-services-and-coverage`**, through `IconDefinition` and `GenerateNotificationsSystem` (`src/Game/Game.Tools/IconDefinition.cs:7-15`, `SystemOrder.cs:100`), which is how a notification icon is previewed alongside the thing that will carry it, and through the `NotificationIconPrefab` the error prefabs share with service notifications (`src/Game/Game.Prefabs/NotificationIconPrefab.cs:12-31`).
+- **`transportation-and-vehicles`**, through `WaypointDefinition` and `ColorDefinition` and the route pipeline: `GenerateWaypointsSystem` at `Modification1` and `GenerateRoutesSystem` at `Modification2` (`SystemOrder.cs:99/112`), both fed by `RouteToolSystem.cs:567-751`, with the route's colour arriving as a `ColorDefinition` on the same definition entity (`:572`).
+
+## Dead ends
+
+- **The wiki has nothing on this topic, checked properly.** A live fetch of `Creating a Tool` (https://cs2.paradoxwikis.com/Creating_a_Tool) succeeded without the bot challenge on 2026-08-02, and the page mentions none of `CreationDefinition`, `ObjectDefinition`, `NetCourse`, `OwnerDefinition`, `ToolOutputBarrier`, `Temp`, the `Generate*System` family, the `ApplyTool`/`ClearTool` phases or `ToolErrorData`; it stops at the tool lifecycle and the raycast tables. A full-text wiki search for `CreationDefinition` returns three pages, none of them about it — `Creating a Tool`, `Asset Pipeline: Surfaces` and `Assets: Import and Setup Aging Trees`, the last matching on the English word "definition". A search for `ToolErrorData definition Temp entity` returns "There were no results matching the query." `survey-wiki-inventory.md:112` characterises the tool page the same way from the 2026-07-31 snapshot. **This topic is undocumented outside the corpus**, which is most of why it earns a reference.
+- **`ToolReadyBarrier` still has zero corpus uses.** The game's own definition rewriter uses it (`CourseSplitSystem.cs:4010/4124/4138`) and it is the phase-correct barrier for a `PostTool` rewrite, but no mod in twenty repositories touches it. `ecs-in-this-game.md:335` recorded the zero; this sweep looked again for a definition-related use and found none.
+- **How many `ToolError` prefabs the game actually ships, and which ones carry `DisableInEditor` by default, cannot be read from `src/`.** The flags are authored data on prefab assets, not code; `ValidationSystem` allocates a slot for all 31 `ErrorType` values and simply leaves the unfilled ones null (`ValidationSystem.cs:1838`). Anarchy's four-member "do not re-enable in the editor" list (`EnableToolErrorsSystem.cs:29-34`) is the only evidence available for which prefabs are disabled out of the box, and it is a mod author's observation rather than a readable fact.
+- **The precise vanilla site that fails when a mod-created entity has no `PrefabRef` was not found.** Recorded in full inside the fake-prefab finding rather than only here, because a reference that teaches the technique needs to know the limit of the evidence. What is provable is the load-time remap requirement; what is not is the mod's own "vanilla validation" phrasing.
+- **`NodeController`'s definition emission calls a method that is absent from the checkout.** `NodeController/NodeController/Main/Tools/ToolModes/StraightenEndToolMode.cs:302-335` overrides `EmitPreviewEntities(EntityCommandBuffer)` and calls `Tool.EmitEdgePreview(ecb, ...)` twice, but neither `EmitEdgePreview` nor the base declaration of `EmitPreviewEntities` exists in any `.cs` file at commit `49d4e1d` (tag 1.5.1). Both appear only in the repository's own `.github/copilot.instructions.md:221`. So the mod's `CreationDefinition` + `NetCourse` preview path cannot be read here, and the file is not usable as an exemplar.
+- **`ExtraDetailingTools`' object-definition path is commented out.** `ExtraDetailingTools/MOD/Systems/GrassSystem.cs:92-102` and `:341-354` contain a disabled `SavingEntityCreationDefinition` job that would have emitted `CreationFlags.Permanent` definitions. Only its `BrushDefinition` path (`Systems/Tools/GrassToolSystem.cs:401-436`) and its `OwnerDefinition` use in the gizmo tool (`Systems/Tools/TransformGizmoTool.cs:143-191/338`) are live.
+- **`ColorDefinition` has no corpus user.** Grepped across all 20 repositories: zero hits. Its only producer is `RouteToolSystem.cs:572` and its only consumer `GenerateRoutesSystem.cs:60`, so route colouring through a definition is a vanilla-only path with no worked mod example.
+- **No mod places a definition system at `PostTool`, at `Modification2`, or later than `Modification3`.** The full corpus census of systems whose query names `CreationDefinition`: `UpdateBefore<T>(Modification1)` — `Anarchy/Anarchy/AnarchyMod.cs:146` and `:147`, `BetterBulldozer/BetterBulldozer/BetterBulldozerMod.cs:122`, `Tree_Controller/Tree_Controller/TreeControllerMod.cs:119`; `UpdateBefore<T, GenerateZonesSystem>(Modification1)` — `CS2-Platter/Platter/PlatterMod.cs:218`; `UpdateAt<T>(Modification3)` — `Traffic/Code/Mod.cs:85` and `:86`. Nothing else, and nothing in the `UpdateAt` band of `Modification1`. Traffic's pair is the only worked example of a definition system that needs an earlier modification phase to have run first, and the `PostTool` window the game itself uses has no mod example at all.
+- **Two of the nine kinds have no mod-side producer at all: `Zoning` and `WaterSourceDefinition`.** A grep for each type name across all 20 repositories: `WaterSourceDefinition` returns zero hits, and every `Zoning` hit is Platter reading one off a definition the vanilla zone tool emitted (`CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs:38/51/100`) or an unrelated English use of the word. The other seven all have at least one worked example, listed in the hand-building finding above. So a mod that wants to zone by definition, or to place a water source by definition, has the decompile and no corpus precedent.

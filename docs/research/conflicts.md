@@ -44,6 +44,56 @@ A later decomposition that renames or splits one of them leaves a stale name her
 
 ## Ruled
 
+### One mod in twenty stamps an empty prefab on its own entities, and the reason it gives cannot be verified
+
+**Sources.** `Traffic/Code/Helpers/FakePrefab.cs:9-10` is a `PrefabBase` subclass whose own comment states its purpose: "used purely for vanilla validation workaround with custom entites interacting with vanilla ones".
+`survey-mods-techniques.md:473` promotes it to the corpus's second most instructive hack, describing it as "an empty `PrefabBase` whose only job is to satisfy vanilla validation", created in `IPreDeserialize.PreDeserialize` and stamped onto mod-created entities as their `PrefabRef`.
+It is unique in the corpus: a grep for `: PrefabBase` returns twelve subclasses and the other eleven are real prefabs with real content.
+
+**Established.** One requirement is provable and narrower than the mod's phrasing. `PrimaryPrefabReferencesSystem.m_PrefabRefQuery` matches every entity carrying `PrefabRef` and not `Temp` or `Deleted` (`src/Game/Game.Serialization/PrimaryPrefabReferencesSystem.cs:392`), and `FixPrefabRefJob` remaps each non-null reference through `PrefabReferences.Check(ref Entity)`, which indexes `m_PrefabData[prefab]` with no guard (`:37-49`, `src/Game/Game.Serialization/PrefabReferences.cs:61-83`).
+So an entity that carries a `PrefabRef` must point at a registered prefab entity by load time, which is exactly why the mod registers through `PrefabSystem.AddPrefab` inside `PreDeserialize` (`Traffic/Code/Systems/ModDefaultsSystem.cs:34-39`, registered at `Traffic/Code/Mod.cs:101`).
+What could not be proved is the converse — that an entity with **no** `PrefabRef` breaks anything. The nearest unconditional site is `ValidationSystem`'s `ValidateEntitiesJob`, which for a chunk carrying `Game.Objects.Object` indexes the `PrefabRef` chunk array positionally against the entity count (`src/Game/Game.Tools/ValidationSystem.cs:802/809`), and Traffic's connection entities carry neither `Game.Objects.Object` nor `Game.Tools.Temp`, so that is not the site its comment names. No other unconditional site was found in a sweep of `Game.Tools/`, `Game.Serialization/` and `Game.Prefabs/`.
+The mod itself treats the reference as mandatory in a second place, re-adding one on load when it is missing and logging that it was (`Traffic/Code/Systems/Serialization/TrafficDataMigrationSystem.ValidateLoadedDataJob.cs:420-429`), which is evidence of the author's belief rather than of the mechanism.
+
+**Needs a ruling on.** What the `placement-definitions` reference teaches, given that the technique is real and the reason for it is one mod author's unverified claim.
+Three options and each costs something. Teach the broad rule the mod and the survey state — give every entity your mod creates a `PrefabRef` pointing at an empty registered prefab: matches the only worked example, and asks every reader to carry a prefab they may not need, on an authority the pipeline could not confirm. Teach only the narrow provable rule — if your entity carries a `PrefabRef`, that reference must resolve to a registered prefab by load time: correct and complete as far as the evidence goes, and it silently drops the case the technique was invented for, so a reader hitting that case gets no help. Teach the narrow rule and name the broad practice beside it as what one mod does and why it believes it has to: honest, and it is the only form that costs shipped prose a hedge, which every other reference in this plugin avoids.
+What turns on it is a mod's entity archetype, which is the hardest thing to change once a save format depends on it — a reader who adds the prefab late has to migrate, and a reader who adds it needlessly has carried a dead component into every save.
+The ruling goes into the research file for `placement-definitions`, and touches `prefabs-and-assets` only if that reference also states a rule about when a mod-created entity needs a `PrefabRef`.
+
+**Ruling (2026-08-02, ticket 13).** The third option, in `placement-definitions`: the narrow provable rule ships as a rule, and the broad practice is named beside it as a practice.
+An entity carrying a `PrefabRef` must point at a prefab entity registered through `PrefabSystem.AddPrefab` by the time the load pass runs, because the remap indexes `PrefabData` unguarded and the pre-deserialize hook is the last place to register it — that half is settled and states flat.
+The empty-prefab technique itself ships as what one mod does and why it believes it has to, carrying the limit of the evidence in the sentence: the vanilla site that faults on an entity with no `PrefabRef` at all was searched for across the tools, serialization and prefab code and not found.
+Neither half may ship alone, which is what makes this the third option rather than a softened first or second: the narrow rule by itself drops the case the technique was invented for, and the practice by itself would put one author's belief into this plugin's own voice.
+
+The hedge the question objected to is accepted rather than argued away, and it is the only one in the shipped tree.
+What the reader is deciding is an entity archetype, which the entry itself identifies as the hardest thing to change once a save format depends on it — a late addition is a migration and a needless one is a dead component in every save.
+A reader making that call is owed the difference between what was proven and what was believed, and a reference that stated the broad rule flat would be spending its own authority on a mod comment.
+
+### The game rewrites tool definitions in a phase no mod uses, and the corpus's alternative needs a workaround the game's does not
+
+**Sources.** The game's own definition rewriter, `CourseSplitSystem`, runs at `SystemUpdatePhase.PostTool` (`src/Game/Game.Common/SystemOrder.cs:723`) and writes through `ToolReadyBarrier`, which is registered `UpdateAfter` in that same phase (`:697`) and therefore plays back before the modification phases begin.
+Every definition-touching mod system in the corpus instead sits in `Modification1` or `Modification3`: `Anarchy/Anarchy/AnarchyMod.cs:146` and `:147`, `BetterBulldozer/BetterBulldozer/BetterBulldozerMod.cs:122`, `Tree_Controller/Tree_Controller/TreeControllerMod.cs:119`, `CS2-Platter/Platter/PlatterMod.cs:218`, `Traffic/Code/Mod.cs:85` and `:86`.
+`ecs-in-this-game.md:335` records `ToolReadyBarrier` at zero corpus uses across all 20 repositories, and this pass confirmed it.
+
+**Established.** The two windows are not equivalent, and the difference is a real cost rather than a preference.
+A `Modification1` rewriter cannot use that phase's barrier: `ModificationBarrier1` plays back at the end of the phase (`SystemOrder.cs:86`), by which time `GenerateObjectsSystem` and its siblings have already read the definitions. So all four corpus rewriters write synchronously instead — `EntityManager.SetComponentData` directly (`Tree_Controller/Tree_Controller/Systems/TreeObjectDefinitionSystem.cs:117/150`), or an `Allocator.Temp` command buffer played back inside `OnUpdate` (`Anarchy/Anarchy/Systems/ObjectElevation/ElevateObjectDefinitionSystem.cs:77/120-121`, `CS2-Platter/Platter/Systems/Tool/P_GenerateZonesSystem.cs:46/63-65`).
+A `PostTool` rewriter has no such constraint, because `ToolReadyBarrier` plays back before any consumer runs. That is why the vanilla system can schedule a parallel job and hand the barrier a producer handle (`src/Game/Game.Tools/CourseSplitSystem.cs:4124/4138`) while every corpus rewriter completes on the main thread.
+What is not established is whether `PostTool` works for a mod at all. Nothing bars it — `ToolReadyBarrier` is a public `SafeCommandBufferSystem` like the others — but with zero corpus uses there is no evidence that a mod system registered there sees the definitions, and this pipeline has no way to run the game.
+
+**Needs a ruling on.** Which window the reference teaches as the default for rewriting a definition.
+Teaching `Modification1` ships what four mods do and what the pipeline can vouch for, and it ships the synchronous-playback rule as a hard requirement, which is the single fact most likely to save a reader a day. Teaching `PostTool` ships the architecture the game actually uses, lets the rewrite be a scheduled job instead of a main-thread loop, and rests on nothing anyone has run. Teaching both makes the reference the first source to state that the vanilla window exists, which is this plugin's stated value, at the price of pointing readers at an untested path.
+The evidence standard is the substance of the question rather than a side issue: `mod-lifecycle-and-ordering`'s ordering tree was ruled shippable while uncorroborated (this file, ticket 07), and the same argument applies here — but that derivation was a sweep of readable call sites, whereas this one would be a claim about runtime behaviour nobody has observed.
+The ruling goes into the research file for `placement-definitions`, and touches `custom-tools` only if that reference also names a phase for a tool's helper systems.
+
+**Ruling (2026-08-02, ticket 13).** The third option, in `placement-definitions`, with the first as the default: both windows ship and `Modification1` is what the reference teaches.
+The front band of `Modification1` is where a definition rewriter goes, and the synchronous-playback rule ships as a hard requirement rather than as advice — `ModificationBarrier1` plays back at the end of the phase, after the consumers have read, so a rewrite queued into it lands too late, and the write goes through `EntityManager` or through an `Allocator.Temp` buffer the system plays back itself.
+`PostTool` with `ToolReadyBarrier` is named beside it as the window the game's own rewriter uses, with the property that makes it worth knowing — the barrier plays back before the modification phases, so the rewrite can be a scheduled job rather than a main-thread loop — and with its status in the same breath: no mod uses it, this pipeline cannot run the game, so what ships is the architecture rather than a tested path.
+
+The evidence standard the entry raised is what separates this from ticket 07's ruling rather than what aligns it.
+That derivation was a sweep of readable call sites and could carry a shipped default; this one would be a claim about runtime behaviour nobody has observed, which is enough to name a window and not enough to send readers to it first.
+So the `PostTool` claim takes the volatility marker, and the next version's sweep re-checks both whether the window is still open and whether anyone has since used it.
+The `Modification1` default and the barrier timing behind it are architecture and take no marker.
+
 ### Six mods insert themselves at the front of the tool list, and the reference cannot teach that to all of them
 
 **Sources.** `ToolSystem.ActivatePrefabTool` walks `ToolSystem.tools` in order and stops at the first tool whose `TrySetPrefab` returns `true` (`src/Game/Game.Tools/ToolSystem.cs:263-278`), so list position is prefab-claim priority and index 0 has first refusal on everything the toolbar hands out.
