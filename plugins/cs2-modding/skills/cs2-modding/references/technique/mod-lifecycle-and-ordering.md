@@ -247,7 +247,7 @@ Where a phase's purpose is stated, it is inferred from what lives there: the enu
 
 - **`MainLoop`** — 20. The frame's spine, and the only phase whose members drive other phases. A mod registering here lands after the rendering and save systems and before the cleanup preparation, so by the time it fires everything in the frame except `Cleanup` has run.
 - **`Raycast`** — 1, the tool raycast system. First of the middle band in `MainLoop`, so nothing else has run this frame. Where a mod's own raycast system goes; see `custom-tools`.
-- **`PrefabUpdate`** — 23. Texture streaming, geometry asset loading, prefab and object initialisation, mesh, UI and zone initialisation. Runs whenever the prefab system has pending prefab updates. Where prefab-shaping systems go.
+- **`PrefabUpdate`** — 23. Texture streaming, geometry asset loading, prefab and object initialisation, mesh, UI and zone initialisation. Driven every `MainLoop` frame, unconditionally — the gating is per system, each occupant carrying its own query requirement, so a mod system registered here gets an `OnUpdate` every frame and must do the same. Where prefab-shaping systems go.
 - **`PreTool`** — 1.
 - **`ToolUpdate`** — 15: the eleven vanilla tools plus upgrade-deletion, bracketed by the tool output barrier. The tool system enables the active tool immediately before driving this phase and disables it when the tool stops being active, which is why a tool system belongs here and not merely by convention: elsewhere it would still be enable-gated by the tool system but would run at the wrong moment.
 - **`ClearTool`** / **`ApplyTool`** — 1 / 9. Driven from the tail of `ToolUpdate` and mutually exclusive on the tool system's apply mode. `ApplyTool` holds the nine vanilla apply systems.
