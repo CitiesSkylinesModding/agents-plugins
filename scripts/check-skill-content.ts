@@ -7,12 +7,12 @@ import path from 'node:path';
 
 // Content check for the cs2-modding plugin's shipped prose, which is a deliverable rather than
 // documentation of one and has no other automated coverage: no runtime, no server, no tests.
-// The four rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md,
+// The five rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md,
 // which is why this check names that plugin instead of discovering every plugin the way
 // check-plugin-sync.ts does. Exits nonzero (via a failed assertion) on the first violation.
 //
 // The matching logic here is itself untested -- this repository has no TypeScript test suite and
-// this check does not introduce the first one. Each of the four rules was instead verified once by
+// this check does not introduce the first one. Each of the five rules was instead verified once by
 // hand, by planting a violation in the skills tree, watching the assertion fire with the offending
 // file named, and removing the plant. Re-do that when you change a rule.
 
@@ -45,6 +45,7 @@ assert.ok(shippedFiles.length > 0, `No shipped files found under ${skillsRoot}.`
 checkNoModNameLeaks(shippedFiles);
 checkVersionBaselines(shippedFiles);
 checkVolatilityMarkers(shippedFiles);
+checkEvidenceMarkers(shippedFiles);
 checkPointersResolve(shippedFiles);
 
 // The mods corpus is input, never output: knowledge prose states a technique on its own authority
@@ -195,6 +196,33 @@ function checkVolatilityMarkers(files: readonly string[]): void {
         isToken,
         `${file}:${lineOf(content, match.index)} spells the volatility marker "${match[0]}"; the ` +
           `only spelling is "${token}:", so that grepping it yields every claim to re-check.`
+      );
+    }
+  }
+}
+
+// The sibling of the volatility rule, for the other half of the maintenance work. A volatile claim
+// was established and rots; an unverified one was never established, and only a maintainer with a
+// running game can close it. Six references invented six phrasings for that state before the token
+// existed, so none of them was greppable and none read as the same kind of claim -- hence the same
+// strict reading: every occurrence of the word in shipped prose must be the token.
+function checkEvidenceMarkers(files: readonly string[]): void {
+  const token = 'UNVERIFIED';
+
+  for (const file of files) {
+    const content = readShippedFile(file);
+
+    for (const match of content.matchAll(/unverified/giu)) {
+      if (match.index == null) {
+        continue;
+      }
+
+      const isToken = match[0] == token && content[match.index + token.length] == ':';
+
+      assert.ok(
+        isToken,
+        `${file}:${lineOf(content, match.index)} spells the evidence marker "${match[0]}"; the ` +
+          `only spelling is "${token}:", so that grepping it yields every claim to confirm.`
       );
     }
   }

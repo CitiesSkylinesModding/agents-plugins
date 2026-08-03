@@ -19,11 +19,11 @@ The game has eleven concrete tools — nine directly under `ToolBaseSystem`, plu
 Everything else on the class is bookkeeping for that call: four cached system references — the tool output barrier, the object search system, the water system and the terrain system — assigned in its `OnCreate`.
 
 So the rule is one line: **derive from `ObjectToolBaseSystem` when the tool places objects and wants vanilla-quality previews for free, and from `ToolBaseSystem` for everything else**, including a tool that emits its own definitions by hand.
-The heavier base is the minority choice in practice — two of the thirty-odd tools across the mod corpus surveyed for this plugin — because most tools select, edit or paint rather than place.
+The heavier base is the minority choice, because most tools select, edit or paint rather than place.
 
-Two shapes are worth copying from that corpus.
+Two shapes are worth adopting.
 **Every tool is declared `partial`**, which the source generators require anyway (`ecs-in-this-game`) and which lets a large tool split across files by concern rather than by nothing.
-**A family of tools that all raycast and mark eligibility the same way gets its own abstract layer** between the tools and `ToolBaseSystem`; that is the answer to "I have six tools and they differ only in what they do with the hit", and one surveyed mod carries eight tools under two such layers.
+**A family of tools that all raycast and mark eligibility the same way gets its own abstract layer** between the tools and `ToolBaseSystem`; that is the answer to "I have six tools and they differ only in what they do with the hit", and it scales to eight tools under two such layers without strain.
 
 ## Registration is automatic, and it happens in `OnCreate`
 
@@ -37,65 +37,6 @@ And **a tool whose `OnCreate` override forgets `base.OnCreate()` is in no list a
 
 `OnCreate` also sets `Enabled = false`, so a tool is inert from birth and the tool system alone turns it on.
 Setting it false again yourself is harmless and redundant.
-
-## Position in the tool list decides who claims a prefab
-
-`ToolSystem.ActivatePrefabTool(PrefabBase)` walks `tools` in order, stops at the first tool whose `TrySetPrefab` returns `true` and makes it active; when nobody claims the prefab it falls back to the default tool and returns `false`.
-That single loop is the entire meaning of the ordering: **index 0 gets first refusal on every prefab the toolbar hands out.**
-
-The vanilla list is the game's own registration order:
-
-| Index | Tool                  |
-| ----- | --------------------- |
-| 0     | `AreaToolSystem`      |
-| 1     | `BulldozeToolSystem`  |
-| 2     | `DefaultToolSystem`   |
-| 3     | `NetToolSystem`       |
-| 4     | `ObjectToolSystem`    |
-| 5     | `RouteToolSystem`     |
-| 6     | `SelectionToolSystem` |
-| 7     | `UpgradeToolSystem`   |
-| 8     | `ZoneToolSystem`      |
-| 9     | `TerrainToolSystem`   |
-| 10    | `WaterToolSystem`     |
-
-A mod tool appended from `OnLoad` lands at index 11 and never sees a prefab first.
-
-(VOLATILE: the eleven tool system names and their order, and `ToolSystem.tools` being a mutable `List<ToolBaseSystem>` rather than a read-only view — the vanilla system-order class's tool registrations, and the tool system's list property.)
-
-**Take the slot of the one tool you must precede, rather than the front of the list.**
-Read the position back and reinsert at it, from `OnCreate`, immediately after the base has appended you:
-
-```csharp
-protected override void OnCreate()
-{
-    base.OnCreate();
-
-    ObjectToolSystem objectTool = World.GetOrCreateSystemManaged<ObjectToolSystem>();
-
-    m_ToolSystem.tools.Remove(this);
-    m_ToolSystem.tools.Insert(m_ToolSystem.tools.IndexOf(objectTool), this);
-}
-```
-
-A position stated relative to another tool needs no race to win, and that is why `OnCreate` is the right hook: another mod inserting itself at index 0 later does not stop you preceding the object tool.
-
-**Index 0 is the answer to one question, and it ships bound to its condition.**
-Reach for the front when your tool must claim a prefab kind a vanilla tool already claims — and then return `true` from `TrySetPrefab` only while your tool is already active:
-
-```csharp
-public override bool TrySetPrefab(PrefabBase prefab)
-{
-    return m_ToolSystem.activeTool == this && prefab is ObjectGeometryPrefab;
-}
-```
-
-That gate is what makes index 0 cost the tools behind it nothing.
-The walk reaches your tool first, it declines every prefab it was not already handling, and the vanilla tool behind it claims as usual; only once the player has put your tool in charge does it start intercepting.
-A tool at index 0 that returns `true` for prefabs it does not own hijacks the toolbar for every other tool in the game.
-
-**`GetPrefab()` and `TrySetPrefab(PrefabBase)` are abstract**, alongside `toolID`, so every tool answers both even when the answers are "nothing" and "no".
-A tool reached only from a mod's own UI or a hotkey returns `null` and `false` unconditionally, and then costs the toolbar nothing wherever it sits.
 
 ## The lifecycle contract, method by method
 
@@ -124,7 +65,7 @@ The game-lifecycle hooks a tool shares with every other system — loading-compl
 **One block of the base class is unreachable from a mod, and the reason is an access modifier.**
 The five action-state fields, the tool-actions enumerable, `actionsEnabled`, and the three virtuals `SetActions()`, `ResetActions()` and `UpdateActions()` are all `private protected` — which C# resolves as protected _and_ internal, meaning derived classes inside the game assembly only.
 The consequence is concrete: the vanilla pattern of overriding `UpdateActions()` to recompute `shouldBeEnabled` every frame cannot be copied.
-Set `shouldBeEnabled` from `OnStartRunning`, `OnStopRunning` or your own `OnUpdate` instead, which is what the corpus does.
+Set `shouldBeEnabled` from `OnStartRunning`, `OnStopRunning` or your own `OnUpdate` instead.
 The deferral helper every vanilla `UpdateActions` body wraps itself in is `internal static` as well, so the batching it provides is unavailable too.
 What _is_ reachable: `applyAction`, `secondaryApplyAction`, `cancelAction` and their three `*Override` setters are plain `protected`.
 
@@ -180,8 +121,22 @@ The mode icon path the UI synthesises is `"Media/Tools/" + toolID + "/" + modeNa
 
 (VOLATILE: the hard-coded tool-id switch and the mode type-test — the tool UI system.)
 
+## Position in the tool list decides who claims a prefab
+
+`ToolSystem.ActivatePrefabTool(PrefabBase)` walks `tools` in order, stops at the first tool whose `TrySetPrefab` returns `true` and makes it active; when nobody claims the prefab it falls back to the default tool and returns `false`.
+That single loop is the entire meaning of the ordering: **index 0 gets first refusal on every prefab the toolbar hands out.**
+A mod tool appended from `OnLoad` lands at index 11 and never sees a prefab first.
+
+(VOLATILE: the number of vanilla tools, which is both the count the base-class section above splits and the index a mod tool's own append lands at — the vanilla tool registrations in the game's system-order class.)
+
+**`GetPrefab()` and `TrySetPrefab(PrefabBase)` are abstract**, alongside `toolID`, so every tool answers both even when the answers are "nothing" and "no".
+A tool reached only from a mod's own UI or a hotkey returns `null` and `false` unconditionally, and then costs the toolbar nothing wherever it sits.
+
 **Handing a prefab _to_ the list is the useful direction, and `ActivatePrefabTool` is public.**
 Pass it the tool system's current `activePrefab` again to force the walk to re-run after a setting changed what your `TrySetPrefab` would answer; pass a prefab chosen in your own UI to let the list decide who takes it; pass `null` to fall through to the default tool deliberately.
+
+Only a tool that must claim a prefab kind a vanilla tool already claims has to contend for a position at all.
+That is its own procedure — the vanilla order, the reinsertion recipe and the gate that makes the front of the list safe: [contending for a prefab from the toolbar](toolbar-position.md).
 
 ## The raycast: what the vanilla masks can see
 
@@ -290,14 +245,16 @@ What a tool needs from it is the flag set.
 
 `Hidden` is a zero-size tag put on the **original** entity so the preview can stand in for it: the generation systems add it, the apply family removes it on commit, and the clear system removes it on discard.
 `Error` is another zero-size tag, added in `ModificationEnd` by `ValidationSystem.Components` — a separate system spliced after `ValidationSystem`, which produces the error records but tags nothing itself — and it is the only thing `ToolBaseSystem` keeps a query for.
-The error data itself carries the temp entity, the permanent entity, a position, an `ErrorType` — thirty causes plus `None` and `Count` — and an `ErrorSeverity`: `None`, `Override`, `Warning`, `Error`, `Cancel`, `CancelError`.
+Behind that tag is an error record naming a cause and a severity, and the severity is what decides whether the validation ends in the blocking tag at all; `placement-definitions` owns the record, its causes, the severity levels and the error prefabs that decide which of them are raised, which is also where the suppression technique lives.
 
-(VOLATILE: the `TempFlags`, `ErrorType` and `ErrorSeverity` member sets — the tools namespace.)
+(VOLATILE: the `TempFlags` member set — the tools namespace.)
 
 **`GetAllowApply()` is the gate, and it has a second clause tools forget.**
 The base returns false when errors exist and the tool system's ignore-errors flag is off, and _also_ returns false when the original-deleted system reports a result for the current window.
 That system walks every `Temp` and sets a flag when the original carries `Deleted` or no longer exists at all, keeping a two-frame ring so the first index covers last frame and this one; it runs at `PreTool`.
-A tool whose previews point at originals that legitimately vanish therefore refuses to apply, and the observed workaround is an override keeping only the error clause — with the caveat that whether that is a game bug or a consequence of pointing `Temp` at originals the check considers gone is not settled by the source.
+A tool whose previews point at originals that legitimately vanish therefore refuses to apply.
+**Override `GetAllowApply()` and keep only the error clause** when your tool does that deliberately; the second clause is the one you are dropping, and you drop it for the whole tool.
+(UNVERIFIED: whether that refusal is a game bug or the intended consequence of pointing `Temp` at originals the check considers gone — watching the check fire in a running game against a tool that does it deliberately would settle it.)
 
 **The canonical loop is the vanilla bulldoze tool**, and it is worth reading before writing your own.
 It is a switch over a private state enum — default, applying, waiting, confirmed, cancelled — with a pre-switch guard that resets to default, sets `ApplyMode.Clear` and destroys the definitions whenever the state is "applying" and the apply action has stopped being enabled.
@@ -308,8 +265,8 @@ Its update helper is the readable statement of the three modes:
 - subsequent frames → `None`, unless the control point actually moved, and `Clear` again when it did.
 
 Its apply path checks `GetAllowApply()`, plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing sweeps away the definitions that produced the previews being committed, and creates none to replace them.**
-`DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` is a protected helper on the base class that destroys every entity in the query through the barrier's parallel writer, and `GetDefinitionQuery()` is the query it expects: `{CreationDefinition}` excluding `Updated`.
-That exclusion means the sweep always runs one frame behind: it matches the previous frame's definitions, never the ones just emitted, so exactly one generation is alive at a time — `placement-definitions` owns the lifetime.
+`DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` and the `GetDefinitionQuery()` it expects are both protected on the base class, and the tool's whole share of the mechanism is where it calls them: the pre-switch guard, the lost-raycast branch and the apply path above, each pairing the call with the `ApplyMode` it sets.
+`placement-definitions` owns what that query matches, why the sweep runs a frame behind, and who collects a definition a tool leaves behind.
 
 What goes _into_ a definition, and what the generation systems make of it, is `placement-definitions`.
 
@@ -334,8 +291,6 @@ That is the shape a tool almost always wants; the base returns `None` and `None`
 
 `kSnapAllIgnoredMask` is a public constant equal to `AutoParent | PrefabType | ContourLines`: the three flags an "all snapping" toggle is meant to leave alone.
 The tool UI system applies it to build `allSnapMask` — the tool's user-selectable set minus those three — and the panel's "All" button toggles exactly that set, leaving contour lines a control of their own.
-The constant's name appears nowhere but its declaration, because the compiler inlines a `const` at its call site; read that absence as a decompilation artifact rather than as a missing consumer.
-
 (VOLATILE: the `Snap` member set and the contents of `kSnapAllIgnoredMask` — the snap enum and the base tool class.)
 
 Four UI bindings read all of this: two that call `GetAvailableSnapMask`, one that reads the selected snap, and a trigger that writes it back.
@@ -391,7 +346,7 @@ The widget types available, one file each in the tooltip namespace: `StringToolt
 
 (VOLATILE: the widget type names above — the tooltip namespace, one file each.)
 
-The shape, vanilla and corpus alike: construct the widgets once in `OnCreate` with a stable path and a localised-string id, return early from `OnUpdate` unless your tool is the active tool, then set the values and call `AddMouseTooltip`.
+The shape: construct the widgets once in `OnCreate` with a stable path and a localised-string id, return early from `OnUpdate` unless your tool is the active tool, then set the values and call `AddMouseTooltip`.
 Colour is per widget, so a warning and a success line can sit in the same group.
 
 ## The three actions a tool gets free, and why the vanilla ones cannot be taken
@@ -418,8 +373,8 @@ The practical upshot is the whole point: **a mod tool's `applyAction` _is_ the u
 `InputManager.FindAction(mapName, actionName)` is public and the tool map's name is a public constant, so looking up the vanilla Apply action compiles.
 Enabling it does not: setting `shouldBeEnabled` on a built-in action throws, and the public activator constructor throws on the same condition.
 The only way past is an internal constructor overload that ignores the check — which is precisely what the wrapper the base class hands you is built on.
-Which specific actions carry the built-in flag is asset data rather than code, but the answer is not partial: the flag defaults to true and the one site in the game that clears it is a mod's own key-binding registration, so every vanilla action carries it.
-The check is not a filter some vanilla action might slip past — it rejects all of them, and **the inherited property is the sanctioned way in.**
+Which specific actions carry the built-in flag is asset data rather than code: the flag defaults to true, and the only thing that can clear it on a vanilla action is the input asset itself, which no grep of the source reads.
+The one site in the game that clears it is a mod's own key-binding registration, so treat a vanilla action as built-in and **the inherited property as the sanctioned way in.**
 
 (VOLATILE: the five action alias strings above and the `internal` accessibility of the tool action collection — the base tool class's create body, and the input manager.)
 
@@ -427,7 +382,7 @@ The check is not a filter some vanilla action might slip past — it rejects all
 To make one of them fire on whatever button the user rebound a vanilla action to, mimic it: declaratively with the binding-mimic attribute naming the map and the action, or imperatively by looking up the vanilla action, copying its binding path and modifiers onto your own binding, and setting the binding back.
 Mimicking is for a mod's _additional_ actions — a second modifier, a mode toggle, something that must appear on the settings screen — not for apply and cancel, which the base class already gave you.
 
-## Small things that are easy to miss
+## Input barriers, the commit sound, and two prefab-side gates
 
 - The tool system installs a barrier on the whole tool map, blocked while the game is loading or not in game, and a per-action mouse barrier that blocks while the pointer is over UI — so a tool's actions go quiet over the UI without the tool doing anything.
 - `ToggleToolOptions(bool)` exists for the tool-options panel to suppress a tool's own actions while a widget has focus, and the base's actions-enabled state additionally goes false whenever an input field has focus.

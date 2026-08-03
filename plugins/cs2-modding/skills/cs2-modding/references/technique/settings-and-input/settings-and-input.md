@@ -81,29 +81,18 @@ Overriding `Apply()` to push new values into a live system before calling `base.
 Subscribing to `onSettingsApplied` is the form that survives a subscriber who does not own the settings object, which is the usual case for a system reacting to a setting.
 `ApplyAndSave()` is `async void` at the base-class level, so no caller can await it.
 
-## The attribute catalog, grouped by what each attribute does
+## The attributes, grouped by what each one does
 
 The settings namespace holds 38 `SettingsUI*` attributes.
 Grouping them by the job they do is what makes the set learnable: several attributes that look adjacent do entirely different things, and the grouping the game's own categories imply cuts across the code's behaviour.
 
-**Widget selectors** — the attribute decides which control the property becomes:
-
-| Attribute                   | Parameters                                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `SettingsUIButton`          | none                                                                                                                            |
-| `SettingsUISlider`          | fields `min`, `max = 100f`, `step = 1f`, `unit = "integer"`, `scalarMultiplier = 1f`, `scaleDragVolume`, `updateOnDragEnd`      |
-| `SettingsUIDropdown`        | `(Type itemsGetterType, string itemsGetterMethod)`                                                                              |
-| `SettingsUITextInput`       | none                                                                                                                            |
-| `SettingsUIDirectoryPicker` | none                                                                                                                            |
-| `SettingsUIMultilineText`   | `(string icon = null)`                                                                                                          |
-| `SettingsUIConfirmation`    | `(string overrideConfirmMessageId = null, string overrideConfirmMessageValue = null)` — upgrades a button to a confirmed button |
+**Widget selectors** — the attribute decides which control the property becomes: `SettingsUIButton`, `SettingsUISlider`, `SettingsUIDropdown`, `SettingsUITextInput`, `SettingsUIDirectoryPicker`, `SettingsUIMultilineText`, and `SettingsUIConfirmation`, which upgrades a button to a confirmed button.
 
 **Formatting of the chosen widget:** `SettingsUICustomFormat`, with fields `fractionDigits`, `separateThousands = true`, `maxValueWithFraction = 100f` and `signed`.
 Setting it replaces a slider's `unit` with the literal `"custom"` and hands the numeric formatting to the frontend.
 **Only a float slider reads all four.** The int-slider builder copies `separateThousands` and `signed` and drops the other two, and the frontend's own int-slider type declares only those two — so `fractionDigits` and `maxValueWithFraction` on an `int` property are inert.
 
-**Layout and ordering:** `SettingsUISection`, `SettingsUITabOrder`, `SettingsUIGroupOrder`, `SettingsUIShowGroupName`, `SettingsUIButtonGroup(string name)`, `SettingsUIPath(string overridePath)`.
-`SettingsUITabOrder` and `SettingsUIGroupOrder` each take either `params string[]` or a `(Type checkType, string checkMethod)` pair; `SettingsUIShowGroupName` takes either nothing — meaning every group — or `params string[]`.
+**Layout and ordering:** `SettingsUISection`, `SettingsUITabOrder`, `SettingsUIGroupOrder`, `SettingsUIShowGroupName`, `SettingsUIButtonGroup`, `SettingsUIPath`.
 
 **`SettingsUISection`'s three overloads are the one place in the catalog that misleads.**
 `(tab, simpleGroup, advancedGroup)` is the full form and `(tab, group)` sets both groups, but the **single-argument overload names a group, not a tab**: it forwards to `(null, group, group)` and the constructor turns a null tab into the literal `"General"`.
@@ -115,23 +104,23 @@ Evaluated once at page build, with the property simply skipped: `SettingsUIHidde
 Evaluated every frame the page is open, through a delegate the widget holds: `SettingsUIHideByCondition(Type checkType, string checkMethod, bool invert = false)` and `SettingsUIDisableByCondition` with the identical shape.
 Evaluated at page build but affecting placement rather than presence: `SettingsUIAdvanced`, which moves the option behind the screen's advanced toggle, and `SettingsUISearchHidden`, which keeps it out of the search index.
 
-**Text:** `SettingsUIDisplayName` and `SettingsUIDescription`, each with two constructors — `(string overrideId = null, string overrideValue = null)` and `(Type getterType, string getterMethod)`.
+**Text:** `SettingsUIDisplayName` and `SettingsUIDescription`.
 
-**Reaction:** `SettingsUISetter(Type setterType, string setterMethod)`, and `SettingsUIValueVersion(Type versionGetterType, string versionGetterMethod)`, which nothing sends to the frontend: it replaces the widget's own value-equality check with a version counter, and a dropdown carrying none reads its item list exactly once.
+**Reaction:** `SettingsUISetter`, and `SettingsUIValueVersion`, which nothing sends to the frontend: it replaces the widget's own value-equality check with a version counter, and a dropdown carrying none reads its item list exactly once.
 
-**Warnings:** `SettingsUIWarning(Type checkType, string checkMethod)` on a property, `SettingsUITabWarning(string tab, Type checkType, string checkMethod)`, and `SettingsUIPageWarning(Type checkType, string checkMethod)`.
+**Warnings:** `SettingsUIWarning` on a property, `SettingsUITabWarning`, and `SettingsUIPageWarning`.
 
 **Persistence:** `SettingsUIForceSave`, treated under persistence below.
 
-**Input:** the three class-level action attributes and the three property-level binding attributes, plus `SettingsUIBindingMimic(string map, string action)`, all treated in full below.
+**Input:** the three class-level action attributes and the three property-level binding attributes, all treated in full below, plus `SettingsUIBindingMimic`, treated in [mimicking a vanilla binding, and building input by hand](mimicking-and-hand-built-input.md).
 
 **Class-level fallback is not uniform, and that is the single most confusing thing in the set.**
 `SettingsUISection`, `SettingsUIAdvanced`, `SettingsUISearchHidden`, `SettingsUIDisableByCondition` and `SettingsUIHideByCondition` all check the property first and then fall back to the declaring type.
 `SettingsUIHidden`, `SettingsUIDeveloper` and `SettingsUIPlatform` do **not**: they read the property alone, so `[SettingsUIHidden]` on the settings class has no effect at all even though its `AttributeUsage` permits writing it there.
 
-Some of these have no worked example behind them in the mod corpus surveyed for this plugin — the three warning attributes, the button group, the path override, the platform filter, the search-hidden and developer flags and the force-save marker — so everything stated about them comes from the game's own code and nothing else.
+(VOLATILE: the attribute set and its member names — the settings namespace, one file per attribute.)
 
-(VOLATILE: the attribute set, its member names and its constructor parameters — the settings namespace, one file per attribute.)
+Read [the settings attribute catalog](attribute-catalog.md) for every attribute's constructors, parameters and defaults, and for the property-type-to-widget table the engine below dispatches on.
 
 ## The reflection engine: one pass over public instance properties
 
@@ -150,26 +139,7 @@ The automatic path runs **exactly once per registration**, in this order:
 
 ### The dispatch table
 
-| Property type     | Condition                                                                                                         | Widget built                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `bool`            | `[SettingsUIButton]` + `[SettingsUIConfirmation]`                                                                 | button with confirmation     |
-| `bool`            | `[SettingsUIButton]`                                                                                              | button, inside a button row  |
-| `bool`            | readable **and** writable                                                                                         | toggle field                 |
-| `bool`            | write-only                                                                                                        | button, inside a button row  |
-| `int`             | `[SettingsUIDropdown]`                                                                                            | int dropdown                 |
-| `int`             | `[SettingsUISlider]`                                                                                              | int slider                   |
-| `float`           | `[SettingsUISlider]`                                                                                              | float slider                 |
-| `string`          | read+write, `[SettingsUITextInput]`                                                                               | string input field           |
-| `string`          | read+write, `[SettingsUIDropdown]`                                                                                | string dropdown              |
-| `string`          | read+write, `[SettingsUIDirectoryPicker]`                                                                         | directory picker             |
-| `string`          | read-only, `[SettingsUIMultilineText]`                                                                            | multiline text               |
-| `string`          | read-only, no attribute                                                                                           | localized value field        |
-| `LocalizedString` | read-only                                                                                                         | localized value field        |
-| enum              | `[SettingsUIDropdown]`                                                                                            | int dropdown                 |
-| enum              | no attribute                                                                                                      | enum field                   |
-| `ProxyBinding`    | unconditional                                                                                                     | input binding field          |
-| anything else     | `[SettingsUIDropdown]`, and the type is both `IJsonWritable` and `IJsonReadable` with a parameterless constructor | dropdown built by reflection |
-
+Which property type, accessor set and attribute combination produces which widget is the dispatch table in [the settings attribute catalog](attribute-catalog.md).
 Everything else produces no widget.
 Three consequences are worth stating flat.
 
@@ -181,7 +151,7 @@ The button builder returns null the moment the property is readable, so `[Settin
 **`ProxyBinding` is the only type whose dispatch ignores the accessors**, but the binding machinery behind it filters for properties that are both readable and writable.
 A getter-only `ProxyBinding` property therefore renders a keybinding row over a default-valued, unregistered binding.
 
-(VOLATILE: the property-type-to-widget dispatch above and the widget class names behind it — the automatic settings page builder, and the menu widgets namespace.)
+(VOLATILE: the property-type-to-widget dispatch and the widget class names behind it — the automatic settings page builder, and the menu widgets namespace.)
 
 **Buttons group by side effect.**
 The builder keeps a dictionary of button rows for the duration of one page build, cleared at both ends.
@@ -233,7 +203,7 @@ The engine reports nothing when it drops a property, so the diagnosis is a walk 
 
 1. **The property is not public, or is static.** The enumeration asks for public instance properties and nothing else.
 2. **It was filtered before dispatch** — the platform filter excludes the running platform, `[SettingsUIHidden]` is present, or `[SettingsUIDeveloper]` is present and developer mode is off.
-3. **Dispatch produced nothing** — the type, accessor and attribute combination is not in the table above. A numeric property with neither slider nor dropdown, a read-write `string` with no attribute, and any collection type all land here.
+3. **Dispatch produced nothing** — the type, accessor and attribute combination is not in the dispatch table. A numeric property with neither slider nor dropdown, a read-write `string` with no attribute, and any collection type all land here.
 4. **The builder returned null even though the type matched.** The bool-button builder rejects a readable property; the three dropdown builders reject a missing `[SettingsUIDropdown]`; the int-slider builder rejects a missing `[SettingsUISlider]`; the custom-dropdown builder also rejects a type that is not both `IJsonWritable` and `IJsonReadable` with a parameterless constructor; and a second button in a group returns null by design. The tab builder then skips every item with a null widget without a word.
 5. **The widget exists and hides itself.** A hide-by-condition delegate is re-evaluated on every frame the page is open, and a section with no visible option is itself invisible.
 6. **The page was never registered**, or was registered before the ECS world existed. Registration resolves the options system through the default world and **returns false silently** when that world is null, and the mod-facing wrapper discards the return value — so there is no signal at all.
@@ -392,7 +362,8 @@ Teaching one without the other leaves a reader either debugging a dead hotkey ag
 
 **A usage narrows the conflict the player is _shown_.**
 The per-row warning triangle and the per-map notification both go through a usage-aware comparison, which requires the two bindings to share at least one usage on top of matching device and control path.
-That is the whole of what a usage does anywhere at 1.6.0f1: nothing outside the input and settings namespaces reads one.
+A usage has one further effect, in the options screen's rebinding flow: the cascade that resolves a rebind skips any competing binding sharing no usage with the set it has accumulated so far, and that set grows transitively through the linked actions it walks.
+So usages decide which _other_ bindings a player's rebind swaps onto the new key, empties, or reports unsolvable — writes, not display.
 
 **The pass that _disables_ an action ignores usages entirely.**
 It goes through a comparison called with usage checking switched off, so it pairs any two currently-enabled actions sharing a device and a control path, whatever usages either carries.
@@ -470,34 +441,8 @@ The tool base class fetches per-tool wrappers over the shared vanilla actions in
 `custom-tools` establishes that path in full, including why the raw action underneath cannot be taken.
 
 **For any other action a mod declares, mimicking copies the vanilla binding's control path onto the mod's own action and keeps copying it.**
-Declaratively, that is `[SettingsUIBindingMimic(string map, string action)]` on a `ProxyBinding` property.
-The resolver looks the named action up, **requires it to be built-in**, then requires a composite for the property's device and a binding for its component; any of those four failing returns false and the property silently falls back to its declared default key.
-When it succeeds, the binding is created with the vanilla binding's path, original path and modifiers copied in, and registration additionally attaches a watcher on the **source** binding that re-copies path and modifiers into the mod's binding every time the player rebinds the vanilla one.
-
-That watcher is the whole value of the technique: a plain default key goes stale the moment the player rebinds.
-The map name comes from the input manager's constants, of which the tool map and the shortcuts map are the two a mod normally wants.
-
-**Pair every mimic with `[SettingsUIHidden]`.**
-A mimicked binding must not be offered for rebinding, because the next watcher callback overwrites whatever the player set.
-
-An axis is mimicked with two properties sharing one action name, one carrying the positive component and one the negative, each with its own mimic attribute — the same grouping rule that builds an axis out of two bindings applies unchanged.
-
-**The imperative form is the same behaviour, reachable at runtime and revocable.**
-`ProxyBinding.Watcher` has a public constructor taking a binding and a change callback, so a mod can build the watcher itself, apply the copy once immediately, and dispose it later.
-The helper the settings class uses internally is not reachable, but that constructor is.
-The one-shot variant — look the vanilla action up, copy its path and modifiers onto your own binding, set the binding back, and stop there — is simpler and does **not** follow later rebinds, which is the difference that matters.
-
-The imperative form is what lets mimicking be a _player setting_: a bool with a `[SettingsUISetter]` that registers or disposes the watchers, and `[SettingsUIDisableByCondition]` on the mod's own binding properties against the same flag, so those rows grey out while the mimic is on.
-
-**When the attributes cannot express the input at all, the map is built by hand.**
-The route is to clone the vanilla composite that already has the shape you need, flip its built-in flag to false, replace its modifiers, and register the result through the input manager's action-adding entry point, which is internal and therefore reached by reflection.
-Pass the mod's own `id` as the map name and the resulting actions are reachable through `settings.GetAction(...)` exactly like a declared one, and their locale keys sit under the mod's own map alongside the rest.
-The case that forces this is a scroll-wheel action, since no mouse binding enum member names the wheel.
-
-**Every vanilla action is built-in, so the resolver's built-in requirement never rejects a vanilla target.**
-The flag is not declared in code and cannot be read off the source: it is deserialized from the input asset, where it defaults to true.
-What is readable is that exactly one site in the game clears it, and that site is a mod's own key-binding registration — so a composite is built-in unless a mod made it, and every action in every vanilla map qualifies.
-The mimic attribute's failure modes are therefore the other three: a map or action name that resolves to nothing, no composite for the property's device, and no binding for its component.
+It has a declarative form, an attribute on a `ProxyBinding` property, and an imperative one the mod owns and can revoke; past both sits the hand-built map, the route a scroll-wheel action forces.
+Read [mimicking a vanilla binding, and building input by hand](mimicking-and-hand-built-input.md) for all three, for the rule that a mimicked binding is never offered for rebinding, and for the four ways the declarative form silently falls back to its declared default key.
 
 ## What this reference hands to others
 
@@ -512,11 +457,10 @@ The two halves meet exactly once, at mimicking: the tool's own apply and cancel 
 A keybinding conflict is one of the few failures in this area that reaches the player by itself, as a notification titled with the mod's display name that opens its options page.
 And `[SettingsUIDeveloper]` is the only attribute in the catalog gated on the game's developer-mode flag, which is how a settings page carries a debug section ordinary players never see.
 
-`simulation-time-and-units` is the one mechanics topic this surface owns outright.
-The game's interface settings carry the time format, the temperature unit and the unit system as three enums, and the options system publishes all three to the frontend as one struct.
-Anything that renders a number to a player resolves through them, so a mod panel formatting its own values reads them from the shared settings rather than assuming metric.
+`units-and-formatting` owns the three interface preferences the game's own settings carry — the time format, the temperature unit and the unit system — and everything a mod does with them when it renders a number to a player.
 
-Camera input has no mechanics topic of its own and stays here: the game's input settings are entirely camera — scroll sensitivity, the keyboard, mouse and gamepad move, rotate and zoom sensitivities, the four invert flags and elevation dragging — and they all sit on the camera map, which is one of the six whose actions are system actions and therefore outrank every mod binding.
+Camera input has no mechanics topic of its own and stays here: most of the game's input settings are camera — the keyboard, mouse and gamepad move, rotate and zoom sensitivities and the four invert flags, which the game groups under a camera section — beside a few it groups elsewhere, including mouse scroll sensitivity under navigation and the elevation-dragging and legacy-camera toggles under a general one.
+These are setting _values_ rather than actions on a map, so the system-action tier that outranks every mod binding does not reach them; what that tier governs is the composites the settings page builds its keybinding widgets over, and those span every vanilla map.
 
 `frontend-and-injection` receives everything this topic produces.
 The options screen is one binding group carrying the pages, the active page and section, the widget bindings and the rebinding triggers, and the widget classes the engine instantiates are ordinary frontend widgets.

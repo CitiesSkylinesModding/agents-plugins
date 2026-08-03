@@ -11,13 +11,13 @@ Both take their declaration rules from here.
 
 ## The five component kinds, and how unevenly the game uses them
 
-| Kind                    | Where it appears                                                                |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `IComponentData`        | Everywhere. Over a thousand game types; the default choice.                     |
-| `IBufferElementData`    | Common. A variable-length list owned by one entity.                             |
-| `ISharedComponentData`  | **Five** game types, one of them load-bearing. No surveyed mod declares one.    |
-| `IEnableableComponent`  | **Twelve** game types, listed below, two of which change what your query means. |
-| `ICleanupComponentData` | **Zero** game types. The engine honours it; the game never reaches for it.      |
+| Kind                    | Where it appears                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `IComponentData`        | Everywhere. Over a thousand game types; the default choice.                       |
+| `IBufferElementData`    | Common. A variable-length list owned by one entity.                               |
+| `ISharedComponentData`  | **Five** game types, one of them load-bearing. A mod rarely needs to declare one. |
+| `IEnableableComponent`  | **Twelve** game types, listed below, two of which change what your query means.   |
+| `ICleanupComponentData` | **Zero** game types. The engine honours it; the game never reaches for it.        |
 
 The two small rows are the finding.
 
@@ -49,8 +49,10 @@ public abstract void GetArchetypeComponents(HashSet<ComponentType> components);
 ```
 
 `GetPrefabComponents` shapes the **prefab entity**; `GetArchetypeComponents` shapes **every instance of that prefab**.
-`PrefabBase` seeds each set with one type — `PrefabData` and `LoadedIndex` for the prefab entity, `PrefabRef` for the instances — so an override calls `base` first and then adds its own.
-The prefab system then unions every attached component's contribution, **adds `Created` and `Updated` unconditionally**, and calls `EntityManager.CreateArchetype` once; the building prefab overrides the same path and writes the result into its object data instead.
+`PrefabBase` seeds the prefab-entity set with `PrefabData` and `LoadedIndex`, and the instance set with `PrefabRef` alone, so an override calls `base` first and then adds its own.
+The prefab system unions every attached component's `GetPrefabComponents` contribution, **adds `Created` and `Updated` unconditionally**, and calls `EntityManager.CreateEntity` — that builds the prefab entity, not the instance archetype.
+The instance archetype is built separately, by a refresh method run from the prefab's late initialization, and several prefab families override that method — so which hook shapes your instances depends on what kind of prefab it is.
+`prefabs-and-assets` owns that path and the families it splits into.
 
 So a mod that wants a component on every instance of a prefab overrides `GetArchetypeComponents`, and a mod that wants it on the prefab entity overrides `GetPrefabComponents`.
 Neither needs a system.
@@ -103,7 +105,7 @@ What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
 
 ## The query APIs, and what decides between them
 
-Four APIs exist in the package, and the game and shipped mods use different ones.
+Four APIs exist in the package, and the game reaches for them unevenly.
 
 | Form                                       | Expresses                       | Needs the generators |
 | ------------------------------------------ | ------------------------------- | -------------------- |
@@ -114,7 +116,7 @@ Four APIs exist in the package, and the game and shipped mods use different ones
 
 **Every iteration query in the game is hand-built with `GetEntityQuery`.**
 The game's use of `SystemAPI` is singleton access and nothing else: `GetSingleton<T>`, `TryGetSingleton<T>`, `GetSingletonEntity<T>`, `GetSingletonBuffer<T>`, `HasSingleton<T>`.
-Shipped mods went the other way and reach for the builder heavily, so both forms are idiomatic in this ecosystem and the choice is made per system rather than per project.
+The builder is equally correct in a mod, and needs no more than the generators the toolchain already wires in, so the choice between the two is made per system rather than per project.
 
 **The mechanism behind that choice is the one thing to internalise.**
 Every `SystemAPI` member in the shipped assembly is a body that throws.
@@ -132,7 +134,7 @@ Then the small rules:
 
 - **Build queries in `OnCreate`.** Universal in the game, and the generated form does the same thing from `OnCreateForCompiler`.
 - **Mark components read-only unless you write them.** The generated handle names encode the mode, so a decompiled system tells you its intent at a glance.
-- **`EntityQueryDesc` is the only non-generated form that expresses `Any`.** The varargs form has `ReadOnly`, `ReadWrite` and `Exclude`, which map to `All` and `None` and nothing else.
+- **The varargs form cannot express `Any`.** It has `ReadOnly`, `ReadWrite` and `Exclude`, which map to `All` and `None` and nothing else; reach for `EntityQueryDesc`, or construct `EntityQueryBuilder` by hand, which takes an allocator and needs no generator.
 - **A fork of a vanilla system inherits the vanilla form**, because the starting point is decompiled source.
 
 ### The gates, and the one that ignores your filter
@@ -147,7 +149,8 @@ That is by design and the game relies on it; it is only a surprise if you expect
 ## Jobs: write per-entity, read per-chunk
 
 **Write new jobs as `IJobEntity`.**
-It is the modern replacement for `IJobChunk`, it removes the whole fetch-array-and-index preamble, and the generators it needs ship with the official toolchain and work in a mod project today.
+It is the modern replacement for `IJobChunk` and it drops the whole fetch-array-and-index preamble: the parameter list _is_ the query, and `Execute` is called once per entity.
+The source generators it needs are wired in as analyzers by the official toolchain, so it compiles and runs in a mod project today.
 
 ```csharp
 [BurstCompile]
@@ -162,16 +165,16 @@ private partial struct AgeCitizensJob : IJobEntity
 }
 ```
 
-The parameter list _is_ the query: `ref` for write, `in` for read-only, `Entity` for the entity itself.
+`ref` for write, `in` for read-only, `Entity` for the entity itself.
 **Both the job struct and the system that schedules it must be `partial`**, because the generator emits the `Execute` plumbing and the schedule extension into the other half.
 That is the first thing an agent hits, and its absence is a compile error rather than a runtime one, which is the good case.
 
-**Be clear-eyed about the discrepancy.**
-The game itself contains not one `IJobEntity`: every jobified system in it — several hundred — is `IJobChunk`.
-That is a fact about the codebase's age, not about what works, and it has a practical cost: every line of vanilla source you open next is written the other way, and so is every fork you start from a decompiled body.
-This reference chooses the per-entity form for new code and teaches the chunk form well enough to read and fork vanilla.
+**Hold the discrepancy in mind before you open vanilla source.**
+The game contains not one `IJobEntity`: every jobified system in it — several hundred — is `IJobChunk`.
+That is a fact about the codebase's age rather than about what works, so it is not a reason to follow it; what it decides is what you read and what you fork.
+**A fork of a vanilla job starts from decompiled source and therefore arrives as `IJobChunk` before you have written a line of it.**
 
-### Reading and forking `IJobChunk`
+### `IJobChunk`: what you read, and what a fork starts as
 
 ```csharp
 public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex,
@@ -185,20 +188,21 @@ public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex,
 
 Schedule it with `JobChunkExtensions.Schedule` or `JobChunkExtensions.ScheduleParallel`, passing the query and the incoming dependency, and assign the returned handle back to `Dependency`.
 
-**Three things have no per-entity equivalent**, and a fork that uses any of them needs a plan before it converts:
+**Three facilities come from holding the chunk**, and they are why the game's own jobs hold one:
 
-- **The chunk-level early exit.** The per-bucket shared-component skip above rejects a whole chunk with one read. A per-entity `Execute` cannot see the chunk, so the same test would run up to 128 times more often.
-- **The chunk-scoped accessors** — `chunk.GetSharedComponent`, `chunk.GetBufferAccessor`, `chunk.DidChange`, `chunk.Has`. All four are questions about a chunk, and a per-entity job never holds one.
-- **`unfilteredChunkIndex`.** It is handed to `Execute` and is exactly the stable sort key a parallel command buffer wants; the per-entity form generates its own key, which is fine on its own but is not the vanilla number.
+- **The chunk-level early exit.** The per-bucket shared-component skip above rejects a whole chunk with one read.
+- **The chunk-scoped accessors** — `chunk.GetSharedComponent`, `chunk.GetBufferAccessor`, `chunk.DidChange`, `chunk.Has`. All four are questions about a chunk.
+- **`unfilteredChunkIndex`.** It is handed to `Execute` and is exactly the stable sort key a parallel command buffer wants.
 
-Where the fork needs none of the three, converting it to a per-entity job is mechanical.
+A per-entity `Execute` never holds the chunk, so it has none of the three: no per-chunk early exit — the same test would run up to 128 times more often — no shared-component read, and a parallel-writer sort key it generates for itself rather than the vanilla number.
+Where a fork needs none of the three, converting it to a per-entity job is mechanical.
 Where it needs one, keep the chunk form for that job rather than emulating the chunk from inside a per-entity `Execute`.
 
 ### Burst is a choice, not a default
 
-`[BurstCompile]` behind a conditional compilation symbol is a common and shipped arrangement, because a Burst-compiled job cannot be stepped in a debugger.
-Some mods burst every job, some burst none, and both ship.
-Decide it per project and keep an unbursted build reachable, since attaching a debugger to a bursted job simply shows nothing.
+`[BurstCompile]` behind a conditional compilation symbol keeps both builds reachable from one source, which is what you want because a Burst-compiled job cannot be stepped in a debugger.
+Bursting every job and bursting none are both workable, so decide it per project.
+Keep the unbursted build reachable either way, since attaching a debugger to a bursted job simply shows nothing.
 
 ## Type handles: what they index, and what breaks when one is stale
 
@@ -296,8 +300,9 @@ Resolve the one you want once in `OnCreate` with `World.GetOrCreateSystemManaged
 | `ToolReadyBarrier`       | end of `PostTool`                                  |
 | `DeserializationBarrier` | end of `Deserialize`                               |
 
-A thirteenth type, `AudioEndBarrier`, exists in the assembly, is registered nowhere and is referenced by no system.
-Do not reach for it.
+A thirteenth type, `AudioEndBarrier`, exists in the assembly and is registered in no phase.
+It has a companion opener like the others, and that opener is unregistered too, so nothing ever re-opens the barrier after its first playback attempt closes it.
+Reach for one of the twelve instead.
 
 **The contract is three calls, and each of the three has a failure mode.**
 
@@ -319,14 +324,21 @@ Passing `unfilteredChunkIndex` — the parameter `IJobChunk.Execute` already han
 A constant or a thread index there makes your mod's structural changes order-dependent on the scheduler, which is a bug that reproduces once a week.
 
 **Writing to a barrier outside its window throws, loudly.**
-Each barrier closes itself immediately before playing back, and a companion system re-opens it later in the frame; creating a buffer while it is closed raises `Trying to create EntityCommandBuffer when it's not allowed!`.
+Each barrier closes itself immediately before playing back, and a companion system re-opens it; creating a buffer while it is closed raises `Trying to create EntityCommandBuffer when it's not allowed!`.
 This is the one place in this ECS where the failure is an exception rather than silence, so trust it.
 
-**`EndFrameBarrier` has the narrowest window of the twelve, despite being the most used.**
-It plays back at the front of the frame and re-opens well into it — after the systems that drive the modification, tool, raycast, prefab-update and deserialize phases have already run.
-So **an `OnUpdate` body running in any of those phases cannot create an `EndFrameBarrier` command buffer**; use the barrier belonging to its own phase instead.
-Simulation systems, which run later in the frame, use `EndFrameBarrier` freely and that is where nearly all of vanilla's use of it sits.
-This rule is about `OnUpdate` bodies; a lifecycle hook such as `OnGameLoadingComplete` fires outside the frame's phase walk, and its position relative to the window is not settled.
+**Write only to the barrier belonging to the phase you are running in.**
+That is the general rule, and it falls out of where each barrier's opener sits.
+Eleven of the twelve open at the start of their own phase and play back at the end of it, so each is open for the duration of that one phase and shut from the end of it until its phase runs again.
+For most of the eleven that means the next frame; for the deserialization barrier it means the next load, since its phase fires once per load rather than every frame.
+Where the opener and the playback sit within the phase, and what that costs a system registered beside them, is `mod-lifecycle-and-ordering`.
+
+**`EndFrameBarrier` is the exception, and its window is the widest rather than the narrowest.**
+Its opener and its playback sit far apart inside the main loop rather than bracketing one phase, so it is open from partway through the frame, across the phases that run after that, and on to the next frame.
+Simulation systems use it freely and that is where nearly all of vanilla's use of it sits.
+What it does not cover is the front of the frame: **an `OnUpdate` body running before the opener — the modification, tool, raycast, prefab-update and deserialize phases — cannot create an `EndFrameBarrier` command buffer**, and uses its own phase's barrier instead.
+This rule is about `OnUpdate` bodies, and a lifecycle hook such as `OnGameLoadingComplete` fires outside the frame's phase walk entirely.
+(UNVERIFIED: whether a buffer created from a lifecycle hook lands inside the open window or throws against a closed barrier — the hook's invocation site in `GameSystemBase` read against the barrier's opener and playback registrations in the vanilla system-order class, or one run of the game with a buffer created there.)
 
 **One crack in the gate, and it is in the type system.**
 The safety check lives on a method that _shadows_ the base `EntityCommandBufferSystem.CreateCommandBuffer()` rather than overriding it, and the base method is not virtual.
@@ -411,7 +423,7 @@ Prefix your components rather than naming them after the concept alone.
 | `ICleanupComponentData`      | A residue entity that outlives `DestroyEntity` until you remove the component.                                                                      |
 
 `[InternalBufferCapacity(0)]` means **never inline**: every buffer becomes a heap allocation, which keeps chunks dense when most entities carry an empty buffer.
-Shipped mods split deliberately between `(0)` for sparsely-populated buffers and a small explicit capacity for buffers that almost always hold one to three elements.
+Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
 `performance-and-memory` owns that trade in full.
 
 **Save cost is decided by one interface and nothing else.**
@@ -432,7 +444,7 @@ public struct MyPloppedMarker : IComponentData, IQueryTypeParameter, IEmptySeria
 ```
 
 **The library rebuilds after a mod assembly loads**, in the same step that registers the types, so a mod component becomes saveable purely by implementing the interface.
-Most mod components deliberately implement neither and are rebuilt on load, which is the cheaper and safer default: a component in a save is a compatibility obligation forever.
+Implementing neither and rebuilding the component on load is the cheaper and safer default: a component in a save is a compatibility obligation forever.
 The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to `save-serialization`, and you want it before the first release, not after.
 
 (VOLATILE: the serializer selection above and the two game types that opt out of persisting enabled state — the component serializer library.)
@@ -450,7 +462,7 @@ if (EntityManager.TryGetComponent(entity, out PrefabRef prefabRef))
 }
 ```
 
-These ship with the game rather than coming from anywhere else, and they are the most-used helper surface in this ecosystem by a wide margin.
+These ship with the game rather than coming from anywhere else, so they cost a mod no dependency at all.
 Reach for them before writing your own.
 
 ## What this reference hands to others

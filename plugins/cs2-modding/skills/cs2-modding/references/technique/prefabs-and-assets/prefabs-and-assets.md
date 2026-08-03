@@ -42,28 +42,6 @@ Grep for `m_MaxWorkers` and you find the second and third and never learn the fi
   That one `int` is the entire bridge from ECS back to managed data.
 - `ComponentBase.prefab` is the back-pointer from an attached authoring component to the authoring prefab that owns it.
 
-### The 111 shadowed short names, and the thirteen that both compile
-
-Comparing the prefab namespace's type names against every other game namespace returns **111 short names declared in both**.
-98 of them are authoring classes shadowing an ECS component elsewhere — `Workplace`, `Hospital`, `School`, `Park`, `FireStation`, `PoliceStation`, `Prison`, `GarbageFacility`, `TransportStation`, `Hearse`, `Resident` and eighty-odd more.
-In every one of those the prefab-namespace type is not a component at all, so naming it in a query is a compile error: the failure is loud.
-
-**The thirteen that are not authoring types are the dangerous ones, because both sides compile.**
-Four of them are the purest form of the trap — a buffer that exists once on the prefab entity and once on the instance, under the same short name:
-
-| Short name  | Prefab-entity version (the recipe)                                                 | Instance version                                 |
-| ----------- | ---------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `SubObject` | `m_Prefab`, `m_Flags`, `m_Position`, `m_Rotation`, `m_ParentIndex`, `m_GroupIndex` | `Game.Objects.SubObject.m_SubObject`, one entity |
-| `SubNet`    | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`, `m_InvertMode`, `m_Upgrades` | `Game.Net.SubNet.m_SubNet`                       |
-| `SubLane`   | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`                               | `Game.Net.SubLane.m_SubLane`, `m_PathMethods`    |
-| `SubArea`   | `m_Prefab`, `m_NodeRange`                                                          | `Game.Areas.SubArea.m_Area`                      |
-
-Both members of each pair are `IBufferElementData` and both bind in a query.
-Reading the wrong one gives you the list of prefabs a building is _made of_ when you wanted the entities it _has_, or the reverse, with no error anywhere.
-**Fully qualify a short name that appears on both sides**, in queries and in lookups alike.
-
-(VOLATILE: the 111-name collision count and the four `Sub*` pairs — a count derived by comparing the prefab namespace's type names against the other game namespaces.)
-
 ## The archetype declaration hooks, and what each populates
 
 `ComponentBase` declares exactly two abstract members, and nothing else is required of an authoring component:
@@ -140,7 +118,8 @@ public bool TryGetPrefab<T>(PrefabData prefabData, out T prefab) where T : Prefa
 ```
 
 The `as T` cast is unchecked and its result is never tested, so **`true` means "this entity is a live prefab", not "you got a `T`"**.
-The entity and `PrefabRef` overloads delegate to this one, and the two-argument `GetPrefab<T>` overloads have the same shape and simply return null.
+The entity and `PrefabRef` overloads delegate to this one.
+The three single-argument `GetPrefab<T>` overloads share the same unchecked `as T` and return null on a failed cast — but they carry no live-prefab guard at all, so a dead prefab throws out of the index rather than returning null.
 **Null-check the out parameter yourself** on every typed lookup — `TryGetPrefab(x, out T p) && p is not null` — or wrap it once in an extension method and call only that.
 
 **By query singleton.**
@@ -208,6 +187,28 @@ They are conveniences over `EntityManager`, and going through the `EntityManager
 `AddUnlockRequirement(unlocker, unlocked)` is the one domain-specific mutator, appending to the unlock-requirement buffer and warning when either side is not unlockable.
 
 (VOLATILE: the mutator names above and the negative index sentinel `-1000000000` — the prefab system's registry region.)
+
+## The short names that compile on both sides
+
+Comparing the prefab namespace's type names against every other game namespace returns **111 short names declared in both**, and almost every one of those collisions fails loudly.
+98 are authoring classes shadowing an ECS component elsewhere — `Hospital`, `School`, `Park`, `FireStation`, `Hearse`, `Resident` and ninety-odd more — where the prefab-namespace type is not a component at all, so naming it in a query is a compile error.
+Of the thirteen that are not authoring types, seven fail loudly too: five are enum pairs and two pair a component with a plain struct, and neither kind is interchangeable with its twin.
+
+**The remaining six are the dangerous ones, because both sides compile.**
+They are `WaterSourceData`, which is `IComponentData` on both sides, `CompanyInitializeSystem`, which is a system class on both sides and so is a valid type argument either way, and four buffers that exist once on the prefab entity and once on the instance under the same short name:
+
+| Short name  | Prefab-entity version (the recipe)                                                 | Instance version                                 |
+| ----------- | ---------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `SubObject` | `m_Prefab`, `m_Flags`, `m_Position`, `m_Rotation`, `m_ParentIndex`, `m_GroupIndex` | `Game.Objects.SubObject.m_SubObject`, one entity |
+| `SubNet`    | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`, `m_InvertMode`, `m_Upgrades` | `Game.Net.SubNet.m_SubNet`                       |
+| `SubLane`   | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`                               | `Game.Net.SubLane.m_SubLane`, `m_PathMethods`    |
+| `SubArea`   | `m_Prefab`, `m_NodeRange`                                                          | `Game.Areas.SubArea.m_Area`                      |
+
+Both members of each pair are `IBufferElementData` and both bind in a query.
+Reading the wrong one gives you the list of prefabs a building is _made of_ when you wanted the entities it _has_, or the reverse, with no error anywhere.
+**Fully qualify a short name that appears on both sides**, in queries and in lookups alike.
+
+(VOLATILE: the collision count, the 98-to-13 split and which pairs compile on both sides — the prefab namespace's type declarations, against every other game namespace.)
 
 ## What initialises prefab data, and when
 
@@ -288,7 +289,8 @@ So "does my edit reach placed buildings" is answered by reading the systems that
    **Exactly three systems in the prefab namespace query for `Updated` at all** — vehicle capacity, area initialize and unlock — so it is not a general "recompute everything downstream" signal, and reaching for it as one produces a partial refresh that looks like a bug somewhere else.
 
 **Mutating the instance component directly is the remedy of last resort.**
-Do it only knowing which systems read the field, what caches exist behind it, and which invariant the value participates in; a computed runtime value written from outside is where side effects come from.
+Before reaching for it, grep the field name across the simulation namespace and list every system that writes it; where that list is not empty, one of the four remedies above is the answer instead.
+A computed runtime value written from outside is where side effects come from.
 Where asking the player to rebuild is acceptable, it is both easier and safe, and every _new_ building is already handled by the prefab-entity edit.
 
 (VOLATILE: the workplace initialize system's two query descs and its `Modification5` registration, the three prefab-namespace systems that consume `Updated`, and the 292/210 lookup counts — the workplace initialize system, and `.m_Prefab]` across the simulation namespace.)
@@ -411,13 +413,23 @@ Reaching it means reflection, and reaching it one frame after your own `OnCreate
 Two practical costs come with the technique.
 
 - **Throttle it.** Queue requests rather than acting on one inline, refuse to drain the queue while a drag is in progress, and hold a cooldown between rebuilds — under a second is enough to keep a slider usable without rebuilding on every intermediate value.
+  (UNVERIFIED: the sub-second cooldown figure — nobody has timed a regeneration against a running game.)
 - **Both entities exist for a while.** Between your call and the prefab system's next update, the old and the new prefab entity are both live.
   Tag the outgoing one with a marker of your own and exclude that marker from your other queries.
 
-Whether calling this on a **vanilla** prefab is safe **in a running city** is not established, and the two halves of the evidence pull apart.
-Nothing forbids it, and the game's own editor does it: the duplicate-and-replace-a-mesh path and the inspector's reparenting path both hand `UpdatePrefab` whatever prefab is being edited, which is routinely a vanilla one.
-But the editor is not carrying a live simulation over the result, and no mod does it in game.
-Treat it as a technique for prefabs you minted yourself until you have tested otherwise against a running game.
+**On a vanilla prefab the entity graph survives and the vanilla caches do not.**
+That split is the whole of what this call costs, and the first half is the one that misleads: run against a vanilla building, pathway and trailer prefab in a loaded city, each old prefab entity was destroyed, a new one took its place, every placed instance came back pointing at the new entity, and a save and reload round trip completed with the city intact.
+The game's own editor does the same thing on a routine path — the duplicate-and-replace-a-mesh and inspector-reparenting flows both hand `UpdatePrefab` whatever prefab is being edited, which is often a vanilla one.
+
+**What breaks is any managed state the game keys by prefab `Entity`**, because that key is exactly what the rebuild throws away.
+The vanilla case is not hypothetical: the game mode that restores service-consumption defaults holds a cache keyed by prefab entity, and after regenerating a city-service building it logs `Cached ServiceUpkeepData not found` against the new entity — during a save, long after the call that caused it.
+Nothing in the ECS graph is wrong at that point, which is why the failure reads as unrelated to anything you did.
+
+So **regenerate prefabs you minted and treat a vanilla one as a last resort**, and when you do reach for one, expect the damage to surface somewhere that never mentions prefabs.
+
+**The same rule catches your own state.**
+A prefab entity does not survive its own update, so a handle taken before the call names a destroyed entity afterwards, and the safe form is to hold the `PrefabBase` and re-resolve the entity after each rebuild.
+Note also that the drain wraps each prefab in its own `try`/`catch` that logs and moves on, so a prefab that fails to rebuild leaves the registry pointing at the old entity and reports nothing to your caller — check the result rather than assuming the update took.
 
 (VOLATILE: the replacement system's 14-component query list and the three types its instance-archetype reconciliation covers — the replacement system.)
 
@@ -459,76 +471,11 @@ The format itself is `save-serialization`.
 
 (VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — the prefab id type, and the prefab system's serialization region.)
 
-## Loading an asset from code
+## Getting content and files in front of the game
 
-`Colossal.IO.AssetDatabase` is the layer under the prefab system.
-Four statics exist — `global`, `game`, `user` and `packages` — plus a factory for a throwaway transient one.
-**`global` is a collection of registered databases rather than a database itself**, and it is the one to read through; `user` is the writable one.
-
-The read surface is `IAssetDatabase`: `TryGetAsset` and `GetAsset`, each keyed four ways — by `Uri`, by string uri, by guid, and by a search filter — plus `GetAssets<T>(SearchFilter<T>)`, `AllAssets()`, `DeleteAsset` and `UnloadAllAssets`.
-The write surface is `ILocalAssetDatabase`, which adds `AddAsset<TAssetData, TData>(AssetDataPath, TData, Hash128 forceGuid = default)` and simpler overloads, `MoveAssetTo`, `CopyAssetTo`, `Exists<T>` and `MarkForDeletion`.
-`AssetDatabase.global` is not an `ILocalAssetDatabase`.
-
-**`PrefabAsset` is the asset kind carrying a prefab**, and `Load()` / `Load<T>()` return the `ScriptableObject`.
-It saves as text by default with a binary option.
-The game's own prefab-loading step is nothing more than those three calls in a loop:
-
-```csharp
-foreach (PrefabAsset asset in assetDatabase.GetAssets(default(SearchFilter<PrefabAsset>)))
-{
-    if (asset.Load() is PrefabBase prefab)
-    {
-        m_PrefabSystem.AddPrefab(prefab);
-    }
-}
-```
-
-Two reads come up constantly and are worth knowing verbatim.
-**Locating your own mod's directory on disk** goes through the executable asset for your assembly, found with a search filter matching its full name; from there `Path.GetDirectoryName(asset.path)` is your install folder.
-**Testing an existing prefab's provenance** is `prefab.asset?.database == AssetDatabase<ParadoxMods>.instance`, which distinguishes subscribed content from base-game content.
-
-**Registering a database of your own** is the deep end and is occasionally the right answer, for a mod importing content it generates or ships outside the normal asset pipeline.
-Declare a descriptor — five members: `name`, `canWriteSettings`, `dlcId`, `assetFactory`, `dataSourceProvider` — expose `AssetDatabase<YourDescriptor>.instance`, register it with `AssetDatabase.global.RegisterDatabase(...)`, populate it, and unregister on dispose.
-Content goes in through `AddAsset<PrefabAsset, ScriptableObject>(path, prefab, Hash128.CreateGuid(name))` followed by `Save()`, and the resulting prefab is handed to `AddPrefab` **from the main thread**.
-The same call shape stores geometry, locale and image assets.
-
-Note the boundary once more: producing the content of a texture, mesh or surface is asset authoring and out of scope here; storing and retrieving one through this API is not.
-
-(VOLATILE: the `IAssetDatabase` and `ILocalAssetDatabase` member lists and the four `AssetDatabase` statics — both interfaces, and the database type itself.)
-
-## Serving your own files over the game's resource scheme
-
-**The UI reads files through `coui://<host>/<path>`, where a host is a name mapped to one or more directories on disk.**
-Registration is one call:
-
-```csharp
-UISystem.AddHostLocation(string hostName, string path, bool shouldWatch = true, int priority = 0);
-```
-
-It appends to the host's path list, keeps the list sorted by priority, ignores a duplicate path, and raises a host-added event carrying the watch flag.
-An overload takes several paths at once, and `RemoveHostLocation` exists — put it in `OnDispose`, since a host location is state registered outside your own world.
-
-**Resolution walks the host's paths in priority order and takes the first that reads.**
-An unknown or empty host fails with an invalid-host-locations error.
-So **two mods registering the same host name do not conflict — they stack**, and priority decides who is asked first.
-
-The two shapes worth copying:
-
-- **A read-only directory beside your assembly**, watching off, for icons you ship.
-  Derive the path from your own executable asset as above.
-- **A watched temporary directory**, for files you generate at runtime.
-  Watching is what makes a thumbnail written after startup appear at all; without it the resource handler serves what it already knows.
-
-The game registers three hosts of its own, and they are the shapes to recognise: `gameui` for the base UI, `ui-mods` for the directory of every mod's UI module asset, and one host per UI host asset found in the database.
-
-**Where a `coui://` URL is consumed on the prefab side.**
-`UIObject.m_Icon` is a plain string, and the image system returns it when non-empty, falling back to the UI group's icon.
-The thumbnail chain is the one to know: icon if set, else a placeholder when thumbnails are disabled, else the prefab's own `thumbnailUrl` with a size query appended — and that url is `"thumbnail://ThumbnailCamera/"` plus the prefab id rendered as a url segment.
-**So a prefab with no icon gets a live render keyed on its prefab id**, through one of three extra schemes the game's resource handler layers on top of `coui`, alongside screen capture and user avatar.
-
-The Cohtml side of the frontend is `frontend-and-injection`.
-
-(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, and `AddHostLocation`'s signature — the UI system, and the default resource handler.)
+`Colossal.IO.AssetDatabase` is the layer under the prefab system, and it is how content gets in: the game's own prefab-loading step is a loop over the database's prefab assets, handing each loaded object to `AddPrefab`.
+The frontend reaches a mod's own files — the icons it ships, the thumbnails it generates — through `coui://<host>/<path>`, where a host is a name mapped to one or more directories on disk that the mod registers.
+[Assets and resource hosts](assets-and-resource-hosts.md) carries the database's read and write surfaces, locating your own mod's directory, registering a database of your own, host registration and resolution, and the thumbnail chain a prefab with no icon falls back to.
 
 ## What this reference hands to others
 
@@ -545,5 +492,5 @@ Everything a definition-rewriting mod does depends on knowing the definition car
 
 `mod-lifecycle-and-ordering` owns when a system runs; the registration timings above are choices within what it establishes.
 `save-serialization` owns the save format that the identity section touches.
-`frontend-and-injection` owns the frontend that consumes the host locations above.
+`frontend-and-injection` owns the frontend that consumes the host locations.
 `patching` owns remedy 3.

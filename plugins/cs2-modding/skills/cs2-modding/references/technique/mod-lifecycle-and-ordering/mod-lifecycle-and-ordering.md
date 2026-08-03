@@ -39,8 +39,8 @@ Three rules follow.
   The redundant redeclaration is what the metadata scan requires, and it is the reason detection succeeds for a mod built on a shared base class.
 - **Every `IMod` implementation in the assembly is instantiated**, and `OnLoad` is called on each in turn.
   A second implementation left behind from a refactor is a second mod entry point running in the same session.
-- **Do not declare an abstract type that implements `IMod` inside a mod assembly.**
-  Nothing filters it out before construction, and the construction path is not documented to accept one.
+- **Keep every `IMod` implementation in the assembly concrete.**
+  Nothing filters an abstract one out before construction, and the loader constructs each implementation it finds without calling a constructor, so a shared base is safer expressed as a plain class the mod entry point holds than as a base the entry point derives from.
 
 Other gates the asset passes before `OnLoad` is reached, each failing to a distinct state on the mod's record:
 
@@ -157,16 +157,19 @@ The rebuild walks the registered systems and never enumerates the pending anchor
 No exception, no log line, no symptom other than absence.
 
 So the anchor's phase is not optional context: pass the phase the vanilla system is actually registered in.
-Anchoring is the most common ordering technique in practice — around half the mods surveyed for this plugin use it — and its failure is the hardest one in this reference to diagnose from a log, because there is nothing in the log.
+Anchoring's failure is the hardest one in this reference to diagnose from a log, because there is nothing in the log.
 
 ## The phases nest; they do not run flat
 
 There are 32 update phases.
 Their declaration order in the enum is **not** their execution order — the ordinal is used only to index the update system's per-phase ranges and carries no timing meaning.
 
-The real structure is a tree, and it is derived rather than read: every call site that drives a phase was traced to its owning system, and each owner's position taken from its vanilla registration.
+The real structure is a tree.
 Only the game manager sits on the engine's own update callbacks; every other phase is driven from inside some system's `OnUpdate`, which is what makes the nesting.
-To re-derive it against a new game version, sweep for calls that drive a phase, then place each owner by its registration.
+
+No single file states this tree.
+It is derived from two things read together: the vanilla registration table, which fixes where each driver system itself runs, and the calls that drive a phase from inside a system's own `OnUpdate`, which supply the nesting.
+Re-checking it means reading those two against each other again.
 
 Indentation below is nesting.
 A phase listed under a system runs entirely inside that system's update.
@@ -221,7 +224,7 @@ engine LateUpdate()  →  GameManager.LateUpdate()
   DebugGizmos
 ```
 
-(VOLATILE: the driver system names in this tree, and the per-phase names and counts in the catalogue below — the tree's shape is architecture, but every name and number on it moves with the version.)
+(VOLATILE: the driver system names in this tree — the vanilla system-order class, and the systems that drive a phase from their own `OnUpdate`.)
 
 Four consequences a reader needs before choosing a phase:
 
@@ -234,51 +237,23 @@ Four consequences a reader needs before choosing a phase:
   What a simulation step is worth in game time belongs to `simulation-time-and-units`.
 - **`Deserialize` and `Serialize` fire once per load and once per save, not per frame.**
   Their driving systems are disabled by default and flipped on for a single run.
-  Every other phase in the tree runs unconditionally when its driver runs.
+  Several other phases are conditional on their driver's own state as well — the two simulation phases on the action mode, `LoadSimulation` on a loading counter, and `ClearTool` and `ApplyTool` on the tool system's apply mode, which selects at most one of the two.
+  A phase whose driver runs is not thereby a phase that runs, so check the driver before sizing per-update work.
 - **`PrefabReferences` is reached from two different parents**, inside `Deserialize` and inside `Serialize`, so a system registered there runs in both directions of the save pipeline.
 
 ## Choosing a phase
 
-Vanilla registration counts below are occurrence counts over the vanilla registration pass, so a system registered into two phases counts in both.
-The names are the phase's characteristic occupants, not a full listing.
-Where a phase's purpose is stated, it is inferred from what lives there: the enum carries no documentation and neither does any vanilla comment.
+Six choices cover almost every mod, and each is a position in the tree above rather than a preference.
 
-**Driven from the frame update**
+- **Simulation work on the city** goes in `GameSimulation`, which is where the whole vanilla simulation lives, and which runs zero to eight times per frame.
+  The editor drives `EditorSimulation` instead, so a system that must also run in the editor is registered into both phases; registering into `GameSimulation` alone leaves it silently dead there.
+- **Anything the player looks at in the UI** goes in `UIUpdate`, which holds every vanilla UI system.
+- **A tooltip system** goes in `UITooltip` and nowhere else; that one is a hard requirement rather than a convention, and `custom-tools` owns the mechanism behind it.
+- **A tool** goes in `ToolUpdate`, because the tool system enables the active tool immediately before driving that phase.
+- **Changing entities while the frame is still building them** goes in one of the eight modification phases, anchored beside the vanilla system whose output you need or whose input you are supplying.
+- **Anything that must read or write a save** goes in `Deserialize` or `Serialize`, both of which fire once per load or save rather than per frame.
 
-- **`MainLoop`** — 20. The frame's spine, and the only phase whose members drive other phases. A mod registering here lands after the rendering and save systems and before the cleanup preparation, so by the time it fires everything in the frame except `Cleanup` has run.
-- **`Raycast`** — 1, the tool raycast system. First of the middle band in `MainLoop`, so nothing else has run this frame. Where a mod's own raycast system goes; see `custom-tools`.
-- **`PrefabUpdate`** — 23. Texture streaming, geometry asset loading, prefab and object initialisation, mesh, UI and zone initialisation. Driven every `MainLoop` frame, unconditionally — the gating is per system, each occupant carrying its own query requirement, so a mod system registered here gets an `OnUpdate` every frame and must do the same. Where prefab-shaping systems go.
-- **`PreTool`** — 1.
-- **`ToolUpdate`** — 15: the eleven vanilla tools plus upgrade-deletion, bracketed by the tool output barrier. The tool system enables the active tool immediately before driving this phase and disables it when the tool stops being active, which is why a tool system belongs here and not merely by convention: elsewhere it would still be enable-gated by the tool system but would run at the wrong moment.
-- **`ClearTool`** / **`ApplyTool`** — 1 / 9. Driven from the tail of `ToolUpdate` and mutually exclusive on the tool system's apply mode. `ApplyTool` holds the nine vanilla apply systems.
-- **`PostTool`** — 7. Tool feedback, selection update, course splitting, sub-element deletion, map tiles.
-- **`Deserialize`** — 161. The largest phase after `GameSimulation`, and the only one whose three bands are used as a designed pipeline. Fires once per load. Its contents belong to `save-serialization`.
-- **`PrefabReferences`** — 4. Primary and secondary prefab references plus two check passes. Reached from inside both `Deserialize` and `Serialize`.
-- **`Modification1`** — 18. The generation systems plus graph deletion: where entities get created from placement definitions. See `placement-definitions`.
-- **`Modification2`** — 14. Edge, route and building initialisation; damage and destruction.
-- **`Modification2B`** — 15. Cross-references and area geometry. No open-source mod surveyed for this plugin registers here.
-- **`Modification3`** — 10. Sub-object references, owner lookup, attachment, and network composition selection. The phase to anchor into for composition work.
-- **`Modification4`** — 33. Modifiers, sub-net references, network geometry and lanes. The two most-forked vanilla systems in the surveyed corpus both live here; see `roads-and-traffic`.
-- **`Modification4B`** — 16. Object emergence, lane references, secondary lanes, building state efficiency.
-- **`Modification5`** — 62. Removal, the update-collection systems, the search trees and graph systems.
-- **`ModificationEnd`** — 60. Instance counts, lane data, zone checking, validation, prefab application, notification triggers. The last chance to touch an entity before the frame's tool and render work.
-- **`PreCulling`** — 19. Camera update, pre-culling, overlay infomodes, mesh colour, wind textures. Where per-instance colour work goes.
-- **`UIUpdate`** — 83, every vanilla UI system. Used by more of the surveyed mods than any other phase — nineteen of twenty. That `UISystemBase` belongs here is convention rather than a constraint: the base class itself constrains no phase. See `binding-layer`.
-- **`UITooltip`** — 23. **This one is a hard requirement, not a convention.** The tooltip UI system clears its group list, drives `UITooltip`, then reads the list back into its bindings, so a tooltip system running anywhere else writes into a list that has already been consumed. A mod that puts its tooltip system here and its other UI systems in `UIUpdate` reads like an inconsistency and is correct.
-- **`Rendering`** — 40. Batch instances, the initialisation family, object colour, batch data, area rendering, visual effects. Runs after `UIUpdate` in the same frame.
-- **`Serialize`** — 7: path trimming and two pre-serialize wrappers in front, then prefab serialization begin and end, the serializer, and the writer. Vanilla registers **nothing** in the back band, so a mod's `UpdateAfter` here is the last thing to run before the save completes.
-- **`Cleanup`** — 6. Audio, animation, batch upload, cleanup, culling and enabled-state completion. Driven after the UI update, at the very end of the frame update. Where a disposal system goes.
-
-**Driven from the late update**
-
-- **`LateUpdate`** — 5, the drivers themselves. No surveyed mod registers here, which is unsurprising: it means running between the drivers of the whole simulation.
-- **`PreSimulation`** — **0**. Driven every frame and occupied by nobody, vanilla or mod. The one genuinely empty phase, and the only place to run exactly once per frame immediately before that frame's simulation steps.
-- **`GameSimulation`** — 297. By far the largest phase; the whole city simulation, and where `citizens-and-households`, `economy-and-companies` and `city-services-and-coverage` live. Runs 0–8 times per frame with the update-interval mask applied.
-- **`EditorSimulation`** — 9: time, climate, snow, wind, natural resources, fire, street lights — environment only, no city. A mod that must also work in the editor registers the same systems into both this and `GameSimulation`; that dual registration is the pattern `environment-and-pollution` needs.
-- **`LoadSimulation`** — 20, navigation and AI systems, run eight iterations per frame while the loading counter is positive — on the order of a thousand iterations for a new game. No surveyed mod registers here.
-- **`PostSimulation`** — 1, the water system. Runs once per frame after the steps.
-- **`CompleteRendering`** — 1. Driven after every GPU upload for the frame has completed.
-- **`DebugGizmos`** — 31, the debug system family. Last phase of the frame.
+Read [the phase catalogue](phase-catalogue.md) for what characterises each of the 32 phases, which is what separates two candidates none of the six covers.
 
 ## The update interval, and the two halves of the rule
 
@@ -406,11 +381,13 @@ The same applies to reflecting over a vanilla system's private state, to registe
 
 ## The pre-deserialize hook and its siblings
 
-Four generic wrapper systems exist, each forwarding to one method on the wrapped system and passing it the load or save context:
+Three generic wrapper systems exist, each forwarding to one method on the wrapped system and passing it the load or save context:
 
 - `PreDeserialize<T>`, where `T` implements `IPreDeserialize`;
 - `PostDeserialize<T>`, with `IPostDeserialize`;
-- `PreSerialize<T>`, with `IPreSerialize`, plus its counterpart on the far side of the writer.
+- `PreSerialize<T>`, with `IPreSerialize`.
+
+There is no `PostSerialize<T>`: the far side of the writer is reached by an ordinary `UpdateAfter` registration in the `Serialize` phase instead.
 
 **The wrapper is what gets registered, not the wrapped system:**
 
@@ -428,11 +405,13 @@ What goes inside any of those methods is `save-serialization`.
 
 ## Not every mod system needs a phase
 
-A system that extends a vanilla base which self-registers into a vanilla collection does not get registered with the update system at all.
-The info-section base classes are the case in point: the section adds itself to the selected-info UI system from its own `OnCreate`, and that system then drives every member from its own update.
-Creating the system with `GetOrCreateSystemManaged` **is** the registration, and the phase question does not arise.
+A system that lands in a vanilla collection which is itself pumped does not get registered with the update system at all.
+The info-section base classes are the case in point: create the system with `GetOrCreateSystemManaged` and then call the selected-info UI system's public add-section method yourself, after which that system drives your section from its own update and the phase question does not arise.
+The base class does not do this for you — its `OnCreate` caches the UI system and registers nothing, and the vanilla sections reach the panel through a hard-coded list your section is not on.
 
-When a mod system extends a vanilla base, check whether the base self-registers before choosing a phase for it — registering it as well would run it twice.
+**Ask what kind of collection the base joins, not merely whether it joins one.**
+A collection that is pumped replaces a phase registration; a collection that is only a lookup does not.
+The tool base class is the trap here: it appends every tool to the tool system's list from `OnCreate`, but that list decides prefab claim order alone, so a tool still has to be registered into `ToolUpdate` or its `OnUpdate` never runs.
 
 ## `OnDispose` hygiene
 
@@ -441,18 +420,19 @@ So every null guard in an `OnDispose` body is load-bearing rather than defensive
 
 What belongs there:
 
-- **Unpatch Harmony.**
-  Constructing a fresh `Harmony` with the same id and calling `UnpatchAll(id)` is correct and often necessary, because the id is the key and the mod instance may hold no usable state across the two calls.
+- **Undo the mod's Harmony patches.**
+  A patch outlives the mod object that applied it, and a mod can be re-initialised without the process restarting, so patches left in place stack a second set over the first.
+  `patching` owns the call and the identity it keys on.
 - **Unregister the settings from the options UI**, and null the field, in the shape `if (Settings != null) { Settings.UnregisterInOptionsUI(); Settings = null; }`.
   See `settings-and-input`.
 - **Null the mod's own static instance and any other static state**, since statics outlive a re-initialisation that constructs a new mod object.
 - **Undo anything registered outside the mod's own world** — a UI host location, a temporary directory, an entry in another mod's registry.
 
 What does not belong there: unregistering systems.
-Neither `IMod` nor the update system offers a way to, the five registration methods are the complete surface, and no mod attempts it.
+Neither `IMod` nor the update system offers a way to, and the five registration methods are the complete surface.
 A mod's systems live until the world does.
 
 ## What this reference hands to others
 
-`ecs-in-this-game` for what goes inside a system; `save-serialization` for the contents of the two save phases, whose position in the tree and once-per-load firing come from here; `diagnostics` for reading the log files these failures write into; `performance-and-memory` for what the update interval buys; `patching` for changing behaviour without owning the system; `mod-compatibility` for deciding at load time what another mod has already done.
-Every mechanics reference needs a phase for its change, and the modification-phase decomposition above is the part `roads-and-traffic` and `zoning-buildings-and-land-value` lean on hardest.
+`ecs-in-this-game` for what goes inside a system; `save-serialization` for the contents of the two save phases, whose position in the tree and once-per-load firing come from here; `diagnostics` for reading the log files these failures write into; `performance-and-memory` for what the update interval buys; `patching` for changing behaviour without owning the system, and for the patch lifecycle a dispose has to close; `mod-compatibility` for deciding at load time what another mod has already done.
+Every mechanics reference needs a phase for its change, and the modification-phase decomposition in the phase catalogue is the part `roads-and-traffic` and `zoning-buildings-and-land-value` lean on hardest.

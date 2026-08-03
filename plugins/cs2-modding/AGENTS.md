@@ -13,6 +13,8 @@ Every skill works unchanged when neither is installed.
 
 Four disclosure tiers, in order of cost: skill descriptions, then `SKILL.md` bodies, then references, then the local decompile and mod corpus grepped on demand.
 A fact earns its tier by how many readers need it, and a trunk body carries what belongs to no single reference — plus the handful a trunk reader cannot act without, which are stated there in a paragraph and developed in their reference.
+The reference tier nests: a topic discloses within its own folder (below), so material only some of its readers need costs the rest nothing.
+What may never move down is a rule whose absence makes a reader **wrong** rather than shallower — a pointer carries depth, and a reference stays self-sufficient without following one.
 
 ## The shipped-prose contract
 
@@ -30,6 +32,10 @@ Everything under `skills/` is a deliverable held to these rules. Load the `writi
 - **Volatility marker.** A claim that rots — component field names, system names, save-format versions, UI module paths, raycast mask combinations — carries `VOLATILE:` inline, naming what moves and where it lives: `(VOLATILE: the field names on this component — the component's own declaration.)`. That uppercase token is the only spelling, and durable architectural facts carry none, so `VOLATILE:` greps into the maintenance checklist for the next game version.
   **A marker is a label, and reads as one.** An imperative — _re-read this_, _check that_ — is an order an agent obeys on sight, so a reference carrying nine of them spends a reader's context re-deriving claims that were right. Name the thing that moves, so the next version's sweep has its list, and name where it lives as a location rather than an errand — a type, a namespace, a region, or the game's own file where the claim is not a C# one, since the sweep has to be able to open what the marker names. The trunk `SKILL.md` owns the reason: it states the four triggers that make re-deriving worth it, once, for every marker in the plugin.
   Every marker you add or remove goes in your closing message to the user, quoted, so they can rule on it there rather than by reading the diff. The maintainer owns which claims count as volatile, and calls that look settled from inside one file are the ones they overturn.
+- **Evidence marker.** A claim the pipeline reached but could not confirm carries `UNVERIFIED:` inline, naming what went unconfirmed and what would settle it: `(UNVERIFIED: whether this is safe in a running city — nobody has run it.)`. That uppercase token is the only spelling, and the lint asserts it the same way it asserts the other.
+  **It answers a different question from `VOLATILE:`.** A volatile claim was established and will rot; an unverified one was never established. Both grep into the next version's work — one into what to re-derive, the other into what to confirm — and a maintainer with a running game can only sweep for the second if it has a token.
+  State the claim in the prose's own voice and attach the marker, rather than hedging the sentence around it. Before the token existed six references invented six phrasings for this — _ships as observed practice_, _is not established_, _is not settled by the source_ — and no reader could tell them from each other, nor any grep find them. Where a claim is not merely unconfirmed but genuinely unknowable from the sources, that is a `conflicts.md` entry and not a marker.
+  Every marker you add or remove goes in your closing message, quoted, exactly as a volatility marker does.
 
 ## Fact-checking is its own pass
 
@@ -55,6 +61,14 @@ Only the trunk splits this way; every other skill keeps a flat `references/`.
 
 - **Technique** references, in `skills/cs2-modding/references/technique/`, teach mechanism reusable across subject matter.
 - **Mechanics** references, in `skills/cs2-modding/references/mechanics/`, teach what the game simulates in one area, name the components and systems carrying it, and state the game's own numbers and relationships.
+
+**Every reference is a folder, and its entry file repeats the topic name.**
+`references/technique/custom-tools/custom-tools.md` is the reference a bridge slug names and a pointer resolves to; anything else the topic discloses sits beside it, in that same folder, under its own name.
+A topic that discloses nothing keeps the folder anyway — it is one file in a directory of its own, and that is the point: **disclosing later is then a new file rather than a move**, so no pointer, slug or ticket path changes when a reference outgrows one file.
+
+Both families work this way, and so does the UI skill's flat `references/`.
+A sub-file is a reference like any other: it carries its own title and its own `Verified against game version <version>.` line, because it goes stale on its own, and the content lint already treats any `.md` below a `references/` directory as a reference at any depth.
+Link to a sibling in the same folder by bare filename; a bridge to another _topic_ stays a backticked slug and never a link.
 
 The boundary is the question a fact answers: _how do I do this at all_ is technique, _what does the game model here and where does it live_ is mechanics.
 The bridge between them is the product — no other source connects "here is the ECS" to "here is how this part of the city works" with "therefore, to change X, modify Y" — so the two families cross-reference: a mechanics reference points at the techniques a change there needs, a technique reference points at the mechanics it serves.

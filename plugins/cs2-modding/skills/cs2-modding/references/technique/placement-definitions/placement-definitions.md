@@ -48,7 +48,7 @@ commandBuffer.AddComponent(definition, default(Updated));
 No tool anywhere in the game declares a definition archetype; the only two `CreateArchetype` calls for a definition are in the simulation, and they exist for a reason covered below.
 
 **`Updated` is load-bearing and not decoration.**
-Every consumer's query requires it, and the game's cleanup system strips it — along with `Created`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated` — from every tagged entity in the `Cleanup` phase at the end of the frame.
+Every consumer's query requires it, and the game's cleanup system strips it from every tagged entity in the `Cleanup` phase at the end of the frame, as it does every frame-scoped tag — `ecs-in-this-game` owns that protocol and its timing.
 So a definition is visible to its consumer for exactly the frame it was created in, and a definition emitted without `Updated` is invisible to every consumer while still matching the sweep that destroys stale definitions.
 
 ## The kind component decides the consumer, and there are nine of them
@@ -143,7 +143,8 @@ MainLoop
                         ToolUpdate  the eleven tools -> definitions emitted
                                     ToolOutputSystem -> ClearTool | ApplyTool
                                     ToolOutputBarrier playback
-                        PostTool    CourseSplitSystem, ToolFeedbackSystem, ...
+                        PostTool    ToolFeedbackSystem, SelectedUpdateSystem,
+                                    CourseSplitSystem, ...
                                     ToolReadyBarrier playback
   ModificationSystem    Modification1   Generate{Objects,Nodes,Zones,Areas,Waypoints,
                                         Notifications,Brushes,Aggregates,WaterSources}
@@ -172,9 +173,10 @@ This is a hard requirement of the window rather than a stylistic preference, and
 **`PostTool` is the window the game's own definition rewriter uses.**
 The vanilla course-splitting system queries `{CreationDefinition, NetCourse, Updated}` at `PostTool` and rewrites those definitions through `ToolReadyBarrier`, splitting one drawn course wherever it crosses an existing node; at over four thousand lines it is the largest piece of definition-rewriting code in the game.
 The property that makes the window worth knowing is that `ToolReadyBarrier` plays back **before** the modification phases, so a rewrite queued into it lands in time — which means the rewrite can be a scheduled job rather than a main-thread loop, the one thing the `Modification1` window cannot offer.
-The status ships with it: no mod in the twenty-repository corpus surveyed for this plugin uses that barrier, and this plugin cannot run the game, so what is on offer here is the architecture rather than a tested path.
+So a rewriter heavy enough to want a job goes here, and `Modification1` stays the default for everything else.
+(UNVERIFIED: whether a mod system registered at `PostTool` sees the frame's definitions at all — registering one in a running game and watching its query match would settle it, and until somebody has, this window is architecture rather than a walked path.)
 
-(VOLATILE: that the `PostTool` window is still open and still without a worked mod example — the game's own course-splitting system, and the tool-ready barrier's phase registration.)
+(VOLATILE: that the `PostTool` window is still open — the game's own course-splitting system, and the tool-ready barrier's phase registration.)
 
 ## The query that catches a definition in flight
 
@@ -195,12 +197,12 @@ The zone-spawn and area-spawn systems build their definitions from an archetype 
 Excluding `Deleted` is therefore a real decision: it leaves the simulation's own placements alone and confines the rewrite to what a tool is drawing, which is almost always what a mod wants.
 
 `Overridden` is **not** reachable on a definition entity.
-The only system that writes it adds it to the `Temp` chunk set at `ApplyTool`, never to a definition.
+Eight sites across the tools, net, objects and areas namespaces add it, and every one of them targets a real instance or a `Temp` clone rather than a definition.
 The exclusion is inert; it is worth keeping only as documentation that the author knew the difference between a definition and a `Temp`.
 
 The vanilla side keeps the **complement** of this query for a different purpose: `ToolBaseSystem.GetDefinitionQuery()` is `{CreationDefinition}` with `Exclude<Updated>`, matching only the stale definitions of a previous frame, which is what the sweep below consumes.
 
-(VOLATILE: that `Overridden` is still unreachable on a definition entity, and that the simulation's spawn archetypes still bake `Deleted` into theirs — the tool apply system, and the simulation's zone and area spawn systems.)
+(VOLATILE: that `Overridden` is still unreachable on a definition entity, and the count of sites that add it, and that the simulation's spawn archetypes still bake `Deleted` into theirs — every writer of `Overridden` across the tools, net, objects and areas namespaces, and the simulation's zone and area spawn systems.)
 
 ## Rewriting a definition changes what the game builds, without touching the tool
 
@@ -275,9 +277,8 @@ That is how the selection highlight works — a `Select` definition becomes a `T
 
 ## Producing definitions: the sanctioned helper, and what "vanilla-quality" actually means
 
-`ObjectToolBaseSystem` exists for one protected method.
-`CreateDefinitions(...)` takes 23 parameters, schedules the game's own definition job wired with some seventy component and buffer lookups plus the object search tree, the water surface data and the terrain height data, and emits through `ToolOutputBarrier`.
-`custom-tools` owns the choice of base class; what belongs here is what that job actually produces.
+`ObjectToolBaseSystem` exists for one protected method, `CreateDefinitions(...)`, which schedules the game's own definition job and emits through `ToolOutputBarrier`.
+`custom-tools` owns that helper — its signature, the cost behind it and the choice of base class it decides; what belongs here is what the job actually produces.
 
 **The job's job is composition.**
 It resolves the control points into a placement, emits the definition for the object itself, and then recurses through the prefab's structure — sub-objects, sub-nets, sub-lanes, sub-areas — threading an `OwnerDefinition` down so every sub-element points at its not-yet-created parent.
@@ -286,7 +287,7 @@ Around that walk it does placeholder resolution, attachment resolution, the lowe
 **So "vanilla-quality preview" is not about rendering — no tool renders anything.**
 It means a definition tree complete enough that the generation system produces the same `Temp` entities the vanilla tool would, which is what makes a placed building bring its own driveway, lawn and lamp posts along with it.
 
-A mod that reimplements the job — the corpus's one full fork runs to fourteen hundred lines and 63 injected lookup fields, wired one by one and executed on the main thread rather than scheduled — keeps and drops along a clean line.
+A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled — keeps and drops along a clean line.
 
 **What has to be kept** is everything driven by prefab structure: the recursive walk over sub-objects, sub-nets and sub-areas, the `OwnerDefinition` threading, placeholder variation resolution, the attached-parent resolution, the lowered-parent test, the parent-prefab check and the clear-area plumbing.
 **What can be dropped** is everything driven by tool state: brush scattering and with it the object search tree, snapping and distance, the frame delta, removal and stamping, decoration mode, the lane editor, the transform prefab — and dropping that last one means the fork never sets `CreationDefinition.m_SubPrefab` — and the attachment and service-upgrade data.
@@ -339,8 +340,19 @@ The pre-deserialize hook is the last place a mod can register a prefab before th
 A mod whose own entities have no natural prefab gives them one: an empty `PrefabBase` subclass with no fields and no behaviour, whose two archetype hooks add a single marker component of the mod's own to the prefab entity and to the instance archetype.
 It is instantiated with `ScriptableObject.CreateInstance<T>()` in the pre-deserialize hook, named with the mod's own prefix, marked active, handed to `PrefabSystem.AddPrefab`, and its entity cached in a static field; that entity is then stamped as `PrefabRef` onto every entity the mod creates — at generate time, at apply time, and again in a load-time repair pass that adds one to any entity found without it and corrects any that points elsewhere.
 
-That practice ships as observed practice rather than as a rule, and the limit of the evidence belongs in the same sentence: the mod that does it says in its own source that the prefab exists to satisfy vanilla validation, and the vanilla site that faults on an entity carrying **no** `PrefabRef` at all was looked for across the tools, serialization and prefab code and not found.
-What is provable is the remap requirement above; what is not is that an entity with no reference at all is rejected.
+The practice reaches further than the rule, and it earns the reach: the rule binds an entity that already carries a `PrefabRef`, and the practice gives one to entities that might have gone without.
+
+**An entity with no `PrefabRef` costs nothing while the game runs and kills the process at the next world transition.**
+Stripping the component off a live sub-object disturbs nothing at runtime — no exception, no stall, the simulation ticks on and the entity keeps working — and the save writes normally.
+That silence is the trap: nothing connects the failure to the thing that caused it.
+
+The bill comes due whenever the game tears the world down and rebuilds it — reloading a save, or merely returning to the main menu.
+The serialization pass that rebuilds each owner's `SubObject` buffer from its members' `Owner` back-references logs `Owner has no SubObject: <index>:<version>`, naming the offending entity, and the process dies on that line.
+So a mod that leaves its own entities without a prefab does not crash the session that creates them; it crashes the player who quits to the menu.
+
+**Give every entity you create a `PrefabRef`**, and where the entity has no natural prefab, mint the empty one above rather than leaving the component off.
+
+(VOLATILE: that the owner/sub-object rebuild is where this surfaces — the serialization namespace's sub-object system.)
 
 The distinction is worth the extra sentence because what you are deciding is an entity archetype, the most expensive thing to change once a save format depends on it: adding the reference late means a migration, and adding it needlessly means a dead component in every save.
 
@@ -375,7 +387,7 @@ The apply dispatcher reads two of them at `ApplyTool`: a chunk carrying `Warning
 `ValidationSystem` itself tags nothing, so a mod system spliced `UpdateAfter<Mine, ValidationSystem>(ModificationEnd)` still runs after `ValidationSystem.Components` has added and removed this frame's tags — two systems anchored on the same target splice in registration order and vanilla registered first.
 That is the position from which a mod adds `Error` tags of its own and expects them to survive the frame.
 
-(VOLATILE: the `ErrorType` and `ToolErrorFlags` member sets, the error-prefab array sized to the `ErrorType` count, and the `{NotificationIconData, ToolErrorData}` prefab query — the tools and prefabs namespaces, and the validation system.)
+(VOLATILE: the `ErrorType`, `ErrorSeverity` and `ToolErrorFlags` member sets, the error-prefab array sized to the `ErrorType` count, and the `{NotificationIconData, ToolErrorData}` prefab query — the tools and prefabs namespaces, and the validation system.)
 
 ## Turning a tool error off means editing its prefab, and putting it back afterwards
 
@@ -403,7 +415,7 @@ The complementary move is to **reuse** a vanilla error prefab rather than suppre
 
 `custom-tools` is the other half of this seam, and neither reference is complete without it: it owns `ObjectToolBaseSystem` as a choice of base class, the `ApplyMode` state machine that decides when definitions are rebuilt and destroyed, and the `GetAllowApply()` gate that the error findings above fill in the first place.
 
-`prefabs-and-assets` sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the default probability in `ObjectDefinition` comes straight from the first — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
+`prefabs-and-assets` sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the producer seeds `ObjectDefinition.m_Probability` to 100 and overwrites it from the first only when that prefab's placement flags carry `HasProbability` — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
 
 `zoning-buildings-and-land-value` is reached twice over: every act of zoning and dezoning passes through a `Zoning` definition, and growth itself emits `Permanent` definitions for the building, its sub-areas and its sub-nets, so a mod changing what grows on a lot has a seam here that involves no tool at all.
 
