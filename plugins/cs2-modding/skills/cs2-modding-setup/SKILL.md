@@ -1,11 +1,11 @@
 ---
 name: cs2-modding-setup
-description: 'Provisions and maintains the local ground truth for Cities: Skylines II mod development. Use when the user asks to be set up for CS2 modding, when the decompile needs creating or updating, when they ask which mods are worth reading for a problem, when the in-game debug menu or the UI debugging port turns out to be unavailable, or when another skill finds no decompile recorded.'
+description: 'Provisions and maintains the local ground truth for Cities: Skylines II mod development. Use when the user asks to be set up for CS2 modding, when the decompile or the readable copy of the game UI bundle needs creating or updating, when they ask which mods are worth reading for a problem, when the in-game debug menu or the UI debugging port turns out to be unavailable, or when another skill finds no local source recorded.'
 ---
 
 # Setting up a Cities: Skylines II modding environment
 
-Four things, provisioned separately and none of them required: a **decompile** of the installed game, the game's **developer launch options**, a **debug patch** that lets a debugger attach to it, and a **mod corpus** to read from.
+Five things, provisioned separately and none of them required: a **decompile** of the installed game, the game's **developer launch options**, a **debug patch** that lets a debugger attach to it, a **mod corpus** to read from, and a readable copy of the game's **UI bundle**, which ships as one minified line.
 
 Take the request as it comes rather than asking the user for a keyword.
 No argument, or anything that reads as "set me up", runs first-time setup.
@@ -38,7 +38,13 @@ Decompiled: 2026-08-01
 Debug patch: applied
 Launch options: set
 Mod corpus root: (none)
+UI bundle copy: (none)
+UI bundle lines: (none)
 ```
+
+`UI bundle copy` is a reformatted copy of the game's own `Cities2_Data/Content/Game/UI/index.js`, which ships minified to a single line and cannot be read around or cited as it stands; step 5 makes one.
+`UI bundle lines` is that copy's line count.
+Anything citing the copy cites line numbers, so the count is how a later reader tells whether their copy and the citations still agree — a differing count means they do not, whatever produced it.
 
 ## First-time setup
 
@@ -117,13 +123,16 @@ Done when the user confirms the flags are on their launch command; record it, si
 
 Write the record described above, then tell the user its path and what it is for.
 
-### 5. Offer the optional halves
+### 5. Offer the optional extras
 
 A user who wanted a decompile is finished at step 4.
-The other two are independent of it and of each other, so offer them and let the user decline:
+The other three are independent of it and of each other, so offer them and let the user decline:
 
 - Patching the game so a debugger can attach: [debug-patching.md](references/debug-patching.md).
 - Cloning community mod source to read: [mod-catalog.md](references/mod-catalog.md).
+- Making the game's UI bundle readable, worth offering to anyone working on a mod's interface.
+  `Cities2_Data/Content/Game/UI/index.js` under the install ships minified to a single line, so reading around a match or citing one needs a reformatted copy.
+  Copy it somewhere of the user's choosing, reformat that copy with prettier at its defaults, and fill both record keys with the path and the resulting line count.
 
 ## Refreshing after a game update
 
@@ -133,12 +142,14 @@ Re-read the versions as in step 1 and compare them against the record:
 
 Nothing moved → nothing is stale, so say so rather than redoing the work.
 
-A moved game version stales two things, each guarded by its own key in the record:
+A moved game version stales three things, each guarded by its own key in the record:
 
 - `Decompile root` is set → re-decompile, deleting `src/` first so types the update removed do not survive as stale files.
 - `Debug patch` reads applied → re-apply [debug-patching.md](references/debug-patching.md), which carries why an update undoes it and what changes when the Unity version moved too.
+- `UI bundle copy` is set → remake it from the updated `index.js` as in step 5, and write the new `UI bundle lines` count.
+  The frontend is rebuilt every patch, so a stale copy is worse than none: its module paths and line numbers all still look plausible.
 
-A key that is absent or `(none)` means the user never provisioned that half, so leave it alone rather than offering to repair something they declined.
+A key that is absent or `(none)` means the user never provisioned that one, so leave it alone rather than offering to repair something they declined.
 
 Update the record either way, including when nothing changed, so the next session knows the check happened.
 
