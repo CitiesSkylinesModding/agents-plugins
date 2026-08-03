@@ -124,6 +124,7 @@ Prefab-data initialisation systems anchored immediately after the vanilla initia
 Hand-built input actions registered by reflection, because scroll bindings are not exposed.
 Taking a placement definition away from its vanilla consumer by removing the creation component from a system spliced immediately before that consumer, played back synchronously because a phase barrier would land after the consumer has already run.
 An in-engine test scenario system, debug-only.
+A build-time export of its English string table into the repository, locating the destination from the compiler's caller-file-path rather than a hard-coded developer directory.
 
 ### Traffic
 
@@ -140,6 +141,7 @@ Letting the player choose, from the settings screen, between the mod's own bindi
 Migrating another mod's saved data on load, and detecting an incompatible build of it by scanning loaded assemblies.
 Its own placement-definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of that protocol to a new kind.
 An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
+Its own language dropdown independent of the game's, registering the chosen translation under whatever locale the game is currently set to and re-applying the swap whenever the player changes language.
 
 ## Replacing a vanilla system instead of patching it
 
@@ -153,6 +155,7 @@ Source: [algernon-A/PlopTheGrowables](https://github.com/algernon-A/PlopTheGrowa
 Empty tag components using the engine's own serialization, so per-entity mod state rides along with the entity and needs no save section of its own.
 A deserialize-phase system that backfills entities from saves written before the mod existed.
 Reusing the game's existing "historical" flag rather than inventing a parallel lock.
+Translations as embedded per-locale CSV with its own quote-aware reader, settings keys written as a short packed prefix the loader expands into the long generated key, so a translator edits a two-column spreadsheet.
 
 ### Realistic Trips
 
@@ -183,6 +186,7 @@ Mimicking the built-in apply and cancel bindings by copying them from the input 
 Registering roughly fifteen systems across specific phases, which is a readable map of where prefab, serialize and tool work has to sit.
 Regenerating a live prefab in place, which replaces the prefab entity outright, so the mod tags the outgoing one, throttles the rebuild, and clears the stale entity out of a vanilla system's private dictionary that the engine's own reference sweep cannot reach.
 A null-checking wrapper around the generic prefab lookup, which otherwise reports success while handing back null whenever the requested type does not match.
+A dictionary source registered under every supported locale whose entries are generated on each read, so names for roads the player builds at runtime localize without re-registering anything.
 
 ### Extra Assets Importer
 
@@ -196,6 +200,7 @@ Driving the texture importer directly to turn image files into texture assets, w
 Mapping arbitrary JSON keys onto shader properties.
 Content hashing to skip unchanged assets on the next load, and per-asset error handling so one malformed user folder does not fail the batch.
 Marshalling work back to the main thread from a background import, including blocking a worker on a frame count, which is the corpus's most demanding use of the main-thread dispatcher.
+Turning user-supplied per-locale JSON into a compiled locale asset in its own database, which the localization manager picks up through its asset-changed subscription rather than through an explicit source registration.
 
 ### Water Features
 
@@ -236,6 +241,7 @@ Prefab indexing split into one processor class per category, discovered by refle
 Full rebuild on load versus incremental updates driven by created and updated queries.
 An extension hook that lets any other mod contribute a search predicate, found by reflection with no shared assembly.
 Deriving hundreds of new prefabs from the loaded asset database by cherry-picking a few components off each original instead of cloning it, sharing the mesh reference, and declaring obsolete identifiers so a rename migrates saves.
+Naming prefabs it generates at runtime by copying the original's localized name out of the active dictionary and writing a fallback straight back into it, which is the fast path and is lost the moment the player changes language.
 
 ### Info Loom
 
@@ -263,6 +269,7 @@ Burst jobs for "apply within a radius" against both transforms and curves.
 One of its own components shadows a vanilla component of the same name that arrived later, and the source has both in use side by side, which is the readable case for namespace-qualifying every component a mod shares a name with.
 Three tools that decline every prefab — `TrySetPrefab` returns false and `GetPrefab` returns null — so they are reachable only from the mod's own UI and cost the toolbar nothing wherever they sit in the tool list.
 Emitting a selection definition against an existing entity so the game hands back a temporary copy the mod can edit, which is how it applies a colour through the placement pipeline instead of writing the live entity.
+Player-authored translations: the player names and translates their own palettes in-game, each locale written to a JSON file beside the palette and registered as an in-memory source, guarded by a check that the game supports that locale at all.
 
 ### Write Everywhere
 
