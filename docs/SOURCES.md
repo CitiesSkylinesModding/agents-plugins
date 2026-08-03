@@ -93,7 +93,7 @@ A plain fetch usually loses to the site's JavaScript bot challenge. Try a web-fe
 
 ## 11. The mod corpus
 
-Twenty checked-out open-source mod repositories. Which ones, and what each demonstrates, is [`../plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md`](../plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md) — the one file that names a mod, and the one that gains an entry as passes learn.
+Twenty-one checked-out open-source mod repositories. Which ones, and what each demonstrates, is [`../plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md`](../plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md) — the one file that names a mod, and the one that gains an entry as passes learn.
 **Input, never output.** It is evidence of what mod authors do, which is a different fact from what the game does.
 
 ---

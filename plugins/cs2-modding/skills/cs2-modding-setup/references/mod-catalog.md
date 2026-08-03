@@ -313,3 +313,23 @@ A secondary tool that masquerades as the bulldozer by delegating its prefab meth
 Serializable records that make a destructive edit reversible.
 The reason "permanent" removal needs records at all: the game's own systems keep recreating sub-elements from the asset definition, so the mod re-detects and re-deletes them rather than deleting once.
 Reinserting its two tools at the front of the tool list once loading has completed, which is later than the tool's own creation and therefore wins any race with a mod that reorders at `OnCreate`.
+
+## Inspection and debugging tooling
+
+### Scene Explorer
+
+Source: [krzychu124/SceneExplorer](https://github.com/krzychu124/SceneExplorer)
+
+**Does:** Inspects a clicked entity in its own windows over the running game, listing every component it carries with the field values live-refreshed while the simulation runs, alongside a search over every registered component type, a configurable entity query, and editor-only snapshots of the entities a query returned.
+It writes no simulation values; what it does change is the vanilla highlight on the entity under the cursor, which it removes again, plus bookkeeping entities of its own.
+
+**Demonstrates:** Reading a component whose type is not known until runtime, by caching `MakeGenericMethod` results over the entity manager's own generic getters and classifying each `ComponentType` into unmanaged, managed, shared, buffer, tag and enableable before rendering it, which is what a mod needs when it must handle types it cannot name at compile time.
+Building an entity query at runtime from the type manager's registry, with all-any-none sets staged through pending add and remove collections so a UI callback never mutates a live set mid-layout.
+The vanilla selection glow on an arbitrary entity, by adding the game's own highlight component paired with the batch-update component that forces the re-render — the second half is what makes the first take effect.
+Driving both the overlay buffer and the gizmo batcher from Burst jobs, with the writer registration the gizmo side requires.
+Passing UI intent to renderer systems through ECS components rather than object references: each window owns an entity of a published archetype and writes its hover target into it, and the rendering system rebuilds its map from whichever of those entities changed.
+Distinguishing a structural change from a value change on every refresh — comparing the entity's component-type list against the cached one, rebuilding the whole model when it differs and re-reading values when it does not.
+Registering an editor tool by growing the editor's own tool array.
+Snapshotting entities into memory by transitively following entity-typed fields, holding the two prefab references back so the walk does not drag the whole prefab graph in with them, and rendering live and frozen data through one code path.
+No patching anywhere in the codebase.
+Its helper and service classes are where all of the above is legible; its two thousand-line tool and highlight systems carry near-duplicate dispatch ladders and repay reading only for the specific mechanism you came for.
