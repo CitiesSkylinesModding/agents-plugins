@@ -18,7 +18,8 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
-const skillsRoot = 'plugins/cs2-modding/skills';
+const pluginRoot = 'plugins/cs2-modding';
+const skillsRoot = `${pluginRoot}/skills`;
 
 // The setup skill's provisioning catalog is the single place a mod may be named, so it is both the
 // source of the name list and the one file exempt from the no-leak rule.
@@ -229,6 +230,17 @@ function checkPointersResolve(files: readonly string[]): void {
         existsSync(resolved),
         `${file}:${lineOf(content, match.index)} points at "${target}", which does not exist. ` +
           `Progressive disclosure dead-ends there.`
+      );
+
+      // Existence alone passes a link that climbs out of the plugin, because the target does exist
+      // here -- and a marketplace install copies only the plugin directory, so the same link dead-
+      // ends for every user while this check stays green. That is the one broken pointer existence
+      // cannot see, which is why containment is asserted rather than left to prose.
+      assert.ok(
+        !path.relative(path.join(repoRoot, pluginRoot), resolved).startsWith('..'),
+        `${file}:${lineOf(content, match.index)} points at "${target}", which resolves outside ` +
+          `${pluginRoot}. It works here and dead-ends for everyone who installs the plugin, ` +
+          `since the install copies that directory alone. State the fact instead of linking.`
       );
     }
   }
