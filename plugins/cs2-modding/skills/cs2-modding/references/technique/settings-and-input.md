@@ -100,6 +100,7 @@ Grouping them by the job they do is what makes the set learnable: several attrib
 
 **Formatting of the chosen widget:** `SettingsUICustomFormat`, with fields `fractionDigits`, `separateThousands = true`, `maxValueWithFraction = 100f` and `signed`.
 Setting it replaces a slider's `unit` with the literal `"custom"` and hands the numeric formatting to the frontend.
+**Only a float slider reads all four.** The int-slider builder copies `separateThousands` and `signed` and drops the other two, and the frontend's own int-slider type declares only those two — so `fractionDigits` and `maxValueWithFraction` on an `int` property are inert.
 
 **Layout and ordering:** `SettingsUISection`, `SettingsUITabOrder`, `SettingsUIGroupOrder`, `SettingsUIShowGroupName`, `SettingsUIButtonGroup(string name)`, `SettingsUIPath(string overridePath)`.
 `SettingsUITabOrder` and `SettingsUIGroupOrder` each take either `params string[]` or a `(Type checkType, string checkMethod)` pair; `SettingsUIShowGroupName` takes either nothing — meaning every group — or `params string[]`.
@@ -116,7 +117,7 @@ Evaluated at page build but affecting placement rather than presence: `SettingsU
 
 **Text:** `SettingsUIDisplayName` and `SettingsUIDescription`, each with two constructors — `(string overrideId = null, string overrideValue = null)` and `(Type getterType, string getterMethod)`.
 
-**Reaction:** `SettingsUISetter(Type setterType, string setterMethod)`, and `SettingsUIValueVersion(Type versionGetterType, string versionGetterMethod)`, which tells the frontend that a dropdown's item list has changed underneath it.
+**Reaction:** `SettingsUISetter(Type setterType, string setterMethod)`, and `SettingsUIValueVersion(Type versionGetterType, string versionGetterMethod)`, which nothing sends to the frontend: it replaces the widget's own value-equality check with a version counter, and a dropdown carrying none reads its item list exactly once.
 
 **Warnings:** `SettingsUIWarning(Type checkType, string checkMethod)` on a property, `SettingsUITabWarning(string tab, Type checkType, string checkMethod)`, and `SettingsUIPageWarning(Type checkType, string checkMethod)`.
 
@@ -493,9 +494,10 @@ The route is to clone the vanilla composite that already has the shape you need,
 Pass the mod's own `id` as the map name and the resulting actions are reachable through `settings.GetAction(...)` exactly like a declared one, and their locale keys sit under the mod's own map alongside the rest.
 The case that forces this is a scroll-wheel action, since no mouse binding enum member names the wheel.
 
-**Whether a given vanilla action can be mimicked at all is not provable from the game's source.**
-The built-in flag is deserialized from the input asset rather than declared in code, and the mimic resolver requires it and silently does nothing otherwise.
-Tool-map and shortcuts-map actions are the ones with evidence behind them; anything else is worth confirming against the running game, which is what the sibling Unity plugin is for.
+**Every vanilla action is built-in, so the resolver's built-in requirement never rejects a vanilla target.**
+The flag is not declared in code and cannot be read off the source: it is deserialized from the input asset, where it defaults to true.
+What is readable is that exactly one site in the game clears it, and that site is a mod's own key-binding registration — so a composite is built-in unless a mod made it, and every action in every vanilla map qualifies.
+The mimic attribute's failure modes are therefore the other three: a map or action name that resolves to nothing, no composite for the property's device, and no binding for its component.
 
 ## What this reference hands to others
 

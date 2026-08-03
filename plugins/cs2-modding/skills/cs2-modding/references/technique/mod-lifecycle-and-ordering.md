@@ -400,7 +400,8 @@ The main-thread dispatcher is the mechanism, and it has four shapes with differe
 The tick sits in the frame update **outside** the guard that stops the world, so deferred work runs even while the world is not updating.
 
 Reach for it when the work needs a world that `OnLoad` has not finished building.
-Adding a UI module through the mod manager is the hard case: the call is gated on the manager having finished initialising, so it cannot run inside `OnLoad` at all and must be deferred.
+Adding a UI module through the mod manager is the hard case: the call is gated on the manager having finished initialising, and that gate is a **silent no-op rather than a throw**, so a call from inside `OnLoad` registers nothing and reports nothing.
+It has to be deferred.
 The same applies to reflecting over a vanilla system's private state, to registering with another mod's API, and to marshalling prefab registration back to the main thread from a background import.
 
 ## The pre-deserialize hook and its siblings

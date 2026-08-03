@@ -414,7 +414,9 @@ Two practical costs come with the technique.
 - **Both entities exist for a while.** Between your call and the prefab system's next update, the old and the new prefab entity are both live.
   Tag the outgoing one with a marker of your own and exclude that marker from your other queries.
 
-Whether calling this on a **vanilla** prefab is safe is not established: nothing forbids it, and nothing in the wild exercises it.
+Whether calling this on a **vanilla** prefab is safe **in a running city** is not established, and the two halves of the evidence pull apart.
+Nothing forbids it, and the game's own editor does it: the duplicate-and-replace-a-mesh path and the inspector's reparenting path both hand `UpdatePrefab` whatever prefab is being edited, which is routinely a vanilla one.
+But the editor is not carrying a live simulation over the result, and no mod does it in game.
 Treat it as a technique for prefabs you minted yourself until you have tested otherwise against a running game.
 
 (VOLATILE: the replacement system's 14-component query list and the three types its instance-archetype reconciliation covers — the replacement system.)
@@ -524,7 +526,7 @@ The game registers three hosts of its own, and they are the shapes to recognise:
 The thumbnail chain is the one to know: icon if set, else a placeholder when thumbnails are disabled, else the prefab's own `thumbnailUrl` with a size query appended — and that url is `"thumbnail://ThumbnailCamera/"` plus the prefab id rendered as a url segment.
 **So a prefab with no icon gets a live render keyed on its prefab id**, through one of three extra schemes the game's resource handler layers on top of `coui`, alongside screen capture and user avatar.
 
-The Cohtml side of the frontend is `ui-and-frontend`.
+The Cohtml side of the frontend is `frontend-and-injection`.
 
 (VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, and `AddHostLocation`'s signature — the UI system, and the default resource handler.)
 
@@ -543,5 +545,5 @@ Everything a definition-rewriting mod does depends on knowing the definition car
 
 `mod-lifecycle-and-ordering` owns when a system runs; the registration timings above are choices within what it establishes.
 `save-serialization` owns the save format that the identity section touches.
-`ui-and-frontend` owns the frontend that consumes the host locations above.
+`frontend-and-injection` owns the frontend that consumes the host locations above.
 `patching` owns remedy 3.

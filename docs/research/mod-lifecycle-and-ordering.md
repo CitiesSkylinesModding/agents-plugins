@@ -2,6 +2,8 @@
 
 **Baseline.** Decompiled game version 1.6.0f1. Mod corpus (20 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`) read 2026-08-02. Wiki fetched live 2026-08-02 — the bot challenge did not win this time, so the `Systems` and `ECS - Entity Component System` pages are cited from the live pages rather than through `survey-wiki-inventory.md`'s snapshot.
 
+**Re-swept 2026-08-03 (ticket 15b) against `docs/SOURCES.md`, which did not exist when this pass ran.** This topic makes no frontend claim, so the two sources the original pass could not have reached bear on it at exactly one seam: `AddUIModule`, where `@colossalorder/create-csii-ui-mod/template/types/modding.d.ts` declares the `ModuleRegistry` a loaded module talks to — `get`, `add`, `override`, `extend`, `append`, plus `hasAppend`, `find` and `reset`, and seven `AppendHookTargets`. That surface belongs to `frontend-and-injection`; what belongs here is the C# gate, amended at the deferral finding below. Nothing else in this file needed either source.
+
 ## Findings
 
 ### The contract is two methods, and nothing else
@@ -384,6 +386,7 @@ The tick is `MainThreadDispatcher.UpdateUpdaters()` at `GameManager.cs:713`, cal
 - Cross-mod API registration: `FindIt-CSII/FindIt/Mod.cs:73-74`.
 - Another mod's bridge: `ExtraDetailingTools/EDT.cs:93`.
 - Forcing a UI module asset to load through `GameManager.instance.modManager.AddUIModule` — which requires `ModManager.m_Initialized`, so it cannot run inside `OnLoad` at all (`CS2-WriteEverywhere/BelzontWE/WriteEverywhereCS2Mod.cs:104-109`, gate at `ModManager.cs:475-483`).
+  **Amended 2026-08-03 (ticket 15b): the gate is `if (m_Initialized)` with no `else`** (`src/Game/Game.Modding/ModManager.cs:477-482`), so an early call is a silent no-op and not a throw — which is the half a reader diagnosing a missing UI module needs, and which this file had left to inference. The body it skips is the one that registers the `"ui-mods"` host location for the module's directory and pushes the module's `coui` path into the frontend's app bindings, so nothing partial happens either.
 - Lazily reflecting a private field on a vanilla system that must already exist: `RoadBuilder-CSII/RoadBuilder/Systems/RoadBuilderSystem.cs:63`.
 - Marshalling prefab registration back to the main thread from a background import: `ExtraAssetsImporter/MOD/AssetImporter/ImportersUtils.cs:67/198/310` uses `RunOnMainThread`, and `AssetsImporterManager.cs:402` blocks a worker on `WaitXFrames(2).Wait()`.
 

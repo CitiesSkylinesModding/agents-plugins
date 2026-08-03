@@ -44,12 +44,28 @@ Its numbers are from a build nobody can reach.
 **Established.** All three columns with no counterpart on the live page are live game concepts in 1.6.0f1 rather than pre-launch relics: workplace complexity is an enum at `src/Game/Game.Prefabs/WorkplaceComplexity.cs:3-8`, carried on `src/Game/Game.Prefabs/Workplace.cs:22` and consumed at `src/Game/Game.Prefabs/ZonePrefabInitializeSystem.cs:140`; the circular flag is read as `GeometryFlags.Circular` at `src/Game/Game.Areas/ValidationHelpers.cs:233`; garbage accumulation is a field at `src/Game/Game.Prefabs/ConsumptionData.cs:17`.
 The schema survived the launch; only the values did not.
 
+**Established, amended 2026-08-03 (ticket 15b, the first pass to open the install's packaged content).** The real 1.6.0f1 values are on the machine, and what it costs to read one splits by which content it belongs to.
+
+Content-pack prefabs ship as loose `.Prefab` entries inside plain zips — a `Prefabs*.cok` per DLC directory plus `Cities2_Data/Content/Game/Prefabs_FreeUpdate02.cok`, 1,571 entries across the eight of them.
+Each entry is a **self-describing binary key/value stream**: UTF-16LE type names and field names inline, values inline, no schema needed.
+`Playground04/Playground04.Prefab` decodes as a `Game.Prefabs.BuildingPrefab` carrying `Game.Prefabs.ServiceConsumption` with `m_Upkeep = 2000`, `m_ElectricityConsumption = 500`, `m_WaterConsumption = 0`, `m_GarbageAccumulation = 100`, `m_TelecomNeed = 0` — field order and types exactly as `src/Game/Game.Prefabs/ServiceConsumption.cs:14-22` declares them, and the values vary per prefab across the package (`ChirperPark01` at 1000/250/0/100, `BasketballCourt04` at 8000/3000/10000/150).
+Three of those five are columns this page tabulates.
+
+**The base game's own service buildings are not among them**, which is the half that keeps the entry open.
+No `.cok` in the install holds a base-game prefab: `Blob.cok`'s 27,910 entries are materials, geometry, surfaces and textures, and the prefab packages carry DLC and free-update content only.
+Every base-game prefab is a Unity serialized object in `Cities2_Data/resources.assets`, which carries type names (`ServiceConsumption`, `BuildingPrefab`) and **no field names**, so reading a value there needs a Unity serialized-file parser driven by the decompiled class's field order — a derivation rather than a read.
+`docs/SOURCES.md` entry 5 now records the split; it previously described the whole set as "the shipped prefabs, assets and their data" and had never been opened.
+
+So this entry does not dissolve the way the key-namespace one did.
+First-party 1.6.0f1 numbers for the buildings the page is about exist and are reachable, at a cost that case did not carry: either that parser, or the running game, where the prefab system plus one component read returns any of them directly.
+
 **Needs a ruling on.** Whether a mechanics reference may borrow the columns at all, given the decompile carries the same concepts as named types and can be cited directly.
 What the page adds is that it gathers them into one table, which the decompile never does — and that convenience is the whole of its value.
 The risk runs one way: a reader who follows the link for the schema lands on stale values presented exactly like current ones.
 The ruling goes into the research files of the seven topics that borrow a wiki stat table: `city-services-and-coverage`, which this page's own data belongs to, plus `zoning-buildings-and-land-value`, `economy-and-companies`, `roads-and-traffic`, `transportation-and-vehicles`, `city-state-and-progression` and `citizens-and-households`.
 They are listed by name rather than by a rule, because the rule would have to be resolved against a source list this directory does not hold, and an entry naming its topics is what this file's own shape asks for.
 A later decomposition that renames or splits one of them leaves a stale name here, which is a visible problem; a rule nobody can resolve is not.
+The 2026-08-03 amendment does not change the question and adds one option to it: a reference that wants the page's convenience can instead be pointed at first-party numbers, at one of the two costs above. Whether that is worth asking of seven topics is the same judgement, better informed.
 
 ## Ruled
 
@@ -149,6 +165,12 @@ Neither half may ship alone, which is what makes this the third option rather th
 The hedge the question objected to is accepted rather than argued away, and it is the only one in the shipped tree.
 What the reader is deciding is an entity archetype, which the entry itself identifies as the hardest thing to change once a save format depends on it — a late addition is a migration and a needless one is a dead component in every save.
 A reader making that call is owed the difference between what was proven and what was believed, and a reference that stated the broad rule flat would be spending its own authority on a mod comment.
+
+**Addendum (2026-08-03, ticket 15b's re-sweep against `docs/SOURCES.md`).** The gap the ruling accepts is narrower than the `**Established.**` section states it, and the correction is about method rather than about the fact.
+"What could not be proved is the converse" reads as a property of the question; it is a property of the sweep. Whether an entity with no `PrefabRef` breaks anything is not a claim any static read settles — a search of `Game.Tools/`, `Game.Serialization/` and `Game.Prefabs/` can only ever return that no unconditional site was found, which is what it did — and it is a claim an experiment settles outright.
+The source that runs the experiment was on the list and unused: the running game through the sibling Unity plugin (`docs/SOURCES.md` entry 8), where creating an entity with the archetype the mod's connection entities carry, omitting the reference, and taking it through a save and load either faults or does not.
+The ruling survives this unchanged, and cannot be affected by the result: it already ships the narrow rule flat and the broad practice as a practice, and an experiment moves the sentence under it from a gap in the evidence to an observation, in whichever direction it lands.
+The game was not running for this pass, so this records the route and not the result.
 
 ### The game rewrites tool definitions in a phase no mod uses, and the corpus's alternative needs a workaround the game's does not
 

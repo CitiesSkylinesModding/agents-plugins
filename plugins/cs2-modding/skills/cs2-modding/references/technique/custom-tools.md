@@ -333,7 +333,8 @@ That is the shape a tool almost always wants; the base returns `None` and `None`
 **`Snap : uint`** — `ExistingGeometry = 1`, `CellLength = 2`, `StraightDirection = 4`, `NetSide = 8`, `NetArea = 0x10`, `OwnerSide = 0x20`, `ObjectSide = 0x40`, `NetMiddle = 0x80`, `Shoreline = 0x100`, `NearbyGeometry = 0x200`, `GuideLines = 0x400`, `ZoneGrid = 0x800`, `NetNode = 0x1000`, `ObjectSurface = 0x2000`, `Upright = 0x4000`, `LotGrid = 0x8000`, `AutoParent = 0x10000`, `PrefabType = 0x20000`, `ContourLines = 0x40000`, `Distance = 0x80000`, `None = 0`, `All = uint.MaxValue`.
 
 `kSnapAllIgnoredMask` is a public constant equal to `AutoParent | PrefabType | ContourLines`: the three flags an "all snapping" toggle is meant to leave alone.
-Nothing in the game consumes it, so it exists for the frontend and for mods.
+The tool UI system applies it to build `allSnapMask` — the tool's user-selectable set minus those three — and the panel's "All" button toggles exactly that set, leaving contour lines a control of their own.
+The constant's name appears nowhere but its declaration, because the compiler inlines a `const` at its call site; read that absence as a decompilation artifact rather than as a missing consumer.
 
 (VOLATILE: the `Snap` member set and the contents of `kSnapAllIgnoredMask` — the snap enum and the base tool class.)
 
@@ -417,7 +418,8 @@ The practical upshot is the whole point: **a mod tool's `applyAction` _is_ the u
 `InputManager.FindAction(mapName, actionName)` is public and the tool map's name is a public constant, so looking up the vanilla Apply action compiles.
 Enabling it does not: setting `shouldBeEnabled` on a built-in action throws, and the public activator constructor throws on the same condition.
 The only way past is an internal constructor overload that ignores the check — which is precisely what the wrapper the base class hands you is built on.
-Which specific actions carry the built-in flag is asset data rather than code and cannot be read from the game's source, so take the rule in the form that is readable: the base class routes around the check for every tool, and **the inherited property is the sanctioned way in.**
+Which specific actions carry the built-in flag is asset data rather than code, but the answer is not partial: the flag defaults to true and the one site in the game that clears it is a mod's own key-binding registration, so every vanilla action carries it.
+The check is not a filter some vanilla action might slip past — it rejects all of them, and **the inherited property is the sanctioned way in.**
 
 (VOLATILE: the five action alias strings above and the `internal` accessibility of the tool action collection — the base tool class's create body, and the input manager.)
 

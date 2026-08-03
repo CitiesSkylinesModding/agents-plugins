@@ -47,10 +47,15 @@ A `.loc` payload is a flat `BinaryWriter` stream with no compression, no checksu
 
 ## 5. The game's packaged content
 
-The `Blob*.cok` set under `Cities2_Data/Content/Game/`, plus the DLC and radio-pack directories under `Cities2_Data/Content/`, at `%CSII_INSTALLATIONPATH%`.
-The shipped prefabs, assets and their data, in the asset-database package format.
-This pipeline has not opened one, so the format claim above is untested here.
-They are where a prefab, asset or content-pack question goes when the decompile only shows the loader.
+The `.cok` set under `Cities2_Data/Content/Game/`, plus the DLC and radio-pack directories under `Cities2_Data/Content/`, at `%CSII_INSTALLATIONPATH%`.
+**Every `.cok` is a plain zip**, stored rather than deflated, one entry per asset beside a `.cid` sibling. A zip reader opens the largest of them without unpacking it.
+What is in them splits by kind, and the split is the entry's whole point:
+
+- **Art assets** — `Blob*.cok`, `VT*.cok`, `MidMips*.cok`. Materials, geometry, surfaces, textures, animations. `Blob.cok` alone is 27,910 entries and holds not one prefab.
+- **Prefabs, but only for content packs** — a `Prefabs*.cok` in each DLC directory and `Prefabs_FreeUpdate02.cok` in `Game/`. 1,571 `.Prefab` entries across the eight of them. Each is a **self-describing binary key/value stream**: UTF-16LE type names and field names inline, values inline, so a small reader gets `m_Upkeep`, `m_ElectricityConsumption` and the rest by name without a schema.
+- **Neither: the base game's own prefabs.** Every road, service building, zoned building and vehicle is a Unity serialized object in `Cities2_Data/resources.assets`, which carries type names and **no field names**. Reading a value there needs a Unity serialized-file parser driven by the field order of the decompiled class — a derivation, not a read. The input action asset (`Resources.Load<InputActionAsset>("Input/InputActions")`) is in the same file and under the same limit.
+
+So this source answers a content-pack prefab question cheaply and a base-game one expensively; where the base game is the subject and a value is what you want, the running game (source 8) is the shorter road.
 
 ## 6. The official UI mod scaffold
 
