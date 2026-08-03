@@ -9,7 +9,7 @@ Not every disagreement lands here: where the decompile settles a fact, the resea
 What arrives here is the residue — a judgement about what ships, a claim no source can settle, a question whose answer changes the product.
 The launch-flag entry below is the shape of it: the decompile settled which spellings work, and choosing which one to write was the judgement left over.
 
-**Baseline.** Citations here span four kinds of source, and they do not age together: decompiled source under `src/`, regenerated per game version and read at 1.6.0f1; hand-written prose sitting in a decompile checkout, which carries no version and tracks nothing; this repository's own files, read at the commit in hand; and wiki pages, as `survey-wiki-inventory.md` recorded them on 2026-07-31.
+**Baseline.** Citations here span five kinds of source, and they do not age together: decompiled source under `src/`, regenerated per game version and read at 1.6.0f1; the game's own shipped files read out of a 1.6.0f1 install, including the UI bundle, whose citations are to a copy reformatted with prettier at its defaults at `DecompiledCitiesSkylines2/src-ui/source.js`, 135,021 lines; hand-written prose sitting in a decompile checkout, which carries no version and tracks nothing; this repository's own files, read at the commit in hand; and wiki pages, as `survey-wiki-inventory.md` recorded them on 2026-07-31.
 
 **Entry shape.** A `###` heading naming what is contested — a line, not a paragraph — then three labelled paragraphs:
 
@@ -24,6 +24,10 @@ Ruling one adds a `**Ruling (<date>, <where it was made>).**` paragraph and move
 Evidence found after an entry is opened can answer factually what was put up as a judgement — most often a source nobody had reached for, the user's own installed game above all.
 Say so in the `**Ruling**` paragraph, and move the entry to `## Ruled` like any other: its body is the record of what the pipeline was one decision away from shipping on weaker authority, which is worth more than the space it costs.
 So before escalating a question of the form _which source do we trust_, check whether a first-party artifact settles it — a dissolved entry costs the maintainer a round-trip that never needed making.
+
+**Amending a ruled entry's evidence is not a fourth outcome, and gets an `**Addendum (<date>, <where it was found>).**` paragraph** below the ruling rather than a move.
+Use it when new evidence overturns something the `**Established.**` section says and the decision above it still stands: name what no longer holds, say why the ruling survives it, and correct the section in place so it reads as current.
+Where the new evidence would have changed the decision, this is the wrong shape — reopen the entry and put the question again.
 
 A ruling does not deliver itself.
 Whoever rules an entry writes the outcome into the research file of every topic it touches, because the authoring agent reads that file and never this one.
@@ -65,7 +69,9 @@ That settles all three earlier sources rather than adding a fourth opinion.
 The bundle's 72 groups all exist in the shipped data and no group's id count exceeds it — the divergence runs one way only, short by three whole groups (`BikesInfoPanel`, `Glossary`, `WealthInfoPanel`) and 117 further ids, which is what an older copy looks like and not what a wrong copy looks like.
 All 21 namespaces the decompiled C# names as string literals exist, none misspelled or renamed; they are 21 of 75, so 72% of the vanilla namespaces are invisible from C# and the decompile alone could never have produced this table.
 The wiki names 46 distinct namespaces and every one of them exists — it collapses 23 into a single undetailed row and never names 29 of the 75, `Editor` (the largest group in the game at 263 ids) among them.
-What the `.loc` does not carry is the per-id `Single`/`Hashed`/`Indexed`/`HashedIndexed` typing and the argument names, which stay bundle-sourced and have to be re-derived from the key text.
+What the `.loc` does not carry is the per-id `Single`/`Hashed`/`Indexed`/`HashedIndexed` typing and the argument names.
+Those are first-party too, from a second artefact in the same install: the game's compiled UI bundle at `Cities2_Data/Content/Game/UI/index.js`, whose generated `Loc` dictionary types every id by the class it is constructed from and names every argument in that constructor's arguments (`DecompiledCitiesSkylines2/src-ui/source.js:26620-28937`, the four classes at `:26557-26610`).
+It carries the same 75 groups and the same 2,153 ids the `.loc` decode gives, so the two independent first-party artefacts agree exactly.
 
 **Needs a ruling on.** The provenance question this entry was opened for is gone: the table is first-party, version-known, and re-derivable by any reader from their own install.
 What is left is smaller and is a judgement about what ships rather than about what is true.
@@ -82,6 +88,8 @@ The provenance half of this entry was not ruled but dissolved, and the distincti
 Both count columns ship rather than ids alone. Ids is the number a reader reasons with and the one comparable to the generated dictionary, but a group whose entries far exceed its ids is a group whose keys are **constructed** rather than looked up — the reader supplies the bracket contents and the game builds the key — and the ids column alone hides that. `Assets` at 30 ids and 12,028 entries is the case that makes it concrete.
 
 The recipe leaves the reference. It is procedure over the user's own install, the reference's subject is writing strings, and a decode recipe in the middle of it teaches a maintenance task to a reader who came to name a setting. It lands at `method-decoding-shipped-locale-data.md`, a kind of file this directory's `README.md` now documents, and shipping it as a script is roadmap work (`docs/ROADMAP.md`, "Extracting the shipped localization dictionaries"). That keeps the table checkable — the property the recipe was wanted for — without putting it in the reader's way.
+
+**Addendum (2026-08-03, the re-sweep against the shipped UI bundle).** The ruling stands. One sentence of the evidence under it does not: the per-id typing and argument names are first-party after all, from the shipped UI bundle, and the `**Established.**` section above now says so. Nothing the ruling decided depended on it, since what ships is the group set and the two count columns and those came from the `.loc` either way, so the entry is amended rather than reopened.
 
 ### Usage contexts scope the conflict a mod author sees and not the one that disables their action
 

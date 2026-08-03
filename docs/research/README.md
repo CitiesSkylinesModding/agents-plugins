@@ -1,20 +1,16 @@
 # The research stage
 
 The first stage of the `cs2-modding` pipeline, and the only one that keeps its citations.
-A discovery agent owns one topic across four sources — the decompiled game, the game's own shipped data files, the wiki, and the open-source mod corpus — and lands one research file here.
+A discovery agent owns one topic across the sources in [`../SOURCES.md`](../SOURCES.md) and lands one research file here.
 An authoring agent then reads that one file, without the sources, and writes the shipped reference from it.
 
-**The shipped data outranks the decompile on anything it can answer.**
-Both are first-party, and the data is the one that carries a version the agent can state.
-The decompile sees only what C# names, which for some subjects is a fraction of what exists — the game's localization namespaces are 72% invisible from C#, and no amount of grepping `src/` would have found them.
-Reach for the install where a topic's subject matter ships as data rather than as code, and say in `## Dead ends` that it was checked where it holds nothing.
-`method-decoding-shipped-locale-data.md` is the worked example of getting at it.
+**Read `../SOURCES.md` before you start.**
+It names every source, what each is authoritative for and how to reach it, and it carries the precedence rule your verdicts turn on.
 
-**A fact no source settles may still be answerable against the running game.**
-The sibling `unity-devtools` and `coherent-gameface` plugins drive a live game and a live UI, and only the user can run them.
-Asking beats recording a claim as unestablished, so a discovery agent that hits one puts it to the user rather than filing it away.
-Discovery agents run in the background, which is what makes that possible mid-topic: a background agent messages the orchestrator, gets the answer back, and carries on with its own context intact.
-Where the answer arrives after the agent has finished, resume it by name rather than starting a fresh pass — a resumed agent still holds everything it read.
+**Before recording a claim as unanswerable, name the artifact that would answer it and say whether you opened it.**
+That sentence is the whole of what this stage has learned the hard way: a claim shipped as unprovable was one grep away in a file nobody had opened.
+Where the artifact is the running game, ask the user to start it — a background agent can ask mid-topic, get the answer back, and carry on with its context intact.
+Where the answer arrives after the agent has finished, resume it by name rather than starting a fresh pass; a resumed agent still holds everything it read.
 
 What lives here:
 
@@ -28,6 +24,7 @@ What lives here:
 - `method-<slug>.md` — how a source was obtained, where obtaining it was itself an investigation.
   No topic owns one and no authoring agent is pointed at one: they exist so a derivation that lives nowhere else survives the scratch folder it was done in.
   A topic file cites its method file like any other sibling here.
+  One exists: [`method-decoding-shipped-locale-data.md`](method-decoding-shipped-locale-data.md), which gets the vanilla strings out of the game's compiled `.loc` assets. Read it before decoding one yourself — it carries two traps, including the locale that ships loose beside the package and is silently missed by reading the package alone.
 
 ## Findings keep their names
 
@@ -39,15 +36,16 @@ Taking attribution off is the authoring stage's job, and the only place it happe
 
 One file per topic: the title, the baseline line under it, then `## Findings`, `## Bridge` and `## Dead ends` in that order.
 
-- **A citation on every claim.** `src/<assembly>/<namespace>/<Type>.cs:<line>` for decompiled source, `<checkout>/<path>:<line>` for anything else inside a decompile checkout, `<repo>/<path>:<line>` for a mod, a path from this repository's root for a file in it, `<file>:<line>` for a sibling file here, the full URL for a wiki page.
+- **A citation on every claim.** `src/<assembly>/<namespace>/<Type>.cs:<line>` for decompiled source, `<checkout>/<path>:<line>` for anything else inside a decompile checkout, `<repo>/<path>:<line>` for a mod, an install-relative path for a file in the installed game, `<package>/<path>:<line>` for a file in an installed toolchain package, a path from this repository's root for a file in it, `<file>:<line>` for a sibling file here, the full URL for a wiki page.
   Cite a range as `:<first>-<last>` and scattered lines as `:<a>/<b>/<c>`; a claim about a whole file cites the path alone.
+  Where a source has to be transformed before it can be read at all, cite the transformed copy for its line numbers, and state in the baseline both what produced it and the line count it came to — that count is the only way a later reader can tell whether their own copy and your citations still agree.
   Once a path is cited in full, later mentions may shorten to `<Type>.cs:<line>`, and to a bare `:<line>` only where the full path is the nearest one cited.
   A claim nobody can re-check in a year is a claim the next pass has to rediscover.
 - **A baseline**, stated once under the title: always the game version its claims were established against, plus the date the corpus was read and the date the wiki was fetched where those sources were used.
   Every reference derived from your file has to state a version of its own.
 - **A verdict wherever the sources disagreed**, opening with `Verdict:` on the claim it settles.
-  Name the claim, the source it came from, what the decompile shows, and which wins.
-  The decompile is ground truth and wins by default; a verdict going the other way carries the evidence that overturned it.
+  Name the claim, the source it came from, what the authoritative source shows, and which wins.
+  The source `../SOURCES.md` names as authoritative for the claim wins by default; a verdict going the other way carries the evidence that overturned it.
   Record it even when it is unsurprising — a claim marked verified reads differently from one nobody checked.
   A verdict settles a fact, and only a fact: what no source can settle, the question whose answer changes the product, and the judgement about what ships that can remain even once the facts are in all go to `conflicts.md` instead.
 - **A ruling, wherever one came back**, opening with `**Ruled (<date>, <where it was made>; conflicts.md).**` on the finding it governs.
@@ -69,7 +67,7 @@ So a mechanics topic reads a catalogued mod for the one thing no other source gi
 Match on an entry's `Demonstrates` half rather than its `Does` half, as that catalog itself directs, and where no entry's `Demonstrates` names systems in your area, sweep it anyway and record the dead end rather than reaching for a mod whose subject merely sounds close.
 
 Done when each source bearing on the topic has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, whose bot challenge often wins — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
-A file that read one source reads exactly like one that swept all three, and the agent writing the reference cannot see what was never looked at.
+A file that read one source reads exactly like one that swept them all, and the agent writing the reference cannot see what was never looked at.
 
 A survey's or an agent's own recommendation is not a decision: the plugin's `AGENTS.md` governs what ships.
 State it as the opinion it is, and leave it out of the verdicts.

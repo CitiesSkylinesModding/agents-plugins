@@ -299,10 +299,10 @@ LocalizedString.Id("MyMod.STATUS", ("LOADED", new LocalizedNumber<int>(n, Unit.k
 ### The unit is a string, and the two sides carry different lists
 
 `Game.UI.Unit` is a static class of 33 `const string`s, from `kInteger = "integer"` to `kCustom = "custom"`.
-The frontend's own declaration carries **38**: those 33 plus `PercentagePrecise`, `BodiesPerMonth`, `TemperaturePrecise`, `Height` and `DurationSeconds`.
+The frontend's own `Unit` enum carries **38**: those 33 plus `PercentagePrecise`, `BodiesPerMonth`, `TemperaturePrecise`, `Height` and `DurationSeconds`.
 Those five have no C# constant, so reaching them from C# means writing the literal string.
 
-(VOLATILE: the unit constant list on both sides — the UI unit static class, and the modding toolchain's own l10n type declaration.)
+(VOLATILE: the unit constant list on both sides — the UI unit static class, and the frontend's own unit enum.)
 
 **The frontend's number formatter is a lookup table with a visible fallback.**
 An unrecognised unit renders the number followed by the unit name in angle brackets — `1234 <myUnit>` — which is the symptom of a typo'd unit string and the reason a mis-spelled unit never throws.
@@ -313,6 +313,7 @@ The table is where the player's preferences bite:
 - `Length` renders metres below 1,000 and kilometres above for a metric player, yards below 1,609 and miles above for a freedom-units player.
 - `Area`, `Volume`, `Weight`, `WeightPerCell`, `WeightPerMonth`, `Height`, `NetElevation`, `MoneyPerDistance` and `MoneyPerDistancePerMonth` all branch on the unit system the same way.
 - `Temperature` branches on the temperature preference across Celsius, Fahrenheit and Kelvin.
+- The two `*Precise` units are their plain counterparts at two fraction digits: `PercentagePrecise` renders the same percent key as `PercentageSingleFraction` with two rather than one, and `TemperaturePrecise` branches on the temperature preference exactly as `Temperature` does.
 - `Power` divides the raw value by 10 and renders kilowatts below 10,000, and divides by 10,000 for megawatts above it — so **the value C# passes is in units of 100 W**.
 - `Money` has no unit-system branch at all.
 
@@ -320,15 +321,17 @@ Most branches render through a `Common.VALUE_*` key, and the separators come fro
 The sign prefix is `-` for a negative value always, and `+` for a positive one or `±` for zero **only when the signed flag is set**; otherwise both are empty.
 
 **Fractions and bounds support far fewer units than numbers, and fail ugly outside them.**
-`LocalizedFraction` handles ten — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth` — and renders `${value} / ${total} <${unit}>` for anything else.
+`LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else.
 `LocalizedBounds` handles three — `Power`, `PercentageSingleFraction`, `Temperature` — renders `${min}–${max} <${unit}>` otherwise, and short-circuits to a plain number when min equals max.
 Both default to `Integer` when no unit is given.
 
-Whether `PercentagePrecise` and `TemperaturePrecise` have formatter entries of their own could not be established; both are declared on the frontend and neither appears in the formatter table that was read, so treat them as unproven.
+**`BodiesPerMonth` is the one unit a number cannot render.**
+It has a fraction entry and no entry in the number table, so `LocalizedFraction` renders it correctly while `LocalizedNumber` prints the angle-bracket fallback.
 
 ### Percentage, date and duration exist only on the frontend
 
 `LocalizedPercentage(value, max)` computes `100 * value / max` and renders it as a percentage-unit number — but **clamps any positive result to a minimum of 1**, so 0.2% displays as 1%.
+It renders 0 rather than dividing when either the value or the max is at or below zero.
 
 `LocalizedDate({ year, month })` renders a medium-date-format key with the month resolved through the indexed key `Common.MONTH_SHORT:<month>`.
 The month is **zero-based**, and a game year is twelve days, so a day _is_ a month — the game's own producer passes `dayOfYear - 1` as the month.
@@ -340,9 +343,10 @@ The game has `LocalizedTime`, `LocalizedDateTime` and `LocalizedTimestamp`, plus
 The public l10n module exports **eleven names and no more**: `Localized`, `LocalizedBounds`, `LocalizedDate`, `LocalizedDuration`, `LocalizedEntityName`, `LocalizedFraction`, `LocalizedNumber`, `LocalizedPercentage`, `LocalizedString`, `Unit` and `useLocalization`.
 So formatting a time by hand from the player's preference is the answer for the public module, and reaching the real component is the same errand as reaching any other unexported one, which is `frontend-and-injection`'s material.
 
-**One enum is live and three are not.**
+**One enum is exported and three are not.**
 `Unit` **is** exported and its members are real string values, so `Unit.Money` works at runtime.
-The time-format, temperature-unit and unit-system enums are **not** exported even though the type declaration declares all three, so their values have to be written as literals: 24-hour `0` / 12-hour `1`, Celsius `0` / Fahrenheit `1` / Kelvin `2`, metric `0` / freedom `1`.
+The time-format, temperature-unit and unit-system enums are **not** on that list even though the type declaration declares all three, so from the public module their values are written as literals: 24-hour `0` / 12-hour `1`, Celsius `0` / Fahrenheit `1` / Kelvin `2`, metric `0` / freedom `1`.
+All three are registered in the frontend's module registry beside the options bindings, so a mod already reaching in there gets the live enums instead — `frontend-and-injection` owns that route.
 
 ## The player's unit and format preferences
 
@@ -529,8 +533,10 @@ File.WriteAllText(Path.Combine(Application.persistentDataPath, "locale-dictionar
 
 ## Diagnosing a key that renders as itself
 
-A missing key renders as the key — the C# translate path sets the value to the key when the lookup fails, and the frontend's string renderer falls through its fallback and its show-id flag to the same place.
-So the symptom is always the same, and the causes are not.
+A missing key renders as the key, or as nothing at all, and the two are one fault wearing two faces.
+The C# translate path returns the key when the lookup fails, and a localized element sent over the wire keeps that, so it renders its own id.
+A component built from the frontend's own generated dictionary renders its fallback instead, and an empty string when it has none — it shows the id only where the call site asks for it, which the options screen and the keybinding rows do.
+So the causes below surface as a raw key nearly everywhere, and as a blank label in a frontend component of your own.
 
 Walk them in this order.
 
