@@ -56,6 +56,10 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   Flag each claim you judge version-volatile — component and system names, field names, save-format versions, UI module paths, raycast masks — naming what to re-check and the path to re-check it against.
   The author of the reference turns these into its shipped volatility markers, and cannot otherwise tell which claim is architecture and which is a field name that moved.
   Write `Rots:` rather than the shipped marker's own spelling: that marker is greppable as the next version's maintenance checklist precisely because it appears in shipped prose and nowhere else, and a staging file wearing it would put unshipped claims on the list.
+- **What was reached and not confirmed**, opening with `Unconfirmed:` on the claim it qualifies.
+  Name what would settle it — the artifact to open, or the experiment to run against the running game — so the reference's author can turn it into a shipped `UNVERIFIED:` marker rather than inventing a hedge.
+  The same spelling rule applies for the same reason: the shipped token greps into the list of claims a maintainer can still close, and a staging file wearing it would put unshipped claims on that list.
+  This is not the same as a dead end. A dead end is a road that was walked and went nowhere; this is a claim the reference will make, carrying the limit of its evidence.
 - **The bridge.** For a technique topic, the mechanics topics that exercise it; for a mechanics topic, the techniques a change there needs, cited like anything else.
   A file returning only technique or only mechanics has done half the job, and that connection is the thing no other source provides.
 - **The dead ends.** What was searched and came back empty, what was ruled out and how.

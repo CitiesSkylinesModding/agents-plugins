@@ -162,7 +162,7 @@ An entity carrying a `PrefabRef` must point at a prefab entity registered throug
 The empty-prefab technique itself ships as what one mod does and why it believes it has to, carrying the limit of the evidence in the sentence: the vanilla site that faults on an entity with no `PrefabRef` at all was searched for across the tools, serialization and prefab code and not found.
 Neither half may ship alone, which is what makes this the third option rather than a softened first or second: the narrow rule by itself drops the case the technique was invented for, and the practice by itself would put one author's belief into this plugin's own voice.
 
-The hedge the question objected to is accepted rather than argued away, and it is the only one in the shipped tree.
+The hedge the question objected to is accepted rather than argued away, and at the time of the ruling it was the only one in the shipped tree.
 What the reader is deciding is an entity archetype, which the entry itself identifies as the hardest thing to change once a save format depends on it — a late addition is a migration and a needless one is a dead component in every save.
 A reader making that call is owed the difference between what was proven and what was believed, and a reference that stated the broad rule flat would be spending its own authority on a mod comment.
 
@@ -171,6 +171,47 @@ A reader making that call is owed the difference between what was proven and wha
 The source that runs the experiment was on the list and unused: the running game through the sibling Unity plugin (`docs/SOURCES.md` entry 8), where creating an entity with the archetype the mod's connection entities carry, omitting the reference, and taking it through a save and load either faults or does not.
 The ruling survives this unchanged, and cannot be affected by the result: it already ships the narrow rule flat and the broad practice as a practice, and an experiment moves the sentence under it from a gap in the evidence to an observation, in whichever direction it lands.
 The game was not running for this pass, so this records the route and not the result.
+
+**Second addendum (2026-08-03, the review gate over tickets 07–15).** The ruling's uniqueness clause has stopped describing the tree, and the maintainer has since given the class a token, so the clause is amended rather than left to mislead.
+Four more evidence hedges of the same shape now ship — `prefabs-and-assets` on `UpdatePrefab` against a vanilla prefab, `custom-tools` on a `Temp`-original check, `placement-definitions` on the `PostTool` window, and `ecs-in-this-game` on a lifecycle hook's position relative to the barrier window.
+Read the clause as what it was: a statement about the tree on the day it was ruled, and the reason the hedge was affordable, rather than a standing policy that hedging is reserved to this one entry.
+What replaces it is `UNVERIFIED:`, now the plugin's second marker (`plugins/cs2-modding/AGENTS.md`), which makes the whole class greppable the way `VOLATILE:` makes the rots-with-the-version class greppable. A maintainer with a running game can now sweep for what to confirm.
+The ruling's substance is untouched: the narrow rule still ships flat and the broad practice still ships as a practice.
+One of the four has since been settled and is no longer a hedge — `UpdatePrefab` on a vanilla prefab was run against the running game, which is recorded at `prefabs-and-assets.md`'s dead ends and turned out to cost more than the first run showed.
+
+**Third addendum (2026-08-03, same gate). The experiment was run, and the converse is established.**
+The entry's open half was whether an entity with **no** `PrefabRef` breaks anything, which no static read settles.
+
+**Method.** In a loaded city, a tree entity — a valid sub-object carrying `Owner`, `Transform` and a `PrefabRef` — had `PrefabRef` and nothing else removed through the sibling Unity plugin, isolating the one variable against an otherwise untouched vanilla archetype. The city was then saved and reloaded.
+
+**Result, and it reproduced.**
+At runtime the removal costs nothing, and this was checked with the simulation confirmed running rather than paused — the frame index advanced across the observation, no managed exception fired with a break armed on `System.ArgumentException` and subclasses, and world reads stayed normal. The save completed.
+
+**The process then died at the next world transition, twice, naming the stripped entity both times as the final line of the player log.**
+Run one: reloading the save, last line `Owner has no SubObject: 438602:3`. Run two, a fresh entity in a fresh session: returning to the main menu, last line `Owner has no SubObject: 180755:5`. Each index and version is exactly the entity whose `PrefabRef` had been removed, and in each case the log ends there — `SceneFlow.log` stops mid-transition at `Loading mode MainMenu with purpose Cleanup`, and `Player-prev.log`'s final line is the message itself.
+
+The message is `Game.Serialization.SubObjectSystem`'s, at `src/Game/Game.Serialization/SubObjectSystem.cs:49`: a job whose query is `All = {Object}`, `Any = {Owner, Attached}`, `None = {Vehicle, Creature}`, which looks up each member's owner in a `BufferLookup<SubObject>` and logs when the lookup misses. It is a `Debug.Log` rather than a throw, so the log line marks the failure rather than being it; what kills the process immediately after is not established.
+
+**It fired exactly once per run, which is what makes it the cause rather than the last thing printed.** `Player-prev.log` from the crashed process contains one `Owner has no SubObject` line — naming the stripped entity — as its final line, and the healthy session that followed contains none. A message the game emits routinely would not have that shape.
+
+**Where the pieces sit.** The system runs in `SystemUpdatePhase.Deserialize` (`src/Game/Game.Common/SystemOrder.cs:806`), in the back band, after a front band of `PreDeserialize<T>` wrappers and `ClearSystem` (`:737-795`) that empties derived state before it is rebuilt. The `SubObject` buffer itself is not serialized: it is declared on the **owner's** archetype by whichever prefab component gives that owner sub-objects (`BuildingPrefab.cs:53`, `LotPrefab.cs:36`, `NetGeometryPrefab.cs:61/74`, `ObjectSubObjects.cs:26/31`, `NetSubObjects.cs:25`, `AreaSubObjects.cs:25`) and refilled from members' `Owner` back-references on load.
+
+**So the actionable rule is aimed correctly — at the entity you create, not at its owner** — and that was the question worth asking, since the buffer belonging to the parent made it plausible the advice pointed at the wrong end. It does not: the entity that was mutated is the entity the log names.
+
+**Hypothesis, explicitly not a finding:** the parent may be fine and the lookup may be failing on a dead entity rather than on a live owner missing its buffer, because `BufferLookup.TryGetBuffer` returns false for both and the message cannot tell them apart — which would mean the child's own `Owner` reference did not survive the round trip. Nothing here establishes that, and it is recorded only so the next pass does not have to re-derive the possibility.
+
+**The trigger is any world teardown, not the save file.** Quitting to the main menu is enough, and the save written from the damaged world loaded cleanly in a freshly launched process — so nothing is wrong with the bytes on disk, and the shipped prose says the process dies at a transition rather than that the save is ruined.
+
+**So the practice is vindicated on better evidence than its author's comment**, and on a different mechanism than the one the mod gives. The reason to stamp a prefab is not vanilla validation in the abstract: it is that the load-time reconstruction of the owner/sub-object graph runs over these entities, and an entity that fell out of its prefab-derived archetype is what it trips on.
+
+**What is not established**, and the entry should not be read as claiming: that _every_ `PrefabRef`-less entity is fatal rather than only one carrying `Owner`, since both runs used a tree that had one; what actually terminates the process after the log line, the message being a `Debug.Log` rather than a throw; and the chain from a missing `PrefabRef` on a member to a missing `SubObject` buffer on its owner, which is the mechanically interesting part and is still guesswork.
+
+**Three wrong calls are recorded rather than dropped**, because each was stated to the maintainer with more confidence than the evidence carried, and the sequence is the instructive part.
+The first freeze was attributed to this removal from a clean timeline and a plausible Burst-lookup mechanism — a hypothesis presented as a finding.
+Re-running the removal appeared to refute it, so the attribution was withdrawn; that run had been made against a **paused simulation**, which the maintainer caught, so the refutation was worthless and the withdrawal was itself premature.
+In between, the freeze was attributed to a save the maintainer had been asked to perform; they had performed none.
+Only the fourth attempt settled it — simulation confirmed ticking by a rising frame index, the entity named in the log, and a second independent reproduction on a fresh entity in a fresh session.
+The lesson cuts both ways: a timeline plus a mechanism is a hypothesis, and a failed reproduction is evidence only if the experiment was capable of reproducing it.
 
 ### The game rewrites tool definitions in a phase no mod uses, and the corpus's alternative needs a workaround the game's does not
 

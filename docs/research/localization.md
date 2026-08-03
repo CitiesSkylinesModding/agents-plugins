@@ -1,5 +1,12 @@
 # Localization
 
+**This file backs two shipped references, not one.**
+The review gate of 2026-08-03 split `localization` in two, and `units-and-formatting` is the 27th reference (`.scratch/cs2-modding/reference-structure.md`).
+Everything below about **rendering a quantity** — the unit string table and its two declaring sides, the number, fraction, percentage, date and duration formatters, per-unit fraction and bounds coverage, the localized element types, and the three interface preference enums — is now that reference's material.
+Everything about **producing text the game will display** — the dictionary-source contract, entry ingestion, the key grammar, packaging, the vanilla namespaces, the translator export, the diagnosis walk — stays `localization`'s.
+The pass that produced this file predates the split, so it is left whole rather than cut in two: a research file records what one pass found, and slicing it after the fact would break the citations without adding a fact.
+A later pass amending the formatting half amends it here and says which reference it feeds.
+
 **Baseline.** Decompiled game 1.6.0f1; mod corpus read 2026-08-03 at the commits the 20-repository checkout carried; wiki (`Localize your mod`) fetched live 2026-08-03, so no snapshot substitution was needed.
 A fourth source is the user's own installed copy at `1.6.0f1 (419.d6c6) [6216.19404]` — the same build the decompile was taken from — and it holds two things the decompile cannot: the strings themselves as compiled `.loc` assets, and the whole frontend as a plain 2.2 MB bundle at `Cities2_Data/Content/Game/UI/index.js`.
 Both are first-party and version-known, so they outrank everything else on anything they can answer, and the install is read-only throughout.
@@ -22,7 +29,7 @@ void Unload();
 `IDictionaryEntryError` is an **empty marker interface** with no members and no implementation anywhere in `src/` (`src/Colossal.Core/Colossal/IDictionaryEntryError.cs:3-5`), so the `errors` list is a channel nothing writes to. The manager allocates a fresh list, passes it, and logs whatever it finds (`src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs:395-419`) — for a mod source that is always nothing.
 `indexCounts` is the live per-locale index table (see the key-grammar finding); a source that ships no indexed keys ignores it.
 
-Both parameters are handed `null` by some corpus callers with no ill effect, because a source that returns a stored dictionary never touches them (`Traffic/Code/Mod.cs:63` passes `null, null`; `Traffic/Code/Localization.ModLocale.cs:49` does the same).
+Both parameters are handed `null` by some corpus callers with no ill effect, because _their own_ source ignores them. **Verdict: the causal clause is wrong and an earlier pass of this file generalised it from that one mod.** The game's own stored-dictionary sources do touch both — `LocaleAsset.ReadEntries` throws `ArgumentNullException` on a null `errors` (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/LocaleAsset.cs:175-180`) and dereferences `indexCounts` at `:196-201`, and `MemorySource.ReadEntries` writes into `indexCounts` for every `Indexed` or `HashedIndexed` key (`src/Colossal.Localization/Colossal.Localization/MemorySource.cs:14-29`). The observation held only because a source that returns a stored dictionary _may_ touch them (`Traffic/Code/Mod.cs:63` passes `null, null`; `Traffic/Code/Localization.ModLocale.cs:49` does the same).
 
 `LocalizationManager` is the single consumer. It is created once, before the ECS world exists, with `en-US` as the hard-coded fallback locale (`src/Game/Game.SceneFlow/GameManager.cs:2356-2361`):
 
