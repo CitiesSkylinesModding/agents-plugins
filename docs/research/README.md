@@ -12,8 +12,9 @@ Reach for the install where a topic's subject matter ships as data rather than a
 
 **A fact no source settles may still be answerable against the running game.**
 The sibling `unity-devtools` and `coherent-gameface` plugins drive a live game and a live UI, and only the user can run them.
-Asking beats recording a claim as unestablished, so a discovery agent that hits one names it as a question for the user rather than filing it away.
-The request travels through the orchestrator: a discovery agent run in the foreground has no channel to the user until it returns, so it puts the question in its closing message, and the orchestrator resumes it by name once the answer is in — resuming keeps the agent's own context, which is what makes the round trip cheaper than a fresh pass.
+Asking beats recording a claim as unestablished, so a discovery agent that hits one puts it to the user rather than filing it away.
+Discovery agents run in the background, which is what makes that possible mid-topic: a background agent messages the orchestrator, gets the answer back, and carries on with its own context intact.
+Where the answer arrives after the agent has finished, resume it by name rather than starting a fresh pass — a resumed agent still holds everything it read.
 
 What lives here:
 
