@@ -1,8 +1,19 @@
 # The research stage
 
 The first stage of the `cs2-modding` pipeline, and the only one that keeps its citations.
-A discovery agent owns one topic across all three sources — the decompiled game, the wiki, the open-source mod corpus — and lands one research file here.
+A discovery agent owns one topic across four sources — the decompiled game, the game's own shipped data files, the wiki, and the open-source mod corpus — and lands one research file here.
 An authoring agent then reads that one file, without the sources, and writes the shipped reference from it.
+
+**The shipped data outranks the decompile on anything it can answer.**
+Both are first-party, and the data is the one that carries a version the agent can state.
+The decompile sees only what C# names, which for some subjects is a fraction of what exists — the game's localization namespaces are 72% invisible from C#, and no amount of grepping `src/` would have found them.
+Reach for the install where a topic's subject matter ships as data rather than as code, and say in `## Dead ends` that it was checked where it holds nothing.
+`method-decoding-shipped-locale-data.md` is the worked example of getting at it.
+
+**A fact no source settles may still be answerable against the running game.**
+The sibling `unity-devtools` and `coherent-gameface` plugins drive a live game and a live UI, and only the user can run them.
+Asking beats recording a claim as unestablished, so a discovery agent that hits one names it as a question for the user rather than filing it away.
+The request travels through the orchestrator: a discovery agent run in the foreground has no channel to the user until it returns, so it puts the question in its closing message, and the orchestrator resumes it by name once the answer is in — resuming keeps the agent's own context, which is what makes the round trip cheaper than a fresh pass.
 
 What lives here:
 
@@ -13,6 +24,9 @@ What lives here:
   Read the ones your topic touches before you start: they exist so no topic agent begins cold.
 - `<topic-slug>.md` — one file per topic in the approved reference structure, named for the topic its reference will cover.
   Your ticket names the topic, its boundary, and the sources that feed it.
+- `method-<slug>.md` — how a source was obtained, where obtaining it was itself an investigation.
+  No topic owns one and no authoring agent is pointed at one: they exist so a derivation that lives nowhere else survives the scratch folder it was done in.
+  A topic file cites its method file like any other sibling here.
 
 ## Findings keep their names
 
@@ -53,7 +67,7 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
 So a mechanics topic reads a catalogued mod for the one thing no other source gives: which vanilla systems and components that mod had to disable, fork or query to change the behaviour.
 Match on an entry's `Demonstrates` half rather than its `Does` half, as that catalog itself directs, and where no entry's `Demonstrates` names systems in your area, sweep it anyway and record the dead end rather than reaching for a mod whose subject merely sounds close.
 
-Done when each of the three sources has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, whose bot challenge often wins — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
+Done when each source bearing on the topic has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, whose bot challenge often wins — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
 A file that read one source reads exactly like one that swept all three, and the agent writing the reference cannot see what was never looked at.
 
 A survey's or an agent's own recommendation is not a decision: the plugin's `AGENTS.md` governs what ships.

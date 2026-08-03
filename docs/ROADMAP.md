@@ -131,6 +131,28 @@ Skills and references teaching an agent to write Cities: Skylines II code mods, 
 decompiled game, the wiki and a corpus of open-source mods. Knowledge only: no MCP server, no
 runtime, and no shipped code artifacts.
 
+### Extracting the shipped localization dictionaries
+
+The game's compiled `.loc` assets are the only first-party, version-known source for the vanilla
+localization key set, and decoding them is mechanical: `Locale.cok` is a plain stored zip, and the
+payload is a flat `BinaryWriter` stream whose reader is its own specification. A one-off decoder
+produced the 75-group namespace table the `localization` reference bakes.
+`docs/research/method-decoding-shipped-locale-data.md` holds the recipe, the two traps and the
+citations.
+
+Ship that as a script, so the table is regenerable rather than re-derived by hand each game version.
+Shape, sketched not settled: it belongs to `cs2-modding-setup`, which is where procedure over the
+user's own install already lives, and it would run against a recorded install path the way the
+decompile step already does. The output worth committing is the group table and the identifier-shape
+distribution, not the strings — the key identifiers are mechanism and the translations are the
+publisher's copyrighted text, which is the line the recipe file states and any script inherits.
+
+Two constraints that would shape it. The plugin ships no executable content by decision, so a script
+here is repository tooling of the kind `scripts/` already holds, not something the marketplace copies
+into a user's install; that makes it a maintenance tool for regenerating a shipped table, which is
+the honest framing rather than a user-facing feature. And two shipped files carry trailing bytes past
+their declared end, so end-of-file is not end-of-data and the decoder has to stop on the counts.
+
 ### Asset, map and editor authoring
 
 Scope is code mods, so loading assets _from code_ is covered and authoring the assets themselves is
