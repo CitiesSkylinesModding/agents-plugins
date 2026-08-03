@@ -20,6 +20,11 @@ The launch-flag entry below is the shape of it: the decompile settled which spel
 A new entry goes under `## Open`.
 Ruling one adds a `**Ruling (<date>, <where it was made>).**` paragraph and moves the entry to `## Ruled` with its body intact, question included — the disagreement is why the shipped sentence reads as it does, and the next game version brings the same sources back.
 
+**An entry can also dissolve, and that is a third outcome rather than a quiet close.**
+Evidence found after an entry is opened can answer factually what was put up as a judgement — most often a source nobody had reached for, the user's own installed game above all.
+Say so in the `**Ruling**` paragraph, and move the entry to `## Ruled` like any other: its body is the record of what the pipeline was one decision away from shipping on weaker authority, which is worth more than the space it costs.
+So before escalating a question of the form _which source do we trust_, check whether a first-party artifact settles it — a dissolved entry costs the maintainer a round-trip that never needed making.
+
 A ruling does not deliver itself.
 Whoever rules an entry writes the outcome into the research file of every topic it touches, because the authoring agent reads that file and never this one.
 
@@ -43,6 +48,40 @@ They are listed by name rather than by a rule, because the rule would have to be
 A later decomposition that renames or splits one of them leaves a stale name here, which is a visible problem; a rule nobody can resolve is not.
 
 ## Ruled
+
+### The complete vanilla key-namespace table exists only in a compiled UI bundle a mod author copied into their repository
+
+**Sources.** The `localization` reference is the named owner of the vanilla localization-key namespace table, and that table is a mechanism table rather than balance data: an agent cannot reuse a vanilla key without it.
+Three sources carry a version of it and they are not equivalent.
+The decompiled game yields 21 namespaces as C# string literals — `Editor`, `Common`, `Options`, `Properties`, `Paradox`, `Assets`, `Tools`, `Menu`, `PhotoMode`, `DefaultTool`, `SelectedInfoPanel`, `Services`, `Maps`, `Infoviews`, `Policy`, `GameListScreen`, `SubServices`, `StatisticsPanel`, `Radio`, `Notifications`, `Loading` — anchored at `src/Game/Game.UI/LocaleIds.cs:5-13`, `src/Game/Game.UI.InGame/PrefabUISystem.cs:1498-1527`, `src/Game/Game.Modding/ModSetting.cs:303-371` and roughly 500 further literals.
+`Localize your mod` (https://cs2.paradoxwikis.com/Localize_your_mod, fetched live 2026-08-03) tabulates roughly 35 prefixes, collapses the 17 distinct `*InfoPanel` groups into one row, and omits 14 groups that exist.
+A fourth source was found after this entry was opened and it outranks all three: the game's own compiled `.loc` assets, in the user's installed copy at `Cities2_Data/Content/Game/Locale.cok` and `Cities2_Data/StreamingAssets/uk-UA.loc`.
+The entry was opened because the only complete list this pipeline could then reach — 72 groups, 2,013 ids — was `CS2-Platter/Platter/UI/tools/source.js:25770-27958`, a beautified copy of the game's compiled UI bundle that a corpus mod author vendored into their repository with no version stamp and no provenance note anywhere in that repo.
+
+**Established.** The shipped locale data answers the question directly, at a known version, from a first-party artefact.
+A `.cok` is the asset-database package extension and a plain zip with each asset stored uncompressed (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/PackageAsset.cs:7-9`, `ZipPackageWriter.cs:51-74`); the payload is a flat `BinaryWriter` stream whose reader is its own specification (`LocaleAsset.Load`, `LocaleAsset.cs:109-134`, mirrored by `LocalizationCompiler.WriteLocale`, `LocalizationCompiler.cs:206-227`).
+Decoding it at installed version `1.6.0f1 (419.d6c6) [6216.19404]` — the decompile's own build — yields **75 groups, 2,153 ids and 22,120 entries** in `en-US`, which is the fallback locale and therefore the key set that defines what exists (`src/Game/Game.SceneFlow/GameManager.cs:2356-2361`).
+That settles all three earlier sources rather than adding a fourth opinion.
+The bundle's 72 groups all exist in the shipped data and no group's id count exceeds it — the divergence runs one way only, short by three whole groups (`BikesInfoPanel`, `Glossary`, `WealthInfoPanel`) and 117 further ids, which is what an older copy looks like and not what a wrong copy looks like.
+All 21 namespaces the decompiled C# names as string literals exist, none misspelled or renamed; they are 21 of 75, so 72% of the vanilla namespaces are invisible from C# and the decompile alone could never have produced this table.
+The wiki names 46 distinct namespaces and every one of them exists — it collapses 23 into a single undetailed row and never names 29 of the 75, `Editor` (the largest group in the game at 263 ids) among them.
+What the `.loc` does not carry is the per-id `Single`/`Hashed`/`Indexed`/`HashedIndexed` typing and the argument names, which stay bundle-sourced and have to be re-derived from the key text.
+
+**Needs a ruling on.** The provenance question this entry was opened for is gone: the table is first-party, version-known, and re-derivable by any reader from their own install.
+What is left is smaller and is a judgement about what ships rather than about what is true.
+The measured table has 75 rows and two count columns (ids and entries), and the ids column is the one a reader reasons with while the entries column mostly records how heavily a group is hashed or indexed — `Assets` carries 12,028 entries against 30 ids.
+So: does the reference bake both columns or just ids, and does it ship the decode recipe beside the table?
+Shipping the recipe is what makes the table checkable rather than merely asserted, and it is a mechanism a reader can run — a zip reader and a `BinaryReader` against their own installed game — which is the form this plugin prefers everywhere else.
+Against it: it is procedure in a reference whose subject is writing strings, and the setup skill is where procedure normally lives.
+The ruling goes into the research file for `localization`, and touches `prefabs-and-assets` only if that reference also states the `Services`/`SubServices`/`Assets` key pairs a registered prefab is looked up by.
+
+**Ruling (2026-08-03, ticket 15).** The table ships in full — all 75 groups, both count columns — and the decode recipe does not.
+
+The provenance half of this entry was not ruled but dissolved, and the distinction is worth keeping: the question was which source the plugin is willing to state 51 rows on, and the answer turned out to be a fourth source nobody had reached for. The game ships its own strings, readable from the user's own install at a version they can state. So the reference bakes the table in its own voice, with no hedge and no per-row marking, and the entry is kept as the record of how close the pipeline came to shipping a third party's copy of compiled game code as fact.
+
+Both count columns ship rather than ids alone. Ids is the number a reader reasons with and the one comparable to the generated dictionary, but a group whose entries far exceed its ids is a group whose keys are **constructed** rather than looked up — the reader supplies the bracket contents and the game builds the key — and the ids column alone hides that. `Assets` at 30 ids and 12,028 entries is the case that makes it concrete.
+
+The recipe leaves the reference. It is procedure over the user's own install, the reference's subject is writing strings, and a decode recipe in the middle of it teaches a maintenance task to a reader who came to name a setting. It lands at `method-decoding-shipped-locale-data.md`, a kind of file this directory's `README.md` now documents, and shipping it as a script is roadmap work (`docs/ROADMAP.md`, "Extracting the shipped localization dictionaries"). That keeps the table checkable — the property the recipe was wanted for — without putting it in the reader's way.
 
 ### Usage contexts scope the conflict a mod author sees and not the one that disables their action
 
