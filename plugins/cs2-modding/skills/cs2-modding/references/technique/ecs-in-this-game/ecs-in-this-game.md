@@ -298,7 +298,10 @@ Resolve the one you want once in `OnCreate` with `World.GetOrCreateSystemManaged
 | `ModificationEndBarrier` | end of `ModificationEnd`                           |
 | `ToolOutputBarrier`      | end of `ToolUpdate`                                |
 | `ToolReadyBarrier`       | end of `PostTool`                                  |
-| `DeserializationBarrier` | end of `Deserialize`                               |
+| `DeserializationBarrier` | front of `Deserialize`'s back band                 |
+
+`DeserializationBarrier` is the one that does not play back at the end of its phase: it is the first `UpdateAfter` registration in `Deserialize`, so it plays back before the rest of that band rather than after it, and a system placed there cannot ask it for a command buffer.
+`save-serialization` maps that band, in the census file its entry points to, and states what a system placed there should use instead.
 
 A thirteenth type, `AudioEndBarrier`, exists in the assembly and is registered in no phase.
 It has a companion opener like the others, and that opener is unregistered too, so nothing ever re-opens the barrier after its first playback attempt closes it.

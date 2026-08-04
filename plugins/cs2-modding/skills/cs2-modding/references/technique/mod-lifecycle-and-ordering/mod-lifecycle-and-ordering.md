@@ -92,6 +92,14 @@ Four consequences, each load-bearing:
 
 The world keeps updating during a save load, so phases continue to run while the loading screen is up.
 
+**The world is created once at boot and destroyed only at shutdown**, so loading a second city runs against the world the first one left behind.
+The game empties it before each load, but only of its own types.
+Anything a mod leaves on an entity the game does not recognise therefore survives into the next city, and clearing it is the mod's job.
+`save-serialization` carries what that costs.
+
+**`GameSystemBase.OnCreate` also subscribes the system to the save-loaded callback**, `OnGameLoaded(Context)`, which fires once after the whole `Deserialize` phase has run and carries the load context.
+Like `OnWorldReady` it needs no phase registration — and like it, both guards apply: the subscription happens only for the default world, and only if `base.OnCreate()` is called.
+
 Mods can also be re-initialised without restarting the game — a playset or mod-status change re-runs the whole registration and `OnLoad` pass — and the manager pushes a "restart required" notification when it cannot.
 An `OnLoad` that assumes it runs exactly once per process is wrong on that path.
 
@@ -395,8 +403,9 @@ There is no `PostSerialize<T>`: the far side of the writer is reached by an ordi
 updateSystem.UpdateBefore<PreDeserialize<MySystem>>(SystemUpdatePhase.Deserialize);
 ```
 
-Vanilla registers nine `PreDeserialize<T>` in the front band of `Deserialize` — the six spatial search systems, the instance counter, and the two pathfinding queue systems — and that is the pattern's purpose: **clear a mod's own index, cache or spatial tree before the loader starts writing entities into it.**
+Vanilla registers 57 `PreDeserialize<T>` in the front band of `Deserialize`, and the first nine state the pattern's purpose plainly — the six spatial search systems, the instance counter and two pathfinding systems: **clear a mod's own index, cache or spatial tree before the loader starts writing entities into it.**
 Any mod holding a quadtree or a lookup keyed by entity wants this, and wants it in the front band so it runs before the readers.
+(VOLATILE: the count of vanilla `PreDeserialize<T>` registrations — the vanilla system-order class.)
 
 The `Deserialize` phase cannot host everything that looks like it belongs there.
 A migration that needs data another phase produces — network compositions, for instance — has to be registered into the modification phase that produces it instead, anchored before whichever system consumes it.
