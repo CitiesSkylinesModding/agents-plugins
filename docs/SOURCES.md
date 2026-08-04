@@ -72,8 +72,12 @@ The full `CSII_*` set is the toolchain's own record of where everything lives: i
 ## 8. The running game — Unity
 
 The sibling `unity-devtools` plugin, over the Mono soft debugger.
-Settles what no static read can: live component values, real ECS query results, actual execution order, whether a patch took.
+Settles what no static read can: live component values, real ECS query results, actual execution order, whether a patch took, the contents of any registry the game builds by reflection at startup, and the load-time context of the city currently open — including the build that wrote its save.
 Needs the game running as a debug-patched development build, which `cs2-modding-setup` provisions.
+
+**What it can answer depends on what the game has loaded, not only on whether it is running.**
+A question about a mod-declared surface — a serializable component, a mod's own entities, a system a mod registers — needs a mod present that declares one, and with none loaded the question looks unanswerable when it is merely unequipped.
+So name what the game must be carrying before recording a live question as unanswerable, and ask for it: the user will install any mod on request, and one from the setup skill's catalog is a minute's work.
 
 ## 9. The running game — the UI
 

@@ -44,9 +44,17 @@ The agent that wrote a claim cannot audit it, so verifying it is `/review-gate`'
 The gate's finders re-derive each claim from the primary sources — the decompile first, then the installed toolchain and the game's own files — and return the line that proves or disproves it.
 Point them at those sources and at the claims to re-derive; a finder told only to review the prose reads it for plausibility, which is how it was written in the first place.
 
+**A green `mise check:skill-content` says nothing about whether a reference is right.**
+It checks marker spellings, the version baseline, link resolution and catalogued mod names — the shapes a script can see.
+Counts, guard conditions, failure modes and a claim contradicting a sibling all pass it untouched, so the gate is the only thing between a plausible sentence and a wrong one.
+
 Aim the pass at over-reach, because that is what authoring produces: a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
 Prose that has gone through a gate has been wrong on exactly these, and none of it read as doubtful.
 Read these before re-deriving anything: [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md), and [a read that stopped where the code agreed with it](../../docs/solutions/decompile-read-stopped-at-the-confirming-line.md).
+
+**Over-reach usually enters one stage before the prose carrying it.**
+A reference is written by an agent holding a research file and no source, so a guard, a condition or a scope dropped while the research was written down is copied into the shipped file faithfully, and reads as well there as it did in the research.
+Aim finders at the research file's own citations as much as at the prose: open the line a claim rests on and read what surrounds it, rather than re-deriving only what the shipped sentence already says.
 
 A reference contradicting a shipped sibling is the normal output of partitioning one subject: the slices overlap, and a topic that owns a mechanism reads its source more closely than one that merely mentions it.
 Fix it in the pass that found it — re-derive the claim from the decompile, then correct every file carrying the wrong version, a reference whose own work is long finished included.
@@ -55,6 +63,11 @@ Deferring the correction to a follow-up drops it.
 Corrections earn another `/review-gate`. A rewritten passage is new prose, and the round that fixes the most is the round that introduces the most.
 The way a correction goes wrong is over-correction: a vague rule rewritten into a precise one that is wrong, a permission narrowed to a whitelist tighter than what was ruled, a mechanism invented to justify a rule that was already justified.
 Prefer scoping or restoring the sentence you have over generalising it, and where a fix needs a claim the sources do not carry, drop the claim rather than the fix.
+
+**The shape of a fix predicts whether it holds.**
+A correction that takes something away — a duplicated passage, a rule stated three times, a sentence that reached past its evidence — survives its own review, and so does a mechanical one applied uniformly across a file.
+A correction that adds precision is the one the next round finds wrong: a count, a mechanism, a rationale, a worked example.
+Give those the same scrutiny as the prose they replace.
 
 ## Reference families
 

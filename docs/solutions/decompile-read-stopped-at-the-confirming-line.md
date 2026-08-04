@@ -58,6 +58,24 @@ Read past the confirmation: the rest of the method, the caller that reaches it, 
 immediately after the one you cited. A range that ends exactly where the claim is satisfied is the
 shape to distrust in your own citations.
 
+## The counting variant
+
+The same stop produces a wrong **census**, and it reads even better than a wrong claim does.
+
+A registration list, an enum or a family of systems usually opens with a contiguous block that
+explains the pattern — the six spatial search systems and the pathfinding pair that open the
+`PreDeserialize` registrations, say. That block answers _what is this for_, so the read ends there
+and the count ends with it. The `mod-lifecycle-and-ordering` reference shipped "nine
+`PreDeserialize<T>`" off exactly this; there are 57, and the nine are the leading block.
+
+**A count is a claim about a whole span, so derive it from the span.** `grep -c` over the file
+beats reading until the pattern is clear, and the count and the illustration are two separate
+claims: give the illustration its own narrow range and the count its own wide one.
+
+The over-correction to expect here is characterising the rest of the span from the tail you
+happened to read. The same reference then shipped "the remaining 48 are UI, infoview and rendering
+systems" — audio, tool, pathfinding, buffer and tutorial systems are in there too.
+
 ## Prevention
 
 Two habits, both cheap.
