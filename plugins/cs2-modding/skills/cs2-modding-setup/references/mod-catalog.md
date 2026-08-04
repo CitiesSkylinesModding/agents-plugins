@@ -285,6 +285,24 @@ Versioned serialization with an explicit migration scheme.
 The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
 
+### Hall of Fame
+
+Source: [toverux/HallOfFame](https://github.com/toverux/HallOfFame)
+
+**Does:** Takes supersampled screenshots of the player's city, uploads them to a community server, and presents other players' screenshots as the main menu's background, with the creator, the city name and controls over the image.
+It also replaces the loading screen's background with the last image it loaded.
+
+**Demonstrates:** A mod whose product is its frontend, so its C# exists to serve one.
+Extending vanilla React components the module registry exposes and no shipped declaration file names — the menu shell, its backdrops, the master screen, the loading-screen overlay, the photo-mode panel — each wrapper returning the vanilla component untouched when the feature is off, which is what makes an injection reversible from a setting.
+Reaching the vanilla DOM from such a wrapper by resolving the wrapped component's scoped CSS-module class names through the module registry and mounting a React portal into the node they find, with every module and class accessor guarded so a renamed class costs a missing button rather than a broken menu.
+A frontend binding facade, one module per binding group, whose value bindings are created on first read rather than at import.
+Two frontend cache techniques the engine forces: an optional sub-object's presence encoded into the type name its payload is written under, and hidden nodes on the document body holding images resident across the screens the game unmounts.
+Runtime-written images served to the UI over the mod's own `coui://` host.
+A hand-rolled supersampled capture — hide the UI view, force the graphics settings that grain the image, render the camera repeatedly into an oversized texture, and restore every one of those in a `finally`.
+Reflection proxies as a declared layer rather than scattered calls, each acquiring its member once, logging what it could not find, and answering with a fallback afterwards.
+An input action owned by the frontend: a composite binding publishing the binding configuration and the action's phase, enabling the action while the frontend holds a subscription.
+Tests on both sides: xUnit over plain classes kept free of engine types, and UI component tests that load the game's own UI bundle, inject the repository's React into it, and answer binding subscriptions from a mock engine.
+
 ## Error checks, overrides and save-safe state
 
 ### Anarchy
