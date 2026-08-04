@@ -58,10 +58,27 @@ So **two mods registering the same host name do not conflict — they stack**, a
 
 The two shapes worth copying:
 
-- **A read-only directory beside your assembly**, watching off, for icons you ship.
+- **A read-only directory beside your assembly**, for icons and markup you ship.
   Derive the path from your own executable asset as above.
-- **A watched temporary directory**, for files you generate at runtime.
-  Watching is what makes a thumbnail written after startup appear at all; without it the resource handler serves what it already knows.
+- **A directory you write into at runtime**, watching off, for files you generate.
+
+**The watch parameter defaults to `true`, so an argumentless call watches.**
+Its one consumer is the UI view's live-reload component, which a view constructs only when its settings enable live reload.
+Two things turn that on: the UI developer-mode launch option, which is how you get it in the sessions you develop in, and a stored UI-manager settings asset, which the game reads over the launch option's value and which no shipped database carries.
+So a player ordinarily has no watcher, and you cannot treat that as a guarantee.
+There **a change under the directory reloads the whole view** rather than refreshing the file that changed.
+That is what you want for a directory you ship and edit while iterating, and it is why a directory your mod writes into at runtime takes `false`: every file written blanks and rebuilds the UI the write was updating.
+
+Watching is not what serves the file either.
+Resolution holds no cache — a request walks the host's paths and reads the file off disk again — so **a file written after startup is served the next time the frontend asks for it, watched or not.**
+
+**One branch runs before that walk, and it is a name collision waiting to happen.**
+A request for a raster image — the extension list is `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.psd`, `.tga`, `.astc`, `.pkm`, `.dds`, `.ktx`, and pointedly not `.svg` — is first looked up as a Unity resource under `UI/SharedImages`, keyed on the file name with its extension dropped, and only falls through to the host walk when that lookup comes back null.
+So `coui://yourmod/settings.png` serves the game's built-in `settings` texture if one exists under that name, and your file is never read.
+**Name a raster file you serve after something no shared image is called**, or ship it as `.svg`, which never takes this branch.
+What may not ask again is the frontend, and a fixed file name rewritten in place is where that bites.
+A version query on the name reaches the same file, since the resolved path comes from the URL's path alone and the `coui` branch reads no query at all.
+(UNVERIFIED: what the engine's image cache does with a URL it already holds when the bytes under it change — no source this plugin reads states the cache's key or its invalidation, and nobody has watched a re-request in a running game.)
 
 The game registers three hosts of its own, and they are the shapes to recognise: `gameui` for the base UI, `ui-mods` for the directory of every mod's UI module asset, and one host per UI host asset found in the database.
 
@@ -72,4 +89,4 @@ The thumbnail chain is the one to know: icon if set, else a placeholder when thu
 
 The Cohtml side of the frontend is `frontend-and-injection`.
 
-(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, and `AddHostLocation`'s signature — the UI system, and the default resource handler.)
+(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — the UI system, the UI live-reload class, and the default resource handler.)

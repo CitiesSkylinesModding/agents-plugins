@@ -3,6 +3,7 @@
 > **Seed survey.** Produced 2026-07-31 during the interview that became the `cs2-modding` spec, before the discovery pipeline existed.
 > Read the open-source mod corpus only, at the commits each repository carried on 2026-07-31.
 > Kept as it was written, citations intact; its recommendations are that pass's opinion, not decisions.
+> Where a later pass overturned a claim here, the correction rides beside it as a dated `[ed. …]` note rather than as an edit to the sentence, so the survey still reads as the snapshot it is.
 
 **Corpus root:** `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`
 
@@ -214,7 +215,7 @@ Because `AddPrefab` only creates the prefab entity, mods add a `PrefabUpdate`-ph
 
 ### 4.4 External asset import
 
-- **Runtime SVG thumbnail synthesis:** `RoadBuilder-CSII/RoadBuilder/Utilities/ThumbnailGenerationUtil.cs:55-90` composes SVG fragments with `System.Xml.Linq`, saves to `FoldersUtil.TempFolder`, and returns `coui://roadbuilderthumbnails/{id}.svg`, which resolves because `Mod.cs:36` did `UIManager.defaultUISystem.AddHostLocation("roadbuilderthumbnails", FoldersUtil.TempFolder, true)`.
+- **Runtime SVG thumbnail synthesis:** `RoadBuilder-CSII/RoadBuilder/Utilities/ThumbnailGenerationUtil.cs:55-90` composes SVG fragments with `System.Xml.Linq`, saves to `FoldersUtil.TempFolder`, and returns `coui://roadbuilderthumbnails/{id}.svg`, which resolves because `Mod.cs:36` did `UIManager.defaultUISystem.AddHostLocation("roadbuilderthumbnails", FoldersUtil.TempFolder, true)` [ed. 2026-08-04: the registration is what resolves it and the `true` is not — see the 2026-08-04 verdict in `prefabs-and-assets.md` for what that flag does.]
 - **Fonts, image atlases, OBJ meshes from disk:** WriteEverywhere loads TTFs (with a full C# port of stb_truetype under `BelzontWE/Font/FileReader/` — `FontInfo.cs`, `CharStringContext.cs`, `Buf.cs`, `FakePtr.cs`, `RectPackContext.cs`), packs sprite atlases (`Font/Sprites/MaxRectsBinPack.cs`, `WEAtlasesLibrary.cs`), and parses `.obj` (`IO/ObjFileHandler.cs`). Roots under `BasicIMod.ModSettingsRootFolder` (`Font/FontServer.cs:32`, `Font/Sprites/WEAtlasesLibrary.cs:35-39`).
 - **Riding the PDX asset-upload pipeline:** `CS2-WriteEverywhere/BelzontWE/Overrides/AssetUploadOverrides.cs:14-60` patches `Game.UI.Menu.PdxAssetUploadHandle.CopyPreview` to copy the mod's `.we` sidecar folder (layouts/atlases/meshes) into the upload payload so custom assets carry WE data. Genuinely novel.
 - **Reacting to playset changes:** `CS2-WriteEverywhere/BelzontWE/WriteEverywhereCS2Mod.cs:90` subscribes to `(AssetDatabase<ParadoxMods>.instance.dataSource as ParadoxModsDataSource).onAfterActivePlaysetOrModStatusChanged`.
