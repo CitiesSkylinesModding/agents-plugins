@@ -117,7 +117,8 @@ Source: [lucarager/CS2-Platter](https://github.com/lucarager/CS2-Platter)
 
 **Does:** Adds placeable "parcels" holding zone cells, so zoning can be placed anywhere and at any angle with snapping and setbacks, while the game's own demand, land value and growth logic still decides what spawns on them.
 
-**Demonstrates:** Custom prefab subclasses and runtime prefab variant generation.
+**Demonstrates:** A serializable component in its minimal form — fields written and read in the same order, a nested game struct passed straight through, and a flags enum cast to its underlying type in both directions, since the reader and writer have no enum overload.
+Custom prefab subclasses and runtime prefab variant generation.
 Deserialize-phase jobs that rebuild the links between mod entities and game entities after a load.
 Rewriting a vanilla system's private entity query at runtime so stock code skips the mod's entities — the most aggressive compatibility technique in the corpus, and worth reading as much for its risk as for its power.
 Prefab-data initialisation systems anchored immediately after the vanilla initializer whose output they overwrite, which is the readable way to correct derived prefab data rather than fight for it.
@@ -133,6 +134,9 @@ Source: [krzychu124/Traffic](https://github.com/krzychu124/Traffic)
 **Does:** A lane connector for rewiring turning lanes at an intersection and a priorities tool for yield and stop rules, with modifier keys selecting unsafe, track-only, road-only or shared connections.
 
 **Demonstrates:** The reference example of save-data migration: a version constant, per-version repair jobs, and validation passes that fix or drop data an older version wrote.
+A migration version kept in a save section owned by a system rather than on any entity, with a defaults hook supplying version zero for saves written before the mod existed.
+A formerly-serialized-as attribute on that system, so a save written under its earlier namespace still resolves.
+Importing the persisted components of a different mod: the foreign type is resolved by name out of the asset database, queried through a runtime component type, migrated by a chunk job in the deserialize phase's back band, then removed from every entity that carried it.
 Disabling the vanilla lane system and taking over its slot, with no patching anywhere in the codebase.
 Registering a system frames after the mod loaded, from a deferred main-thread callback, which is how it disables another mod's system once that mod is known to be present.
 A custom raycast system registered in the raycast phase.
@@ -167,7 +171,8 @@ Source: [ruzbeh0/Time2Work](https://github.com/ruzbeh0/Time2Work)
 Reimplementing the game's time model, deriving ticks per day from the vanilla constant scaled by a factor, which is where to look for how the simulation's time units actually work.
 The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval, which is what puts a fork on the same simulation frames as the original.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
-A versioned serializable component for per-citizen state, with a fallback path that reads saves written by older versions.
+A serializable component for per-citizen state whose deserializer wraps its reads in a catch that cannot fire on the size mismatch it is written for.
+A system save section whose read is gated on one of the game's own save-format tags while its write is unconditional, which is the coupling hazard rather than a pattern to copy.
 Carries the game's own generated type-handle struct into each fork and refreshes every handle by hand at the top of the update, which is what a forked system must do once the source generator is no longer writing that code for it.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
 
@@ -182,6 +187,7 @@ Custom roads are saved inside the city and travel with it.
 
 **Demonstrates:** Composing a network prefab in code — instantiating the prefab, assembling its sections, edge and node states from lane-group prefabs, rather than cloning a fixed template.
 Versioned custom save serialization with migration constants and post-load repair of invalid references.
+Marker entities written into the save from a system registered in the serialize phase's front band, one per placed custom road, and deleted again later in the same frame, so a load knows which of the mod's on-disk files that city needs and can rebuild them from the save when the files are gone.
 Mimicking the built-in apply and cancel bindings by copying them from the input manager, so a custom tool obeys the user's remaps.
 Registering roughly fifteen systems across specific phases, which is a readable map of where prefab, serialize and tool work has to sit.
 Regenerating a live prefab in place, which replaces the prefab entity outright, so the mod tags the outgoing one, throttles the rebuild, and clears the stale entity out of a vanilla system's private dictionary that the engine's own reference sweep cannot reach.
@@ -281,7 +287,8 @@ Source: [klyte45/CS2-WriteEverywhere](https://github.com/klyte45/CS2-WriteEveryw
 Burst-compiled glyph layout writing vertices into a native queue, on top of a hand-written font file parser.
 Loading meshes from disk at runtime and composing per-entity materials.
 Attaching mod data to game entities by owner back-reference instead of spawning a parallel object graph.
-Versioned serialization with an explicit migration scheme.
+A version int read into a local that bails when the save was written by a newer build of the mod, then one appended conditional block per revision that added a field, so a new field costs no edit to any existing branch.
+The same classes serve as both the mod's XML file format and its save payload, which works because the reader's overload for a reference type deserializes into an instance the caller has already allocated.
 The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
 
