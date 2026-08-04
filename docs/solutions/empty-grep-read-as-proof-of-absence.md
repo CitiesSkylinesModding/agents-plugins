@@ -4,8 +4,10 @@ area: docs/research (the cs2-modding discovery pipeline, against any decompile)
 symptoms:
   - 'a claim reads "nothing in the game consumes it" and the game consumes it'
   - 'a claim reads "the only system that writes it" and eight systems write it'
+  - 'a claim reads "the only repository that does X" and four of them do X'
   - 'a grep of the decompiled source returns no hits for something the game plainly does'
-tags: [research, decompile, grep, over-reach, verification, false-absence]
+tags: [research, decompile, grep, over-reach, verification, false-absence, corpus]
+updated: 2026-08-04
 ---
 
 # A grep came back empty and the pass concluded absence
@@ -43,6 +45,12 @@ Three distinct mechanisms, which is why fixing one instance taught nothing about
 - **Whole subsystems are invisible to a C# search.** The frontend and everything shipping as data
   are not in the decompile at all. 72% of this game's localization namespaces never appear in C#,
   so `localization` had a rule resting on the opposite assumption.
+- **A pattern that names one member of a family, taken for the family.** A corpus sweep for
+  `xunit|from 'bun:test'|testing-library` across the mod repositories returned one hit, and the
+  catalog shipped "the only repository here that ships tests". Four ship test projects; the other
+  three use NUnit, which the pattern never named. This one does not come back empty, and that is
+  what makes it convincing — a search returning exactly one hit looks like a finding rather than
+  like a question about the pattern.
 
 ## Fix
 
