@@ -352,7 +352,10 @@ The workable timings, in rough order of how much control they give:
 
 Creating a system without giving it a phase is a real option, not a workaround: `mod-lifecycle-and-ordering` records the same shape under "Not every mod system needs a phase".
 
-**Every one of those paths can run more than once**, because mods are re-initialised on a playset change and hooks fire per load.
+**Every one of those paths can run more than once**, and each for its own reason.
+The prefab-update phase is driven from a system that updates every frame, so a routine registered there re-runs continuously rather than once.
+The load hooks fire once per city load, and a session loads as many cities as the player opens.
+A background import completes whenever it completes.
 Open the routine with a `TryGetPrefab` on the id you are about to mint and return early when it resolves.
 
 ## Cloning a vanilla prefab, and the reference hygiene a clone needs

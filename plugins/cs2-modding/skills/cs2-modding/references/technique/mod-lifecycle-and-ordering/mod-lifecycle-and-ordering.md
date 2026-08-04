@@ -76,7 +76,8 @@ Game startup is a single ordered sequence, and mod loading sits late in it:
 5. prefabs are loaded;
 6. the world reaches its ready state and the world-ready event fires.
 
-Four consequences, each load-bearing:
+Four consequences, each load-bearing.
+The last three describe the boot path alone, and the mid-session-enable path below reverses them:
 
 - **The world exists and all of vanilla is already registered.**
   A mod cannot change how the world is built, cannot get in front of the vanilla registration pass, and cannot pre-empt a vanilla registration.
@@ -100,8 +101,13 @@ Anything a mod leaves on an entity the game does not recognise therefore survive
 **`GameSystemBase.OnCreate` also subscribes the system to the save-loaded callback**, `OnGameLoaded(Context)`, which fires once after the whole `Deserialize` phase has run and carries the load context.
 Like `OnWorldReady` it needs no phase registration — and like it, both guards apply: the subscription happens only for the default world, and only if `base.OnCreate()` is called.
 
-Mods can also be re-initialised without restarting the game — a playset or mod-status change re-runs the whole registration and `OnLoad` pass — and the manager pushes a "restart required" notification when it cannot.
-An `OnLoad` that assumes it runs exactly once per process is wrong on that path.
+**A playset or mod-status change re-runs the registration and load pass mid-session, and that pass only ever adds.**
+A mod is loaded only while its state is still unknown, so one already loaded is skipped rather than disposed and loaded again: enabling a mod mid-session runs its `OnLoad` for the first time without a restart, while disabling one leaves it loaded and pushes the "restart required" notification instead.
+So `OnLoad` runs exactly once per mod per process.
+What varies is where in the boot sequence it lands, and on that path it lands past the end of it: prefabs are loaded, the world has been ticking for some time, and the world-ready event has already fired.
+The first consequence still holds — vanilla is registered either way, and a mod can still only append.
+**A system created on that path misses `OnWorldReady` permanently**, because the event is raised once at boot and never again, so a mod that puts one-shot setup there does nothing at all when the player enables it without restarting.
+Put that setup somewhere that fires per load instead.
 
 ## Ordering is imperative, and the stock ECS attributes do nothing here
 
@@ -430,11 +436,12 @@ So every null guard in an `OnDispose` body is load-bearing rather than defensive
 What belongs there:
 
 - **Undo the mod's Harmony patches.**
-  A patch outlives the mod object that applied it, and a mod can be re-initialised without the process restarting, so patches left in place stack a second set over the first.
+  A patch outlives the mod object that applied it, so a mod that patched and then threw halfway through `OnLoad` leaves live patches behind for a mod the game has given up on.
+  That is the case the undo is for; at shutdown the process is going away regardless.
   `patching` owns the call and the identity it keys on.
 - **Unregister the settings from the options UI**, and null the field, in the shape `if (Settings != null) { Settings.UnregisterInOptionsUI(); Settings = null; }`.
   See `settings-and-input`.
-- **Null the mod's own static instance and any other static state**, since statics outlive a re-initialisation that constructs a new mod object.
+- **Null the mod's own static instance and any other static state**, since statics outlive the mod object and a failed load otherwise leaves them pointing at a half-built one for the rest of the session.
 - **Undo anything registered outside the mod's own world** — a UI host location, a temporary directory, an entry in another mod's registry.
 
 What does not belong there: unregistering systems.

@@ -77,7 +77,11 @@ The enum's declaration order is load-bearing for that comparison and is not chro
 
 Rots: the `GameManager.State` member names and their declaration order — re-read `src/Game/Game.SceneFlow/GameManager.cs:122-132`.
 
-Mods can be re-initialised without a restart: `m_ModManager?.Initialize(m_UpdateSystem, reinitialize: true)` (`:1628`) runs on a playset or mod-status change, and `RequireRestart()` (`ModManager.cs:524-545`) pushes the "restart required" notification when it cannot.
+The re-initialisation pass only ever adds a mod, never reloads one (corrected 2026-08-04 by ticket 17's orchestrator pass, which found the earlier reading contradicted by `patching`'s unpatch-lifecycle finding).
+`m_ModManager?.Initialize(m_UpdateSystem, reinitialize: true)` (`:1628`) runs on a playset or mod-status change and re-runs `RegisterMods()` then `InitializeMods()` (`ModManager.cs:263-264`).
+`RegisterMods` keeps an existing entry's state through `ModInfo.TransferState` and gives only a genuinely new asset a fresh `ModInfo` (`ModManager.cs:397-428`, the transfer at `:414`), and `ModInfo.Load` returns immediately unless `state == State.Unknown` (`:95-98`).
+So an already-loaded mod is skipped rather than disposed and re-loaded, and `OnLoad` runs exactly once per mod per process.
+Disabling a loaded IL assembly mid-session cannot unload it: that branch calls `RequireRestart()` (`GameManager.cs:1572`, the notification at `ModManager.cs:524-545`), while `!isLoaded && isInActivePlayset` queues the assembly for a first load (`GameManager.cs:1576`).
 
 ### Ordering is imperative, and the stock ECS attributes are inert here
 
