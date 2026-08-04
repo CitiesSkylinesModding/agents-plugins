@@ -43,7 +43,7 @@ Source: [algernon-A/LineTool-CS2](https://github.com/algernon-A/LineTool-CS2)
 **Demonstrates:** Cooperative tool design — it inserts itself into the tool list at `OnCreate` and hands control back to the previously active tool instead of replacing anything.
 Its `CreateDefinitions` is a Burst-compiled port of the game's own object-creation pipeline, so placed objects go through the same `CreationDefinition`/`ObjectDefinition` path as vanilla, sub-objects and sub-nets included.
 Line modes are a strategy hierarchy, one class per mode, each owning its click, drag and overlay behaviour.
-Its two runtime patches are small and targeted, applied only to refresh a private UI binding.
+Its single runtime patch is small and targeted, applied only to refresh a private UI binding, and the same binding is read elsewhere through a cached reflection accessor rather than a second patch.
 
 ### Move It
 
@@ -122,6 +122,7 @@ Custom prefab subclasses and runtime prefab variant generation.
 Deserialize-phase jobs that rebuild the links between mod entities and game entities after a load.
 Rewriting a vanilla system's private entity query at runtime so stock code skips the mod's entities — the most aggressive compatibility technique in the corpus, and worth reading as much for its risk as for its power.
 Prefab-data initialisation systems anchored immediately after the vanilla initializer whose output they overwrite, which is the readable way to correct derived prefab data rather than fight for it.
+A patch that records whether it was the one that widened a filter, and narrows the results only in that case, so it composes with another mod doing the same thing and degrades to a no-op if the game starts doing it too.
 Hand-built input actions registered by reflection, because scroll bindings are not exposed.
 Taking a placement definition away from its vanilla consumer by removing the creation component from a system spliced immediately before that consumer, played back synchronously because a phase barrier would land after the consumer has already run.
 An in-engine test scenario system, debug-only.
@@ -174,6 +175,7 @@ Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A serializable component for per-citizen state whose deserializer wraps its reads in a catch that cannot fire on the size mismatch it is written for.
 A system save section whose read is gated on one of the game's own save-format tags while its write is unconditional, which is the coupling hazard rather than a pattern to copy.
 Carries the game's own generated type-handle struct into each fork and refreshes every handle by hand at the top of the update, which is what a forked system must do once the source generator is no longer writing that code for it.
+Replacing one branch of a vanilla job-scheduling method from a prefix — a private target resolved by explicit signature, the type handles and lookups the vanilla method would have refreshed rebuilt by hand, and the substitute job's handle returned rather than completed, so the caller's temporary allocations outlive the work.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
 
 ## Prefabs and assets from code
@@ -252,6 +254,8 @@ Naming prefabs it generates at runtime by copying the original's localized name 
 ### Info Loom
 
 Source: [bruceyboy24804/InfoLoom](https://github.com/bruceyboy24804/InfoLoom)
+
+The shared build directory the project imports is not in the default branch, so its package references and the bootstrap that applies its patch are not readable from a plain clone; the patch body is.
 
 **Does:** Adds panels for demand, workforce and workplace structure, demographics, residential, commercial and industrial data, trade costs and districts, and injects extra sections into the game's selected-object panel.
 Read-only; it changes no rules.

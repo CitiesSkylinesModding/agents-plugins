@@ -101,10 +101,18 @@ The checked-out open-source mod repositories. Which ones, and what each demonstr
 **Input, never output.** It is evidence of what mod authors do, which is a different fact from what the game does.
 **It is also a lead generator, and its leads are worth chasing.** A mod contradicting your derivation is one whose author hit that behaviour in a running game. Read the first-party source again before you write. The corpus still settles nothing — but discarding its lead on that ground is how a half-finished derivation survives a pass.
 
+## 12. The Harmony library
+
+Ships with no first-party artifact: it is not in `Cities2_Data/Managed/`, and the toolchain's `Mod.props` and `Mod.targets` never mention it.
+Every mod that patches brings its own `0Harmony.dll` through the `Lib.Harmony` package, and the deploy target ships it beside the mod's assembly.
+**Authoritative for patch semantics** — the injected parameter names, prefix and postfix ordering, the `ArgumentType` mapping, unpatch filtering — none of which any other source here can answer: the decompiled game says what a patch target contains and nothing about what a patch does, and the wiki mentions the library twice in passing.
+Read it by decompiling a copy with `ilspycmd`, taking any `0Harmony.dll` under the Paradox mods cache at `%CSII_USERDATAPATH%/.cache/Mods/pdx_mods/` and checking the assembly identity first: several versions are in circulation and none is strong-named, so which one a given copy is cannot be assumed.
+
 ---
 
 ## What looks like a source and is not
 
 - **First-party files vendored into a mod repository** — a copy of the UI bundle, a `types/*.d.ts`. The install supersedes them, and where a copy disagrees with it, assume the copy is stale rather than wrong: the failure mode is recording what the copy lacks as something the game lacks.
-- **The user's installed mods** — the built assemblies under `%CSII_LOCALMODSPATH%` and the Paradox cache. Compiled, not source, and whoever wrote one may not be in the corpus at all.
+- **The user's installed mods** — the built assemblies under `%CSII_LOCALMODSPATH%` and the Paradox cache. Compiled, not source, and whoever wrote one may not be in the corpus at all, so they settle nothing about how a mod works. The Paradox cache alone settles one thing they cannot: how common something is, since the set of files a mod ships is readable without decompiling anything and that cache is the only sample of the ecosystem this pipeline can reach that nobody selected for it. Use **the Paradox cache** for prevalence and never for a claim about how a mod works, say how many mods the count was over, and do not read `%CSII_LOCALMODSPATH%` this way — it holds what the user themselves built and is a sample of nothing.
+  This bars the cache as evidence about mods; it is also where a copy of a _library_ a mod ships is reached, which is source 12 and a different question.
 - **The `.coc` files at the `%CSII_USERDATAPATH%` root** — one per mod, plus the game's own. These are saved settings, not code and not content, however much the extension resembles the `.cok` packages.
