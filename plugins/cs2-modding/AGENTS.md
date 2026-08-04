@@ -69,6 +69,11 @@ A correction that takes something away — a duplicated passage, a rule stated t
 A correction that adds precision is the one the next round finds wrong: a count, a mechanism, a rationale, a worked example.
 Give those the same scrutiny as the prose they replace.
 
+**A claim that comes back wrong twice is a claim to delete rather than rephrase.**
+Each round fixes the number and leaves the sentence, because the sentence reads as the thing the passage needs.
+One ranking survived three rewrites — largest by targets, largest of those read, most mods — each wrong a different way, while the structural reason beside it carried the passage unaided the whole time.
+Ask what the surrounding prose loses if the claim simply goes; where the answer is nothing, that is the fix.
+
 ## Reference families
 
 The trunk skill's references nest in two families, one directory each, because the sources decompose along two orthogonal axes and both are real.
