@@ -46,6 +46,10 @@ The agent that wrote a claim cannot audit it, so verifying it is `/review-gate`'
 The gate's finders re-derive each claim from the primary sources — the decompile first, then the installed toolchain and the game's own files — and return the line that proves or disproves it.
 Point them at those sources and at the claims to re-derive; a finder told only to review the prose reads it for plausibility, which is how it was written in the first place.
 
+**Where a claim rests on a live-game run, the brief names the captured logs as the source and says not to re-run it.**
+"Re-derive from the primary sources" reads as "reproduce the experiment" to a finder holding no other instruction, and it will rebuild a probe and reach for the game within minutes.
+Say instead that an honest gap is the useful answer: where the captured evidence cannot settle a claim, the finder names what would settle it and moves on.
+
 **`/simplify` runs before the gate.**
 Simplifying afterwards re-opens reviewed prose, which earns another gate: simplify-then-gate converges, gate-then-simplify loops.
 Aim it at what authoring overproduces — how a conclusion was reached, a rule restated in the file that does not own it, a count or a date standing where an invariant belongs.

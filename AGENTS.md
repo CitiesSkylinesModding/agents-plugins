@@ -77,6 +77,7 @@ Ask first before:
 - Adding a dependency.
 - Reworking architecture.
 - Performing destructive file or data operations.
+- Acting on the user's running game — launching it, quitting it, loading or reloading a save, changing a setting in it. Say what you need done and why, then wait: only they can see what the game is actually on, and a launch costs minutes of their machine. Building, deploying and reading logs need no such permission.
 
 ## Where knowledge goes
 
