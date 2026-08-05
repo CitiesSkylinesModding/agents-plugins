@@ -269,7 +269,11 @@ Register it in the `Cleanup` phase: that phase runs after the whole main loop, s
   That `Complete()` is a stall and is unavoidable; the job's work is the lookup and the command-buffer recording, which is what keeps the disposal itself off the worker thread.
   If you schedule it parallel, the queue needs its `ParallelWriter` and so does the command buffer — on this build neither omission throws.
 
-(UNVERIFIED: which error a reader meets when the free is attempted from inside the job — a Burst-compiled job rejects the managed call at compile time while an unbursted one reaches a Unity API from a worker thread, and nothing established which; attempting the free from a job body in a running game, once bursted and once not, would settle it, and the enqueue-then-drain shape exists so the question never arises.)
+**Neither guard catches the handle free.**
+With `[BurstCompile]` on the job the build fails at the read of the handle's `Target`: fetching the managed object is an unsupported call and it is the one a real body reaches first, with `Object.Destroy` unsupported behind it.
+Take the attribute off and it builds, and the destroy throws on the worker thread instead — `Destroy can only be called from the main thread.`
+Taking it off is the only route to that second case: a body that will not compile has no artifact for the launch switch below to unburst.
+`Free()` is rejected by neither.
 
 **Two failure modes, neither of them visible:**
 
@@ -432,8 +436,8 @@ NativeLeakDetection.Mode = NativeLeakDetectionMode.EnabledWithStackTrace;
 ```
 
 `EnabledWithStackTrace` prints a callstack per leaked allocation, which is what separates "something is leaking" from "this is leaking".
-The frames are native — `UnityPlayer` and the Mono runtime, symbolicated as addresses — rather than a managed C# stack, so read them as a region of the engine rather than as a line number in your mod.
-(UNVERIFIED: whether a mod's own methods appear among those frames — the leak observed here was allocated through a debugger, whose invoke machinery filled the managed half of the stack; leaking one from ordinary mod code and reading the log would settle it.)
+**A leak from ordinary mod code names that code.**
+The frames above the allocation are the mod's own methods as Mono JIT frames, and the stack turns native only below the game's own — `(UnityPlayer)`, `(mono-2.0-bdwgc)` and address-only entries.
 
 **Bind it to a condition, and never let it reach a shipped default path.**
 Set it from a debug configuration, or behind a mod setting that is off unless the player turns it on.
