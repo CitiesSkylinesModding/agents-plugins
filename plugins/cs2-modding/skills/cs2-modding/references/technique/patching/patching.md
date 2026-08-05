@@ -197,7 +197,8 @@ The managed body of such a method is one line dispatching to a generated invoker
 So a prefix or postfix on it runs, and **you can read and rewrite the arguments and the result but you cannot change the logic**, because the logic is in the native image the fallback path never reaches.
 
 For a Burst-compiled **job**, the substitution point is not in C# at all: a job's entry is registered through an `extern` reflection-data call, and the point where Burst swaps in the compiled body is native.
-(UNVERIFIED: that a patch on a `[BurstCompile]` job's `Execute` has no effect while Burst is enabled — patching one vanilla job's `Execute` with a logging postfix and observing whether it fires, with Burst on and then off, would settle it.)
+So a patch on that `Execute` never runs while Burst is enabled: it rewrites the managed body, and the managed body is exactly what the native compilation replaces.
+`performance-and-memory` settles the same fact from the other side — a breakpoint set in that body binds and never fires.
 
 **So the rule is: replace the job, not its body.**
 Patch the managed method that _schedules_ the job — the last managed instruction before the schedule — and schedule your own job instead.
