@@ -53,6 +53,7 @@ Errors about generated job or system code come from those generators and belong 
 The post-processor runs over the compiled assembly for three platforms, and does two things in order.
 It first runs Unity's IL post-processors — the same ones a Unity build would run — in a helper process holding the Entities, Collections and Burst packages, rewriting the assembly.
 It then runs the Burst compiler once per platform over whatever the assembly marks for Burst compilation, producing `<assembly>_win_x86_64.dll` and its macOS and Linux counterparts beside the assembly.
+(Jobs are reached through their schedule sites, so a `[BurstCompile]` job nothing schedules is compiled to nothing and the build still passes; the pass's own `containing N methods` line is what says otherwise.)
 A mod that marks nothing still gets those files, and its own code stays managed.
 A failure here reads `Failed to compile Burst dll for <platform>` or reports an error from the post-processor, and neither is a compilation error, so re-reading the C# is wasted effort.
 The game loads the Windows library beside a mod assembly when it is there, and the other two ship against a port that has not happened.
