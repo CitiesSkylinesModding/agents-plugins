@@ -29,6 +29,7 @@ The game takes that trade exactly once, for simulation bucketing (below).
 The entity moves into a residue archetype holding only the cleanup components and an internal marker, and dies for real only once you remove the cleanup component.
 That is the one correct way for a component to own a handle — an unmanaged allocation, or a managed mesh or material pinned inside an otherwise blittable struct — because it guarantees a disposal system gets to see the entity after deletion.
 Forget the removal and you leak entities silently, with nothing in the log.
+`performance-and-memory` owns the pattern itself — the disposal system's shape, and what a save and load do to a residue entity.
 
 The game's own answer to "clean up after me" is not a cleanup component at all: it is the `Deleted` tag plus a frame of grace, and the tag section below is where that lives.
 
@@ -200,9 +201,10 @@ Where it needs one, keep the chunk form for that job rather than emulating the c
 
 ### Burst is a choice, not a default
 
-`[BurstCompile]` behind a conditional compilation symbol keeps both builds reachable from one source, which is what you want because a Burst-compiled job cannot be stepped in a debugger.
 Bursting every job and bursting none are both workable, so decide it per project.
-Keep the unbursted build reachable either way, since attaching a debugger to a bursted job simply shows nothing.
+What the decision costs you is stepping: a Burst-compiled job cannot be stepped, so keep a route back to an unbursted run.
+Disable Burst compilation at launch rather than gating `[BurstCompile]` behind a conditional-compilation symbol, which silently ships the mod unbursted when the symbol is defined nowhere.
+`performance-and-memory` owns both gates in full.
 
 ## Type handles: what they index, and what breaks when one is stale
 
@@ -425,7 +427,7 @@ Prefix your components rather than naming them after the concept alone.
 | `IEnableableComponent`       | Its own bits in the chunk's enabled masks, and a toggle that is not a structural change.                                                            |
 | `ICleanupComponentData`      | A residue entity that outlives `DestroyEntity` until you remove the component.                                                                      |
 
-`[InternalBufferCapacity(0)]` means **never inline**: every buffer becomes a heap allocation, which keeps chunks dense when most entities carry an empty buffer.
+`[InternalBufferCapacity(0)]` means **never inline**: every non-empty buffer becomes a heap allocation and an empty one allocates nothing, which keeps chunks dense when most entities carry an empty buffer.
 Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
 `performance-and-memory` owns that trade in full.
 

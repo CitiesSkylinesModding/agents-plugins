@@ -59,6 +59,8 @@ Typed raycast wrappers registered with the game's own raycast system.
 Overlay rendering dispatched per entity kind, with the draw and update passes as jobs.
 Cross-mod integration by reflection over loaded assemblies rather than a compile-time reference, so a missing sibling mod costs nothing.
 Emitting the game's own placement definitions by hand for every selected entity and each of its sub-nets and sub-areas, switching one flag field between relocate, delete, hidden and recreate, rather than using the definition helper its base class offers.
+Command buffers the mod allocates itself and plays back on the spot inside a system, rather than handing the work to a barrier.
+A custom quadtree iterator walking three vanilla search trees with mod-defined selection, serving its marquee, bounds, point and ray searches.
 
 ### Area Bucket
 
@@ -85,6 +87,7 @@ One output-mode switch that decides whether a job writes preview definitions or 
 Interactive 3D handles as their own drawable, cullable entities.
 A source generator that emits the TypeScript binding declarations from the C# side, which is the only answer in this corpus to C#-and-frontend drift.
 A watchdog that re-runs the game's own deserialize-time graph verification at runtime, so an edit cannot quietly bake a corrupt graph into a save.
+Consuming five vanilla data providers in one job, four of them taken with their own handle and combined into a single schedule, with one of the five never registered back.
 
 ### Node Controller
 
@@ -127,6 +130,7 @@ Hand-built input actions registered by reflection, because scroll bindings are n
 Taking a placement definition away from its vanilla consumer by removing the creation component from a system spliced immediately before that consumer, played back synchronously because a phase barrier would land after the consumer has already run.
 An in-engine test scenario system, debug-only.
 A build-time export of its English string table into the repository, locating the destination from the compiler's caller-file-path rather than a hard-coded developer directory.
+A mod-owned spatial index following the vanilla search systems closely: outstanding handles completed before disposal, and the tree cleared from the pre-deserialize hook and refilled on the next update through a first-load flag.
 
 ### Traffic
 
@@ -147,6 +151,7 @@ Migrating another mod's saved data on load, and detecting an incompatible build 
 Its own placement-definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of that protocol to a new kind.
 An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
 Its own language dropdown independent of the game's, registering the chosen translation under whatever locale the game is currently set to and re-applying the swap whenever the player changes language.
+Two mod-owned quadtrees published behind the game's own reader/writer handle protocol, and every Burst attribute gated behind a symbol only its Release configuration defines.
 
 ## Replacing a vanilla system instead of patching it
 

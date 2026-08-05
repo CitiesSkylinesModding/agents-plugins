@@ -295,7 +295,8 @@ The vanilla idiom, and the one to copy: declare `public static readonly int kUpd
 A system that splits its entity set across sub-frames returns `262144 / (kUpdatesPerDay * 16)` and pairs it with the vanilla helper that computes which sub-frame the current frame belongs to.
 What that cadence is worth in simulated time is `simulation-time-and-units`.
 
-A system whose interval is below the maximum iteration count also has its job dependency reset between iterations, which is where this interacts with `performance-and-memory`.
+A system the interval gate lets run has its job dependency reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a system the gate skips is not reset that iteration.
+This is where the interval interacts with `performance-and-memory`.
 
 ## When a lifecycle hook throws
 

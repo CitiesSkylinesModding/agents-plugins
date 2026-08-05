@@ -69,6 +69,63 @@ The 2026-08-03 amendment does not change the question and adds one option to it:
 
 ## Ruled
 
+### The only leak diagnostic this game has is a switch the game deliberately turned off, and a mod that turns it back on turns it on for everyone
+
+**Sources.** `How To Avoid Memory Leaks` (https://cs2.paradoxwikis.com/How_To_Avoid_Memory_Leaks, fetched live 2026-08-04) teaches that a `TempJob` allocation "persists for four frames, after which point it should be disposed of", which in stock Unity is enforced by a native leak-detection warning naming the allocation.
+One corpus mod ships the switch enabled: `Time2Work/NightShift/Mod.cs:175` sets `NativeLeakDetection.Mode = NativeLeakDetectionMode.EnabledWithStackTrace` as the last statement of `OnLoad`, unconditionally.
+A second used it and took it out: `Traffic/Code/Mod.cs:116` is the identical line, commented.
+Nobody else in twenty-two repositories touches it.
+
+**Established.** The game disables native leak detection at boot, and the method that does it is named `EnableMemoryLeaksDetection`. Its whole body is `NativeLeakDetection.Mode = NativeLeakDetectionMode.Disabled;` (`src/Game/Game.SceneFlow/GameManager.cs:1877-1880`), called once from `Awake` (`:529`), long before any mod assembly loads.
+The setter is a live call into the native runtime rather than a `[Conditional]` no-op (`src/UnityEngine.CoreModule/Unity.Collections/NativeLeakDetection.cs`, wrapping the `extern UnsafeUtility.SetLeakDetectionMode` at `src/UnityEngine.CoreModule/Unity.Collections.LowLevel.Unsafe/UnsafeUtility.cs:110`), and the allocation path goes through `MallocTracked` / `FreeTracked` (`src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs:299`, `:337`), so the tracking machinery is present in the shipped build and switched off rather than compiled out.
+The mode enum is `Disabled = 1, Enabled, EnabledWithStackTrace` (`src/UnityEngine.CoreModule/Unity.Collections/NativeLeakDetectionMode.cs:7-11`).
+So at 1.6.0f1 a leaked `TempJob` or `Persistent` allocation produces no warning, no log line and no console output, and this is the only mechanism in the game that would produce one — the collections safety system that reports the neighbouring class of error is compiled out entirely and the mod toolchain defines no symbol that would restore it (`NativeArray.cs:218-222` has no safety-handle field; `cs2-moddingtools/Mod.props` carries no `DefineConstants`).
+What is equally established is the blast radius: the mode is a property of the native allocator, not of the calling assembly, so a mod that sets it imposes leak bookkeeping — and under `EnabledWithStackTrace`, a managed stack capture per allocation — on the game's own thousands of allocations per frame and on every other loaded mod.
+What could not be established is the size of that cost at 1.6.0f1. Measuring it means running the game with the mode set and comparing frame times, which the sibling Unity plugin could drive and this pass did not.
+
+**Needs a ruling on.** Whether `performance-and-memory` teaches a reader to set `NativeLeakDetection.Mode`, and if so in what form.
+Three options and each costs something.
+Say nothing: the reference then teaches the disposal discipline and leaves a reader whose memory climbs with no instrument at all, which is the single hardest failure in this area to diagnose and the one the topic exists for.
+Teach it plainly: every agent-written mod that hits a memory question reaches for a process-global switch, and the cost lands on the player and on every other mod in their load order — and one corpus mod already ships it enabled, so this is a practice that spreads rather than a hypothetical.
+Teach it bound to a condition — set it from a debug configuration or behind a mod setting the player does not have on by default, never in a shipped default path: correct on the evidence and it asks shipped prose to carry a caveat about other people's mods, which no other reference in this plugin does.
+What turns on it is whether the plugin's readers get the one diagnostic that exists, against whether the plugin becomes the reason a player's frame time drops after installing a mod that never had a leak.
+The ruling goes into the research file for `performance-and-memory`, and touches `diagnostics` only if that reference also states a diagnosis order for a mod whose memory grows.
+
+**Ruling (2026-08-04, ticket 18).** The third option: the reference teaches the switch, bound to a condition — a debug configuration, or a mod setting that is off unless the player turns it on, and never a shipped default path.
+
+The ground is the asymmetry the `**Established**` section proves. The cost is not paid by the mod that opts in: the mode is a property of the native allocator rather than of the calling assembly, so it lands on the game's own allocations and on every other mod in the player's load order. A reader whose memory climbs still gets the one instrument this game has, which is what the "say nothing" option gives up and what the topic exists for.
+
+This does ask shipped prose to carry a caveat about other people's mods, which the entry correctly noted no other reference here does. That is accepted rather than worked around: the reason is the process-global scope, which is a property of this particular switch and not a precedent for a general style. Two limits ride with it — the reference states the scope of the cost and claims no figure, since nothing measured it at 1.6.0f1, and it does not name the corpus mod that ships the switch enabled, because shipped prose credits no repository and the technique stands on its own authority.
+
+Separately and outside what the reference says: the mod shipping it enabled is `ruzbeh0/Time2Work` at `NightShift/Mod.cs:175`, the only occurrence in that repository and therefore never reset. Raising it with the author was noted as worth doing at the time of this ruling; that is an act outside this pipeline and nothing in the plugin depends on its outcome.
+
+### The corpus's Burst gate is the one seven of ten mods get wrong, and the first-party one nobody uses needs no rebuild
+
+**Sources.** `survey-mods-techniques.md:158` promotes the compile-time gate as a thing to teach: "Traffic gates every `[BurstCompile]` behind `#if WITH_BURST`, set only in Release … MoveIt uses `USE_BURST`; WriteEverywhere uses a `<Bursted>` property. Teach this: Burst makes stepping/debugging impossible, so gate it."
+The approved reference structure carries the same instruction into this topic's **Owns** line, as "that Burst makes stepping impossible, so gating it by configuration is the norm".
+
+**Established.** The practice is real, the reason is real, and the execution fails more often than it works.
+Ten of twenty-two repositories wrap `[BurstCompile]` in a preprocessor gate, under three different symbol names: `WITH_BURST` (`Traffic`, 68 sites), `USE_BURST` (`CS2-Platter` 49, `CS2-NetworkTools` 22, `CS2-MoveIt` 12), `BURST` (`CS2-WriteEverywhere` 24, `BetterBulldozer` 20, `Water_Features` 19, `Tree_Controller` 15, `Recolor` 11, `Anarchy` 7).
+**Two of the ten define the symbol in Release only**, which is what the technique is for: `Traffic/Code/Traffic.csproj:23-26` against its Debug group at `:17-21`, and `CS2-Platter/Platter/Platter.csproj:27-35`.
+**One defines it in every configuration**, so the gate never fires: `CS2-MoveIt/Code/MoveIt/MoveIt.csproj:77-93` sets `USE_BURST` in Release, Stable and Debug alike.
+**Seven define it nowhere in the checkout.** `Anarchy`, `BetterBulldozer`, `Recolor`, `Tree_Controller` and `Water_Features` contain no `DefineConstants`, no `Directory.Build.props`, and no `.props` or `.targets` file at all — 72 `[BurstCompile]` attributes behind `#if BURST` with nothing that could define it. `CS2-NetworkTools` uses `#if USE_BURST` 22 times and defines it in no csproj. `CS2-WriteEverywhere` sets a custom `<Bursted>` property (`CS2-WriteEverywhere/BelzontWE/BelzontWE.csproj:7-8`) whose only possible consumer, `$(SolutionDir)\_Build\belzont_public.targets` imported at `:16`, is not in the repository.
+A first-party alternative exists, needs no rebuild and no cooperation from the mod, and has zero corpus users and zero wiki mentions. `BurstCompilerOptions`' static constructor sets `ForceDisableBurstCompilation` from the launch argument `--burst-disable-compilation`, and separately from the environment variable `UNITY_BURST_DISABLE_COMPILATION` set to anything but empty or `"0"` (`src/Unity.Burst/Unity.Burst/BurstCompilerOptions.cs:681-707`, the constants at `:12` and `:14`); `IsEnabled` is `EnableBurstCompilation && !ForceDisableBurstCompilation` (`:252-262`), and the managed body survives in the assembly for the fallback to reach — the post-processor's own generated shim is `if (BurstCompiler.IsEnabled) { … native call … } return <Name>$BurstManaged(…);` (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs:542-553`, four more sites under `src/Game/`).
+What could not be established is whether the flag actually restores steppable execution in this AOT player build, or whether the seven repositories with undefined symbols also ship unbursted. The first needs the running game under a debugger; the second needs `ilspycmd` over the published assemblies in the Paradox mods cache. Neither was run.
+
+**Needs a ruling on.** Which gate `performance-and-memory` teaches as the way to debug a Burst-compiled job.
+Three options and each costs something.
+Teach the compile-time gate as the survey and the structure say: it is what the corpus reaches for, it is the only form verified to work here, and the reference would be teaching a technique whose failure mode is silent — a symbol defined nowhere produces no warning, no error, and a build that looks exactly like a working one, which is how seven repositories arrived where they are.
+Teach the runtime flag: it is first-party, it needs no build system change, it cannot be got wrong the way a `#if` can, and no evidence exists that anyone has run it against this game.
+Teach both, with the runtime flag first as the thing to try and the compile-time gate as what to set up if you are going to do this often — honest, and it makes this the second place in the plugin that ships an untested first-party path beside a proven corpus one, the first being `PostTool` in `placement-definitions` (this file, ticket 13).
+What turns on it is whether an agent told to gate Burst writes a `#if` into a csproj it may not be able to verify, and whether shipped prose should carry the observation that a preprocessor gate whose symbol is undefined is indistinguishable from one that is defined — which is a fact about C# rather than about this game, and the reason the corpus's failure rate is what it is.
+The ruling goes into the research file for `performance-and-memory`, and touches `diagnostics` only if that reference also states how to get a mod's job into a debugger.
+
+**Ruling (2026-08-04, ticket 18).** The third option, and the order within it is the ruling: the reference teaches both gates and leads with the runtime one. `--burst-disable-compilation` or `UNITY_BURST_DISABLE_COMPILATION` is what a reader reaches for to get a job into a debugger; the `#if` gate is what to set up if you will do it often enough that a launch argument becomes tiresome.
+
+What decides it is the failure rate in the `**Established**` section rather than a preference between two working techniques. Seven of the ten repositories using the compile-time gate define the symbol nowhere in the checkout, and the reason that happens is worth stating in the reference: a preprocessor symbol defined nowhere produces no warning, no error, and a build indistinguishable from a working one. That is a fact about C# rather than about this game, and it is what makes the compile-time form the more dangerous of the two to hand to an agent — an agent writing a `#if` into a csproj it cannot run is precisely the case those seven repositories describe.
+
+The cost is accepted and stated rather than hidden: the runtime flag is unrun against this game, nothing establishes that it restores steppable execution in this AOT player build, and the reference marks that instead of implying it is proven. This is the second place the plugin puts an untested first-party path ahead of a proven corpus one, after `PostTool` in `placement-definitions`, and it is ruled the same way for the same reason — a first-party mechanism that cannot be got silently wrong beats a corpus practice that can.
+
 ### The complete vanilla key-namespace table exists only in a compiled UI bundle a mod author copied into their repository
 
 **Sources.** The `localization` reference is the named owner of the vanilla localization-key namespace table, and that table is a mechanism table rather than balance data: an agent cannot reuse a vanilla key without it.
@@ -272,7 +329,7 @@ Teaching `OnGameLoadingComplete` would have been teaching an agent to beat other
 The decompiled game declares 771 `IJobChunk` structs and zero `IJobEntity` structs (`ecs-in-this-game.md`, "The job interface").
 
 **Established.** The survey's stated reason is wrong at 1.6.0f1, and the practice it describes is real anyway.
-The official toolchain wires all twelve Entities source generators as Roslyn analyzers, `JobEntityGenerator.dll` among them, and hard-errors if the directory is missing (`C:\Users\Morgan\AppData\LocalLow\Colossal Order\Cities Skylines II\.cache\Modding\Mod.props:63-74`, `Mod.targets:85-87`).
+The official toolchain wires all twelve Entities source generators as Roslyn analyzers, `JobEntityGenerator.dll` among them, and hard-errors if the directory is missing (`cs2-moddingtools/Mod.props:63-74`, `cs2-moddingtools/Mod.targets:85-87`).
 One corpus mod uses `IJobEntity` end to end and ships: `InfoLoom/InfoLoom/Systems/DemographicsData/Demographics.cs:22/51/77/390`, a `partial struct … : IJobEntity` inside a `partial class … : GameSystemBase`, scheduled with the generated `job.Schedule(query, Dependency)`.
 So it compiles, it runs, and it is used once in twenty repositories against 172 `IJobChunk` declarations.
 The countervailing facts are equally solid: a `IJobEntity` body cannot see the chunk, so it cannot do the per-chunk early exit the game's simulation systems rest on (`src/Game/Game.Simulation/AgingSystem.cs:68-71`), cannot read a shared component, and — the practical one — cannot be produced by copying a decompiled vanilla job, which is where the corpus's dominant technique starts.
