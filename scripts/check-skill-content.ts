@@ -7,14 +7,16 @@ import path from 'node:path';
 
 // Content check for the cs2-modding plugin's shipped prose, which is a deliverable rather than
 // documentation of one and has no other automated coverage: no runtime, no server, no tests.
-// The five rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md,
-// which is why this check names that plugin instead of discovering every plugin the way
+// The rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md, which is
+// why this check names that plugin instead of discovering every plugin the way
 // check-plugin-sync.ts does. Exits nonzero (via a failed assertion) on the first violation.
 //
 // The matching logic here is itself untested -- this repository has no TypeScript test suite and
-// this check does not introduce the first one. Each of the five rules was instead verified once by
-// hand, by planting a violation in the skills tree, watching the assertion fire with the offending
-// file named, and removing the plant. Re-do that when you change a rule.
+// this check does not introduce the first one. Each rule was instead verified once by hand, by
+// planting a violation in the skills tree, watching the assertion fire with the offending file
+// named, and removing the plant. Re-do that when you change a rule, and for a rule with more than
+// one failure mode plant one violation per mode: the reachability rule fails both when a sibling
+// is unlinked and when a folder has no entry file, and only the first is obvious to plant.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
@@ -47,6 +49,7 @@ checkVersionBaselines(shippedFiles);
 checkVolatilityMarkers(shippedFiles);
 checkEvidenceMarkers(shippedFiles);
 checkPointersResolve(shippedFiles);
+checkDisclosedFilesAreReachable(shippedFiles);
 
 // The mods corpus is input, never output: knowledge prose states a technique on its own authority
 // and never credits the mod it was learned from. One forgetful authoring pass is all it takes to
@@ -274,6 +277,57 @@ function checkPointersResolve(files: readonly string[]): void {
   }
 }
 
+// Pointer checking runs one way -- every link resolves -- which leaves the other way unchecked: a
+// disclosed sub-file nothing links to. It ships, costs an install its bytes, and is read by nobody,
+// and no other check can see it because the failure is the absence of a link rather than a bad one.
+// A reference is a folder whose entry file repeats the topic name, so the entry file is the only
+// place a sibling can be reached from. A file sitting directly under a flat "references" directory
+// is reached from its skill's own body instead, and is out of scope here.
+function checkDisclosedFilesAreReachable(files: readonly string[]): void {
+  for (const file of files) {
+    if (!isReference(file)) {
+      continue;
+    }
+
+    const folder = path.dirname(file);
+    const topic = path.basename(folder);
+    const entryFile = `${folder}/${topic}.md`;
+
+    if (topic == 'references' || file == entryFile) {
+      continue;
+    }
+
+    // Asserted rather than skipped. A folder whose entry file is missing or misnamed leaves every
+    // file in it unreachable at once, which is the worse form of the defect this rule is for --
+    // and skipping it would exempt exactly the case with the most to lose.
+    assert.ok(
+      files.includes(entryFile),
+      `${file} sits in a reference folder with no ${topic}.md beside it, so nothing reaches it. ` +
+        `A reference is a folder whose entry file repeats the topic name.`
+    );
+
+    assert.ok(
+      linkToPattern(path.basename(file)).test(readShippedFile(entryFile)),
+      `${file} is disclosed into a reference folder and ${entryFile} never links to it, so no ` +
+        `reader arrives. Link it by bare filename, or fold it back into the entry file.`
+    );
+  }
+}
+
+// The link grammar rather than a substring, for two reasons a substring gets wrong: a bare prose
+// mention (or a name inside a code fence) satisfies it while giving the reader nothing to follow,
+// and a plain match is a suffix match, so linking "what-gets-patched.md" would silently cover a
+// "gets-patched.md" that nothing points at.
+//
+// The optional fragment and title are the same two the pointer rule above accepts. Matching a
+// narrower grammar than that one would fail a link it resolves, on a message telling the author to
+// write the link they already wrote.
+function linkToPattern(fileName: string): RegExp {
+  const escaped = escapeForPattern(fileName);
+
+  return new RegExp(String.raw`\]\(\.?/?${escaped}(?:#[^)\s]*)?(?:\s+"[^"]*")?\)`, 'u');
+}
+
 function isLocalPointer(target: string): boolean {
   return !/^[a-z][a-z0-9+.-]*:/iu.test(target) && !target.startsWith('#');
 }
@@ -289,9 +343,16 @@ function isReference(file: string): boolean {
 // Case-sensitive and whole-word: lowercase prose is not a mod name, and a game type whose name
 // embeds one ("TrafficFlowSystem") is not a citation either.
 function wholeWordPattern(name: string): RegExp {
-  const escaped = name.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
+  return new RegExp(String.raw`\b${escapeForPattern(name)}\b`, 'u');
+}
 
-  return new RegExp(String.raw`\b${escaped}\b`, 'u');
+// Shared, because every pattern here is built from a name off the disk or out of the catalog. One
+// builder escaping a narrower set than the other is a hole that opens on the first name carrying a
+// metacharacter, and it opens two ways: an unbalanced bracket throws out of `new RegExp` and takes
+// the whole run down with a stack trace instead of a named file, while a parenthesis quietly
+// becomes a capture group and changes what the rule matches.
+function escapeForPattern(text: string): string {
+  return text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
 }
 
 function lineOf(content: string, index: number): number {

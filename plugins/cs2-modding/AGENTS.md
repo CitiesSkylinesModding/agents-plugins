@@ -55,7 +55,7 @@ Simplifying afterwards re-opens reviewed prose, which earns another gate: simpli
 Aim it at what authoring overproduces — how a conclusion was reached, a rule restated in the file that does not own it, a count or a date standing where an invariant belongs.
 
 **A green `mise check:skill-content` says nothing about whether a reference is right.**
-It checks marker spellings, the version baseline, link resolution and catalogued mod names — the shapes a script can see.
+It checks marker spellings, the version baseline, link resolution, whether a disclosed file is linked at all, and catalogued mod names — the shapes a script can see.
 Counts, guard conditions, failure modes and a claim contradicting a sibling all pass it untouched, so the gate is the only thing between a plausible sentence and a wrong one.
 
 Aim the pass at over-reach, because that is what authoring produces: a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
@@ -95,6 +95,7 @@ Only the trunk splits this way; every other skill keeps a flat `references/`.
 
 **Every reference is a folder, and its entry file repeats the topic name.**
 `references/technique/custom-tools/custom-tools.md` is the reference a bridge slug names and a pointer resolves to; anything else the topic discloses sits beside it, in that same folder, under its own name.
+**The entry file links every sibling in its folder**, because it is the only place a reader can arrive from — a disclosed file nothing links to ships in every install and is read by nobody, and the lint asserts both halves.
 A topic that discloses nothing keeps the folder anyway — it is one file in a directory of its own, and that is the point: **disclosing later is then a new file rather than a move**, so no pointer, slug or ticket path changes when a reference outgrows one file.
 
 Both families work this way, and so does the UI skill's flat `references/`.

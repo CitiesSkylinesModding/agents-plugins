@@ -84,4 +84,4 @@ That leaves it without the one thing a research file never states: where the top
 
 So hand it the boundary and the questions alongside the file, and judge the shipped reference against them rather than against the file alone.
 A file records what was found, so an agent holding it by itself picks its own scope — it writes into a neighbouring reference's territory, or drops a question the file answered in passing.
-Nothing downstream catches either: the content lint checks mod names, the version baseline, the marker spelling and that links resolve, and none of those is coverage.
+Nothing downstream catches either: the content lint checks mod names, the version baseline, the marker spelling, that links resolve and that a disclosed file is linked at all, and none of those is coverage.
