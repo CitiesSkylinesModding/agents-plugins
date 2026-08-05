@@ -9,6 +9,8 @@ The decompiled C# and the installed game are both the game itself. The install i
 Where a topic's subject matter ships as data or as JavaScript, the install outranks the decompile on anything it can answer. Where it ships as C#, the decompile is ground truth and nothing moves.
 The official toolchain is first-party too, and authoritative for its own half — how a mod is built, post-processed and published, and what a UI mod may import. It does not outrank the game on anything about the game, and the game does not outrank it on anything about the build.
 So among first-party sources the tie-break is which one **owns** the subject, not which sits higher on a list.
+Two sources are first-party for something that is not the game: the Harmony library for patch semantics, and Unity's own documentation for the engine. Both answer questions the decompile cannot — the decompiled C# shows what the engine's code contains and not what the runtime does with it — and neither outranks the decompile on anything the decompile can answer.
+
 Below them the order is flat and absolute. The wiki ships as authoritative only where nothing first-party covers the subject, and is a lead generator everywhere else. The mod corpus never settles anything about the game: it is evidence of what mod authors do, which is a different fact.
 
 **Locating a source.** Where the official toolchain is installed it sets `CSII_*` environment variables naming most of these paths, and each entry below gives the variable where one exists. Expect a variable to be missing rather than assuming it: an agent whose session started before the toolchain did will not have inherited them.
@@ -66,8 +68,12 @@ The template beside them also carries the reference `webpack.config.js`, `tsconf
 ## 7. The official modding toolchain
 
 MSBuild targets in the `cs2-moddingtools` NuGet package, plus the `ModPostProcessor` and `ModPublisher` executables under `Cities2_Data/Content/Game/.ModdingToolchain/`, and the tool cache at `%CSII_TOOLPATH%`.
-Authoritative for how a mod is built, post-processed and published, and for the Unity version a mod targets (`%CSII_UNITYVERSION%`, `%CSII_ENTITIESVERSION%`).
+Authoritative for how a mod is built, post-processed and published, and for the Unity and package versions a mod **targets** (`%CSII_UNITYVERSION%`, `%CSII_ENTITIESVERSION%`, and the fuller list in `%CSII_UNITYMODPROJECTPATH%/Packages/manifest.json`).
+Targets, not runs — the declared Entities version is ahead of the shipped assembly (entry 13).
 The full `CSII_*` set is the toolchain's own record of where everything lives: installation, managed, user data, local mods, Paradox mods cache, and the Unity mod project.
+
+It is also the only source for what a mod project _compiles with_. `Mod.props` and `Mod.targets` under `%CSII_TOOLPATH%` are the record of the mod compile's own configuration: `Mod.props` sets no `DefineConstants` at all, which is what settles that a mod compiles without the conditional-compilation symbols the engine's own guards are gated on.
+`ModPostProcessor.exe PostProcess --help` is self-documenting and resolves the short flags the targets compose into the post-processing command; nothing else in the pipeline records what they mean.
 
 ## 8. The running game — Unity
 
@@ -107,6 +113,28 @@ Ships with no first-party artifact: it is not in `Cities2_Data/Managed/`, and th
 Every mod that patches brings its own `0Harmony.dll` through the `Lib.Harmony` package, and the deploy target ships it beside the mod's assembly.
 **Authoritative for patch semantics** — the injected parameter names, prefix and postfix ordering, the `ArgumentType` mapping, unpatch filtering — none of which any other source here can answer: the decompiled game says what a patch target contains and nothing about what a patch does, and the wiki mentions the library twice in passing.
 Read it by decompiling a copy with `ilspycmd`, taking any `0Harmony.dll` under the Paradox mods cache at `%CSII_USERDATAPATH%/.cache/Mods/pdx_mods/` and checking the assembly identity first: several versions are in circulation and none is strong-named, so which one a given copy is cannot be assumed.
+
+## 13. Unity's own documentation
+
+The engine's manual and package documentation at `https://docs.unity3d.com/`, fetched live. Pages are static HTML served per version, and a plain fetch is normally enough — there is no bot challenge here, unlike the wiki.
+
+**Authoritative for engine mechanism the decompile cannot state** — what the job scheduler does with a dependency chain, why completing a handle costs more than that job's own duration, what a sync point drains, what an allocator's contract is, what the safety system would have caught had it been compiled in. The decompiled engine shows the code; it does not explain the runtime's behaviour around it, and no other source here does either.
+
+**Never authoritative for API shape, names, counts, or what this game's build does.** Two facts about the version are why.
+
+**The declared version is not the version that runs.** `%CSII_ENTITIESVERSION%` and the mod project's manifest at `%CSII_UNITYMODPROJECTPATH%/Packages/manifest.json` declare Entities 1.3.10, Collections 2.5.7, Burst 1.8.23 and Mathematics 1.3.2 — what a mod compiles against. The shipped `Unity.Entities.dll` is **1.3.5 to 1.3.8**. Nothing in an assembly states its own version, so re-dating one is an investigation: [dating a shipped Unity package](solutions/dating-a-shipped-unity-package.md) carries the method and the four traps, and the other three packages have not been dated this way. The gap is benign because nothing a mod plausibly calls changed across it, and this manifest is where a wider one would show first.
+
+**The assembly is not stock.** `Colossal.CORuntimeApplication` ships inside `Unity.Entities`, appears in no Unity release, and calls an `internal` method, so it can only have been compiled in from source. Colossal build Entities themselves, and the docs therefore describe a package adjacent to the one that runs.
+
+So read the docs for the mechanism, then read the decompile for what this build actually contains, and where they disagree the decompile wins without argument.
+
+Three URL shapes, and all three must carry a version:
+
+- **Editor manual**, `https://docs.unity3d.com/2022.3/Documentation/Manual/<Page>.html`. The game runs Unity 2022.3.71f1, so this one pins exactly. It owns the low-level job system: `JobSystem.html` is the entry point.
+- **Package manual**, `https://docs.unity3d.com/Packages/com.unity.<package>@<major.minor>/manual/<page>.html`, with `/api/<Type>.html` for the scripting reference and `/changelog/CHANGELOG.html` for when a behaviour changed. The packages that matter are `entities`, `collections` and `burst`. Read `@1.3` for Entities, because that is the branch this game's assembly sits on; `@1.4` resolves and describes a package this build does not run.
+- Page names moved between major versions and guessing one wastes a fetch — `sync_points.html` under `@0.50` became `performance-sync-points.html` under `@1.3`. Search with `allowed_domains: ["docs.unity3d.com"]` to get the current name rather than composing URLs by hand.
+
+**An unversioned URL is the trap.** `docs.unity3d.com/Manual/<Page>.html` without a version segment redirects to the newest Editor and serves it: `Manual/JobSystem.html` 301s to `Manual/job-system.html` and returns a Unity 6 page. Nothing fails and nothing on the page objects, so a version segment on every fetch is what keeps you on this game's Editor.
 
 ---
 
