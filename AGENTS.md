@@ -107,4 +107,5 @@ In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Ci
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
+- The gameface and unity tools show their gaps in use: when you work around a missing tool, or a missing mode of one that exists, propose an entry in [`docs/ROADMAP.md`](docs/ROADMAP.md), with the workaround you used as its evidence.
 - Formatters reformat the whole project, not your diff. Never revert what they touch: fold drift in a file your change already edits into that commit, and land drift in files it does not into a commit of its own.
