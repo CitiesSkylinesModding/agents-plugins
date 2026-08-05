@@ -34,6 +34,8 @@ No label means step 2 did not take — usually the file was copied from the wron
 
 From outside the game, `Player.log` at the root of the user data path is the second signal: on a patched install its `Player connection` line carries `[Debug] 1`.
 
+`diagnostics` carries two further log signals, one sourced in each edit, plus two checks readable with the game closed.
+
 Set `Debug patch: applied` in the record once a signal confirms it, so a later session does not re-walk this.
 
 Verify before pointing a debugger at the game.

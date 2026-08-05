@@ -363,6 +363,39 @@ If you write one, verify the symbol reaches the compiler in the configuration yo
 
 (VOLATILE: the `[BurstCompile]` attribute's spelling, the launch argument and the environment variable name — the Burst package's attribute declarations and `BurstCompilerOptions`.)
 
+## A log call is a synchronous file write, so logging is a per-frame cost like any other
+
+**A message that passes the level filter opens the log file, writes, flushes, and closes it again**, under a lock.
+Nothing batches and nothing buffers across messages: the stream is held open only if the logger's `keepStreamOpen` is set, which defaults off and which nothing in the game turns on.
+So a log call that gets written is not a cheap side effect that disappears in a release build — it is a file-system round trip on the calling thread, serialised against every other logger in the process.
+
+That makes the cost scale with the thing a mod is tempted to log from.
+Once per load is free.
+Once per frame is a file open and close every frame.
+Once per entity in a system's update is a file open and close per entity per frame, which is enough to be felt on its own — before counting the string that had to be built to pass to it.
+
+**The level filter is the cheap gate, and it runs first.**
+Every level-specific method tests the logger's `effectivenessLevel` before doing any of the above, so a line below the shipped level is neither formatted nor written — though its arguments are evaluated before the test runs.
+That is the first lever to reach for.
+
+The rest follow, in the order to reach for them.
+
+- **Pass the format and its arguments separately rather than interpolating.**
+  The `*Format` overloads check the level _before_ formatting, so a filtered-out `DebugFormat` skips building the message entirely — while the arguments themselves are evaluated at the call site regardless, so a costly call in a format parameter runs whether or not the line is written.
+- **Keep the log out of the per-entity loop, and out of the update itself.**
+  Aggregate to a count or a worst case and write that single line when the aggregate changes, not every frame it holds.
+  A managed job that logs pays the same round trip and serialises on the same lock as the main thread; a Burst-compiled one cannot call a logger at all, and its only channel is the engine's own logging entry point.
+- **Where a line has to survive in a release build and fire often, hold the stream open.**
+  Setting `keepStreamOpen` on the logger removes the per-message open and close, which is the bulk of the cost, and is one line in the mod's load hook.
+- **To pay nothing at all in a release build, gate the call at compile time rather than at runtime.**
+  A logging method marked `[Conditional("SYMBOL")]` has its **call sites removed entirely** when the symbol is undefined — arguments included — so an interpolated message is never built and the runtime level check never runs.
+  One method per category, each with its own symbol, gives per-category logging that costs a release build nothing.
+  An undefined symbol is as silent here as it is on the Burst gate above, and it resolves differently: `[Conditional]` is applied where the call is compiled, not where the method is declared.
+  So the symbol goes in the project holding the call sites: a logging helper living in a shared assembly is stripped or kept by the _calling_ mod's configuration, never by the shared assembly's.
+- **Where the line must survive into a shipped build, throttle it like any other periodic work** — the update-interval and change-detection mechanisms above apply unchanged to a logging system.
+
+(VOLATILE: the `keepStreamOpen` and `effectivenessLevel` property names and the `*Format` overload family — the logging library's logger type.)
+
 ## Main-thread scans that look harmless
 
 Four rungs, and a mod's per-frame code should stay on the first two.
@@ -443,4 +476,5 @@ The frames above the allocation are the mod's own methods as Mono JIT frames, an
 Set it from a debug configuration, or behind a mod setting that is off unless the player turns it on.
 The reason is that the cost is not paid by the mod that opts in: the mode is a property of the native allocator rather than of the calling assembly, so stack-trace capture lands on every native allocation the game makes and on every other mod in the player's load order.
 
-`diagnostics` owns the wider question this answers, including the shape of the failures the rest of this reference produces: an out-of-bounds native read or a use-after-free is a process death with no managed exception, so "the game crashed and there is no stack trace" starts here rather than in the log.
+The shape of the failures the rest of this reference produces belongs here rather than to a log-reading pass: an out-of-bounds native read or a use-after-free is a process death with no managed exception, so "the game crashed and there is no stack trace" starts in this reference and not in `diagnostics`, whose order assumes a live process still writing lines.
+What `diagnostics` does own for a dead process is the evidence rule: the crashed run's logs are copied before anything is relaunched.

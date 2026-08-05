@@ -3,6 +3,7 @@
 Every source the `cs2-modding` pipeline may read, in one place: what each one is, what it is authoritative for, and how to reach it.
 
 **This list grows from the passes that use it.** Every artifact on it was unlisted until somebody went looking, and a first-party artifact sitting unread on the machine looks exactly like one that does not exist. So a pass that reaches something this file does not name, or finds an entry wrong — a path moved, a format not as described, a narrower authority than claimed — amends it and says so, the way a discovery pass amends the mod catalog. A list only its maintainer can grow is a snapshot of the day it was written.
+**A new entry appends and never renumbers**, whatever it is about: entry numbers are cited from elsewhere in the pipeline, so the order below is arrival order rather than kinship.
 
 **Precedence: first-party beats everything, and which first-party source wins depends on how the subject ships.**
 The decompiled C# and the installed game are both the game itself. The install is the one that carries a version the agent can state, and it holds whole subsystems the C# never names.
@@ -136,6 +137,18 @@ Three URL shapes, and all three must carry a version:
 
 **An unversioned URL is the trap.** `docs.unity3d.com/Manual/<Page>.html` without a version segment redirects to the newest Editor and serves it: `Manual/JobSystem.html` 301s to `Manual/job-system.html` and returns a Unity 6 page. Nothing fails and nothing on the page objects, so a version segment on every fetch is what keeps you on this game's Editor.
 
+## 14. The game's own logs
+
+The `Logs/` directory under `%CSII_USERDATAPATH%`, plus `Player.log` and `Player-prev.log` at that path's root.
+First-party, version-stamped, readable with the game closed — and the only artifact that records what one _particular run_ did, which is what separates it from every other source here.
+
+**Authoritative for what one run did**: which launch flags were passed, the game and Unity versions, whether the build is a development one, which mods were in the active playset, which assemblies loaded and how long each took, and the last thing a process that died printed.
+Flag _names_ only — the value of every `name=value` argument is masked before it is written, so the logs never settle what a flag was set to.
+Each logger writes its own `<Name>.log`, and `Player.log` sits at the root beside the directory rather than inside it.
+
+Two properties decide whether a log can answer your question at all, and both are the shipped `diagnostics` reference's to explain: which severities reach which file, and that a file is truncated at each session's first message rather than appended, so only `Player-prev.log` survives a relaunch.
+`FallbackSettings.coc` at the same root governs what these files contain — it holds the persisted settings for every logger, so it is read with them rather than separately.
+
 ---
 
 ## What looks like a source and is not
@@ -143,4 +156,4 @@ Three URL shapes, and all three must carry a version:
 - **First-party files vendored into a mod repository** — a copy of the UI bundle, a `types/*.d.ts`. The install supersedes them, and where a copy disagrees with it, assume the copy is stale rather than wrong: the failure mode is recording what the copy lacks as something the game lacks.
 - **The user's installed mods** — the built assemblies under `%CSII_LOCALMODSPATH%` and the Paradox cache. Compiled, not source, and whoever wrote one may not be in the corpus at all, so they settle nothing about how a mod works. The Paradox cache alone settles one thing they cannot: how common something is, since the set of files a mod ships is readable without decompiling anything and that cache is the only sample of the ecosystem this pipeline can reach that nobody selected for it. Use **the Paradox cache** for prevalence and never for a claim about how a mod works, say how many mods the count was over, and do not read `%CSII_LOCALMODSPATH%` this way — it holds what the user themselves built and is a sample of nothing.
   This bars the cache as evidence about mods; it is also where a copy of a _library_ a mod ships is reached, which is source 12 and a different question.
-- **The `.coc` files at the `%CSII_USERDATAPATH%` root** — one per mod, plus the game's own. These are saved settings, not code and not content, however much the extension resembles the `.cok` packages.
+- **The `.coc` files at the `%CSII_USERDATAPATH%` root** — one per mod, plus the game's own. These are saved settings, not code and not content, however much the extension resembles the `.cok` packages. The exception is `FallbackSettings.coc`, which governs what entry 14 contains and is filed there.

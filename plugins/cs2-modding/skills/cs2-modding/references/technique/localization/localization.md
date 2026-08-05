@@ -411,7 +411,7 @@ The game ships a diagnostic for exactly this, in the developer-mode debug window
 (VOLATILE: the localization debug tab's contents — the developer-mode localization debug UI.)
 
 The other diagnostic is the log: the `Localization` logger writes `Added localization source ...` at Debug and the import failure at Error, and the `ToString()` override is what makes either line identify your mod.
-`diagnostics` owns the debug window itself and the log channels.
+`debug-menu` owns the developer menu itself; `diagnostics` owns the log channels and what each line proves.
 
 ## What this reference hands to others
 

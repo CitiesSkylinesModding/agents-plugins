@@ -453,9 +453,7 @@ This reference establishes the shapes those keys take and where the reflection e
 `custom-tools` owns the three actions the tool base class provides and the tool-changed event that drives the enablement idiom above; this reference owns every action a mod declares.
 The two halves meet exactly once, at mimicking: the tool's own apply and cancel never need it, and anything else the tool wants on a reserved button does.
 
-`diagnostics` is reached twice from here.
-A keybinding conflict is one of the few failures in this area that reaches the player by itself, as a notification titled with the mod's display name that opens its options page.
-And `[SettingsUIDeveloper]` is the only attribute in the catalog gated on the game's developer-mode flag, which is how a settings page carries a debug section ordinary players never see.
+`[SettingsUIDeveloper]` is the only attribute in the catalog gated on the game's developer-mode flag, which is how a settings page carries a debug section ordinary players never see; `debug-menu` owns what that flag gates.
 
 `units-and-formatting` owns the three interface preferences the game's own settings carry — the time format, the temperature unit and the unit system — and everything a mod does with them when it renders a number to a player.
 

@@ -325,19 +325,24 @@ All five log through the system base's own logger, named `SceneFlow` — **not**
 - **A throw out of a system's `OnCreate` kills the whole mod.**
   The ECS catches it, removes the half-built system from the world, and rethrows; the throw propagates out of the system-creation call inside `UpdateAt<T>`, out of `OnLoad`, and into the mod manager, which disposes the mod and logs `Error initializing mod {0} ({1})`.
 - **A throw out of `OnUpdate` disables nothing and repeats forever.**
-  The update system wraps each system's update and logs `System update error during {0}->{1}:` with the phase and the system type, then continues to the next system; the throwing system runs again next frame, and logs again, every frame.
+  The update system wraps each system's update and logs `System update error during {0}->{1}:` with the phase and the system type at `Critical`, then continues to the next system; the throwing system runs again next frame, and logs again, every frame.
 
-So there are four distinct failure surfaces, and "the silent disable" is exactly one of them:
+So there are four distinct failure surfaces, and the disable is exactly one of them:
 
-| Where it throws                                              | Outcome                                                                                                                           |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| The mod's `OnLoad`, including any system's `OnCreate`        | whole mod fails with a general-error state, a clickable failure notification carries the stack trace, `OnDispose` is still called |
-| A system's `OnWorldReady`, `OnGamePreload` or `OnGameLoaded` | that system is disabled for the session, one log line, no user-visible symptom                                                    |
-| A system's `OnGameLoadingComplete` or `OnFocusChanged`       | logged, system keeps running                                                                                                      |
-| A system's `OnUpdate`                                        | logged every frame, system keeps running                                                                                          |
+| Where it throws                                              | Outcome                                                                 |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| The mod's `OnLoad`, including any system's `OnCreate`        | whole mod fails, `OnDispose` is still called, and the failure is logged |
+| A system's `OnWorldReady`, `OnGamePreload` or `OnGameLoaded` | logged; that system is disabled for the session                         |
+| A system's `OnGameLoadingComplete` or `OnFocusChanged`       | logged; system keeps running                                            |
+| A system's `OnUpdate`                                        | logged every frame; system keeps running and throws again               |
 
-The mod-loading logger suppresses its errors from the UI, so an `OnLoad` failure is louder in the log than on screen.
-Reading those log files is `diagnostics`.
+**The `OnLoad` row is the quiet one on screen, and the other three are not.**
+The loader's own logger has its errors suppressed from the UI, and the mod's state is overwritten before the notification pass reads it, so an `OnLoad` failure raises no dialog and pushes no notification either — `Modding.log` is the whole of the record.
+The five hook wrappers log through the `SceneFlow` logger instead, whose errors are not suppressed, so each of them pops the game's modal error dialog and pauses the simulation.
+`OnUpdate` does the same every frame in a normal game session.
+The one exception is the game's own map and asset editor, where the update wrapper suppresses the flag around that call.
+
+Reading those log files, and what reaches the player, is `diagnostics`.
 
 (VOLATILE: all five log-message strings above, the mod-initialisation error string, the per-frame update error string, and the `SceneFlow` logger name — `GameSystemBase`'s hook wrappers, `UpdateSystem.Update`, and the mod manager.)
 

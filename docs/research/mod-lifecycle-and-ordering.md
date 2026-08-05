@@ -341,14 +341,22 @@ All five log through `COSystemBase.baseLog`, which is `LogManager.GetLogger("Sce
 
 So there are three distinct failure surfaces for a mod, and the "silent disable" belongs to exactly one of them:
 
-| Where it throws                                              | Outcome                                                                     |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| Mod `OnLoad` (including any system's `OnCreate`)             | whole mod fails, `State.GeneralError`, `OnDispose` still called             |
-| A system's `OnWorldReady` / `OnGamePreload` / `OnGameLoaded` | that system disabled for the session, one log line, no user-visible symptom |
-| A system's `OnGameLoadingComplete` / `OnFocusChanged`        | logged, system keeps running                                                |
-| A system's `OnUpdate`                                        | logged every frame, system keeps running                                    |
+| Where it throws                                              | Outcome                                                         |
+| ------------------------------------------------------------ | --------------------------------------------------------------- |
+| Mod `OnLoad` (including any system's `OnCreate`)             | whole mod fails, `State.GeneralError`, `OnDispose` still called |
+| A system's `OnWorldReady` / `OnGamePreload` / `OnGameLoaded` | that system disabled for the session                            |
+| A system's `OnGameLoadingComplete` / `OnFocusChanged`        | logged, system keeps running                                    |
+| A system's `OnUpdate`                                        | logged every frame at `Critical`, system keeps running          |
 
-**A mod's `OnLoad` throwing is a different mechanism entirely.** `ModManager.InitializeMods` catches, calls `modInfo2.Dispose()` — which calls `OnDispose()` on every instance (`ModManager.cs:160-173`) — and logs (`:451-455`). The mod's state becomes `GeneralError` and a clickable failure notification with the stack trace is pushed (`:266-336`). The logger is `LogManager.GetLogger("Modding").SetShowsErrorsInUI(false)` (`:178`).
+Verdict: a hook throwing is **not** invisible to the player, against this file's earlier reading of it as "one log line, no user-visible symptom".
+The five hook wrappers log at `Error` through `COSystemBase.baseLog`, which is the `SceneFlow` logger, and that logger's `showsErrorsInUI` holds its `true` default — so each raises the modal error dialog and pauses the simulation.
+**The `OnUpdate` row is scoped and the others are not:** `UpdateSystem.Update` sets `showsErrorsInUI = false` around its own log call when `GameManager.instance.gameMode.IsEditor()` and restores it after (`src/Game/Game/UpdateSystem.cs:190-196`, identically `:238-245`), so that one raises no dialog in the editor.
+The `OnLoad` row is quieter still: `ModInfo.Dispose()` overwrites the error state with `Disposed` before the notification pass tests `state >= IsNotModWarning` (`src/Game/Game.Modding/ModManager.cs:170-173`, `:264` against `:270`), so it pushes no notification either.
+Established by ticket 19's `diagnostics` pass, which re-derived this code rather than trusting this file; `diagnostics.md` owns the surface and carries the chain from the logged level to the dialog.
+
+Verdict: the dialog appears, confirmed by the maintainer on 2026-08-05 against the running game, so the claim ships flat rather than marked.
+
+**A mod's `OnLoad` throwing is a different mechanism entirely.** `ModManager.InitializeMods` catches, calls `modInfo2.Dispose()` — which calls `OnDispose()` on every instance (`ModManager.cs:160-173`) — and logs (`:451-455`). The mod's state becomes `GeneralError` — and then `Disposed`, because `Dispose()` sets it (`:170-173`), which is what keeps it below the notification pass's `state >= IsNotModWarning` gate (`:270`). So **no notification is pushed for it**, corrected 2026-08-05 against the earlier reading of `:266-336`. The logger is `LogManager.GetLogger("Modding").SetShowsErrorsInUI(false)` (`:178`), so there is no dialog either, and `Modding.log` is the whole record.
 
 **A corpus author found this by hand.** `ExtraAssetsImporter/EAI.cs:164-168` catches, logs with the comment "Doing this, because the game isn't logging any error", then `throw ex;` with "This should still send the error to the game and so start the OnDispose." The second half is exactly right — the rethrow is what triggers `Dispose()`. The first half is not quite: `ModManager.cs:454` does log it, to the `Modding` logger with UI errors suppressed.
 

@@ -144,6 +144,8 @@ A formerly-serialized-as attribute on that system, so a save written under its e
 Importing the persisted components of a different mod: the foreign type is resolved by name out of the asset database, queried through a runtime component type, migrated by a chunk job in the deserialize phase's back band, then removed from every entity that carried it.
 Disabling the vanilla lane system and taking over its slot, with no patching anywhere in the codebase.
 Registering a system frames after the mod loaded, from a deferred main-thread callback, which is how it disables another mod's system once that mod is known to be present.
+Reporting a failure to the player end to end: a notification carrying a failed progress state whose click opens a message dialog with a copyable details pane, the dialog's callback popping the notification.
+A logging facade built on compile-time categories, each method carrying a conditional-compilation attribute so a build without the symbol drops the call and the message it would have built, with one symbol gating both an info-level and an error-level method.
 A custom raycast system registered in the raycast phase.
 Rebindable actions declared as settings attributes and consumed by the tool, scoped with its own usage strings beside the built-in ones.
 Letting the player choose, from the settings screen, between the mod's own bindings and watchers that keep them equal to the vanilla apply and cancel bindings.
@@ -312,6 +314,7 @@ It also replaces the loading screen's background with the last image it loaded.
 Extending vanilla React components the module registry exposes and no shipped declaration file names — the menu shell, its backdrops, the master screen, the loading-screen overlay, the photo-mode panel — each wrapper returning the vanilla component untouched when the feature is off, which is what makes an injection reversible from a setting.
 Reaching the vanilla DOM from such a wrapper by resolving the wrapped component's scoped CSS-module class names through the module registry and mounting a React portal into the node they find, with every module and class accessor guarded so a renamed class costs a missing button rather than a broken menu.
 A frontend binding facade, one module per binding group, whose value bindings are created on first read rather than at import.
+Keeping the logger's show-errors-in-UI flag on and treating a logged error as the mod's user-facing error dialog, with a helper that flips the flag off and back around the errors it wants kept out of the player's way.
 Two frontend cache techniques the engine forces: an optional sub-object's presence encoded into the type name its payload is written under, and hidden nodes on the document body holding images resident across the screens the game unmounts.
 Runtime-written images served to the UI over the mod's own `coui://` host.
 A hand-rolled supersampled capture — hide the UI view, force the graphics settings that grain the image, render the camera repeatedly into an oversized texture, and restore every one of those in a `finally`.
@@ -363,6 +366,7 @@ The vanilla selection glow on an arbitrary entity, by adding the game's own high
 Driving both the overlay buffer and the gizmo batcher from Burst jobs, with the writer registration the gizmo side requires.
 Passing UI intent to renderer systems through ECS components rather than object references: each window owns an entity of a published archetype and writes its hover target into it, and the rendering system rebuilds its map from whichever of those entities changed.
 Distinguishing a structural change from a value change on every refresh — comparing the entity's component-type list against the cached one, rebuilding the whole model when it differs and re-reading values when it does not.
+A logging facade whose three category methods each carry a conditional-compilation attribute, so a build without the symbol drops the call and the message it would have built, behind a static constructor that suppresses the logger's UI errors as it creates it.
 Registering an editor tool by growing the editor's own tool array.
 Snapshotting entities into memory by transitively following entity-typed fields, holding the two prefab references back so the walk does not drag the whole prefab graph in with them, and rendering live and frozen data through one code path.
 No patching anywhere in the codebase.

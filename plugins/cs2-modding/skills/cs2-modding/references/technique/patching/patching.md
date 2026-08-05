@@ -236,10 +236,15 @@ It runs at process shutdown, where the AppDomain is going away regardless.
 And it runs for one mod when that mod's own load throws — which is the case where unpatching genuinely buys something, since a mod that patched and then failed halfway through `OnLoad` would otherwise leave live patches behind a mod that is not there.
 It does **not** run when a code mod is disabled mid-session: that path requires a restart and leaves the mod loaded, and re-initialisation skips any mod not in the initial state, so a mod is never unloaded and re-patched inside one run.
 
-**The game's own patch inventory always finds nothing.**
-It exists and it is thorough, but it runs inside engine initialisation _before_ the mod manager is constructed, so nothing has been patched by the time it looks.
-It does print: a modding-runtime line goes to the log unconditionally, before it goes looking, so finding that line tells you the inventory ran rather than that nothing is patched.
-`diagnostics` owns the habit that replaces it: log `harmony.GetPatchedMethods()` yourself, immediately after applying, which is the only way to see what is patched.
+**The game's own patch inventory always finds nothing under the built-in modding runtime.**
+It runs inside engine initialisation _before_ the mod manager is constructed, so no mod assembly — and therefore no copy of the patching library — is in the process when it looks, and it returns after its first line.
+It does print that line: a modding-runtime line goes to the log unconditionally, before it goes looking, so finding it tells you the inventory ran rather than that nothing is patched.
+A third-party loader is the case it was written for, since that loader is in the process before the game is.
+(UNVERIFIED: whether such a loader has finished applying its plugins' patches by the time the inventory runs — nobody here has run that configuration, so an empty census under one proves no more than under the built-in runtime.)
+
+**Logging your own inventory is this reference's habit, and the two calls are not interchangeable.**
+`harmony.GetPatchedMethods()` on your own instance returns only the patches that instance applied.
+The static `Harmony.GetAllPatchedMethods()` returns every patched method in the process, which is the one that answers "is another mod already on this method" — call it after mods have loaded.
 
 ## Composing with another mod's patch
 

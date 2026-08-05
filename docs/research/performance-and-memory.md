@@ -528,6 +528,18 @@ Two limits the shipped prose is scoped around rather than stating. The `(at <fil
 
 Rots: the `BC1016` code and the two error strings — the Burst package's diagnostic tables, reached through the post-processor the toolchain runs. The `UnityException` text is Unity's own, in the engine's threading guard.
 
+### A log call is a synchronous file round trip, added 2026-08-05 from ticket 19's pass
+
+Evidence belongs to `diagnostics.md`'s logging findings and is cross-noted here because the shipped `performance-and-memory` reference now carries the cost rule, at the maintainer's request after observing mods — agent-written ones especially — logging from update hooks.
+
+`UnityLogger.Internal_WriteStream` takes `lock (_syncObject)`, calls `Open()` when the stream is closed, writes, `Flush()`es, and calls `Close()` again unless `keepStreamOpen` (`src/Colossal.Logging/Colossal.Logging/UnityLogger.cs:308-346`).
+`keepStreamOpen` defaults false and is set by nothing in `src/` or in the 22-repository corpus (`diagnostics.md:612-613`), so that path is what every logger does today — but it is a public settable property (`src/Colossal.Logging/Colossal.Logging/ILog.cs:61`), so a mod turns it off in one line, which is the lever the shipped rule now names.
+The `lock` is what extends the cost past the calling thread: a job that logs contends with the main thread and with every other logger in the process.
+
+The level filter does not save the message string. `*Format` overloads check `isLevelEnabled` before formatting (`UnityLogger.cs:941-947` is representative), but an interpolated `$"..."` argument is built at the call site before the call is made — which is what makes the `[Conditional]` gate materially different from a runtime check rather than a stylistic alternative, since it removes the call site and its argument expressions outright.
+
+Rots: nothing here — the open/close discipline and the argument-evaluation rule are architecture rather than names.
+
 ## Bridge
 
 This is a technique topic and everything that schedules a job sits on top of it. Eight topics need something specific.
