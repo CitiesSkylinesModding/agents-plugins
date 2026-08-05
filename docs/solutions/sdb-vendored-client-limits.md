@@ -89,3 +89,6 @@ wire protocol is version-negotiated at attach, so one client serves every Mono-e
 `core.longpaths`, preserving the submodule gitlink a re-clone would break). Run it after a submodule
 init, or to recover from a plain `git submodule update` that materialized the FULL tree — that state
 breaks `mise check`, because oxlint then scans the vendored JS/TS.
+
+A recursive init also costs gigabytes that no `deinit` reclaims: mono's own submodules keep their
+object stores under `.git/modules` even once their working trees are gone. The reset deletes them.
