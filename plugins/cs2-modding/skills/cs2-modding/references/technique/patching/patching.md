@@ -248,7 +248,6 @@ The asset loader deduplicates executable assets by simple assembly name across e
 That last key is a total tiebreak, so the winner is decided by the installed set rather than by load order — deterministic, and no less out of your hands for it.
 So the copy every mod patches through may be one nobody compiled against, and it is not simply the highest version.
 Nothing here is strong-named, so version binding is not enforced and no error is raised.
-(UNVERIFIED: whether a mod compiled against one version of Harmony executes correctly against a different loaded copy — reading the loaded assembly version back from two mods shipping different copies, in a running game, would settle it.)
 `mod-compatibility` owns what this means for a mod's dependency posture, and `cs2-mod-project` owns the pin every mod agrees to.
 
 **Widen a shared flags field with `|=`, and treat a plain `=` as a bug.**
