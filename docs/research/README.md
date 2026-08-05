@@ -41,6 +41,7 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   Where a source has to be transformed before it can be read at all, cite the transformed copy for its line numbers, and state in the baseline both what produced it and the line count it came to — that count is the only way a later reader can tell whether their own copy and your citations still agree.
   Once a path is cited in full, later mentions may shorten to `<Type>.cs:<line>`, and to a bare `:<line>` only where the full path is the nearest one cited.
   A claim nobody can re-check in a year is a claim the next pass has to rediscover.
+  **Where the source was purpose-built to answer the question and is then gone** — an experiment mod, a probe, a throwaway script — record the method that established the finding, in the finding, and cite nothing. Keeping the artifact alive to satisfy this rule is the wrong trade: the code is throwaway and the method is what a later reader would re-run anyway.
 - **A baseline**, stated once under the title: always the game version its claims were established against, plus the date the corpus was read and the date the wiki was fetched where those sources were used.
   Every reference derived from your file has to state a version of its own.
 - **A verdict wherever the sources disagreed**, opening with `Verdict:` on the claim it settles.
