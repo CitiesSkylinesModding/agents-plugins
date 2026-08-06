@@ -239,7 +239,7 @@ Skipping the refresh is not something you can do by accident when you use those 
 - **Put the handles on the job and give the job two methods**, `AssignHandles(ref SystemState)` called from the system's `OnCreate` and `UpdateHandles(ref SystemState)` called from its `OnUpdate`.
   This keeps each handle beside the job that reads it and is the cleanest hand-written form.
 
-(VOLATILE: the generated handle-name scheme `__<Namespace>_<Type>_<RO|RW>_<Kind>` and the compiler-interface method names behind `SystemAPI` — both belong to the Entities generator version the toolchain pins, not to the game.)
+(VOLATILE: the generated handle-name scheme, which `navigating-the-decompile` states in full, and the compiler-interface method names behind `SystemAPI` — the generated `TypeHandle` structs across `src/Game`.)
 
 ## The chunk-enabled mask
 

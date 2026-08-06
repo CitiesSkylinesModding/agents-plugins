@@ -312,6 +312,7 @@ It also replaces the loading screen's background with the last image it loaded.
 
 **Demonstrates:** A mod whose product is its frontend, so its C# exists to serve one.
 Extending vanilla React components the module registry exposes and no shipped declaration file names — the menu shell, its backdrops, the master screen, the loading-screen overlay, the photo-mode panel — each wrapper returning the vanilla component untouched when the feature is off, which is what makes an injection reversible from a setting.
+One local module per vanilla module it imports, filed under that module's own `game-ui/…` path and resolving the export through the registry behind a type guard and a fallback, so a module no declaration file names still reads as an ordinary typed import at every call site.
 Reaching the vanilla DOM from such a wrapper by resolving the wrapped component's scoped CSS-module class names through the module registry and mounting a React portal into the node they find, with every module and class accessor guarded so a renamed class costs a missing button rather than a broken menu.
 A frontend binding facade, one module per binding group, whose value bindings are created on first read rather than at import.
 Keeping the logger's show-errors-in-UI flag on and treating a logged error as the mod's user-facing error dialog, with a helper that flips the flag off and back around the errors it wants kept out of the player's way.

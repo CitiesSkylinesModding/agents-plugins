@@ -363,11 +363,11 @@ With both spellings valid the choice is a house convention, so a reader finding 
 
 ### An orientation document in one decompile checkout teaches an ordering mechanism the game does not use
 
-**Sources.** `DecompiledCitiesSkylines2/AGENTS.md:56`, hand-written orientation prose sitting alongside the decompiled source in the maintainer's own checkout, instructs modders to inject custom systems with `[UpdateAfter]` and `[UpdateBefore]`.
+**Sources.** `DecompiledCitiesSkylines2/AGENTS.md:56` **at commit `ec7c3720`** (`git show ec7c3720:AGENTS.md`; the file was cut down later, see the addendum), hand-written orientation prose sitting alongside the decompiled source in the maintainer's own checkout, instructs modders to inject custom systems with `[UpdateAfter]` and `[UpdateBefore]`.
 The game orders systems imperatively instead, through `UpdateSystem.UpdateAt/UpdateBefore/UpdateAfter<T>(SystemUpdatePhase)`.
 
 **Established.** A grep over `src/Game/` returns zero `[UpdateAfter]`, `[UpdateBefore]` and `[UpdateInGroup]` attributes, so they are inert here and a mod ordered with them compiles and never runs where it meant to.
-The error is one sentence in one file rather than a pattern: the same checkout's `DecompiledCitiesSkylines2/docs/game.md:9` sends modders to `SystemUpdatePhase` and `UpdateSystem`, which is the right mechanism, though only one of the three phase names it offers as examples is real — `Rendering` (`src/Game/Game/SystemUpdatePhase.cs:20`), against no `Initialization` and no `Simulation`.
+The error is one sentence in one file rather than a pattern: the same checkout's `DecompiledCitiesSkylines2/docs/game.md:9`, also at `ec7c3720` and since deleted, sends modders to `SystemUpdatePhase` and `UpdateSystem`, which is the right mechanism, though only one of the three phase names it offers as examples is real — `Rendering` (`src/Game/Game/SystemUpdatePhase.cs:20`), against no `Initialization` and no `Simulation`.
 It also reaches no user through this plugin: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:70-93` provisions a decompile by running `ilspycmd` over the user's own installed assemblies and emits `src/` alone, so no shipped path delivers that prose.
 
 **Needs a ruling on.** Whether the trunk names this wrong guidance to warn a reader off it, now that the exposure is one checkout's hand-written file rather than anything the plugin hands out.
@@ -379,6 +379,15 @@ The ruling goes into the research file for mod lifecycle, loading and system ord
 That form keeps the rule the question was asked against — prose states mechanisms on its own authority and names no source — while still reaching the reader the warning is for, who arrives from stock ECS and reaches for the attributes by default, having read nothing at all.
 Ticket 07's discovery pass also widened the exposure past the checkout that raised it, which is what settles the doubt about whether the warning earns its line: a published mod in the corpus ships `[UpdateAfter(typeof(WeekSystem))]` on a system that, through the band rules, runs _before_ the system it names (`mod-lifecycle-and-ordering.md`, "Ordering is imperative, and the stock ECS attributes are inert here").
 The same pass found the stronger proof the prose should rest on — the game imperatively registers a stock system that carries `[UpdateInGroup]` and never creates a system group, so no consumer of those attributes exists in the world — and that, rather than the absence of the attributes from game code, is the fact worth shipping, because it is the one a reader can act on.
+
+**Addendum (2026-08-05, ticket 20's verification pass over the decompile checkout).** The ruling stands and both cited files are gone from the working tree, so the `**Established.**` section no longer describes the checkout it was written against.
+In `DecompiledCitiesSkylines2`, `docs/cohtml.md`, `docs/colossal.md` and `docs/game.md` were deleted and `AGENTS.md` cut from 64 lines to 14, committed in `565e22b7` and `190766c4`. The current `AGENTS.md` is a two-section orientation note carrying no modding guidance at all, so the `[UpdateAfter]` sentence and the three phase-name examples reach nobody reading that checkout today.
+Both citations in the `**Sources.**` and `**Established.**` text above now carry that commit, so they resolve where the evidence still exists rather than dangling at deleted paths.
+**Anchor the evidence to the commit, not to `HEAD`, which has since moved past it.** Both lines are verifiable at `ec7c3720`: `git show ec7c3720:AGENTS.md` line 56 is the `[UpdateAfter]`/`[UpdateBefore]` instruction, and `git show ec7c3720:docs/game.md` line 9 offers `Initialization`, `Simulation` and `Rendering` as `SystemUpdatePhase` examples, of which only `Rendering` exists (`src/Game/Game/SystemUpdatePhase.cs:20`). The zero-attribute grep over `src/Game/` reproduces unchanged at 1.6.0f1.
+The decision is untouched because it never depended on the document: it was ruled that shipped prose states the trap as a plain negative fact naming no source, and the stronger proof it rests on is the game's own `[UpdateInGroup]`-carrying stock system.
+What the deletion adds is a durable fact, and it is recorded here rather than shipped: hand-written prose sitting in a decompile checkout is not part of the decompile — it carries no version, tracks nothing, and is whatever its owner last edited.
+`navigating-the-decompile` was written to carry it and the gate cut the passage, on the maintainer's ruling that the checkout's own hand-written files are theirs alone and shipped prose may not describe them.
+The reference states the tree-level form of the same caution instead, and states no count: an absence proves the game lacks a name only in a tree the provisioning command produced, and in a hand-trimmed one it is a fact about the trimming.
 
 ### The wiki has no update-phase ordering, and the plugin would be the first source to state one
 

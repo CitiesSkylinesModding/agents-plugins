@@ -14,9 +14,10 @@ updated: 2026-08-04
 
 ## Problem
 
-Three shipped claims in the `cs2-modding` references asserted that something did not exist, each
-derived from a search that returned nothing. All three were false, and none of them read as
-doubtful — they were the most confident sentences in their sections.
+Four shipped claims across the `cs2-modding` prose asserted that something did not exist, or that a
+set was complete, each derived from a search whose pattern could not reach what it was claiming
+about. All four were false, and none of them read as doubtful — they were the most confident
+sentences in their sections.
 
 A search returning nothing is evidence about the search. Turning it into a claim about the game
 needs a separate argument that the search could have found the thing.
@@ -24,7 +25,7 @@ needs a separate argument that the search could have found the thing.
 ## What didn't work
 
 **Re-reading the prose.** A false absence is indistinguishable from a true one by inspection: the
-sentence is short, flat and plausible either way. All three survived authoring, the authoring
+sentence is short, flat and plausible either way. Every one survived authoring, the authoring
 agent's own re-read, and the orchestrator's end-to-end pass. Only a reviewer told to re-derive the
 claim from the source caught them.
 
@@ -33,7 +34,7 @@ the research file reported; the inference drawn from them was the wrong part.
 
 ## Root cause
 
-Three distinct mechanisms, which is why fixing one instance taught nothing about the others.
+Four distinct mechanisms, which is why fixing one instance taught nothing about the others.
 
 - **A compile-time `const` is inlined at its call sites.** A name-grep finds the declaration and
   nothing else however many consumers exist. `custom-tools` shipped "nothing in the game consumes
@@ -54,12 +55,10 @@ Three distinct mechanisms, which is why fixing one instance taught nothing about
 
 ## Fix
 
-State the scope in the claim, or widen the search until the claim's scope matches it. Where the
-subject can live outside C# — a frontend behaviour, a value in shipped data, an asset flag — the
-decompile cannot answer at all and `docs/SOURCES.md` names the source that can.
-
-For a `const` specifically, search for the **value** or for the consuming expression rather than
-the name.
+The `navigating-the-decompile` reference owns what to do about each of these, under "What an empty
+grep proves", and it carries the checks a reader runs before writing the word "nothing". Send
+anyone who needs the technique there; this file is the incident record and keeps only what the
+reference cannot: which claim shipped wrong, and why nothing caught it.
 
 ## Prevention
 
@@ -68,5 +67,7 @@ quiet. `plugins/cs2-modding/AGENTS.md` states the rule for shipped prose — _a 
 comes back empty settles nothing on its own_ — and a reviewer re-deriving claims from primary
 sources is what actually enforces it, because the prose gives the reader no signal.
 
-The `navigating-the-decompile` reference is scoped to carry all three variants for shipped
-readers; until it exists, this file is where they live.
+The review gate that produced the reference found two more of these inside the reference itself:
+a census whose anchored pattern missed every primary-constructor struct, and a key enumeration
+whose character class missed the one key name carrying a digit. Both looked verified because an
+earlier pass had run the same pattern and got the same answer.

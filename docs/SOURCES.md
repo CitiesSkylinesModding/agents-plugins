@@ -6,7 +6,7 @@ Every source the `cs2-modding` pipeline may read, in one place: what each one is
 **A new entry appends and never renumbers**, whatever it is about: entry numbers are cited from elsewhere in the pipeline, so the order below is arrival order rather than kinship.
 
 **Precedence: first-party beats everything, and which first-party source wins depends on how the subject ships.**
-The decompiled C# and the installed game are both the game itself. The install is the one that carries a version the agent can state, and it holds whole subsystems the C# never names.
+The decompiled C# and the installed game are both the game itself, and the install holds whole subsystems the C# never names.
 Where a topic's subject matter ships as data or as JavaScript, the install outranks the decompile on anything it can answer. Where it ships as C#, the decompile is ground truth and nothing moves.
 The official toolchain is first-party too, and authoritative for its own half — how a mod is built, post-processed and published, and what a UI mod may import. It does not outrank the game on anything about the game, and the game does not outrank it on anything about the build.
 So among first-party sources the tie-break is which one **owns** the subject, not which sits higher on a list.
@@ -26,6 +26,7 @@ The C# of every shipped assembly, decompiled from the install's own managed DLLs
 **Ground truth for anything C# names**: systems, components, prefabs, the modding API, serialization, the binding layer's C# half.
 Blind to the frontend entirely, and to any behaviour that lives in shipped data rather than in code. Grepping it and finding nothing proves nothing about either.
 Reach it under the checkout's `src/`, one directory per assembly.
+**It states its own version.** `src/Game/Properties/AssemblyInfo.cs` carries a `VersionInternal` attribute holding the game version, the changelist and the build. The `AssemblyVersion` attribute on the line below it reads `0.0.0.0` in most assemblies and settles nothing.
 
 ## 2. The game's managed assemblies
 
@@ -47,6 +48,7 @@ What the single line genuinely blocks is reading around a match and citing one, 
 Reading only the package silently misses that last one.
 **Authoritative for every vanilla string and for the localization-key namespace table.**
 A `.loc` payload is a flat `BinaryWriter` stream with no compression, no checksum and no table of contents, so a zip reader and a `BinaryReader` get the whole of it.
+That the payload is uncompressed and the package stored also means a raw byte-grep over the `.cok` finds a key by name with no decoding at all — use it to settle whether a key exists and to enumerate a key family, and the decoder for counts and for the whole table.
 
 ## 5. The game's packaged content
 
@@ -123,7 +125,7 @@ The engine's manual and package documentation at `https://docs.unity3d.com/`, fe
 
 **Never authoritative for API shape, names, counts, or what this game's build does.** Two facts about the version are why.
 
-**The declared version is not the version that runs.** `%CSII_ENTITIESVERSION%` and the mod project's manifest at `%CSII_UNITYMODPROJECTPATH%/Packages/manifest.json` declare Entities 1.3.10, Collections 2.5.7, Burst 1.8.23 and Mathematics 1.3.2 — what a mod compiles against. The shipped `Unity.Entities.dll` is **1.3.5 to 1.3.8**. Nothing in an assembly states its own version, so re-dating one is an investigation: [dating a shipped Unity package](solutions/dating-a-shipped-unity-package.md) carries the method and the four traps, and the other three packages have not been dated this way. The gap is benign because nothing a mod plausibly calls changed across it, and this manifest is where a wider one would show first.
+**The declared version is not the version that runs.** `%CSII_ENTITIESVERSION%` and the mod project's manifest at `%CSII_UNITYMODPROJECTPATH%/Packages/manifest.json` declare Entities 1.3.10, Collections 2.5.7, Burst 1.8.23 and Mathematics 1.3.2 — what a mod compiles against. The shipped `Unity.Entities.dll` is **1.3.5 to 1.3.8**. No Unity package assembly states its **package** version — the `VersionInternal` attribute entry 1 describes is Colossal's own, and the four packages that matter all report `AssemblyVersion("0.0.0.0")` — so re-dating one is an investigation: [dating a shipped Unity package](solutions/dating-a-shipped-unity-package.md) carries the method and the four traps, and the other three packages have not been dated this way. The gap is benign because nothing a mod plausibly calls changed across it, and this manifest is where a wider one would show first.
 
 **The assembly is not stock.** `Colossal.CORuntimeApplication` ships inside `Unity.Entities`, appears in no Unity release, and calls an `internal` method, so it can only have been compiled in from source. Colossal build Entities themselves, and the docs therefore describe a package adjacent to the one that runs.
 
