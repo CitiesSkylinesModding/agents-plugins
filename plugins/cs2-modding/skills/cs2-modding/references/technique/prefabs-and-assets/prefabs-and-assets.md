@@ -371,7 +371,7 @@ Two consequences follow from that body, and both matter:
 
 **Strip the obsolete identifiers.**
 `Clone` copies that component along with the rest, and `AddPrefab` registers every entry in it as an additional index pointing at the clone — or, if the original registered them first, logs a duplicate-id warning and drops them.
-Either way a save referring to the original by an obsolete id can resolve to your clone.
+So a save referring to the original by an obsolete id resolves to whichever of the two registered first.
 `DuplicatePrefab` does the removal for you; a hand-rolled `Clone` must do it itself.
 
 **Three strategies exist and they are not equivalent.**

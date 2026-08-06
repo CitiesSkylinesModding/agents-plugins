@@ -70,7 +70,8 @@ Packages the mod genuinely depends on are the opposite case: they have to land n
 ```
 
 The game ships no patching library and the toolchain references none, so every mod that patches ships its own copy — and the game then collapses them into one.
-Before loading anything it groups every assembly shipped by every mod by name, treats same-named copies as duplicates, and loads the group's winner in place of the copy a mod shipped: whichever is already loaded, else a local build over a subscribed one, else the highest version.
+Before loading anything it groups every assembly shipped by every mod by name, treats same-named copies as duplicates, and loads the group's winner in place of the copy a mod shipped: at boot a local build over a subscribed one, then the highest version, then the asset id.
+A copy already in the process outranks all three, so a local build deployed and enabled mid-session loses to the subscribed copy that won at boot, and only a restart puts your build in front.
 So a mod pinning a different version does not get that version to itself — it can become the copy every other mod patches through, and nothing warns anyone, because the duplicate warning the game raises covers mod assemblies rather than the libraries they reference.
 That shared fate is why the version is agreed rather than chosen per project.
 

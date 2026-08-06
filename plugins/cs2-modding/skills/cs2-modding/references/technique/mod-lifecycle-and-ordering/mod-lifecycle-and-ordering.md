@@ -45,7 +45,7 @@ Three rules follow.
 Other gates the asset passes before `OnLoad` is reached, each failing to a distinct state on the mod's record:
 
 - the assembly must be marked required, and must be either a mod or a reference;
-- same-named assemblies are resolved to a single winner, ordered by already-loaded, then local, then version descending, so a second copy of the same assembly name simply loses;
+- same-named assemblies are resolved to a single winner, ordered by already-loaded — which nothing is at boot — then local, then version descending, then asset id, so a second copy of the same assembly name simply loses;
 - every assembly reference must resolve, or the mod is refused with a missed-dependencies state;
 - an asset that ships a copy of a game assembly beside itself is **skipped** with a warning reading `Assembly "{0}" is in-game assembly and it should NOT be shipped with mod "{1}"`.
 

@@ -44,6 +44,7 @@ Source: [algernon-A/LineTool-CS2](https://github.com/algernon-A/LineTool-CS2)
 Its `CreateDefinitions` is a Burst-compiled port of the game's own object-creation pipeline, so placed objects go through the same `CreationDefinition`/`ObjectDefinition` path as vanilla, sub-objects and sub-nets included.
 Line modes are a strategy hierarchy, one class per mode, each owning its click, drag and overlay behaviour.
 Its single runtime patch is small and targeted, applied only to refresh a private UI binding, and the same binding is read elsewhere through a cached reflection accessor rather than a second patch.
+Yielding shared player-facing affordances to competitor mods rather than fighting for them — a snap mode it stops offering and a transparency setting it hands over — with one competitor's detection isolated in a file of its own that tries three possible assembly names and three type names before giving up.
 
 ### Move It
 
@@ -58,6 +59,7 @@ Clone an alpha branch rather than the default one: the architectural changes wor
 Typed raycast wrappers registered with the game's own raycast system.
 Overlay rendering dispatched per entity kind, with the draw and update passes as jobs.
 Cross-mod integration by reflection over loaded assemblies rather than a compile-time reference, so a missing sibling mod costs nothing.
+The push direction of the same arrangement: invoking a static on another mod's bridge class to register itself with it, latching the result so the push happens once, and exposing a public static of its own in a partial file whose only purpose is that other mod's reflection.
 Emitting the game's own placement definitions by hand for every selected entity and each of its sub-nets and sub-areas, switching one flag field between relocate, delete, hidden and recreate, rather than using the definition helper its base class offers.
 Command buffers the mod allocates itself and plays back on the spot inside a system, rather than handing the work to a barrier.
 A custom quadtree iterator walking three vanilla search trees with mod-defined selection, serving its marquee, bounds, point and ray searches.
@@ -110,7 +112,7 @@ Source: [AlphaGaming7780/ExtraDetailingTools](https://github.com/AlphaGaming7780
 **Demonstrates:** Extending vanilla tool behaviour by patching the two methods that decide rotation and snap masks, rather than replacing the tool.
 A reusable generic base for adding custom snap modes to any tool.
 A batched custom raycast where several callers share one pass per frame, keyed by context.
-Runtime bridging to another mod through a dedicated bridge class.
+Runtime bridging to another mod through a dedicated bridge class, whose methods are each resolved once by explicit parameter-type array rather than by name, cached, and invoked through helpers that return a neutral value on a missing member or a thrown call — so every entry point degrades to a no-op when the other mod is absent.
 Declaring its own input usage string beside the built-in ones, so its transform-tool actions are not reported as conflicting with vanilla bindings they share keys with.
 A port of the game's own selection-definition builder that branches on what the selected entity is and emits the matching definition kind for each — network course, object, area nodes, route waypoints, notification icon, aggregate elements — which is the widest coverage of that mechanism outside the game itself.
 
@@ -141,7 +143,8 @@ Source: [krzychu124/Traffic](https://github.com/krzychu124/Traffic)
 **Demonstrates:** The reference example of save-data migration: a version constant, per-version repair jobs, and validation passes that fix or drop data an older version wrote.
 A migration version kept in a save section owned by a system rather than on any entity, with a defaults hook supplying version zero for saves written before the mod existed.
 A formerly-serialized-as attribute on that system, so a save written under its earlier namespace still resolves.
-Importing the persisted components of a different mod: the foreign type is resolved by name out of the asset database, queried through a runtime component type, migrated by a chunk job in the deserialize phase's back band, then removed from every entity that carried it.
+Importing the persisted components of a different mod: the foreign type is resolved by name and queried through a runtime component type, but the chunk job that does the migration reads only vanilla components — the foreign type is a marker for which entities that mod touched, the result is re-derived from the state it had already written, and the marker is then removed from every entity that carried it.
+A second compatibility system beside it taking the non-destructive position on the same machinery: it resolves another mod's tag component by name and queries on it purely as a signal, resetting only its own state on the entities that carry it.
 Disabling the vanilla lane system and taking over its slot, with no patching anywhere in the codebase.
 Registering a system frames after the mod loaded, from a deferred main-thread callback, which is how it disables another mod's system once that mod is known to be present.
 Reporting a failure to the player end to end: a notification carrying a failed progress state whose click opens a message dialog with a copyable details pane, the dialog's callback popping the notification.
@@ -334,6 +337,7 @@ Source: [yenyang/Anarchy](https://github.com/yenyang/Anarchy)
 **Demonstrates:** Widening a tool's raycast layer mask from a postfix on its raycast initialization — the smallest useful example of tool interception.
 Custom serializable components recording state that must survive a save, paired with query-and-command-buffer systems that strip and restore vanilla components at scale.
 Soft integration with another mod through a bridge type located by reflection, with no hard dependency in either direction.
+The provider half of that arrangement as well: a static bridge class whose every signature uses only engine and game types, handing out its own component types as runtime component-type values, and letting another mod's tool register itself into a list this mod keeps.
 Cloning a vanilla prefab component by component and rebuilding its UI component from scratch rather than copying it, with the clearest comment in this corpus on why a clone must not keep a reference to its source.
 Remembering the previously active tool by subscribing to the tool system's tool-changed event rather than latching it at activation, which is the only form that survives an activation the tool did not initiate.
 Mimicking a vanilla binding declaratively, so a mod action sits on a button the game reserves and follows the player's rebinds, including the two-property form that mimics an axis.

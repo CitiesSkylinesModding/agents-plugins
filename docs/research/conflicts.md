@@ -69,6 +69,43 @@ The 2026-08-03 amendment does not change the question and adds one option to it:
 
 ## Ruled
 
+### A mod that deletes another mod's data has one worked example and one worked refusal
+
+**Sources.** `save-serialization.md:386` hands `mod-compatibility` "the question of when doing it is legitimate", the mechanism itself being settled there and in `mod-compatibility.md`.
+The corpus takes three positions on reaching into another mod's data and they do not agree.
+Read and delete: `Traffic/Code/Systems/ModCompatibility/TLEDataMigrationSystem.cs` migrates a foreign mod's per-node lane directions and then removes the foreign component from every entity that carried it, commented `// delete TLE data components to prevent data corruption` (`:89-91`), and disables the other mod's system so it cannot act on what is gone (`Traffic/Code/Mod.cs:166`).
+Read only: `Traffic/Code/Systems/ModCompatibility/RoadBuilderCompatibilitySystem.cs:28-76` resolves another mod's tag component by name, queries on it as a signal, and writes only to its own components.
+Outside the save, the same split appears over a third mod's residue on disk. `FindIt-CSII/FindIt/Mod.cs:115-136` deletes `ModsData/Gooee` and `Mods/Gooee` recursively, gated on that mod not being enabled, from a deferred callback inside a bare `catch {}`. `CS2-MoveIt/Code/MoveIt/Settings/FileUtils.cs:13-22` detects the same two folders and puts a warning and an **open folder** button on its own settings page instead (`CS2-MoveIt/Code/MoveIt/Settings/LocaleEN.cs:222-240`).
+
+**Established.** Nothing in the game stops any of it, and the four capabilities are each proven.
+A foreign mod's components are in the world by the time any mod's system runs, because the loader loaded that assembly and the serializer library reflected over its types like any other; a type resolved by name through `TypeManager.GetTypeIndex` becomes an ordinary `ComponentType` (`TLEDataMigrationSystem.cs:34-44`), so query, read, write and `EntityManager.RemoveComponent` all work (`:45-50`, `:90-91`).
+A foreign mod's _system_ can be switched off from outside: `World.GetExistingSystemManaged(type)` on a type resolved the same way, then `Enabled = false` (`Traffic/Code/Mod.cs:158-168`).
+A foreign mod's on-disk data is an ordinary directory under `EnvPath.kUserDataPath` with no game-side ownership concept at all — the decompile has no `ModsData` or `ModsSettings` constant anywhere in `src/`, so the layout is a wiki convention (`https://cs2.paradoxwikis.com/Naming_Folder_And_Files`, `survey-wiki-inventory.md:50`) that mods compose by hand.
+And the game gives the wronged mod no way to notice: `IMod` has two members, `OnLoad` and `OnDispose` (`src/Game/Game.Modding/IMod.cs`), and `OnDispose` fires only at process shutdown (`src/Game/Game.SceneFlow/GameManager.cs:792`).
+What is equally established is that the destructive form has a real justification in the one case that carries it: `Traffic` takes over the vanilla `LaneSystem` slot the other mod also took (`Traffic/Code/Mod.cs:76`, `:168`), so both mods' data cannot coexist, and it reports what it did to the player in a dialog naming both mods and the count (`TLEDataMigrationSystem.cs:94-98`).
+What could not be established is whether the deleting mods asked their targets. Nothing in either repository records a conversation, and that is not a question any source here can answer.
+
+**Needs a ruling on.** What the `mod-compatibility` reference teaches about acting on another mod's data, given that the mechanism is the same for all three positions and only the intent differs.
+Three options and each costs something.
+Teach the mechanism with the read-only position as the rule — resolve a foreign type, query it, never write it, never remove it: safe, matches the majority of the corpus's sites, and it drops the one case the technique was invented for, so a reader taking over another mod's slot gets nothing and improvises.
+Teach it with the destructive form bound to a stated condition — you may migrate and remove another mod's data only when you are replacing the system that produced it, and you tell the player you did: correct on the one worked example, and it is the plugin telling agents when to delete somebody else's user data, which is a line no other reference in this plugin goes near.
+Teach the mechanism and refuse the destructive form outright, naming only the read-only and write-your-own variants: cleanest, and it makes the reference silently incomplete about a technique a reader will find in the corpus the moment they look, with no warning attached.
+The on-disk half rides along and may need a separate answer: deleting a component inside a save the player can restore from a backup is not the same act as `Directory.Delete(recursive: true)` on a folder outside it, and the two corpus positions there are a deletion and a refusal to delete rather than two migrations.
+What turns on it is whether an agent that detects a competitor reaches for removal as the default remedy. This is the first reference in the plugin whose subject is what one author may do to another author's users, and an agent following it will not be the one who hears about it.
+The ruling goes into the research file for `mod-compatibility`, at the "Migrating another mod's data" finding, and touches `save-serialization` only if that reference also states who may remove a foreign component.
+
+**Ruling (2026-08-06, ticket 21).** None of the three, because the question was put to the wrong party: whether a mod replaces another mod, cooperates with it or ignores it is the mod author's own design decision, and the plugin's job is to make that decision informed rather than to license one of its outcomes.
+
+So all three positions ship, as postures a mod takes toward another mod's data, over one statement of the mechanism — resolve the foreign type by name, query it, and from there read, write or remove it, which is the same machinery in every case.
+**Replace** migrates the data, removes the foreign component and disables the other mod's system. **Cooperate** reads the foreign component as a signal and writes only the mod's own. **Coexist** leaves it alone.
+
+What is not a matter of taste is the consequence set, and that is the half the reference owes its reader.
+Removal is permanent inside the player's save. The other mod is never told, because `IMod` carries no hook that could tell it. A directory removed outside the save has no restore path at all, which is what separates the on-disk case from the in-save one rather than a second judgement about intent.
+Replacing is coherent when the mod has taken over the vanilla system that produced the data — otherwise it has deleted data whose producer is still running, which is the failure the posture is chosen to avoid.
+And the worked example tells the player what it did, in a dialog naming both mods and the count, because the player is the party losing the data.
+
+This is why the entry does not resolve into a rule with a condition attached, which is what its own three options each assumed. A condition would read as a permission the plugin grants, and an agent that satisfies it would delete on the plugin's authority rather than on its author's.
+
 ### The only leak diagnostic this game has is a switch the game deliberately turned off, and a mod that turns it back on turns it on for everyone
 
 **Sources.** `How To Avoid Memory Leaks` (https://cs2.paradoxwikis.com/How_To_Avoid_Memory_Leaks, fetched live 2026-08-04) teaches that a `TempJob` allocation "persists for four frames, after which point it should be disposed of", which in stock Unity is enforced by a native leak-detection warning naming the allocation.

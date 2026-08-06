@@ -49,12 +49,15 @@ Registration is one call:
 UISystem.AddHostLocation(string hostName, string path, bool shouldWatch = true, int priority = 0);
 ```
 
-It appends to the host's path list, keeps the list sorted by priority, ignores a duplicate path, and raises a host-added event carrying the watch flag.
+It inserts the path into the host's list at a binary-searched position on priority alone, ignores a duplicate path, and raises a host-added event carrying the watch flag.
 An overload takes several paths at once, and `RemoveHostLocation` exists — put it in `OnDispose`, since a host location is state registered outside your own world.
+**Unregister with the two-argument form, naming both the host and the path**: the single-argument overload drops the whole host and every path any other mod registered under it.
 
 **Resolution walks the host's paths in priority order and takes the first that reads.**
 An unknown or empty host fails with an invalid-host-locations error.
-So **two mods registering the same host name do not conflict — they stack**, and priority decides who is asked first.
+So **two mods registering the same host name do not conflict — they stack**, and the lowest priority number is asked first.
+Paths sharing one priority land wherever the binary search puts them, so between two mods that shipped the same file name under one host, which copy resolves is not something to rely on.
+`mod-compatibility` owns what that means when the host is one every UI mod shares.
 
 The two shapes worth copying:
 

@@ -67,6 +67,7 @@ So this source answers a content-pack prefab question cheaply and a base-game on
 `@colossalorder/create-csii-ui-mod`, an npm package installed globally by the toolchain. Its `template/types/` holds one declaration file per importable module.
 **First-party and authoritative for what a UI mod may import**, module by module: `cs2/bindings` (every binding group's payload types, and by far the largest), `cs2/ui`, `cs2/input`, `cs2/l10n`, `cs2/api`, `cs2/modding` (the module registry's five operations and its append-hook targets), `cs2/utils`, `cs2/assets`, plus the Cohtml and React ambient declarations.
 The template beside them also carries the reference `webpack.config.js`, `tsconfig.json` and `mod.json`.
+Those last two are a source in their own right for the **UI-module manifest**: `mod.json`'s lowercase `id`, `author`, `version` and `dependencies` are interpolated by the webpack config into a banner comment carrying the capitalised `Id`, `Author`, `Version` and `Dependencies` keys the game's `UIModuleAsset` parser reads back, so the two casings are not interchangeable. The banner reaches the bundle through the minifier's extracted-comments option rather than a banner plugin, which is where to look when a built module carries no manifest at all. The pair is therefore authoritative for the manifest format of every UI mod, with the game's parser as the other half of the same contract.
 
 ## 7. The official modding toolchain
 

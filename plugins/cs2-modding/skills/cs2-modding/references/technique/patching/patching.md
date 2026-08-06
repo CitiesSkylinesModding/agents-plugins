@@ -84,7 +84,8 @@ The patch targets read fall into four groups, and the groups are about **what ki
 They describe what was found rather than what exists, so a target fitting none of them tells you nothing either way — check it rather than concluding the game left a seam there.
 
 - **A tool's per-frame raycast and snap configuration.** The reason this group exists is structural: the raycast system calls `InitializeRaycast()` on the _active tool only_, so a mod widening what a vanilla tool can hit has nowhere else to stand.
-- **A value the game publishes to its own UI.** Most of these producers are private and reached only through a delegate the system captured in its own `OnCreate`, so there is no seam by construction: the binding is registered, the system is a concrete type, and the producer is not virtual. Some are neither private nor non-virtual, so check yours before concluding a patch was the only route.
+- **A value the game publishes to its own UI.** Most of these producers are private and reached only through a delegate the system captured in its own `OnCreate`, so there is no seam by construction: the binding is registered, the system is a concrete type, and the producer is not virtual.
+  Some are neither private nor non-virtual, so check yours before concluding a patch was the only route.
 - **A value the game asks for and then acts on.** Consumed immediately and rewritten through `ref __result` — usually a boolean forced the other way, sometimes a returned object.
 - **A simulation value, or the managed method that schedules a job.** Time, climate, upkeep, wind, prefab refresh.
 
@@ -249,11 +250,10 @@ The static `Harmony.GetAllPatchedMethods()` returns every patched method in the 
 ## Composing with another mod's patch
 
 **Exactly one copy of Harmony is loaded per process, and it is not the one you pinned.**
-The asset loader deduplicates executable assets by simple assembly name across every installed mod and loads a single winner, ordered by already-loaded first, then local, then version, then asset id.
-That last key is a total tiebreak, so the winner is decided by the installed set rather than by load order — deterministic, and no less out of your hands for it.
-So the copy every mod patches through may be one nobody compiled against, and it is not simply the highest version.
-Nothing here is strong-named, so version binding is not enforced and no error is raised.
-`mod-compatibility` owns what this means for a mod's dependency posture, and `cs2-mod-project` owns the pin every mod agrees to.
+The asset loader deduplicates executable assets by simple assembly name across every installed mod and loads one winner per group, so the copy every mod patches through may be one nobody compiled against — and it is not simply the highest version.
+Nothing here is strong-named, so version binding is not enforced and nothing objects at load.
+A member the loaded copy no longer has throws instead when the method calling it is first compiled, which is what a missing-member exception out of a patching call means.
+`mod-compatibility` owns that rule, the order it resolves in, and what it means for any library a mod ships; `cs2-mod-project` owns the pin every mod agrees to.
 
 **Widen a shared flags field with `|=`, and treat a plain `=` as a bug.**
 The case that makes this concrete is a postfix widening a vanilla tool's raycast masks: the vanilla method has already cleared that field for the frame, so every widening postfix is competing to put its own bits back.

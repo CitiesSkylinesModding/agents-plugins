@@ -82,13 +82,19 @@ The winner is ordered `isLoaded descending, isLocal descending, version descendi
 So three things follow, and all three are load-bearing.
 **One `0Harmony` exists in the process**, which is why the game's own `FirstOrDefault(a => a.GetName().Name.Contains("Harmony"))` is a reasonable thing to write.
 **Its static patch registry is therefore shared by every patching mod**, which is what makes cross-mod prefix ordering a real question rather than a hypothetical.
-**The winner is decided first by which copy loaded first**, then by locality, and only then by version — so it is neither "highest version wins" nor deterministic, since mod load order is `Dictionary<Identifier, ModInfo>` iteration order (`ModManager.cs:180`, iterated at `:438`).
+**The winner is decided by locality, then by version, then by asset id, and the `isLoaded` key ahead of them cannot fire at a cold boot.**
+`isLoaded` is `assembly != null` (`ExecutableAsset.cs:151`), and the only path setting `assembly` before `LoadAssemblyImpl` is `GetModAssets`, which matches an already-loaded `AppDomain` assembly by file location (`:314-334`, the match at `:321`).
+A mod-shipped assembly is loaded from a byte array (`:236`/`:241`) and so has an empty `Location`, leaving that match nothing to hit.
+So at first initialization the order reduces to local, then highest version, then asset id — deterministic and decided by the installed set, not by mod initialization order.
+`isLoaded` bites only on a mid-session re-initialization (`ModManager.cs:244`, `GameManager.cs:1628`), where a copy already in the process outranks a local one and a higher-versioned one alike; `mod-compatibility.md` carries the full derivation at its first finding.
 
 **The versions in the wild are not all the same.** Across the user's Paradox cache, the 51 shipped `0Harmony.dll` copies carry three identities: `2.2.2.0` (48), `2.3.3.0` (2), `2.4.2.0` (1).
 All three are `PublicKeyToken=null`, so nothing is strong-named and version binding is not enforced; a mod compiled against 2.2.2 will silently run against whichever copy won.
 Every corpus repository that declares the dependency pins `Version="2.2.2"`, all eleven of them.
 
-Unconfirmed: that a mod compiled against 2.2.2 actually executes correctly against a loaded 2.4.2. The code path above is settled; what is not observed is the runtime outcome. The experiment is one the running game settles: install two patching mods shipping different `0Harmony` versions, and read back `typeof(HarmonyLib.Harmony).Assembly.GetName().Version` from each mod's own frame. The game was running for this pass with no Harmony mod enabled, so this records the route rather than the result.
+**Ruled (2026-08-06, ticket 21).** What happens after the loader picks a winner is standard .NET rather than a question about this game: with nothing strong-named the version is no part of binding identity, so the simple name match is the whole of it. A mod built against 2.2.2 runs against whichever copy won, and the experiment this line used to ask for is not owed.
+
+**Verdict: it is neither call-site-granular nor always loud**, established by direct experiment under Unity's own Mono during ticket 21's review; `mod-compatibility.md` carries the derivation and the evidence at its first finding. A missing member throws while the **containing method** is JIT-compiled, before that method's first statement, so a `try`/`catch` around the call never runs — the guard has to be an isolated `[MethodImpl(MethodImplOptions.NoInlining)]` method or a reflection lookup. And a `const`, an enum member's value and an optional parameter's default are baked into the calling assembly at compile time, so a change to any of them keeps running silently with the old value.
 
 Rots: the three version numbers and the 2.2.2 pin the corpus shares — re-count `0Harmony.dll` identities under the Paradox mods cache and re-grep the corpus csproj files.
 
