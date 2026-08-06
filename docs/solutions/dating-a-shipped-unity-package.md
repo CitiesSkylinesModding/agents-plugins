@@ -7,7 +7,7 @@ symptoms:
   - 'a member is missing from the decompile and the pass concludes the build predates it'
   - 'a version bound derived from one marker turns out to admit two answers'
 tags: [research, decompile, unity, versioning, stripping, false-absence, verification]
-updated: 2026-08-05
+updated: 2026-08-06
 ---
 
 # Dating a shipped Unity package when the assembly carries no version
@@ -26,6 +26,12 @@ Unity mirrors package sources with a tag per release at
 `https://github.com/needle-mirror/com.unity.<package>`. Clone a tag and compare it against the
 shipped assembly. Bounds come from members whose presence, shape or absence-within-a-present-body
 changed at a known release.
+
+Start on the machine rather than on the network. The toolchain's Unity project resolves the declared
+version into `Library/PackageCache/` (`SOURCES.md` entry 15), and that copy carries the package's
+whole `CHANGELOG.md` — every release below the declared one, the candidates included. Reading it
+picks the markers; cloning a tag is then how you learn the shape a marker took, on the releases the
+changelog leaves you undecided between.
 
 For this game the chain ran: `EntityExists` is present, added in 1.3.2; `EntityManager.CopyEntitiesFrom` builds a
 query against both worlds and calls no `EntityRemapUtility.GetTargets`, the shape 1.3.5 replaced
