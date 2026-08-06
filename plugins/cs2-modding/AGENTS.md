@@ -29,6 +29,8 @@ Everything under `skills/` is a deliverable held to these rules. Load the `writi
 - **Libraries stay unnamed, except Harmony.** Teach the mechanism so an agent can always write the code itself, rather than pointing it at a dependency whose current shape it cannot verify. This governs libraries a mod would _reference_ — community helpers, utility packages, UI toolkits. Components the game or the official toolchain already ships are named as plainly as any game type: an agent cannot write the code that is already there. So are the applications a user runs on their own machine — a decompiler, an editor, an IDE — because a procedure has to say which program to run.
   Harmony is the one referenced library this plugin names, because it is the ecosystem's only patching runtime and its API is the vocabulary any patching prose has to use. Name it wherever the prose is about patching — the patching reference most of all, and `skills/cs2-mod-project/SKILL.md` for the dependency — and teach its own prefix, postfix and injected-parameter vocabulary rather than the mechanism under it. This is the one place where teaching the mechanism would defeat the rule's purpose: the rule exists so an agent can always write the code itself, and here everyone writing their own is precisely the outcome to avoid.
   Its package id and pinned version stay in `skills/cs2-mod-project/SKILL.md` and nowhere else, so that moving the pin is a one-place edit. Every mod ships its own copy of the library and the game collapses same-named assemblies into a single loaded winner, so a mod pinning a different version can become the copy every other mod patches through — which is why the version is agreed rather than chosen per project.
+- **A count ships only where the count is the thing being taught.** A reader acts on _most adds are not generic_ and never on the two figures behind it, so a supporting figure is load that rots and that every version sweep has to re-earn. State the shape and drop the number.
+  Where the number _is_ what a reader came for — a mechanics reference's own quantities, a phase set, a version string — it stays, and it carries the census discipline [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md) states. A wrong count reads as precision, which is how it survives a review that would have caught a vague sentence, so this is a gate on writing one rather than something the gate cleans up.
 - **Version baseline.** Every reference carries, once, a line reading `Verified against game version <version>.`, so a reader can judge its age against the installed game.
 - **Volatility marker.** A claim that rots — component field names, system names, save-format versions, UI module paths, raycast mask combinations — carries `VOLATILE:` inline, naming what moves and where it lives: `(VOLATILE: the field names on this component — the component's own declaration.)`. That uppercase token is the only spelling, and durable architectural facts carry none, so `VOLATILE:` greps into the maintenance checklist for the next game version.
   **A marker is a label, and reads as one.** An imperative — _re-read this_, _check that_ — is an order an agent obeys on sight, so a reference carrying nine of them spends a reader's context re-deriving claims that were right. Name the thing that moves, so the next version's sweep has its list, and name where it lives as a location rather than an errand — a type, a namespace, a region, or the game's own file where the claim is not a C# one, since the sweep has to be able to open what the marker names. The trunk `SKILL.md` owns the reason: it states the four triggers that make re-deriving worth it, once, for every marker in the plugin.
@@ -49,6 +51,10 @@ Point them at those sources and at the claims to re-derive; a finder told only t
 **Where a claim rests on a live-game run, the brief names the captured logs as the source and says not to re-run it.**
 "Re-derive from the primary sources" reads as "reproduce the experiment" to a finder holding no other instruction, and it will rebuild a probe and reach for the game within minutes.
 Say instead that an honest gap is the useful answer: where the captured evidence cannot settle a claim, the finder names what would settle it and moves on.
+
+**Where the prose prescribes a search, the brief tells the finder to run it.**
+A finder asked to re-derive claims checks whether sentences are true and never whether commands work, so the recipes — the part a reader executes rather than reads — pass untouched through a pass that re-verifies every count beside them.
+Hand the finder the search and ask what it misses.
 
 **`/simplify` runs before the gate.**
 Simplifying afterwards re-opens reviewed prose, which earns another gate: simplify-then-gate converges, gate-then-simplify loops.
@@ -78,6 +84,12 @@ Prefer scoping or restoring the sentence you have over generalising it, and wher
 A correction that takes something away — a duplicated passage, a rule stated three times, a sentence that reached past its evidence — survives its own review, and so does a mechanical one applied uniformly across a file.
 A correction that adds precision is the one the next round finds wrong: a count, a mechanism, a rationale, a worked example.
 Give those the same scrutiny as the prose they replace.
+
+**Derive a correction from the source, never from the sentence it replaces.**
+Reading the shipped line to write its fix reproduces whatever that line got wrong, faithfully and now wearing a correction's authority.
+
+**A recipe stated twice takes a fix only when both copies change.**
+A reference explains a search where the topic owns it and prescribes it again in the summary a reader executes from, so fixing the explanation alone leaves the file carrying its own counterexample.
 
 **A claim that comes back wrong twice is a claim to delete rather than rephrase.**
 Each round fixes the number and leaves the sentence, because the sentence reads as the thing the passage needs.
