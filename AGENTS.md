@@ -97,7 +97,7 @@ Propose updates whenever you detect drift.
 For the same reason a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
 
 Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).
-If present, load the `writing-great-skills` skill and hold the edit to it before writing any of them.
+Load the `writing-for-agents` skill and hold the edit to it before writing any of them.
 In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Citizen`) rather than the reference target's own, and claim verification against no named game: an example teaches a shape, while a real name invites an agent to try it on a game that never had it.
 
 ## Preferred agent behavior

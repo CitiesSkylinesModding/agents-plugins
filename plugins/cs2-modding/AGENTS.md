@@ -19,6 +19,7 @@ What may never move down is a rule whose absence makes a reader **wrong** rather
 ## The shipped-prose contract
 
 Everything under `skills/` is a deliverable held to these rules.
+Load the `writing-for-agents` skill before writing or editing any of it, and hold the edit to that skill as well: it owns how agent-facing prose is written, and the rules below are only what this plugin adds on top.
 
 - **Self-sufficient.** An agent with no local decompile, no running game and no network still gets correct answers. Every other source is an accelerator.
 - **First-party is ground truth, and the decompile is only half of it.** A claim from any other source is verified against the game itself before it ships, and where they disagree the game wins and the prose says so.
@@ -27,6 +28,8 @@ Everything under `skills/` is a deliverable held to these rules.
 - **The mods corpus is input, never output.** It is where techniques and gotchas were learned, and knowledge prose states the technique on its own authority. The single place a mod is named is the setup skill's provisioning catalog, `skills/cs2-modding-setup/references/mod-catalog.md`, which is also the name list the content lint reads — so the entry shape `scripts/check-skill-content.ts` parses is a contract the catalog keeps, and an entry losing its `###` heading or its `Source:` line fails the check rather than escaping it.
   When the check names a word your subject genuinely owns, report the collision and stop: the fix is the maintainer adding that word to the lint's ordinary-word list, and never prose bent around it. A word already on that list warns instead of failing, so a green run still carries the collision.
   **An entry certifies what its own source shows.** Reading one repository establishes nothing about the others, so a comparative — _the only_, _the deepest_, _the fullest_ — is a claim about the whole corpus and ships only with the sweep that established it. A superlative is also the hardest kind of sentence to doubt on re-reading, which is why this gates writing one rather than cautioning you to weigh it.
+  **The corpus leaks in as an evidentiary clause tacked onto a true rule**, and that shape is what to grep for: _no mod read takes_, _across the repositories read_, _the practice is_, _and nobody does it_. The rule survives the cut, so cut it — the clause only dates the sentence to one reading of one corpus, and every reader after that reads a claim nobody can re-derive.
+- **A mod author's design decisions are theirs.** Where the choice belongs to the mod author — replace another mod's data, cooperate with it, leave it alone — ship every option with its consequences rather than licensing one behind a condition. A condition reads as a permission, and an agent that satisfies it acts on this plugin's authority instead of its author's.
 - **Libraries stay unnamed, except Harmony.** Teach the mechanism so an agent can always write the code itself, rather than pointing it at a dependency whose current shape it cannot verify. This governs libraries a mod would _reference_ — community helpers, utility packages, UI toolkits. Components the game or the official toolchain already ships are named as plainly as any game type: an agent cannot write the code that is already there. So are the applications a user runs on their own machine — a decompiler, an editor, an IDE — because a procedure has to say which program to run.
   Harmony is the one referenced library this plugin names, because it is the ecosystem's only patching runtime and its API is the vocabulary any patching prose has to use — teaching the mechanism here would have everyone writing their own patcher, the one outcome that rule must not produce. Name it wherever the prose is about patching, the patching reference most of all and `skills/cs2-mod-project/SKILL.md` for the dependency, and teach its own prefix, postfix and injected-parameter vocabulary rather than the mechanism under it.
   Its package id and pinned version stay in `skills/cs2-mod-project/SKILL.md` and nowhere else, so that moving the pin is a one-place edit. Every mod ships its own copy of the library and the game collapses same-named assemblies into a single loaded winner, so a mod pinning a different version can become the copy every other mod patches through — which is why the version is agreed rather than chosen per project.
@@ -47,6 +50,13 @@ The maintainer owns which claims count, and calls that look settled from inside 
 ## Fact-checking is its own pass
 
 The agent that wrote a claim cannot audit it, so verifying it is `/review-gate`'s job rather than a private re-read at the end of authoring.
+
+**Where a reference prescribes a procedure, have one finder write the code rather than review the prose.**
+Reading finds gaps; writing finds contradictions between instructions that are each true alone, and an empty return from a read-only pass is weak evidence that a lens has converged — [verified claims that did not compose](../../docs/solutions/verified-claims-that-did-not-compose.md).
+
+**Finders agreeing is not confirmation.**
+They read the same source and make the same inference, so a shared misreading arrives looking like consensus: three independent finders once reported the same claim inverted, and all three named the wrong winner.
+Only the verify stage separates agreement from truth, because it traces the mechanism instead of re-reading the claim.
 
 **Brief the finders on the sources, not on the prose.**
 They re-derive each claim from the primary sources — the decompile first, then the installed toolchain and the game's own files — and return the line that proves or disproves it.
@@ -104,6 +114,9 @@ A topic that discloses nothing keeps the folder anyway — it is one file in a d
 Both families work this way, and so does the UI skill's flat `references/`.
 A sub-file is a reference like any other: it carries its own title and its own `Verified against game version <version>.` line, because it goes stale on its own, and the content lint already treats any `.md` below a `references/` directory as a reference at any depth.
 Link to a sibling in the same folder by bare filename; a bridge to another _topic_ stays a backticked slug and never a link.
+
+**A pointer that gates something a reader can get wrong states the consequence, not the ownership.**
+_`custom-tools` owns the tool list_ says who to ask; it does not say what happens to a reader who does not ask, which is how an accurate pointer stops nobody.
 
 ## Guarded local-source access
 
