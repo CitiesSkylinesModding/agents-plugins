@@ -40,16 +40,33 @@ const catalogPath = `${skillsRoot}/cs2-modding-setup/references/mod-catalog.md`;
 // "Node Controller" and "Advanced Line Tool" are names a reader can only read as names.
 const ordinaryWordNames: ReadonlySet<string> = new Set(['Traffic']);
 
+// The baseline and the decompile warning are one header read by two rules, so they share this
+// pattern and both read it off the same trimmed lines -- matching one rule untrimmed and the other
+// trimmed fails a header that states its baseline correctly. `readShippedLines` owns why.
+const baselinePattern = /^Verified against game version .+\.$/u;
+
+// Fixed by the mechanics reference shape rather than chosen per file, since a mechanics reference
+// cannot be checked at all without the tree and that is the whole of what its reader loses.
+const mechanicsWarningLine = 'Without one you cannot check anything below.';
+
+// Every rule reads the whole of each file it judges, so an uncached read costs one decode per rule
+// per file on a path the pre-commit hook runs on every commit. The process is single-shot, so there
+// is no staleness window to trade for it. Declared with the constants rather than beside its reader
+// because the rules run at module top level, before a later `const` would initialize.
+const shippedFileCache = new Map<string, string>();
+
 const shippedFiles = listFilesRecursively(skillsRoot);
 
 assert.ok(shippedFiles.length > 0, `No shipped files found under ${skillsRoot}.`);
 
 checkNoModNameLeaks(shippedFiles);
 checkVersionBaselines(shippedFiles);
+checkDecompileWarnings(shippedFiles);
 checkVolatilityMarkers(shippedFiles);
 checkEvidenceMarkers(shippedFiles);
 checkPointersResolve(shippedFiles);
 checkDisclosedFilesAreReachable(shippedFiles);
+checkMechanicsProseBudget(shippedFiles);
 
 // The mods corpus is input, never output: knowledge prose states a technique on its own authority
 // and never credits the mod it was learned from. One forgetful authoring pass is all it takes to
@@ -167,7 +184,7 @@ function checkVersionBaselines(files: readonly string[]): void {
       continue;
     }
 
-    const baselines = readShippedFile(file).match(/^Verified against game version .+\.$/gmu) ?? [];
+    const baselines = readShippedLines(file).filter(line => baselinePattern.test(line));
 
     assert.equal(
       baselines.length,
@@ -176,6 +193,129 @@ function checkVersionBaselines(files: readonly string[]): void {
         `line reading "Verified against game version <version>."`
     );
   }
+}
+
+// Placement is asserted by line, not by substring. A file carrying the words anywhere at all --
+// inside a fence, below its whole body -- is a reference whose header lost its warning, which is
+// the drift this rule exists to catch, and it reads as green to every weaker test.
+//
+// The opener and the closer are asserted everywhere. Between them sits the line saying where this
+// file's own claims are checkable, which differs per file and which no pattern covers, so AGENTS.md
+// states the cases and a reader's eye is the check -- except in the mechanics family, where the
+// shape doc fixes that line to one sentence and the branch below holds it to that.
+function checkDecompileWarnings(files: readonly string[]): void {
+  // A reference opens on whichever source its own claims are checkable against, and closes on what
+  // locates that source. Almost every one is the decompile. A file whose subject ships as data or
+  // as an install artifact rather than as C# says so instead, and sends the reader somewhere the
+  // setup skill does not provision -- so the two lines move together and a variant is one pair, not
+  // two free lines. This list is the whole of what an author may write; a reference resting on a
+  // source none of these names needs a pair added here before it can pass, which is deliberate:
+  // the alternative is every author inventing a wording and the tree drifting a phrase at a time.
+  const headerVariants = [
+    {
+      opener: `**Read this with the decompile open.**`,
+      closer: '`cs2-modding-setup` provisions it.'
+    },
+    {
+      opener: `**Read this with the game's string tables open.**`,
+      closer: `They ship inside the install, which the toolchain's environment variables locate.`
+    },
+    {
+      opener: `**Read this with the game install open.**`,
+      closer: `The toolchain's environment variables locate it.`
+    }
+  ];
+
+  // The header is the baseline, a blank line, then the block: opener, the file's own cost line, the
+  // closer. Only the two fixed lines are asserted, so the offsets are what pins the middle one.
+  const openerOffset = 2;
+  const closerOffset = 4;
+
+  for (const file of files) {
+    if (!isTrunkReference(file)) {
+      continue;
+    }
+
+    const lines = readShippedLines(file);
+    const openers = lines.filter(line => headerVariants.some(each => each.opener == line));
+
+    // The accepted pairs are printed rather than merely counted: an author who reached this message
+    // wrote a wording of their own, and a message saying "one of the known variants" without naming
+    // them leaves reading this script as the only route back.
+    const acceptedPairs = headerVariants
+      .map(each => `  ${each.opener}\n    ${each.closer}`)
+      .join('\n');
+
+    assert.equal(
+      openers.length,
+      1,
+      `${file} carries ${openers.length} warning openers on a line of their own; every reference ` +
+        `under the trunk skill opens its warning block exactly once, on one of:\n${acceptedPairs}`
+    );
+
+    const variant = headerVariants.find(each => each.opener == openers[0]);
+
+    assert.ok(variant != null, `${file} opens its warning block on no known variant.`);
+
+    // CheckVersionBaselines runs first and has already rejected a reference carrying no baseline,
+    // and both rules read the same pattern off the same trimmed lines, so this is never -1.
+    const baselineLine = lines.findIndex(line => baselinePattern.test(line));
+
+    assert.equal(
+      lines.indexOf(variant.opener),
+      baselineLine + openerOffset,
+      `${file} states its warning block somewhere other than one blank line under its version ` +
+        `baseline, so a reader arriving by a link into this file may never meet it.`
+    );
+
+    // The closer is matched against the opener's own variant, so a file cannot tell a reader to
+    // open one source and then route them to what locates a different one.
+    assert.equal(
+      lines.indexOf(variant.closer),
+      baselineLine + closerOffset,
+      `${file} closes its warning block with something other than "${variant.closer}" on the ` +
+        `second line under the opener, leaving a reader no route to the source it names.`
+    );
+
+    // Last, so a file missing its closer is told that rather than told its middle line is wrong.
+    const middleLine = lines[baselineLine + openerOffset + 1] ?? '';
+
+    // The mechanics family is the one place this line is not a judgement: the shape doc fixes it to
+    // one sentence, because it is true of every file in the family. Left unasserted it is the line
+    // a first author copies from the nearest technique sibling, shipping "the technique holds
+    // without one" into a file that cannot be checked without one -- the borrowed sentence the
+    // contract names, arriving by the one route a green run would never show.
+    if (isMechanicsReference(file)) {
+      assert.equal(
+        middleLine,
+        mechanicsWarningLine,
+        `${file} states "${middleLine}" between its warning block's opener and closer; every ` +
+          `mechanics reference states "${mechanicsWarningLine}" there, which the mechanics ` +
+          `reference shape fixes for the whole family.`
+      );
+
+      continue;
+    }
+
+    // Everywhere else, whether that line is right for this file is a reader's judgement; whether
+    // there is one at all is not, and a blank there satisfies both offsets above.
+    assert.ok(
+      middleLine.length > 0,
+      `${file} leaves the line between its decompile warning's opener and closer empty; that ` +
+        `line is where the file states what a reader without the source loses.`
+    );
+  }
+}
+
+// Every reference under the trunk skill, rather than the two families it happens to hold today: a
+// third family added below it would otherwise be exempt from the warning rule while the run stayed
+// green. The other skills' references are correctly out of scope -- the rule is the trunk's.
+function isTrunkReference(file: string): boolean {
+  return isReference(file) && file.startsWith(`${skillsRoot}/cs2-modding/references/`);
+}
+
+function isMechanicsReference(file: string): boolean {
+  return isReference(file) && file.includes('/references/mechanics/');
 }
 
 // Volatile claims are found by grepping the marker, and that grep is the maintenance checklist for
@@ -306,12 +446,146 @@ function checkDisclosedFilesAreReachable(files: readonly string[]): void {
         `A reference is a folder whose entry file repeats the topic name.`
     );
 
+    // Fenced content is dropped first, so a link shown inside a worked example does not pass as the
+    // link a reader follows. An entry file illustrating the disclosure convention is the ordinary
+    // way to write one, and it satisfies the grammar below while leaving the sibling unreachable.
+    const entry = stripFencedBlocks(readShippedFile(entryFile));
+
+    // Reported here rather than left to the budget rule, which sees only the mechanics family and
+    // runs after this one. An unclosed fence drops every line below it out of the text searched, so
+    // without this the next assertion tells the author to write a link they already wrote and names
+    // the real defect nowhere.
     assert.ok(
-      linkToPattern(path.basename(file)).test(readShippedFile(entryFile)),
+      !entry.hasUnclosedFence,
+      `${entryFile} leaves a code fence unclosed, so everything below it reads as fenced and no ` +
+        `link in it can be found. Close the fence.`
+    );
+
+    assert.ok(
+      linkToPattern(path.basename(file)).test(entry.lines.join('\n')),
       `${file} is disclosed into a reference folder and ${entryFile} never links to it, so no ` +
         `reader arrives. Link it by bare filename, or fold it back into the entry file.`
     );
   }
+}
+
+// A mechanics reference orients rather than explains, and the failure it is written against is
+// length: review catches a wrong sentence and never asks whether the file is too long. Prose is the
+// part that over-produces, so the budget counts prose alone -- a map table and a pseudo-code
+// listing cost nothing against it and grow as far as the topic needs.
+//
+// Warn then fail, because density is a judgement the maintainer owns: a topic genuinely worth
+// seventy lines says so in the check output, while one at the ceiling has stopped orienting.
+function checkMechanicsProseBudget(files: readonly string[]): void {
+  const warnAt = 60;
+  const failAt = 100;
+  const questions: string[] = [];
+
+  let violation: string | undefined;
+
+  for (const file of files) {
+    if (!isMechanicsReference(file)) {
+      continue;
+    }
+
+    const prose = countProseLines(readShippedFile(file));
+
+    if (prose == null) {
+      violation ??=
+        `${file} leaves a code fence unclosed, so every line below it escapes this budget ` +
+        `entirely. Close the fence.`;
+    } else if (prose > failAt) {
+      violation ??=
+        `${file} carries ${prose} prose lines against a ceiling of ${failAt}. A mechanics ` +
+        `reference maps and routes: disclose a section into a sibling rather than growing it.`;
+    } else if (prose > warnAt) {
+      questions.push(
+        `${file} carries ${prose} prose lines, over the ${warnAt}-line budget. Is the topic this ` +
+          `dense, or is a section explaining what the reader could read for themselves?`
+      );
+    }
+  }
+
+  // Printed before the assertion, so a run that fails on one file still hands back every question
+  // it raised about the others.
+  for (const question of questions) {
+    console.warn(`WARNING: ${question}`);
+  }
+
+  assert.ok(violation == null, violation);
+}
+
+// Not blank, not a heading, not a table row, not inside a fence: what is left is the prose a reader
+// has to be told. Fenced content is dropped rather than matched line by line, since a listing's own
+// lines would otherwise count against a budget the listing is exempt from -- which is also why an
+// unclosed fence returns undefined rather than a count: it exempts the whole tail of the file, so
+// the cheapest way to silence this budget is a typo the author never sees.
+function countProseLines(content: string): number | undefined {
+  const { lines, hasUnclosedFence } = stripFencedBlocks(content);
+
+  if (hasUnclosedFence) {
+    return undefined;
+  }
+
+  return lines.filter(line => {
+    const trimmed = line.trim();
+
+    return trimmed.length > 0 && !trimmed.startsWith('#') && !trimmed.startsWith('|');
+  }).length;
+}
+
+// CommonMark closes a fence only on the character it was opened with, and only on a run at least as
+// long, so a fence line of the other character or of a shorter run is ordinary content. Tracking
+// which marker opened is what lets a listing hold a fenced example: a single boolean toggle closes
+// the listing on its first inner fence, counts the remainder as prose, and where the strays are odd
+// runs off the end of the file reporting an unclosed fence in a file whose fences all balance.
+//
+// Two readers need this. The prose budget drops fenced lines so a listing costs nothing against it,
+// and the reachability rule drops them so a link written inside an example does not read as a link
+// a reader can follow -- the case its own link grammar was written to defeat and cannot see.
+function stripFencedBlocks(content: string): UnfencedLines {
+  const lines: string[] = [];
+
+  let openFence: string | undefined;
+
+  for (const line of content.split('\n')) {
+    // Three spaces of indent at most: four or more make an indented code block, whose content is
+    // literal and opens no fence, so trimming first lets an indented example swallow the file.
+    const match = /^ {0,3}(?<fence>`{3,}|~{3,})(?<info>.*)$/u.exec(line);
+    const fence = match?.groups?.fence;
+
+    if (fence != null) {
+      if (openFence == null) {
+        openFence = fence;
+        continue;
+      }
+
+      // A closing fence carries no info string and repeats the opener's character at least as far,
+      // so ```csharp inside an open block is content rather than the closer -- which is how a
+      // nested example is written, and the shape doc teaches nested examples as this family's own
+      // convention. A run is one repeated character, so startsWith is the same-marker test.
+      const isCloser =
+        (match?.groups?.info ?? '').trim().length == 0 &&
+        fence.startsWith(openFence.charAt(0)) &&
+        fence.length >= openFence.length;
+
+      if (isCloser) {
+        openFence = undefined;
+        continue;
+      }
+    }
+
+    if (openFence == null) {
+      lines.push(line);
+    }
+  }
+
+  return { lines, hasUnclosedFence: openFence != null };
+}
+
+interface UnfencedLines {
+  readonly lines: readonly string[];
+  readonly hasUnclosedFence: boolean;
 }
 
 // The link grammar rather than a substring, for two reasons a substring gets wrong: a bare prose
@@ -369,5 +643,26 @@ function listFilesRecursively(relativeDir: string): string[] {
 }
 
 function readShippedFile(relativePath: string): string {
-  return readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  const cached = shippedFileCache.get(relativePath);
+
+  if (cached != null) {
+    return cached;
+  }
+
+  const content = readFileSync(path.join(repoRoot, relativePath), 'utf8');
+
+  shippedFileCache.set(relativePath, content);
+
+  return content;
+}
+
+// Trailing whitespace only. Two trailing spaces are Markdown's hard line break, so an author
+// reaches for them in a header of several lines and an untrimmed comparison reports a line that is
+// present and correctly placed as one that is missing. Leading whitespace stays, because it is what
+// separates a header line from the same words indented in a list item or a fence lower down:
+// discarding it lets a rule anchor on an example in the body and blame the header for it.
+function readShippedLines(relativePath: string): readonly string[] {
+  return readShippedFile(relativePath)
+    .split(/\r?\n/u)
+    .map(line => line.trimEnd());
 }
