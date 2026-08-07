@@ -2,7 +2,7 @@
 
 The first stage of the `cs2-modding` pipeline, and the only one that keeps its citations.
 A discovery agent owns one topic across the sources in [`../SOURCES.md`](../SOURCES.md) and lands one research file here.
-An authoring agent then reads that one file, without the sources, and writes the shipped reference from it.
+An authoring agent then reads that one file — beside the decompiled game where the topic is a mechanics one, and never the mod corpus either way — and writes the shipped reference from it.
 
 **Read `../SOURCES.md` before you start.**
 It names every source, what each is authoritative for and how to reach it, and it carries the precedence rule your verdicts turn on.
@@ -53,6 +53,7 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   The maintainer writes it, not you: your part is the evidence they rule on.
   It restates the decision and what the reference owes because of it, rather than pointing back at the entry, since the authoring agent reads this file and never `conflicts.md`.
   It sits at the finding rather than in a section of its own, so the passage it governs cannot be authored without it.
+  A ruling that governs every finding in the file sits under the baseline instead, stating that reach.
 - **What rots**, opening with `Rots:` on the claim it qualifies.
   Flag each claim you judge version-volatile — component and system names, field names, save-format versions, UI module paths, raycast masks — naming what to re-check and the path to re-check it against.
   The author of the reference turns these into its shipped volatility markers, and cannot otherwise tell which claim is architecture and which is a field name that moved.
@@ -79,7 +80,7 @@ State it as the opinion it is, and leave it out of the verdicts.
 
 ## The boundary travels with the file
 
-The authoring agent reads one research file and no source, which is what keeps a mod name out of shipped prose.
+The authoring agent works from one research file — beside the decompile for a mechanics topic, and never the mod corpus, which is what keeps a mod name out of shipped prose.
 That leaves it without the one thing a research file never states: where the topic stops.
 
 So hand it the boundary and the questions alongside the file, and judge the shipped reference against them rather than against the file alone.

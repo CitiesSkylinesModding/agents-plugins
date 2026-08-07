@@ -34,6 +34,8 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 
 ## Open
 
+## Ruled
+
 ### A pre-launch balance page whose values are stale and whose schema is not
 
 **Sources.** `Service building data test` (https://cs2.paradoxwikis.com/Service_building_data_test) is unlinked from the rest of the wiki and was last edited 2 August 2023, before the game shipped.
@@ -67,7 +69,62 @@ They are listed by name rather than by a rule, because the rule would have to be
 A later decomposition that renames or splits one of them leaves a stale name here, which is a visible problem; a rule nobody can resolve is not.
 The 2026-08-03 amendment does not change the question and adds one option to it: a reference that wants the page's convenience can instead be pointed at first-party numbers, at one of the two costs above. Whether that is worth asking of seven topics is the same judgement, better informed.
 
-## Ruled
+**Ruling (2026-08-06, ticket 22).** No mechanics reference borrows this page's columns, and none borrows a wiki stat table's numbers at all. First-party or nothing, for all seven topics.
+
+What settles it is not the staleness the entry was opened on but the mixture. Checked against the live singletons, some of the `Citizens` page's money rows were current and some were stale, and nothing on the page marks which is which.
+A table that is uniformly stale is the safer artifact, because a reader distrusts all of it. A table where half the rows are current teaches a reader to trust the other half.
+
+So the page is a lead generator and never a shipped citation. `docs/SOURCES.md` entry 10 already says that about the wiki for internals; this ruling is that sentence applied to stat tables specifically.
+
+The cost is accepted and named here, because the six topics that follow inherit it rather than re-deciding it. For `citizens-and-households` every number was one component read from a running game. For the others the offline route splits by where a prefab ships, as this entry's own amendment establishes: a content pack's is a loose `.Prefab` entry in a plain zip, readable by field name with a small reader, while a base-game one sits in `Cities2_Data/resources.assets` behind the Unity serialized-file parser. First-party or nothing therefore commits every remaining mechanics pass to a running game, to that parser, or to the zip route where the subject is a content pack's — and the zip route is the cheap one, so check it before recording a number as unreachable.
+
+What a reference does _instead_ of borrowing is ruled in the entry below. The two are one decision: it names where the number lives rather than what the number is.
+
+### A mechanics number that only a running game can state, and that another mod may have already changed
+
+**Sources.** Every reference this plugin has shipped states its numbers from artifacts a reader can open with the game closed — decompiled C#, the install's own files, the toolchain's targets. The `citizens-and-households` pass is the first whose load-bearing numbers are none of those.
+The balance of this whole area lives in prefab singletons rather than in code: wages and benefits on `EconomyParameterData` (`src/Game/Game.Prefabs/EconomyParameterData.cs:13-33`), every happiness magnitude on `CitizenHappinessParameterData` (`src/Game/Game.Prefabs/CitizenHappinessParameterData.cs`), birth and divorce rates on `CitizenParametersData` (`src/Game/Game.Prefabs/CitizenParametersData.cs:8-33`), school-entry probabilities on `EducationParameterData` (`src/Game/Game.Prefabs/EducationParameterData.cs:6-15`), trip priorities on `TripPriorityParametersData` (`src/Game/Game.Prefabs/TripPriorityParametersData.cs:9-37`), school fees on `ServiceFeeParameterData` (`src/Game/Game.Prefabs/ServiceFeeParameterData.cs:16-20`).
+The decompiled C# declares the field and never its value.
+
+**Established.** The values are first-party and were read at 1.6.0f1, and the route that produced them is the only cheap one.
+Reading each singleton through the sibling Unity plugin against the user's running city returned, among others: wages 1500/1800/2100/2400/2700, family allowance 600, pension 1800, unemployment benefit 900, residential minimum earnings 1400, commuter multiplier 1.1; happiness tax multipliers −0.4/−1/−2/−4/−5 by education level, homelessness −10/−10, death penalty −10 health and −20 wellbeing, unemployment penalty 35 per day capped at 70; base birth rate 0.02 with a 0.08 partner bonus; high-school entry 0.75 for a teen and 0.10 for an adult; trip priorities 192 home / 96 work / 64 shopping against a base max cost of 8000; education fees 25/50/100 with basic education flagged **not player-adjustable**.
+That last flag is the shape of the problem in one field: `FeeParameters.m_Adjustable` (`src/Game/Game.Prefabs/FeeParameters.cs:12`) is a `bool` no static read in this pipeline can resolve, and it changes what a reader may build.
+The offline alternative is real and expensive: these are base-game prefabs in `Cities2_Data/resources.assets`, and `docs/SOURCES.md` entry 5 states what reading one costs and names the running game as the shorter road.
+What is equally established is that the values are **mutable at load by any mod**. `ruzbeh0/Time2Work` registers parameter-rewriting systems that overwrite these components after prefab initialisation — not in a band between two phases, which the registration API cannot express; see the correction in `citizens-and-households.md` — `DemandParameterUpdaterSystem`, `TimeSettingsMultiplierSystem` and `HealthEventProbabilityScalerSystem` each registered into two phases at `Time2Work/NightShift/Mod.cs:154-159`, and `EconomyParameterUpdaterSystem` on a `GameSimulation` interval at `:143` — and overwrites `EconomyParameterData` in place. A reader running that mod, or several others like it, has different numbers in memory from the ones above, and nothing in the game marks them as changed.
+**The game itself does the same thing**, which is the half that does not depend on a load order. `GameModeSystem` runs `RestoreDefaultData` then `ApplyMode` on every load, eight of the eleven parameter components this topic reads have a mode class under `Game.Prefabs.Modes` that rebuilds them field by field, and live at 1.6.0f1 `EasyMode` carries 21 mode prefabs against `NormalMode`'s zero. Which of them a given save applies is authored asset data, so no code read detects it.
+What could not be established is how many published mods do this; the Paradox cache would give a prevalence figure and was not read.
+
+**Needs a ruling on.** Whether a shipped mechanics reference may state a prefab-singleton value as a number, and in what form.
+Three options and each costs something.
+State them plainly, as the reference states a C# constant: the reader gets the figures the topic is unusable without — an agent cannot reason about the education-to-wage ladder or the happiness budget without them — and the plugin is asserting numbers no reader can re-check offline and that a mod in the reader's own load order may have already replaced.
+State none of them and name only the component and field: every claim stays re-checkable, and the reference degrades into a field index for a topic whose whole content is balance, which is the failure the seven-topic entry above is already circling.
+State them with the read recipe attached — the component, the field, and "read the singleton in your own game to confirm": honest, and it puts a procedure into every mechanics reference that carries a number, which is a shape no reference here uses and which the setup skill would normally own.
+What turns on it is larger than this topic. Six other mechanics topics sit on the same kind of data, so whichever form is chosen becomes the house style for every balance number the plugin ever ships, and the mutability half has no precedent at all: this would be the first shipped claim whose truth depends on what else the reader has installed.
+The ruling goes into the research file of every mechanics topic, listed by name as the entry above lists its seven: `citizens-and-households`, `zoning-buildings-and-land-value`, `economy-and-companies`, `utilities-and-flow-networks`, `city-services-and-coverage`, `roads-and-traffic`, `transportation-and-vehicles`, `environment-and-pollution`, `city-state-and-progression` and `simulation-time-and-units`.
+A rule instead of a list would not reach them: a discovery agent can only decide whether its topic states a prefab value after it has done the research, which is after it has recorded the numbers.
+
+**Ruling (2026-08-06, ticket 22).** The second option. A shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude.
+
+Ruled first as "prefab-singleton", against the topic that raised it, and widened the same day: balance also lives on per-prefab components — a school's capacity, a hospital's treatment bonus, a crime's probability — which rot at the same rate and which a mod overwrites as easily, and `citizens-and-households` had withheld those too. The narrow word would have forbidden a figure at the area level and licensed the same figure one level down. [ADR 0004](../adr/0004-a-mechanics-reference-names-the-component-not-the-balance-value.md) is the durable record; what follows is the reasoning it was made on.
+
+The ground is rot rate rather than re-checkability. Balance is the fastest-moving thing in this game, so a baked balance number is the claim in this plugin most likely to be wrong first — and wrong silently, since nothing distinguishes a figure read at 1.6.0f1 from a current one. The mutability half compounds it rather than founding it: a reader running a mod that rewrites `EconomyParameterData` at load has different numbers in memory, and so does one who simply picked a different game mode, since eight of these eleven components have a mode class able to rebuild them field by field and `GameModeSystem` applies a mode on every load. How far that reaches is authored asset data rather than code, so it varies by save and cannot be read statically — the point here is only that the numbers move underneath a reader without the game marking any of them as changed.
+
+**This is a substitution, not a subtraction, and a reference that reads as a field index has misread it.** Three things are untouched, and they are the spine of a mechanics topic:
+
+- **C# constants ship, as numbers.** A value compiled into the decompiled source is first-party, offline-checkable and citable to a line. This topic's life-stage thresholds are static methods rather than prefab data, so they ship.
+- **Formulas ship whole.** The expression a system evaluates, its baseline, its step functions and the shape of its random walk are invariant structure rather than balance — a wage formula ships even though the wages it reads do not — and they are what an agent needs to reason at all.
+- **The map ships, and it is the constructive half of the ruling.** Which parameter component owns which family of numbers is a mechanism table by the plugin's own bulk-against-mechanism test: an agent cannot perform the read without it. The reference hands the reader the lookup in place of the number.
+
+For a parameter singleton the read machinery needs no new prose: `ecs-in-this-game` already ships `GetSingleton<T>` as the game's entire use of `SystemAPI`, and a mechanics reference bridges there and stops. (`prefabs-and-assets`' `GetSingletonPrefab<T>(EntityQuery)` is a different call returning the prefab object, and is not the route to a parameter component.)
+For anything else the map carries the access shape beside the component, because a reader cannot write the call from a field name: a buffer on a singleton entity, a per-prefab component behind an enableable gate, and a lookup through an instance's `PrefabRef` are three different reads, and getting one wrong fails silently rather than at compile time.
+
+Two consequences:
+
+**A derived ratio is a magnitude wearing a mechanism's clothes.** "A tax rise costs a highly educated citizen 12.5 times what it costs an uneducated one" is arithmetic over five singleton values, and it rots the moment either end moves. Where the ratio is the point, the reference states the direction — the multiplier rises with education level — and names the field. An adverb carrying the same magnitude counts: "far more" is the ratio in prose.
+
+**A non-numeric prefab value is still a prefab value.** `FeeParameters.m_Adjustable` is a `bool` deciding whether a fee is player-adjustable at all, and it changes what a reader may build. It does not ship as a fact about basic education. It ships as the field to check before building against a fee, with the reason to check it.
+
+This is the house style for every balance number the plugin ships.
 
 ### A mod that deletes another mod's data has one worked example and one worked refusal
 
@@ -353,12 +410,14 @@ The ruling goes into the research file for `custom-tools`, and touches nothing e
 **Ruling (2026-08-02, ticket 12).** The third option, in `custom-tools`: the restrained form is the default the reference teaches, and index 0 ships as an exception bound to the cooperative gate.
 A tool takes the slot of the one tool it must precede, read back with `tools.IndexOf(...)`, rather than the front of the list.
 
-The cost the question attached to that option dissolves on the evidence the same pass produced: it objected that a reader has to know which vanilla tool they must precede, and the vanilla list order is a readable eleven-name registration table (`SystemOrder.cs:699-709`) the reference bakes anyway.
+The cost the question attached to that option dissolves on the evidence the same pass produced: it objected that a reader has to know which vanilla tool they must precede, and the restrained form needs only that tool's type — the slot is read back live with `tools.IndexOf(...)`, so no list order is required. (Corrected by the addendum below.)
 Index 0 stays teachable for the case it exists for — claiming a prefab kind a vanilla tool already claims — with the gate stated as its condition rather than as advice: return `true` from `TrySetPrefab` only while already active, which is what both mods actually sitting there do, and which is why they cost the tools behind them nothing.
 
 The ruling also settles the timing question rather than answering it, and that is the reason to prefer it over the other two.
 A position stated relative to a tool does not need to win a race: a mod inserting at index 0 after you does not stop you preceding the object tool, so the reference ships `OnCreate` and says why no later hook is needed.
 Teaching `OnGameLoadingComplete` would have been teaching an agent to beat other mods to the front, and the first two tools written from that instruction fight each other.
+
+**Addendum (2026-08-08, review-gate certifying pass).** The ruling stands; the evidence sentence carrying its cost-dissolution did not. The vanilla tool list is not a registration order: `ToolBaseSystem.OnCreate` appends each tool to `ToolSystem.tools` as it is constructed (`ToolBaseSystem.cs:315`), and `SystemOrder.cs:699-709` registers the eleven vanilla tools into `ToolUpdate` without deciding where any lands in that list — so there was no vanilla order to bake, and `custom-tools` bakes none. The objection dissolves harder rather than reviving: the restrained form names a tool type and reads its slot back with `tools.IndexOf(...)`, needing no list order at all, while front-of-list insertion is the form with nothing stable under it. The premise sentence above was corrected in place to read as current.
 
 ### A job interface the toolchain supports, the game never uses, and one mod in twenty proves works
 
