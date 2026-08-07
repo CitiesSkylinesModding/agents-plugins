@@ -180,13 +180,15 @@ Source: [ruzbeh0/Time2Work](https://github.com/ruzbeh0/Time2Work)
 
 **Demonstrates:** Substitution at the largest scale here: roughly a dozen vanilla simulation systems disabled and replaced.
 Reimplementing the game's time model, deriving ticks per day from the vanilla constant scaled by a factor, which is where to look for how the simulation's time units actually work.
-The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval, which is what puts a fork on the same simulation frames as the original.
+The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval.
+Read the `cs2-modding` skill's `mod-lifecycle-and-ordering` reference before copying the pattern, because the offset does not transfer.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A serializable component for per-citizen state whose deserializer wraps its reads in a catch that cannot fire on the size mismatch it is written for.
 A system save section whose read is gated on one of the game's own save-format tags while its write is unconditional, which is the coupling hazard rather than a pattern to copy.
 Carries the game's own generated type-handle struct into each fork and refreshes every handle by hand at the top of the update, which is what a forked system must do once the source generator is no longer writing that code for it.
 Replacing one branch of a vanilla job-scheduling method from a prefix — a private target resolved by explicit signature, the type handles and lookups the vanilla method would have refreshed rebuilt by hand, and the substitute job's handle returned rather than completed, so the caller's temporary allocations outlive the work.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
+Retuning the game's balance without editing a prefab asset, by overwriting parameter components in place once prefab initialization has written them — some systems registered into two phases by two calls so they run inside the load and save pipelines as well, and one rewriting a per-prefab component rather than a singleton.
 
 ## Prefabs and assets from code
 
@@ -274,6 +276,7 @@ Read-only; it changes no rules.
 Reading simulation state cheaply: a job gated on whether the panel is visible, with an update interval so the query runs only every few hundred ticks — on its simulation-phase systems, since an interval on a UI-phase system does nothing, and this source carries examples of both.
 Replacing the game's own JSON binding output by returning false from a prefix, when the vanilla writer truncates what the panel needs.
 The corpus's only source-generated per-entity job, which is the proof that the Entities source generators the official toolchain ships do work in a mod project.
+A read-only census over the citizen population, naming the component set a demographic query needs and applying the moved-in, tourist, commuter and dead exclusions by hand rather than calling the predicates the game exports.
 
 ### Recolor
 
