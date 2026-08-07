@@ -7,6 +7,7 @@ symptoms:
   - 'a claim reads "the only repository that does X" and four of them do X'
   - 'a claim reads "every call is an extend or an append" and the most common call is neither'
   - 'a grep of the decompiled source returns no hits for something the game plainly does'
+  - 'a claim reads "written once and nothing ever writes it back" and a whole directory writes it'
 tags: [research, decompile, grep, over-reach, verification, false-absence, corpus, census]
 updated: 2026-08-06
 ---
@@ -64,6 +65,17 @@ Five distinct mechanisms, which is why fixing one instance taught nothing about 
   again. The call site names the _operation_; the receiver is whatever the caller happened to bind
   it to, so pinning the receiver measures naming conventions rather than behaviour.
 
+- **A pattern requiring the type name and the write verb together.** A sweep for
+  `SetComponentData|SetSingleton|AddComponentData` **near each of eleven component type names**
+  returned one write each, and `mod-lifecycle-and-ordering` shipped "written exactly once, and
+  nothing ever writes it back" with a placement rule resting on it. Eight of the eleven are rebuilt
+  on load by `Game.Prefabs.Modes`, where the write reads
+  `entityManager.SetComponentData(singletonEntity, componentData)` — the component's type appears on
+  the `GetComponentData<T>` line above it and never on the write itself, so the two halves of the
+  pattern are true in the same file and never on the same line. A grep for the bare type name over
+  that directory finds all of them. This got past the verify stage as well as the finders, because
+  the verifier was handed the finder's pattern rather than the finder's question.
+
 ## Fix
 
 The `navigating-the-decompile` reference owns what to do about each of these, under "What an empty
@@ -87,3 +99,8 @@ got the same answer.
 So record the reach beside the result, and re-sweep by varying the pattern rather than repeating it.
 Where a search names a symbol the caller chooses — a receiver, an alias, an import name — it can
 only ever bound the claim to that spelling, and the honest sentence says so.
+
+A conjunction is the shape to distrust most: a pattern joining a type name to an operation assumes
+they meet on one line, and a read-modify-write puts them three lines apart. Search for each half
+separately and intersect the files, rather than the lines. The verify stage is no guardrail against
+this one, for the reason the plugin's `AGENTS.md` already gives.
