@@ -8,6 +8,10 @@
           {
             "type": "command",
             "command": "mise exec bun -- bun \"$CLAUDE_PROJECT_DIR/.agents/hooks/check-line-length.ts\" --extensions ts,cs --suppressions \"oxlint-disable|@ts-expect-error|#pragma warning|ReSharper disable|SuppressMessage\""
+          },
+          {
+            "type": "command",
+            "command": "mise exec bun -- bun \"$CLAUDE_PROJECT_DIR/scripts/hook-skill-content.ts\""
           }
         ]
       }
