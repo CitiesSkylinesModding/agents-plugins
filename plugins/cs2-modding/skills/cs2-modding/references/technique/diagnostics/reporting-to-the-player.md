@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The two surfaces a mod uses to say something went wrong, and the traps in each.
 Whether a failure reaches the player _without_ being asked to is in [diagnostics.md](diagnostics.md).
 

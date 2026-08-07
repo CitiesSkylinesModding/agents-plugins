@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the game install open.**
+Every signal below is a string in a log, a config file or a shipped binary, and reading them is the whole of this technique.
+The toolchain's environment variables locate it.
+
 Whether a debugger can attach at all, read from the logs and from the install.
 Applying the patch is the setup skill's `debug-patching` reference; getting a Burst-compiled job into the debugger once attached is `performance-and-memory`.
 

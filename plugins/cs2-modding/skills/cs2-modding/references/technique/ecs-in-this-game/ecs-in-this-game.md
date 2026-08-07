@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How to write ECS code that reads like the rest of this codebase.
 Stock Entities practice and this game's practice diverge in several places, and each divergence below is a thing an agent arriving from a tutorial gets wrong.
 
@@ -11,19 +15,17 @@ Both take their declaration rules from here.
 
 ## The five component kinds, and how unevenly the game uses them
 
-| Kind                    | Where it appears                                                                  |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `IComponentData`        | Everywhere. Over a thousand game types; the default choice.                       |
-| `IBufferElementData`    | Common. A variable-length list owned by one entity.                               |
-| `ISharedComponentData`  | **Five** game types, one of them load-bearing. A mod rarely needs to declare one. |
-| `IEnableableComponent`  | **Twelve** game types, listed below, two of which change what your query means.   |
-| `ICleanupComponentData` | **Zero** game types. The engine honours it; the game never reaches for it.        |
-
-The two small rows are the finding.
+| Kind                    | Where it appears                                                                |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `IComponentData`        | Everywhere. Over a thousand game types; the default choice.                     |
+| `IBufferElementData`    | Common. A variable-length list owned by one entity.                             |
+| `ISharedComponentData`  | **A handful** of game types; the simulation's bucketing is the one a mod meets. |
+| `IEnableableComponent`  | **Uncommon**, and some of them change what your query means.                    |
+| `ICleanupComponentData` | Honoured by the engine, and not the game's own cleanup idiom — see below.       |
 
 **A shared component's value lives once per chunk, not once per entity**, so every distinct value is a distinct set of chunks.
 That is the whole reason to declare one and the whole reason to be careful: a shared component with many values shatters an archetype into many part-full chunks.
-The game takes that trade exactly once, for simulation bucketing (below).
+The game takes that trade sparingly.
 
 **A cleanup component survives `DestroyEntity`.**
 The entity moves into a residue archetype holding only the cleanup components and an internal marker, and dies for real only once you remove the cleanup component.
@@ -59,7 +61,8 @@ So a mod that wants a component on every instance of a prefab overrides `GetArch
 Neither needs a system.
 
 Archetypes built this way are cached on the prefab-data components and read from inside a job through a `ComponentLookup`, which is how a job spawns a fully-formed instance without touching the `EntityManager`.
-(VOLATILE: the prefab-data types that cache an archetype — `ArchetypeData`, `ObjectData`, `NetData`, `NetLaneArchetypeData` — and the `Created`/`Updated` seeding; the prefab archetype refresh.)
+
+(VOLATILE: the two contribution signatures and the seeded components above — `ComponentBase` and `PrefabBase`; the unconditional `Created`/`Updated` pair — the vanilla prefab system; the instance-archetype refresh — the `RefreshArchetype` overrides, `ArchetypePrefab` and `ObjectPrefab` among them.)
 
 **`EntityManager.CreateArchetype` called directly** is, in the overwhelming majority of the game's several hundred call sites, a one-shot **event archetype**: two or three types, built in `OnCreate`, stashed in an `EntityArchetype` field, and spawned from inside a job through a command buffer.
 
@@ -80,14 +83,17 @@ That 128 is why the per-chunk enabled mask is a `v128` — two 64-bit words, one
 Three chunk operations show up in code a mod writes:
 
 - **`chunk.GetNativeArray(ref handle)`** — the workhorse, returning a `NativeArray<T>` that aliases the chunk's storage and has length `chunk.Count`.
-  When the component is not in the chunk's archetype it returns a **length-zero array rather than throwing**, which is what makes an optional-component read safe and an unguarded index read a silent out-of-bounds.
+  When the component is not in the chunk's archetype it returns a **length-zero array rather than throwing**, which is what makes an optional-component read safe.
+  Nothing signals the mistake at the call: the returned array wraps a null pointer and the shipped indexer bounds-checks nothing, so the fault lands on the read rather than on the call that handed it back.
   Pair it with `chunk.Has` or check `.Length` before indexing.
 - **`chunk.Has(ref handle)`** — a presence test that branches once per chunk instead of once per entity.
 - **`chunk.GetSharedComponent(handle)`** — reads the chunk's single shared value.
 
-**The game's one real shared component is `UpdateFrame`**, a single `uint` index that partitions simulated entities into sixteen buckets so each pass touches a sixteenth of them.
-The index comes from the prefab's update-group data and is written through a command buffer's `SetSharedComponent`; at load, entities are seeded round-robin across the sixteen.
-Two ways to consume it, and both appear in vanilla:
+**The shared component a mod meets is `UpdateFrame`**, a single `uint` index that partitions simulated entities into buckets so each pass touches a fraction of them.
+**The bucket count is per-family rather than a constant**, and the index has an authored path and an assigned one.
+A prefab that declares `UpdateFrameData` — on the prefab class, or through a component type attached under its component menu — pins its instances' index outright; everything else `UpdateGroupSystem` load-balances into the least-loaded bucket of its family, with further writers assigning one at request creation and when an old save is migrated.
+**A prefab you add that declares no `UpdateFrameData`, and inherits none from the base you derived from, therefore takes a load-balanced index**, which is how a new prefab lands outside the buckets a gated vanilla system actually visits, so it is never served and nothing is logged.
+Two ways to skip on it, and both appear in vanilla:
 
 ```csharp
 // Filter the query, so only matching chunks are visited at all.
@@ -100,9 +106,11 @@ if (chunk.GetSharedComponent(m_UpdateFrameType).m_Index != m_UpdateFrameIndex)
 }
 ```
 
-A fork of a vanilla per-frame system inherits whichever the original used, and copying the in-job test verbatim is correct.
+**Neither form says where the index or the bucket count comes from, and a fork that guesses either runs at a fraction of the vanilla rate or never runs at all, with nothing logged.**
+Read [update-frame-buckets.md](update-frame-buckets.md) before forking a system that partitions on it, or before adding a prefab to a family a gated vanilla system serves — it carries both the read and the gated-bucket failure above.
 What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
-(VOLATILE: the five shared-component type names, `UpdateFrame`, `UpdateFrameData.m_UpdateGroupIndex`, the sixteen-bucket count and the 128-entity chunk maximum — the `ISharedComponentData` implementors, and the chunk constants.)
+
+(VOLATILE: the 128-entity chunk maximum — the chunk constants. `UpdateFrame`'s field name and the load-balancing assignment — `UpdateGroupSystem` and its group arrays. The authored path — `UpdateFrameData`. The request-creation and save-migration writers — `ServiceRequestSystem` and `RequiredComponentSystem`.)
 
 ## The query APIs, and what decides between them
 
@@ -144,7 +152,7 @@ Then the small rules:
 `RequireAnyForUpdate(params EntityQuery[])` decomposes the queries you pass and rebuilds them into a single OR query, and is the only way to express "run if either matches".
 
 **The gate tests the query ignoring its filter.**
-A query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set, so a system gated on a per-bucket query runs on every pass and does nothing on fifteen passes out of sixteen.
+A query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set, so a system gated on a per-bucket query runs on every pass and does nothing on all but one bucket's worth of them.
 That is by design and the game relies on it; it is only a surprise if you expected the gate to save the update.
 
 ## Jobs: write per-entity, read per-chunk
@@ -262,25 +270,33 @@ The game only bothers where the query names an enableable component; everywhere 
 `new ChunkEntityEnumerator()` leaves the entity count at zero, so `NextEntityIndex` returns false on the very first call and the loop body never runs — no exception, no warning, just a job that silently does nothing.
 Always pass all three arguments.
 
-## Enableable components: twelve, and two of them narrow your query
+## Enableable components: a bit flip, and a filter you did not write
 
 Toggling an enableable component is a bit flip rather than an archetype move, which is the entire reason to declare one.
 
-The twelve game types: `HasJobSeeker`, `PropertySeeker`, `Arrived`, `BicycleOwner`, `CarKeeper`, `CrimeVictim`, `MailSender`, `Decoration`, `Locked`, `NotificationIconDisplayData`, `PrefabData`, and `CustomMeshColor` — the last being the only enableable buffer in the game.
-
 **A query naming an enableable component matches only entities where it is enabled**, unless the query carries `EntityQueryOptions.IgnoreComponentEnabledState`.
-Two of the twelve make that bite:
+So a query is narrower than it reads whenever one of its components is enableable, and whether a given one is costs a single read — the interface list on that component's own declaration.
+A buffer element can carry `IEnableableComponent` the same way, which is what the enabled-buffer helpers below exist for.
+Some enableable components carry a disabled state a reader would never guess from the name:
 
 - **`PrefabData` disabled means "obsolete prefab".** The loader disables it on prefabs a save references but the current install no longer has, and the prefab system uses its enabled state as the "does this prefab still exist" test when writing a save. So `WithAll<PrefabData>()` gives you live prefabs only — almost always what you want, but it is a filter you did not write, and it explains a prefab count that does not match the installed mod list.
-- **`Locked` disabled means "unlocked".** Unlocking is `SetComponentEnabled<Locked>(entity, false)`, so a progression query on `WithAll<Locked>()` silently returns only what is _still_ locked. `city-state-and-progression` depends on this.
+- **`Locked` disabled means "unlocked".** So a progression query on `WithAll<Locked>()` silently returns only what is _still_ locked, and unlocking is not the bit flip that implies. `city-state-and-progression` depends on this.
 
-Toggle from a job through the command buffer:
+Toggle from a job through the command buffer, as the vanilla aging system does at the child-to-teen transition:
 
 ```csharp
 m_CommandBuffer.SetComponentEnabled<BicycleOwner>(unfilteredChunkIndex, citizen, true);
 ```
 
-(VOLATILE: this list of twelve — the `IEnableableComponent` implementors across the game assembly. The set has grown across versions, and one of its members reached vanilla only after mods had shipped their own component of the same name.)
+**Unlocking is not that call.**
+`Locked` is flipped on the main thread through the `EntityManager`, inside the unlock system, which also raises the `Unlock` event that the UI, achievement and prefab-requirement systems query.
+The milestone systems are what _raise_ that event rather than watch it, so reaching for one to observe an unlock finds no subscription.
+So unlock by creating an event entity on the archetype the game builds — `CreateArchetype(ComponentType.ReadWrite<Game.Common.Event>(), ComponentType.ReadWrite<Unlock>())` in `OnCreate` — setting `new Unlock(prefabEntity)` on it, and letting the unlock system do the flip.
+An event created from the archetype alone carries `Entity.Null` as its prefab, which the unlock system skips without a log line.
+**`Game.Common.Event` is what puts the entity in the destroy set**, so one carrying `Unlock` alone is processed and then never destroyed, re-matching every consumer's query for the rest of the session.
+Flipping the bit yourself leaves all of them unnotified, with nothing logged.
+
+(VOLATILE: what a disabled `PrefabData` and a disabled `Locked` mean — the prefab system and the loader for the first, the unlock system for the second.)
 
 ## Command buffers: twelve named barriers, and one contract
 
@@ -382,7 +398,7 @@ Three consequences a mod needs:
 - `Applied` — added by the tool apply systems when a preview becomes real.
 - `EffectsUpdated` and `PathfindUpdated` — narrow, for visual effects and for lane pathfinding parameters respectively.
 
-**Four more tags are not frame-scoped and never pass through the cleanup pair:**
+**These tags are not frame-scoped and never pass through the cleanup pair:**
 
 - `Overridden` — this object conflicts with another object or network but is not deleted. Persists across a save; raycasting and lane generation both skip overridden geometry.
 - `Native` — marks map-native content. Persists.
@@ -395,7 +411,7 @@ The tool pipeline works entirely on `Temp` copies, and the apply systems read `m
 **Nearly every game query excludes it**, and `None = { Deleted, Temp }` is the canonical pair: a query that forgets it will see the player's uncommitted hover preview as a real building.
 `Hidden` is its sibling for the same reason.
 
-(VOLATILE: all fourteen tag type names above, the six-member type set the cleanup system strips, and `Temp`'s field names — the common and tools namespaces.)
+(VOLATILE: the type set the cleanup system strips — that system's own query. The tag type names above and `Temp`'s field names — each tag's own declaration.)
 
 ## Declaring components of your own
 
@@ -452,7 +468,7 @@ public struct MyPloppedMarker : IComponentData, IQueryTypeParameter, IEmptySeria
 Implementing neither and rebuilding the component on load is the cheaper and safer default: a component in a save is a compatibility obligation forever.
 The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to `save-serialization`, and you want it before the first release, not after.
 
-(VOLATILE: the serializer selection above and the two game types that opt out of persisting enabled state — the component serializer library.)
+(VOLATILE: the serializer selection above — the component serializer library.)
 
 ## The helper extensions the game already ships
 
@@ -479,7 +495,7 @@ Reach for them before writing your own.
 Every mechanics reference sits on top of this one.
 `citizens-and-households` exercises it most directly, since the citizen aging system is the canonical shape: a query excluding `Deleted` and `Temp`, a buffer handle walked per chunk, a scattered-write lookup, and `EndFrameBarrier` used to add, remove and toggle components.
 `zoning-buildings-and-land-value` and `city-services-and-coverage` need the `BatchesUpdated` rule most, because both are about things the player looks at.
-`roads-and-traffic` needs `Owner` and `Temp` more than any other area, plus the enableable-buffer case.
+`roads-and-traffic` needs `Owner` and `Temp` more than any other area.
 `city-state-and-progression` needs the `Locked` trap.
-`simulation-time-and-units` owns the frequency half of the bucketing whose chunk half is above.
+`simulation-time-and-units` owns what a bucket is worth in simulated time; the buckets themselves are [update-frame-buckets.md](update-frame-buckets.md)'s.
 `economy-and-companies`, `utilities-and-flow-networks`, `transportation-and-vehicles` and `environment-and-pollution` each need the query, job and barrier material without needing anything unique from it.

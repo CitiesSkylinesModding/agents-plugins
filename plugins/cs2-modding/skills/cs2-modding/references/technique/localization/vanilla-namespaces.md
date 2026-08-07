@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the game's string tables open.**
+The counts below are taken from those tables and the decompile carries none of them; `localization` owns the C# behind a key lookup.
+They ship inside the install, which the toolchain's environment variables locate.
+
 The lookup behind `localization`'s reuse section: every group the game's own shipped strings occupy, and how many keys each one holds.
 
 Each row is a **group**: the segment before the first dot.

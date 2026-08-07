@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How to change the behaviour of code you did not write, when the game offers no seam for the change you want.
 
 Adding code of your own — a system, a phase registration, a fork of a vanilla system — is `mod-lifecycle-and-ordering`, and it is what you should be doing instead most of the time.

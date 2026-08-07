@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 What a mod does about the other mods loaded beside it: surviving what it shares with them, finding out they are there, offering them something, reaching into their data, composing a patch or a UI registration with theirs, holding up when the player changes the mod set mid-session, and telling the player when none of that worked.
 Helping a player pick or troubleshoot their own mod list is not this plugin's subject; everything below is code a mod ships.
 

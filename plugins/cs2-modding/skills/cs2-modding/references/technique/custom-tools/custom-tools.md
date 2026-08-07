@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How to build a tool that behaves like a vanilla one: it claims the cursor, previews what it would do, and commits on click.
 
 What a tool ultimately emits — the creation definitions the game turns into entities — is `placement-definitions`, and a mod that only wants to change _what_ an existing tool places rewrites those definitions instead of writing a tool at all.
@@ -13,6 +17,7 @@ What a tool ultimately emits — the creation definitions the game turns into en
 `ToolBaseSystem` is abstract, derives from `GameSystemBase`, implements `IEquatable<ToolBaseSystem>`, and is what every tool derives from.
 `ObjectToolBaseSystem` is the only intermediate abstract class the game ships.
 The game has eleven concrete tools — nine directly under `ToolBaseSystem`, plus the object tool and the upgrade tool under the heavier base — and the rest of the tools namespace is the consumer half: the apply and generate system families, validation, the clear and apply dispatchers, and the components and enums everything below names.
+(VOLATILE: the number of vanilla tools and the split between the two base classes — the vanilla tool registrations in the game's system-order class for the count, and the tool classes' own declarations in the tools namespace for the split.)
 
 **What the heavier base adds is exactly one protected helper.**
 `CreateDefinitions(...)` takes 23 parameters, schedules the game's own definition job wired with some seventy component and buffer lookups, and emits `CreationDefinition` and `ObjectDefinition` entities through `ToolOutputBarrier` — sub-objects, sub-nets, sub-lanes, sub-areas, placeholder resolution and attachment included.
@@ -125,9 +130,7 @@ The mode icon path the UI synthesises is `"Media/Tools/" + toolID + "/" + modeNa
 
 `ToolSystem.ActivatePrefabTool(PrefabBase)` walks `tools` in order, stops at the first tool whose `TrySetPrefab` returns `true` and makes it active; when nobody claims the prefab it falls back to the default tool and returns `false`.
 That single loop is the entire meaning of the ordering: **index 0 gets first refusal on every prefab the toolbar hands out.**
-A mod tool appended from `OnLoad` lands at index 11 and never sees a prefab first.
-
-(VOLATILE: the number of vanilla tools, which is both the count the base-class section above splits and the index a mod tool's own append lands at — the vanilla tool registrations in the game's system-order class.)
+A mod tool appended from `OnLoad` lands behind every tool already constructed and so never sees a prefab first.
 
 **`GetPrefab()` and `TrySetPrefab(PrefabBase)` are abstract**, alongside `toolID`, so every tool answers both even when the answers are "nothing" and "no".
 A tool reached only from a mod's own UI or a hotkey returns `null` and `false` unconditionally, and then costs the toolbar nothing wherever it sits.
@@ -136,7 +139,7 @@ A tool reached only from a mod's own UI or a hotkey returns `null` and `false` u
 Pass it the tool system's current `activePrefab` again to force the walk to re-run after a setting changed what your `TrySetPrefab` would answer; pass a prefab chosen in your own UI to let the list decide who takes it; pass `null` to fall through to the default tool deliberately.
 
 Only a tool that must claim a prefab kind a vanilla tool already claims has to contend for a position at all.
-That is its own procedure — the vanilla order, the reinsertion recipe and the gate that makes the front of the list safe: [contending for a prefab from the toolbar](toolbar-position.md).
+That is its own procedure — why the order is a live list rather than a fixed one, the reinsertion recipe, and the gate that makes the front of the list safe: [contending for a prefab from the toolbar](toolbar-position.md).
 
 ## The raycast: what the vanilla masks can see
 

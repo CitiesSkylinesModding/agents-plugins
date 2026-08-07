@@ -25,9 +25,10 @@ New plugins get a sibling directory and an entry in both marketplace files.
 
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
 - `.mcp.json` (root): LOCAL DEV ONLY, wiring both MCP servers for sessions in this repo (gameface from its committed bundle, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
-- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI).
+- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI). `hook-skill-content.ts` is a PostToolUse hook spawning the shipped-prose lint on any edit under that plugin's `skills/`, so a broken warning block, link or marker fails at the edit rather than at the commit; it adds no rule of its own.
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint and oxfmt ignore `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
+- `docs/mechanics-reference-shape.md`: the form every `cs2-modding` mechanics reference takes, disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches it. `check-skill-content.ts` enforces its prose-line budget.
 - `docs/SOURCES.md`: every source the `cs2-modding` pipeline may read, what each settles, and how to locate it. Other files point at it; keep it pointing at as few as possible.
 - `docs/research/`: the `cs2-modding` pipeline's cited stage, sitting outside `plugins/` so none of it ships. Its `README.md` holds the conventions a research file satisfies; nothing under `plugins/` may reference it or `SOURCES.md`, and `check-skill-content.ts` fails any shipped link resolving outside the plugin directory, since existence alone passes one that works here and dead-ends for every installed user.
 
@@ -88,6 +89,7 @@ Five stores, checked in this order when writing something down:
 3. **`docs/solutions/`**: expensive investigations with dead ends, one file per problem, loaded on demand through a pointer placed where the problem bites.
 4. **`docs/adr/`**: why a choice was made, one record per decision.
 5. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
+   An `AGENTS.md` may disclose a contract only one branch of work reaches into a `docs/` file of its own, pointed at from the rule it elaborates — `docs/mechanics-reference-shape.md` is the one that does.
 
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
 
@@ -95,10 +97,13 @@ Propose updates whenever you detect drift.
 
 `.scratch/` is working material and gitignored, so nothing tracked may cite a path inside it — a pointer from `docs/` or from a plugin into a scratch file dangles the moment the feature closes and its folder goes. Move the fact into one of the five stores instead.
 For the same reason a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
+Such a sweep edits what it finds there: a live spec and its tickets are the instructions the next authoring pass runs on, so one still teaching a rule a decision has retired is a defect like any other, and a review that parks it as out of scope leaves the sweep half done.
+A sweep correcting shipped `cs2-modding` prose covers `docs/research/` too: those files are the next authoring pass's inputs, and a retired teaching surviving there walks straight back into the reference.
 
 Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).
 Load the `writing-for-agents` skill and hold the edit to it before writing any of them.
 In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Citizen`) rather than the reference target's own, and claim verification against no named game: an example teaches a shape, while a real name invites an agent to try it on a game that never had it.
+Cite a checklist item by quoting its phrase, never its ordinal — an insertion silently renumbers every positional cite.
 
 ## Preferred agent behavior
 

@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How a mod offers something other mods can call without either side taking a compile-time reference on the other.
 `mod-compatibility` owns why that reference is never taken.
 

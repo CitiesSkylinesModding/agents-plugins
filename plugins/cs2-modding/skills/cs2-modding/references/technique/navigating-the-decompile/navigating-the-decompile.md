@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+Every route below is a search over that tree, so without one there is nothing here to run.
+`cs2-modding-setup` provisions it.
+
 How to find a type, a system, a component, a binding or a string in a decompiled tree of tens of thousands of C# files — and what a search that comes back empty is actually worth.
 
 This is the re-check path: every claim in every other reference here is a claim about the game, and confirming one against the installed version means running one of the routes below.

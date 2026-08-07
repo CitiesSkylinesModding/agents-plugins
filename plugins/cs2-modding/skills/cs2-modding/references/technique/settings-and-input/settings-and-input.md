@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The player-facing configuration surface: the page a mod adds to the options screen, the file that page persists to, and the input actions declared beside it.
 One class carries all three, and one string derived from the mod type ties them together.
 

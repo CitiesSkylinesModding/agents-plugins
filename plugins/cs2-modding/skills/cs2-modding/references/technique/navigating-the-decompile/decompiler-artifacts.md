@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+Every artifact below is a property of that tree, so without one there is nothing here to tell apart.
+`cs2-modding-setup` provisions it.
+
 Everything the decompiler left behind that is not in the game's original source, so a reader can tell machinery from meaning.
 The three that make a reader _wrong_ are stated in `navigating-the-decompile` itself and not repeated here; this page is everything else, plus the version decoy worked out in full, since that is the one of the three with a real answer sitting next to it.
 

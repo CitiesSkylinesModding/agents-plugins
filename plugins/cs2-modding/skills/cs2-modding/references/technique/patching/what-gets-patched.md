@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The vanilla surfaces mods were found patching, grouped by the kind of seam that is missing.
 `patching` owns the discipline; this file is the lookup.
 

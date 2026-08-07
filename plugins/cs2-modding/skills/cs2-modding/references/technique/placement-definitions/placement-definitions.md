@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The seam between a tool and the world.
 A tool never mutates the city: it creates an entity describing what should happen — a **definition** — and a generation system in a later phase of the same frame does the work.
 Everything the placed thing ends up carrying is derived from that definition plus the prefab entity it names, with nothing carried over from the tool, which is why rewriting a definition in flight is enough to change what the game builds.
@@ -236,28 +240,29 @@ Both forms depend on the synchronous-playback rule above: a removal or a destruc
 
 ## Definitions are not a tool-only mechanism, and that is why `Permanent` exists
 
-Several systems outside the tools namespace produce definitions, all of them with `CreationFlags.Permanent`:
+A tool's definition is a preview that the player may still cancel; a `Permanent` one is a commitment the emitter has already made, and the flag is what separates them.
+**Test `CreationFlags.Permanent` rather than the producing namespace**, which discriminates nothing: the simulation emits `Permanent` definitions and so does at least one system in the tools namespace, the one handling upgrades on deleted buildings.
+
+Producers worth knowing, because each shows a different shape:
 
 - the building-construction system emits one per sub-area and per sub-net of a building that has finished construction, with `m_Owner` set to the building;
 - the zone-spawn system emits `Permanent | Construction` for a growable it is about to spawn, and plain `Permanent` for that building's sub-areas and sub-nets;
-- the area-spawn system matches it for areas;
-- the prefab-replacement system emits `Permanent` definitions when swapping a prefab under existing instances;
 - the placeholder system resolves a placeholder into a concrete variation with `Permanent | Native` during deserialization.
 
-**They run in a different phase from the tools, and that is what makes the one-frame lifetime work.**
+**A producer in the simulation phases gets the one-frame lifetime for free**, which is the other half of why `Permanent` is worth recognising.
 `GameSimulation` is driven from `LateUpdate`, after the frame's modification phases have already run, so a definition the simulation emits in frame _N_ is consumed at `Modification1` of frame _N+1_, still carrying `Updated`.
 The `Deleted` baked into its spawn archetype then has the cleanup system destroy it at the end of that frame: exactly one consumption, and no sweep needed.
 
 So a mod that wants to change what **grows** on a lot has a seam here that has nothing to do with any tool, and a definition rewriter that does not exclude `Deleted` will find these definitions in its query.
 
-Two systems **read** definitions rather than producing them, and both make a hand-built definition look right for free.
+Definitions are also **read** rather than produced, and a reader makes a hand-built definition look right for free.
 The guide-lines system, at `Rendering`, queries `All = {CreationDefinition}` with `Any = {NetCourse, WaypointDefinition, Zoning, Game.Areas.Node, ObjectDefinition}` and draws the placement guides and distance labels.
 The net-course tooltip system, at `UITooltip`, queries `{CreationDefinition, NetCourse}` and shows the length and elevation readout.
 A mod tool that emits a well-formed `NetCourse` definition gets both without writing a line of UI.
 
 The serialization clear pass lists `CreationDefinition` among the component types whose entities are destroyed on load, which is the statement that a definition never survives a save.
 
-(VOLATILE: the set of systems outside the tools namespace that produce definitions, and the phase each runs in — the simulation, prefabs and objects namespaces.)
+(VOLATILE: the flags and the phase each named producer and reader uses — each named system's own declaration.)
 
 ## Who destroys a definition
 

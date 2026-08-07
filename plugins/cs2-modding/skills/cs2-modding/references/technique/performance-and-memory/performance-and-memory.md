@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 Not leaking, and not stalling.
 Writing the job itself belongs to `ecs-in-this-game`; this reference owns what the job's memory costs and what its scheduling has to respect.
 
@@ -104,7 +108,7 @@ It builds a dispose job carrying the raw buffer pointer and the allocator label,
 The free happens on a worker thread after the reading job finishes.
 Every stock container has this overload.
 
-**Several of the game's own containers do not have it**, and for those the discipline is complete-then-dispose; [`colossal-collections.md`](colossal-collections.md) names which.
+**Most of the game's own containers do not have it**, and for those the discipline is complete-then-dispose; [`colossal-collections.md`](colossal-collections.md) names the two that do.
 `Complete()` is a main-thread stall until the job finishes, which is acceptable at teardown because teardown happens once per process — and it is the only option those types leave you.
 Complete **every** outstanding handle before disposing: the vanilla object search system makes four `Complete()` calls to guard two `Dispose()` calls, one per reader and writer handle per tree.
 
@@ -323,7 +327,7 @@ It tests the query **ignoring your filter**, so a query narrowed with `SetShared
 
 **The chunk-level early exit inside the job body is the finest-grained form**, and is what the simulation actually runs on: one shared-component read rejects a whole chunk's worth of entities.
 A per-entity job cannot express it — that is one of the three things holding the chunk buys you, per `ecs-in-this-game` — so a per-entity job wanting the same throttle pushes the test into the query as a shared-component filter before scheduling instead.
-The buckets themselves belong to `simulation-time-and-units`.
+`ecs-in-this-game`'s bucketing sibling owns which index and which count to filter on — guessing either runs the job at the wrong cadence or on nothing, with nothing logged; what that cadence is worth in simulated time is `simulation-time-and-units`.
 
 ## Burst: what it costs at debug time, and how to gate it
 

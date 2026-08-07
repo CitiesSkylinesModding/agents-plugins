@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The constructor parameters and field defaults behind the attribute groups in the entry file, and the table the reflection engine dispatches on — what you read once you have chosen an attribute and are writing it.
 Which attribute does which job, and every trap in the set, is the grouped listing in the entry file.
 

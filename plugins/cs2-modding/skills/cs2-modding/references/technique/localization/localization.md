@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 Producing text the game will display: the dictionary source a mod registers, the keys it writes, and the strategies for shipping those strings.
 
 Where that text appears belongs to other references.

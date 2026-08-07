@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The asset database a mod loads content through, and the resource scheme it serves its own files over.
 The prefab layer above both is [prefabs and assets](prefabs-and-assets.md).
 

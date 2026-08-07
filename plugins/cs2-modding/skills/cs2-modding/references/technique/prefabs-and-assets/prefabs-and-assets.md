@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How to find, edit, clone, synthesise and register the game's data-driven content from code, and how to get your own files in front of the game.
 
 Authoring the content itself — meshes, textures, surfaces, maps, editor scenes — is out of scope; the database calls that _store and retrieve_ that content are in.
@@ -59,25 +63,18 @@ Four hook families exist across the prefab namespace, each with a different cons
 
 **2. `GetArchetypeComponents` populates the instance archetype — and nothing consumes it directly.**
 `PrefabBase` seeds it with `PrefabRef` alone.
-The set is materialised by a `RefreshArchetype` method called from `LateInitialize`, and **six independent `RefreshArchetype` families exist, each writing the resulting `EntityArchetype` into a different prefab-data component**:
+The set is materialised from `LateInitialize` — through a `RefreshArchetype` method on some bases, inline on the others — and each writes the resulting `EntityArchetype` into a prefab-data component — `ObjectPrefab` into `ObjectData.m_Archetype`, and so on.
+Every one of them adds `Created` and `Updated` to the archetype unconditionally.
+A subclass may override its parent's, and the building override is the instructive one: it adds `InstalledUpgrade`, a sub-net buffer and a sub-route buffer, but only when the prefab entity already carries a `BuildingUpgradeElement` buffer, so the same prefab class yields two different instance archetypes depending on prefab-entity state at refresh time.
+**One method may write more than one archetype**: the train override writes the object archetype, the stopped archetype and both controller archetypes.
+So read the whole of the `RefreshArchetype` that runs for your base rather than stopping at the first write — patch one where it writes several, and the instances carrying the others stay on the unpatched archetype.
+Some bases declare no `RefreshArchetype` at all and build their archetypes inline — the net prefab among them — so start from your base's own `LateInitialize` and follow where it goes, rather than searching for the method name.
 
-| Prefab base class        | Destination                        |
-| ------------------------ | ---------------------------------- |
-| `ArchetypePrefab`        | `ArchetypeData.m_Archetype`        |
-| `ObjectPrefab`           | `ObjectData.m_Archetype`           |
-| `BrushPrefab`            | `BrushData.m_Archetype`            |
-| `ChirpPrefab`            | `ChirpData.m_Archetype`            |
-| `EventPrefab`            | `EventData.m_Archetype`            |
-| `NotificationIconPrefab` | `NotificationIconData.m_Archetype` |
-
-All six derive straight from `PrefabBase` and all six add `Created` and `Updated` to the archetype unconditionally.
-Three subclasses override the object one — the building, moving-object and train prefabs.
-The building override is the instructive one: it adds `InstalledUpgrade`, a sub-net buffer and a sub-route buffer, but only when the prefab entity already carries a `BuildingUpgradeElement` buffer, so the same prefab class yields two different instance archetypes depending on prefab-entity state at refresh time.
-
-**The net prefab is the exception worth knowing, because it calls the hook twice with different seeds.**
-Its `LateInitialize` builds two sets, one pre-seeded with `Node` and one with `Edge`, runs every component's `GetArchetypeComponents` against both, and writes `NetData.m_NodeArchetype` and `NetData.m_EdgeArchetype`.
-Its own override then _reads the set it was handed_ and branches, adding `ConnectedEdge` when `Node` is present and `ConnectedNode` when `Edge` is.
-So `GetArchetypeComponents` is not a pure emit: the contents of the set at call time carry meaning, and an override may be invoked more than once per prefab with different contents.
+**A prefab may run the hook several times with different seeds**, so the contents of the set at call time carry meaning.
+The net prefab builds two, one pre-seeded with `Node` and one with `Edge`, and writes `NetData.m_NodeArchetype` and `NetData.m_EdgeArchetype` — from its `LateInitialize` directly, since it declares no `RefreshArchetype`.
+Others run more passes and seed them differently — count them in the method your own base runs.
+Some then _read the set they were handed_ and branch — the net one adds `ConnectedEdge` when `Node` is present and `ConnectedNode` when `Edge` is, and the vehicle ones test `Moving`, `Stopped` and `LayoutElement` — while others contribute the same components to every pass, the lane prefab among them.
+So `GetArchetypeComponents` is not a pure emit, and adding unconditionally lands your component on every archetype the hook builds — which is what vanilla wants for some of its own and gates for others.
 
 **3. `IServiceUpgrade.GetUpgradeComponents` declares what an upgrade contributes to its _host_ building** rather than to the upgrade's own entity.
 The workplace component shows the shape: its `GetArchetypeComponents` adds `WorkProvider` and `Employee` only when the component is _not_ a service upgrade, and its `GetUpgradeComponents` adds the same pair whenever the workplace count is non-zero.
@@ -88,10 +85,10 @@ The prefab machinery never calls these: the spawnable- and signature-building co
 **So a growable building's archetype is partly decided by the zone prefab it belongs to and by its level**, not only by its own components — see `zoning-buildings-and-land-value`.
 
 Overriding either of the first two is the whole mechanism for putting a component of your own on every prefab entity or on every instance, and it needs no system.
-Call `base` first, then add.
+Call `base` first, then add — and where the archetype hook runs more than once, test the set you were handed before adding, as the vanilla vehicle components do.
 An authoring component whose two overrides are both **empty** is a supported and useful shape: it contributes nothing to the ECS and exists purely as a managed marker you test with `prefab.Has<T>()`, which is exactly what the vanilla obsolete-identifiers component is.
 
-(VOLATILE: the six `RefreshArchetype` destinations and their component names, and `NetData.m_NodeArchetype` / `m_EdgeArchetype` — the prefab namespace, where `void Get[A-Za-z]*Components\(HashSet<ComponentType>` finds them.)
+(VOLATILE: which prefab bases build an archetype, how many seeds each runs, and where each writes what it built — each prefab base's own `LateInitialize` and whatever `RefreshArchetype` it calls.)
 
 ## What `PrefabSystem` exposes for lookup
 

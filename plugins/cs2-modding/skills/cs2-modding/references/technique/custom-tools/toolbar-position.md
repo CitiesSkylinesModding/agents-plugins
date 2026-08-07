@@ -2,32 +2,19 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 Read this when your tool must claim a prefab kind a vanilla tool already claims.
 A tool reached from a mod's own UI or a hotkey needs none of it: `custom-tools` states the walk and the `null`/`false` answer that keeps such a tool out of the contest.
 
 The list is built by append, not by registration: the tool base class adds each tool to `ToolSystem.tools` from its own `OnCreate`, so the order is the order the systems are _constructed_ in.
 That is not the order they are registered in, because constructing one system pulls in every system it resolves — the default tool is appended before any other, since the tool system creates it from its own `OnCreate`.
-The vanilla list runs:
+**So there is no vanilla order to hold, only a live list to read.**
+A tool appended from `OnLoad` lands behind every tool already constructed and never sees a prefab first, and any mod constructing one early shifts everything after it.
 
-| Index | Tool                  |
-| ----- | --------------------- |
-| 0     | `DefaultToolSystem`   |
-| 1     | `SelectionToolSystem` |
-| 2     | `ObjectToolSystem`    |
-| 3     | `AreaToolSystem`      |
-| 4     | `UpgradeToolSystem`   |
-| 5     | `BulldozeToolSystem`  |
-| 6     | `NetToolSystem`       |
-| 7     | `RouteToolSystem`     |
-| 8     | `ZoneToolSystem`      |
-| 9     | `WaterToolSystem`     |
-| 10    | `TerrainToolSystem`   |
-
-A mod tool appended from `OnLoad` lands at index 11 and never sees a prefab first.
-
-Read the order back at runtime rather than trusting the table, since it falls out of construction order and any mod constructing a tool early shifts it.
-
-(VOLATILE: the eleven tool system names and their order, and `ToolSystem.tools` being a mutable `List<ToolBaseSystem>` rather than a read-only view — the tool base class's `OnCreate` append and the tool system's list property, with the live list as the only place the resulting order is stated.)
+(VOLATILE: `ToolSystem.tools` being a mutable `List<ToolBaseSystem>` rather than a read-only view — the tool system's list property, and the tool base class's `OnCreate` append.)
 
 **Take the slot of the one tool you must precede, rather than the front of the list.**
 Read the position back and reinsert at it, from `OnCreate`, immediately after the base has appended you:
@@ -47,7 +34,7 @@ protected override void OnCreate()
 A position stated relative to another tool needs no race to win, and that is why `OnCreate` is the right hook: another mod inserting itself at index 0 later does not stop you preceding the object tool.
 
 **Index 0 is the answer to one question, and it ships bound to its condition.**
-Reach for the front when your tool must claim a prefab kind a vanilla tool already claims — and then return `true` from `TrySetPrefab` only while your tool is already active:
+Reach for the front only when no single vanilla tool can be named as the one to precede — the prefab kind is claimed by more than one, or by a tool you cannot identify — and then return `true` from `TrySetPrefab` only while your tool is already active:
 
 ```csharp
 public override bool TrySetPrefab(PrefabBase prefab)

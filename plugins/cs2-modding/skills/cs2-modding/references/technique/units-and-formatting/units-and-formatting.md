@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The C# types below are checkable there; the frontend behaviour is not, and its ground truth is the game's own UI bundle.
+`cs2-modding-setup` provisions it.
+
 Rendering a quantity in the player's own units: the unit string a value carries, the formatters that unit selects, and the three interface preferences those formatters branch on.
 
 The ground truth here is the game's own frontend bundle rather than the localization manager, and the reader need not be shipping translations at all.

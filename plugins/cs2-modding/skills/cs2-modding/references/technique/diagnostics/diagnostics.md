@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 Finding out why a mod is not working: which file to open first, what each line proves, and what the player sees when something fails.
 Fixing what the diagnosis found belongs to whichever reference owns the mechanism.
 

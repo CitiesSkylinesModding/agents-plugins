@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 The global names two mods can both claim, what each does on the collision, and what keeps it quiet.
 None of them arbitrates, and only the prefab-id collision leaves so much as a log line.
 

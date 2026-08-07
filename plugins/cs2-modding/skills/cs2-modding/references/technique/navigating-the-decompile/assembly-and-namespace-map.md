@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The map below is of that tree's own directories, so without one there is nothing here to navigate.
+`cs2-modding-setup` provisions it.
+
 Which namespace directory owns a subject, and how big each one is in the only sense that changes what you do: whether you can read it whole or have to search inside it.
 Reach for it when you are deciding what to open and what to exclude.
 

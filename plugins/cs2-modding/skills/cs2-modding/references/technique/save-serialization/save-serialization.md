@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How to make a mod's data survive a save, and how to keep it readable by every later build of the mod.
 
 A save is a stream of length-prefixed buffers: an uncompressed header buffer, then the component type table, the system type table, one buffer per archetype, and one buffer per system serializer, all ZStd-compressed.
@@ -60,8 +64,8 @@ Two modifiers ride on top:
 
 - **`ISerializeAsEnabled`** means _do not persist the enabled bit_.
   The type serializes as if it were not enableable and comes back enabled.
-  The game uses it on `PrefabData` and on the notification-icon display data.
-  (VOLATILE: which types declare this modifier — the `ISerializeAsEnabled` implementors across the game assembly.)
+  Vanilla declares it on very few types, `PrefabData` among them — so before assuming a vanilla component's disabled state survives a save, read that component's own interface list.
+  (VOLATILE: this modifier's effect on the written bit — the component serializer library.)
 - **`IStrideSerializable`** adds `int GetStride(Context)`.
   A non-zero stride declares the fixed byte size of one element and switches the writer into byte-plane column filtering before compression.
   What it buys is compression ratio; returning 0 disables it.

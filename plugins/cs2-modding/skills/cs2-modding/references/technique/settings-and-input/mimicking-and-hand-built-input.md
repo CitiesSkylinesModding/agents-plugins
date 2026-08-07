@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 Mimicking copies a vanilla binding's control path onto the mod's own action and keeps copying it, which is how a mod uses a button the game reserves and still follows the player's rebinds.
 It has a declarative form and an imperative one, and past both sits the hand-built map, for an input the binding attributes cannot express at all.
 A tool's own apply, secondary apply and cancel need none of this; the entry file states why, and `custom-tools` owns that path in full.

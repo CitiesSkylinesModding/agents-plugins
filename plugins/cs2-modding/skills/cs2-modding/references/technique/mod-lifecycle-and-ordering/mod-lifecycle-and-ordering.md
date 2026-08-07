@@ -2,6 +2,10 @@
 
 Verified against game version 1.6.0f1.
 
+**Read this with the decompile open.**
+The technique holds without one, but every game symbol named below is checkable only there.
+`cs2-modding-setup` provisions it.
+
 How a mod gets code running at the right moment.
 What that code does once it runs belongs to the reference for the mechanism it touches.
 
@@ -269,6 +273,10 @@ Six choices cover almost every mod, and each is a position in the tree above rat
 
 Read [the phase catalogue](phase-catalogue.md) for what characterises each of the 32 phases, which is what separates two candidates none of the six covers.
 
+**There is no window between two phases**, whatever a placement written as "after `PrefabUpdate` and before `PrefabReferences`" suggests.
+The five methods above each name exactly one phase, and `PrefabReferences` is reached only from inside `Deserialize` and `Serialize`, so it bounds nothing during play.
+Registering one system into both phases with two calls is a real technique, but it is two registrations rather than a span.
+
 ## The update interval, and the two halves of the rule
 
 A `GameSystemBase` may override `GetUpdateInterval(phase)` and `GetUpdateOffset(phase)`, defaulting to 1 and -1.
@@ -282,21 +290,28 @@ A returned interval of 10 is therefore not a slow system; it is a mod that does 
 **The interval itself is consulted in only three phases.**
 Only the overload that carries an update index reads the interval and offset, and that overload is called from exactly three places: `LoadSimulation`, `EditorSimulation` and `GameSimulation`.
 A `GetUpdateInterval` override on a system registered in any other phase — `UIUpdate`, `Cleanup`, a modification phase — **has no effect at all**, and the system runs every time its phase runs.
-The game itself ships one such dead override, and this is a common mistake: a mod that "throttles" a UI system with an interval has throttled nothing.
+The game itself ships such a dead override, and this is a common mistake: a mod that "throttles" a UI system with an interval has throttled nothing.
 
 Where a system is registered into more than one phase, branch the override on the `phase` argument rather than returning one constant.
-The vanilla systems that span phases all do this.
+That follows from the gate above rather than from vanilla practice, which is not consistent here.
 
 The mask is `(updateIndex & (interval - 1)) != offset → skip`, where the update index is the simulation frame index.
 A negative offset — the default — asks the update system to assign one, spreading same-interval systems across different frames so they do not all fire together.
-Returning an explicit offset opts out of that spreading, which is what a fork wants and almost nothing else does.
+Returning an explicit offset opts out of that spreading, and out of the inheritance an **anchored** system would otherwise get — the fork recipe below is where that matters.
+**In the three phases that honour an interval, an explicit offset must fall inside `[0, interval)`.**
+The gate compares it against the frame index masked by the interval, so a value at or above the interval can never match and the system never runs at all, with nothing logged — which is what a fork does to itself by shortening its interval and keeping an offset copied from the original.
+Elsewhere the offset is never consulted, so an out-of-range one there is inert rather than fatal, and a system that does not run has some other cause.
 
 The vanilla idiom, and the one to copy: declare `public static readonly int kUpdatesPerDay = <n>` and return `262144 / kUpdatesPerDay`, where 262144 is the number of simulation frames in an in-game day.
-A system that splits its entity set across sub-frames returns `262144 / (kUpdatesPerDay * 16)` and pairs it with the vanilla helper that computes which sub-frame the current frame belongs to.
+That 262144 is declared as `TimeSystem.kTicksPerDay`, and `navigating-the-decompile` uses this very constant to show why searching for the name finds none of its uses.
+A system that splits its entity set across sub-frames returns `262144 / (kUpdatesPerDay * groupCount)` and pairs it with `SimulationUtils.GetUpdateFrame(frameIndex, updatesPerDay, groupCount)`, which computes the sub-frame the current frame belongs to.
+**Take that group count off the system you are forking**, which varies by family; assuming a value is how a fork silently mis-covers its set, and `ecs-in-this-game`'s bucketing sibling owns where to read it and what makes it hard to see.
 What that cadence is worth in simulated time is `simulation-time-and-units`.
 
 A system the interval gate lets run has its job dependency reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a system the gate skips is not reset that iteration.
 This is where the interval interacts with `performance-and-memory`.
+
+(VOLATILE: the gate's mask arithmetic — `UpdateSystem`. Which phases honour an interval — `SimulationSystem`, whose calls into that gate are the whole list. The frames-per-day constant — `TimeSystem`. The interval and offset defaults — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The sub-frame helper's signature — `SimulationUtils`.)
 
 ## When a lifecycle hook throws
 
@@ -364,15 +379,26 @@ public void OnLoad(UpdateSystem updateSystem)
 ```
 
 The fork lands in the dead original's exact slot, and stays there if a game update moves the original within the phase.
-Pass the phase the original is registered in; the anchor is otherwise dropped in silence, as above.
+Pass the phase the original is registered in, and note what a mismatch costs here: an anchored system reaches the update list only through its anchor, so naming the wrong phase leaves the fork created, enabled and never updated at all — worse than a wrong frame, and just as quiet.
 
-Two details that bite:
+**To run on the frames the original ran on: match its interval, anchor the registration, and leave the offset alone.**
+The anchoring is what earns the third: a system registered with the two-type overload takes its anchor's **resolved** offset, which works whether the original declares one or was handed one by the spreading.
+Overriding `GetUpdateOffset` cancels that copy — any value at or above zero does, including zero — and so does returning an interval that differs from the original's.
+
+Details that bite:
 
 - `GetOrCreateSystemManaged` **creates** the system when it is missing, so a mistyped or never-registered type yields a live-but-never-updated system rather than an error.
   Reaching it through the `World` on the `OnLoad` parameter needs no extra import; the default injection world is the same object.
-- **A fork in `GameSimulation` copies the original's interval _and_ its offset**, not just the interval.
-  Matching only the interval puts the fork on a different set of simulation frames than the system it replaced, because the update system will assign it a spreading offset of its own.
-  Copying both is what makes a fork fire on exactly the frames the original did.
+- **Which anchoring overload you pick is only about position.**
+  `UpdateAfter<Fork, Original>` inherits the offset identically; the choice between the two is only about which side of the original the fork sits on.
+  Register with the single-type `UpdateAt<Fork>` instead and there is no anchor: the fork is queued for the spreading and gets an arbitrary frame, unless its interval is 1, where the offset is forced to zero and it simply runs every frame.
+  The spreading is computed per phase, so what moves that frame is another system registering into the fork's own phase, not any registration anywhere.
+  The offset the spreading actually assigned lives in the update system's own table, which nothing public reads, so an unanchored fork's frame cannot be recovered at all.
+- **Read the original's declared numbers through `UpdateSystem.GetInterval(system, phase, out interval, out offset)`**, which is public, static, and takes any `ComponentSystemBase` — where `GetUpdateOffset` is declared on `GameSystemBase` alone and does not compile against the rest.
+  **It reports what the system declares, and an offset the system never declared comes back as `-1`** — the interval defaults to 1 instead, so the two have different tells.
+  It also runs the power-of-two check, so calling it on a system with a bad interval throws in your frame rather than reporting.
+
+(VOLATILE: `GetInterval`'s signature, the five registration methods and which of them take an anchor — `UpdateSystem`.)
 
 Where a fork is the realistic change — the large simulation areas, `citizens-and-households`, `economy-and-companies`, `city-services-and-coverage` — this is the recipe those references assume.
 Where the change is a behaviour inside a method rather than a whole system, `patching` is the cheaper tool.
