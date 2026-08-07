@@ -85,6 +85,8 @@ The sibling `unity-devtools` plugin, over the Mono soft debugger.
 Settles what no static read can: live component values, real ECS query results, actual execution order, whether a patch took, the contents of any registry the game builds by reflection at startup, and the load-time context of the city currently open — including the build that wrote its save.
 Needs the game running as a debug-patched development build, which `cs2-modding-setup` provisions.
 
+**It also reaches the managed object behind a prefab entity**, which no component on that entity carries: `PrefabSystem.GetPrefab<T>` on the entity holding a data component returns the authoring `PrefabBase`, and its own fields — arrays of other prefabs among them — read directly off it. That is what answers a question like _which mode prefabs does this game mode carry_.
+
 **What it can answer depends on what the game has loaded, not only on whether it is running.**
 A question about a mod-declared surface — a serializable component, a mod's own entities, a system a mod registers — needs a mod present that declares one, and with none loaded the question looks unanswerable when it is merely unequipped.
 So name what the game must be carrying before recording a live question as unanswerable, and ask for it: the user will install any mod on request, and one from the setup skill's catalog is a minute's work.
@@ -95,7 +97,9 @@ The sibling `coherent-gameface` plugin, over a direct CDP connection to the Coht
 Settles the live DOM, computed styles, what a component actually renders, and console output from injected JavaScript.
 Needs the game running with the UI debugging port open.
 
-**Both are ordinary tools when connected.** When a call fails because the game is not running, the plugin is not installed, or the server has not started, ask the user to start what is missing rather than recording the question as unanswerable.
+**Both are ordinary tools when connected, and neither is yours to start.**
+When a call fails because the game is not running, the plugin is not installed, or the server has not started, stop the phase and ask, under the root `AGENTS.md` rule on acting on the user's running game.
+What this adds is what happens next: the phase resumes on their word rather than on a substitute, since a static read standing in for the live one, or the claim written down as unestablished, are the two ways this gets quietly skipped.
 
 ## 10. The wiki
 
