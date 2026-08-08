@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.4.0...unity-devtools-mcp-v0.5.0) (2026-08-08)
+
+
+### Performance Improvements
+
+* **unity-devtools:** stop re-asking the game what this attach already answered ([6516ec9](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6516ec99ba9f6d7f8e741c4ab9cd235eb48169ef))
+
 ## [0.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v0.3.0...unity-devtools-mcp-v0.4.0) (2026-07-30)
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v0.3.0...gameface-devtools-mcp-v0.4.0) (2026-08-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **gameface:** game_find is removed in favour of game_query, and the handles it stamps are data-gf-tag rather than data-gf-find.
+
+### Features
+
+* **gameface:** locate elements with no text by selector alone ([2ef05b5](https://github.com/CitiesSkylinesModding/agents-plugins/commit/2ef05b54f9507d337990cc3876f6be0e1b7d2df7))
+
+
+### Bug Fixes
+
+* **coherent-gameface:** stop teaching jpeg quality as the screenshot's cost knob ([9e357db](https://github.com/CitiesSkylinesModding/agents-plugins/commit/9e357db260d47ceacf291f8ae0a550a44708e3f7))
+
 ## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v0.2.0...gameface-devtools-mcp-v0.3.0) (2026-07-20)
 
 
