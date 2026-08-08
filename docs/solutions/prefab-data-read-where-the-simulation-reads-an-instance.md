@@ -1,5 +1,6 @@
 ---
 date: 2026-08-06
+updated: 2026-08-08
 area: docs/research and plugins/cs2-modding/skills (any mechanics topic whose numbers sit on buildings)
 symptoms:
   - 'a value read from a prefab is right and the simulation uses a different one'
@@ -68,6 +69,12 @@ The name is the trap, so the check is mechanical: **before citing a `*Data` comp
 the simulation consumes, look for a same-named component in the `Game.Buildings` namespace, and
 read what the consuming system's `ComponentLookup` is actually typed to.** Where both exist, the
 instance is the one that moves.
+
+**The twin can be one field of a differently named component.** `CalculateNumberOfWorkplaces` takes
+its worker count from the instance `Game.Companies.WorkProvider.m_MaxWorkers` and its complexity from
+the prefab's `WorkplaceData`, in the same expression (`WorkProviderSystem.cs:177`,
+`CountWorkplacesSystem.cs:93-94`) — a different name and namespace, so the same-name check above
+never fires, and only the per-field question does.
 
 **The twin is not always a component, and not always on a building.** `ServiceFeeParameterData`'s
 fee defaults seed the city entity's `ServiceFee` buffer once, when the city is created

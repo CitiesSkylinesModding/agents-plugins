@@ -1,5 +1,6 @@
 ---
 date: 2026-08-04
+updated: 2026-08-08
 area: docs/research (the cs2-modding discovery pipeline, against any decompile)
 symptoms:
   - 'a correction lands, and the corrected sentence is wrong again for the same reason'
@@ -75,6 +76,15 @@ claims: give the illustration its own narrow range and the count its own wide on
 The over-correction to expect here is characterising the rest of the span from the tail you
 happened to read. The same reference then shipped "the remaining 48 are UI, infoview and rendering
 systems" — audio, tool, pathfinding, buffer and tutorial systems are in there too.
+
+## The verifier variant
+
+A verifier asked to confirm a claim performs the same stop on your behalf: it finds the supporting
+line and returns CONFIRMED. A review pass verified "`Criminal` is active only while
+`m_Event != Entity.Null`" that way; the claim was wrong for the whole sentenced-to-released stretch
+(`CriminalSystem.cs:262` nulls `m_Event` at sentencing), caught only when a later verifier was asked
+to trace the full state machine and report each field's value at every stage. Brief a verifier on
+the mechanism's trace, never on the claim's confirmation.
 
 ## Prevention
 

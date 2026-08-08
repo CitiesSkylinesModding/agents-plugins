@@ -28,6 +28,7 @@ The entry file carries these sections after its warning, in this order:
 - **`## The map`** — concept to component, field and system, in a table, each row carrying the access shape the prefab-value rule requires.
   Before a row names a `*Data` component for a value the simulation consumes, read [a prefab value read where the simulation reads an instance](solutions/prefab-data-read-where-the-simulation-reads-an-instance.md): the prefab twin and the instance twin share a name, and the row that names the wrong one sends every reader after it to a number the citizens never receive.
   And before a trap or a row treats a parameter component as written once, read [retuning a parameter component the game mode rewrites](solutions/retuning-a-parameter-component-the-game-mode-rewrites.md): whether the loaded game mode rebuilds it on load is authored asset data, invisible to any code read.
+  The access-shape cell carries the read, never a writer roster.
 - **`## Traps`** — what a reader gets wrong by opening the file the map sends them to.
 - **`## Formulas`** — the expressions, transcribed from the C#.
 - **`## Mechanisms`** — the vanilla system owning each, and a link to the sibling holding its listing.
@@ -64,3 +65,4 @@ Pseudo-code rather than the decompiled C#: shipping the game's own code is the p
 **One `VOLATILE:` marker covers a file's names** — the map's components and fields, the symbols its traps and formulas name, and the `Source:` paths with them — stating the declarations they all come from.
 Every name in a mechanics file rots at the same rate and closes on the same sweep, so a marker per section restates one fact until it reads as wallpaper.
 A sibling carries its own, and `UNVERIFIED:` stays per claim.
+An edit that names a type from a new namespace is a marker edit: re-close the marker's location list against everything the file now names, in every file the pass touched.
