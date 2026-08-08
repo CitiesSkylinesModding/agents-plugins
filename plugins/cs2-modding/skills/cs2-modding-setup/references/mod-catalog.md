@@ -133,6 +133,7 @@ Taking a placement definition away from its vanilla consumer by removing the cre
 An in-engine test scenario system, debug-only.
 A build-time export of its English string table into the repository, locating the destination from the compiler's caller-file-path rather than a hard-coded developer directory.
 A mod-owned spatial index following the vanilla search systems closely: outstanding handles completed before disposal, and the tree cleared from the pre-deserialize hook and refilled on the next update through a first-load flag.
+Building and owning zone blocks outside the road network — creating cell buffers, running a fork of the vanilla cell-check pipeline after it, and managing a block's `Owner` by hand, which the vanilla spawner requires of any block it will spawn on.
 
 ### Traffic
 
@@ -171,6 +172,7 @@ Empty tag components using the engine's own serialization, so per-entity mod sta
 A deserialize-phase system that backfills entities from saves written before the mod existed.
 Reusing the game's existing "historical" flag rather than inventing a parallel lock.
 Translations as embedded per-locale CSV with its own quote-aware reader, settings keys written as a short packed prefix the loader expands into the long generated key, so a translator edits a two-column spreadsheet.
+Reversing an abandonment by hand — what level-down strips: the consumer and producer components, the market state, the building condition, and the road-edge refresh that rebuilds the utility connections.
 
 ### Realistic Trips
 

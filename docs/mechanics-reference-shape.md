@@ -29,6 +29,7 @@ The entry file carries these sections after its warning, in this order:
   A table's preamble may state the default read its rows share; a row then states its own only where it differs.
   Before a row names a `*Data` component for a value the simulation consumes, read [a prefab value read where the simulation reads an instance](solutions/prefab-data-read-where-the-simulation-reads-an-instance.md): the prefab twin and the instance twin share a name, and the row that names the wrong one sends every reader after it to a number the citizens never receive.
   And before a trap or a row treats a parameter component as written once, read [retuning a parameter component the game mode rewrites](solutions/retuning-a-parameter-component-the-game-mode-rewrites.md): whether the loaded game mode rebuilds it on load is authored asset data, invisible to any code read.
+  A prefab class's own field initializer is a Unity-serialized default the shipped asset overrides, not a C# constant: it ships as the field, never as the figure (ruled in `research/conflicts.md`; the test is what consumes the value).
   The access-shape cell carries the read, never a writer roster.
   A row whose value another topic owns carries "belongs to `<topic>`" in that cell, in place of the read or beside it where only part of the row routes — that fixed phrase is the only routing the column admits, so a lint or reader can tell the two apart.
 - **`## Traps`** — what a reader gets wrong by opening the file the map sends them to.
@@ -61,6 +62,7 @@ Those have right answers and converge in one pass, so the prose review that foll
 ## Listings
 
 **A listing is pseudo-code in a language-less fence**: the shape of the code, the real symbols, every branch that changes the result, and plain English only behind a placeholder saying so.
+The branches transcription loses are the default arms, the guards placed after the value they appear to gate, and the debug overrides that write last — check those before handing over.
 It names its source files above it and lives in its own sibling file, and a mechanism earns one where piecing it together means opening three or more of them.
 Pseudo-code rather than the decompiled C#: shipping the game's own code is the publisher's call rather than this plugin's.
 A formula two listings both model is transcribed in both: a listing models its method whole, and neither reader should need the other sibling.

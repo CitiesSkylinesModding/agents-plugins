@@ -95,6 +95,9 @@ So name what the game must be carrying before recording a live question as unans
 
 The sibling `coherent-gameface` plugin, over a direct CDP connection to the Cohtml view.
 Settles the live DOM, computed styles, what a component actually renders, and console output from injected JavaScript.
+It also reaches simulation-side data the DOM never renders: a C# value binding is readable from the page.
+`engine.on("<group>.<name>.update", cb)` followed by `engine.trigger("<group>.<name>.subscribe")` returns the binding's current payload, and the matching `.unsubscribe` trigger ends it — no click, no input, so it is not an act on the user's running game.
+The binding groups are enumerated in the reformatted UI bundle copy, and their writers are `Game.UI.*` systems in the decompile.
 Needs the game running with the UI debugging port open.
 
 **Both are ordinary tools when connected, and neither is yours to start.**
