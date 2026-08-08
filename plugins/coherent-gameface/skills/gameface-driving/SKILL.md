@@ -22,14 +22,16 @@ No reconnect ritual exists or is needed: the server re-resolves the page target 
 
 ## Finding elements
 
-Text is a durable anchor, and `game_find` is the built-in text search; the schema covers its parameters, so what follows is how to read and use it.
-Its three counts cascade: `unprunedTotal` (raw text matches), `total` (after `deepest` pruning), and `returned` (after `limit`); `total` above `returned` means the `limit` truncated, so narrow the query, while `unprunedTotal` above `total` just shows how many ancestors `deepest` pruned.
-`deepest` exists because an element's `textContent` includes its descendants': a panel and its title button both match the title, and `deepest` prunes the panel; pass `deepest: false` when you want the enclosing container (finding a panel by its title).
+`game_query` is the built-in element search; the schema covers its parameters, so what follows is how to read and use it.
+Text is the durable anchor where the UI shows it and an attribute selector is the one where it does not; `attributes: true` on a match reveals which attribute the next query should anchor on.
+Its three counts cascade: `unprunedTotal` (what the selector and text filter produced), `total` (after `deepest` pruning), and `returned` (after `limit`); `total` above `returned` means the `limit` truncated, so narrow the query, while `unprunedTotal` above `total` just shows how many ancestors `deepest` pruned.
+`deepest` exists because an element's `textContent` includes its descendants': a panel and its title button both match the title, and `deepest` prunes the panel; pass `deepest: false` when you want the enclosing container (finding a panel by its title), and note a query no text drives — a selector alone, or `text: ''` — has no such bleed to correct.
 `tag: true` handles die on the next tagging call and on any view reload; re-tag rather than reusing a stale handle.
 When a selector is non-unique but the match order is known, the input tools' `index` parameter is a lighter alternative to tagging; each tool reports `Matches: N` so you can tell whether the selector was ambiguous, and an out-of-range `index` reports the match count so you can correct it.
-For a predicate `game_find` cannot express (matching on an attribute, a sibling relation, or computed state), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
+Narrow with `game_query`, then read the one element you settled on with `game_dom`.
+For a predicate no selector can express here (computed state, or picking a parent by what its children are, since `:has()` throws), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
-In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `:not()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2); a selector-taking tool erroring that way needs a rewritten selector, not a retry.
+In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `:not()`, `:has()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2); a selector-taking tool erroring that way needs a rewritten selector, not a retry.
 
 ## Act, then verify
 

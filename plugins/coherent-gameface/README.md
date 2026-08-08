@@ -81,7 +81,7 @@ hands.
 > **Agent:** Not stuck, but no key will do it: `game_key` dispatches a real `Escape` and the
 > page's listeners fire, yet this game routes back-navigation through its native input system,
 > which no DOM event can reach. The UI's own back button must have a JS path though. I locate it
-> with `game_find`, and its handler calls an `engine.trigger` binding: the bridge the UI uses to
+> with `game_query`, and its handler calls an `engine.trigger` binding: the bridge the UI uses to
 > talk to the game. Calling that same binding from `game_eval` closes the screen, and `game_wait`
 > on the settings root disappearing confirms it. The flow now drives the binding directly, no
 > keyboard involved.

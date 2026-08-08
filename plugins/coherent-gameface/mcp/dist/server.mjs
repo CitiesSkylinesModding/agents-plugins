@@ -31012,7 +31012,7 @@ var DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30000;
 var DEFAULT_QUIESCENT_MS = 1000;
 var DEFAULT_JPEG_QUALITY = 80;
 var DEFAULT_CONSOLE_LIMIT = 50;
-var DEFAULT_FIND_LIMIT = 20;
+var DEFAULT_QUERY_LIMIT = 20;
 async function gameStatus(client, reloads) {
   const { host, port } = client.config;
   try {
@@ -31136,43 +31136,74 @@ async function gameDom(client, selector, all = false, maxHtml = 4000) {
     return toErrorResult(error51);
   }
 }
-async function gameFind(client, options) {
-  const {
-    text: needle,
-    match = "contains",
-    caseSensitive = false,
-    selector = "*",
-    deepest = true,
-    tag = false,
-    limit = DEFAULT_FIND_LIMIT
-  } = options;
+async function gameQuery(client, options) {
+  const mode = options.match ?? "contains";
+  const needle = options.text ?? null;
+  const { selector } = options;
+  const rejection = queryRejection(options, mode);
+  if (rejection != null) {
+    return errorText(rejection);
+  }
+  const args = {
+    sel: selector ?? "*",
+    needle,
+    mode,
+    caseSensitive: options.caseSensitive ?? false,
+    deepest: options.deepest ?? (needle != null && needle.length > 0),
+    tag: options.tag ?? false,
+    attributes: options.attributes ?? false,
+    limit: options.limit ?? DEFAULT_QUERY_LIMIT
+  };
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(findFn, {
-        sel: selector,
-        needle,
-        mode: match,
-        caseSensitive,
-        deepest,
-        tag,
-        limit
-      }),
+      expression: callPageFn(queryFn, args),
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Find failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Query failed: ${formatException(res.exceptionDetails)}`);
     }
     const value = res.result.value;
     if (!value) {
-      return errorText(`game_find returned no result for selector ${JSON.stringify(selector)}.`);
+      return errorText(`game_query returned no result for selector ${JSON.stringify(args.sel)}.`);
     }
     if ("error" in value) {
-      return errorText(`game_find: ${value.error}`);
+      return errorText(`game_query: ${value.error}`);
     }
-    return text(JSON.stringify({ selector, match, ...value }, null, 2));
+    const envelope = {
+      selector: args.sel,
+      match: args.needle == null ? undefined : args.mode,
+      deepest: args.deepest,
+      ...value
+    };
+    return text(JSON.stringify(envelope, null, 2));
   } catch (error51) {
     return toErrorResult(error51);
   }
+}
+function queryRejection(options, mode) {
+  const { text: needle, selector } = options;
+  if (needle == null && selector == null) {
+    return `game_query needs text, selector, or both; neither was given.`;
+  }
+  if (selector != null && selector.trim().length == 0) {
+    return `game_query: selector is blank; pass a real one.`;
+  }
+  if (mode == "equals" && needle != null && needle.trim() != needle) {
+    return import_common_tags3.oneLine`
+      game_query: equals compares against trimmed text, so trim yours; where that empties it, pass
+      '' with a selector to find elements carrying no text.
+    `;
+  }
+  if (needle == "" && mode != "equals") {
+    return import_common_tags3.oneLine`
+      game_query: empty text matches every element under ${mode}; pass match: 'equals' with a
+      selector to find elements carrying no text.
+    `;
+  }
+  if (needle == "" && selector == null) {
+    return `game_query: empty text needs a selector to scope it.`;
+  }
+  return;
 }
 async function gameClick(client, selector, index = 0) {
   try {
@@ -31592,12 +31623,12 @@ function collectDomFn(sel, all, maxHtml) {
     };
   }
 }
-function findFn(args) {
-  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+function queryFn(args) {
+  const { sel, needle, mode, caseSensitive, deepest, tag, attributes, limit } = args;
   const SNIPPET_MAX = 100;
-  const target = caseSensitive ? needle : needle.toLowerCase();
+  const target = needle == null ? "" : caseSensitive ? needle : needle.toLowerCase();
   let regex;
-  if (mode == "regex") {
+  if (needle != null && mode == "regex") {
     try {
       regex = new RegExp(needle, caseSensitive ? "" : "i");
     } catch (error51) {
@@ -31606,18 +31637,18 @@ function findFn(args) {
   }
   const found = [];
   for (const el of Array.from(document.querySelectorAll(sel))) {
-    if (matches((el.textContent || "").trim())) {
+    if (needle == null || matches((el.textContent || "").trim())) {
       found.push(el);
     }
   }
-  const kept = deepest ? found.filter((el) => !found.some((other) => other != el && el.contains(other))) : found;
+  const kept = deepest ? innermost(found) : found;
   const chosen = kept.slice(0, limit);
   if (tag) {
-    for (const stale of Array.from(document.querySelectorAll("[data-gf-find]"))) {
-      stale.removeAttribute("data-gf-find");
+    for (const stale of Array.from(document.querySelectorAll("[data-gf-tag]"))) {
+      stale.removeAttribute("data-gf-tag");
     }
     for (const [i, el] of chosen.entries()) {
-      el.setAttribute("data-gf-find", String(i + 1));
+      el.setAttribute("data-gf-tag", String(i + 1));
     }
   }
   return {
@@ -31627,6 +31658,15 @@ function findFn(args) {
     tagged: tag,
     elements: chosen.map((el, i) => describe3(el, i))
   };
+  function innermost(all) {
+    const remaining = new Set(all);
+    for (const el of all) {
+      for (let parent = el.parentElement;parent != null; parent = parent.parentElement) {
+        remaining.delete(parent);
+      }
+    }
+    return Array.from(remaining);
+  }
   function matches(raw) {
     if (mode == "regex") {
       return regex != null && regex.test(raw);
@@ -31650,8 +31690,17 @@ function findFn(args) {
       text: truncated ? raw.slice(0, SNIPPET_MAX) : raw,
       truncated
     };
+    if (attributes) {
+      const map3 = {};
+      for (const attr of Array.from(el.attributes)) {
+        if (attr.name != "data-gf-tag") {
+          map3[attr.name] = attr.value;
+        }
+      }
+      info.attributes = map3;
+    }
     if (tag) {
-      info.selector = `[data-gf-find="${i + 1}"]`;
+      info.selector = `[data-gf-tag="${i + 1}"]`;
     }
     return info;
   }
@@ -32156,6 +32205,8 @@ async function main() {
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI.
         Set all=true to return every match.
+        outerHTML dominates the response: to locate elements, get a targetable handle, or read
+        attributes across many matches, use game_query.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector to query in the Gameface UI`),
@@ -32163,31 +32214,39 @@ async function main() {
       maxHtml: exports_external.number().min(0).optional().describe(`Max outerHTML characters per element before truncation (default: 4000)`)
     }
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
-  server.registerTool("game_find", {
-    title: `Find elements by text in the Gameface UI`,
+  server.registerTool("game_query", {
+    title: `Find elements in the Gameface UI`,
     description: import_common_tags4.oneLine`
-        Locate elements by their text content in the live Gameface UI: scan a CSS selector's matches
-        (default: every element) and filter on trimmed textContent by equals/contains/regex
-        (case-insensitive by default).
-        Returns tag, id, classes, and bounding rect per match, plus match counts before and after
-        deepest pruning so pruning and limit truncation are both visible.
-        Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use selectors
-        for game_click / game_hover / game_screenshot.
-        The go-to way to find an element when class names are build-hashed and there is no XPath.
+        Locate elements in the live Gameface UI by CSS selector, by trimmed textContent
+        (equals/contains/regex, case-insensitive by default), or by both; one of the two is
+        required, and match/caseSensitive are ignored without text.
+        A selector alone selects, reaching elements no text can match.
+        Returns tag, id, classes and bounding rect per match, attributes on request, with the
+        counts before and after deepest pruning and the limit, so both truncations are visible.
+        Set tag=true for data-gf-tag handles feeding game_click / game_hover / game_screenshot.
+        To read an element's markup, use game_dom.
       `,
     inputSchema: {
-      text: exports_external.string().describe(`Text to match against each element's trimmed textContent`),
+      text: exports_external.string().optional().describe(import_common_tags4.oneLine`
+              Text to match against each element's trimmed textContent, so pass it trimmed under
+              match=equals; omit it to select on the selector alone, or pass '' with match=equals
+              and a selector for elements carrying no text.
+            `),
       match: exports_external.enum(["equals", "contains", "regex"]).optional().describe(`How to match the text: equals / contains / regex (default: contains)`),
       caseSensitive: exports_external.boolean().optional().describe(`Match case-sensitively (default: false)`),
-      selector: exports_external.string().optional().describe(`CSS selector scoping the scan (default: *, every element)`),
-      deepest: exports_external.boolean().optional().describe(`Keep only the innermost match, pruning ancestors that also matched (default: true)`),
+      selector: exports_external.string().optional().describe(`CSS selector to match, alone or scoping the text scan (with text, defaults to *)`),
+      deepest: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+              Keep only the innermost match, pruning ancestors that also matched (default: true
+              when non-empty text drives the match, false otherwise).
+            `),
       tag: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
-              Stamp matches with data-gf-find handles and return them as selectors, clearing any
+              Stamp matches with data-gf-tag handles and return them as selectors, clearing any
               prior handles first (default: false).
             `),
+      attributes: exports_external.boolean().optional().describe(`Return each match's attributes, this tool's own data-gf-tag aside (default: false)`),
       limit: exports_external.number().int().min(1).max(100).optional().describe(`Max matches to return (default: 20); the total count is always reported`)
     }
-  }, ({ text: text2, match, caseSensitive, selector, deepest, tag, limit }) => gameFind(client, { text: text2, match, caseSensitive, selector, deepest, tag, limit }));
+  }, ({ text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }) => gameQuery(client, { text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }));
   server.registerTool("game_click", {
     title: `Click an element in the Gameface UI`,
     description: import_common_tags4.oneLine`

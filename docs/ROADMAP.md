@@ -12,14 +12,20 @@ planned. When these land they become standard plugin components: `commands/`, `a
 `skills/` directories auto-discovered by the plugin manifest (`skills/` already ships the
 `gameface` and `gameface-driving` skills).
 
-### Non-text element discovery
+### Selector pre-flight
 
-`game_find` matches on `textContent` only, so icon controls with no text (a back arrow, a close X)
-cannot be located by it, forcing a `game_eval` scan by attribute or bounding-box position (surfaced
-live locating a settings back arrow). Add an attribute-match mode to `game_find` (find by
-`aria-label` / `data-tooltip` / `title` / any attribute); the driving skill already targets
-`[data-tooltip="..."]` for clicks, so those anchors exist. `querySelectorAll` + `getAttribute` makes
-it trivial.
+Cohtml throws a bare "Invalid CSS selector" on `:not()`, `:has()` and `:first-of-type`, and each of
+the nine selector-taking tools surfaces that as an opaque failure an agent tends to retry unchanged.
+The fact lives in the skills — `gameface-driving` and the `gameface` scripting reference — which a
+standalone MCP client never loads, so the tool tier carries none of it, and restating it in nine
+descriptions is the wrong shape for one engine constraint.
+
+Screen the selector server-side instead, before the CDP round trip, and name the unsupported
+construct and a rewrite. A heuristic scan suffices: no CSS parser, and missing an exotic case costs
+nothing beyond the opaque error the caller already gets. What it must not do is refuse a selector
+the engine would have accepted — the unsupported set is verified against one Cohtml version, so the
+screen either gates on the version `game_status` already reports or warns while letting the call
+through.
 
 ### Debugger ergonomics
 

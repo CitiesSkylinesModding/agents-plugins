@@ -84,37 +84,41 @@ interface KeyArgs {
   index: number;
 }
 
-interface FindMatch {
+interface QueryMatch {
   tagName: string | null;
   id: string | null;
   classes: string | null;
   rect: { x: number; y: number; width: number; height: number };
   text: string;
   truncated: boolean;
-  // Present only when tag=true: a ready-to-use selector targeting this match's data-gf-find handle.
+  // Present only when attributes=true: every attribute of the match, name to value.
+  attributes?: Record<string, string>;
+  // Present only when tag=true: a ready-to-use selector targeting this match's data-gf-tag handle.
   selector?: string;
 }
 
-interface FindResult {
-  // Raw textContent matches before deepest pruning; unprunedTotal vs. total shows how many ancestor
-  // matches the deepest filter removed.
+interface QueryResult {
+  // Matches before deepest pruning; unprunedTotal vs. total shows how many ancestor matches the
+  // deepest filter removed.
   unprunedTotal: number;
   // Matches after deepest pruning, before the limit truncates; total vs returned shows the limit
   // truncating.
   total: number;
   returned: number;
   tagged: boolean;
-  elements: FindMatch[];
+  elements: QueryMatch[];
 }
 
-// Input to findFn, passed as one object so the page function stays under the params ceiling.
-interface FindArgs {
+// Input to queryFn, passed as one object so the page function stays under the params ceiling.
+interface QueryArgs {
   sel: string;
-  needle: string;
+  // Null selects on the selector alone, with no text filter.
+  needle: string | null;
   mode: string;
   caseSensitive: boolean;
   deepest: boolean;
   tag: boolean;
+  attributes: boolean;
   limit: number;
 }
 
@@ -144,7 +148,7 @@ const DEFAULT_QUIESCENT_MS = 1000;
 
 const DEFAULT_JPEG_QUALITY = 80;
 const DEFAULT_CONSOLE_LIMIT = 50;
-const DEFAULT_FIND_LIMIT = 20;
+const DEFAULT_QUERY_LIMIT = 20;
 
 /**
  * Reports reachability + page target + engine info + view-reload tracking. Never throws.
@@ -371,75 +375,133 @@ export async function gameDom(
 }
 
 /**
- * Options for gameFind.
+ * Options for gameQuery.
  */
-export interface GameFindOptions {
-  readonly text: string;
+export interface GameQueryOptions {
+  readonly text?: string | undefined;
   readonly match?: 'equals' | 'contains' | 'regex' | undefined;
   readonly caseSensitive?: boolean | undefined;
   readonly selector?: string | undefined;
   readonly deepest?: boolean | undefined;
   readonly tag?: boolean | undefined;
+  readonly attributes?: boolean | undefined;
   readonly limit?: number | undefined;
 }
 
 /**
- * Finds elements by their trimmed textContent (equals / contains / regex) and returns lean,
- * actionable info per match, with the total count, so truncation is visible.
- * With `tag=true`, stamps matches with `data-gf-find` handles and returns ready-to-use selectors,
+ * Locates elements by a CSS selector, by their trimmed textContent (equals / contains / regex), or
+ * by both, returning lean, actionable info per match with the total count, so truncation shows.
+ * With `tag=true`, stamps matches with `data-gf-tag` handles and returns ready-to-use selectors,
  * solving the discovery-to-action handoff when no unique selector can be written.
  */
-export async function gameFind(
+export async function gameQuery(
   client: CdpClient,
-  options: GameFindOptions
+  options: GameQueryOptions
 ): Promise<CallToolResult> {
-  const {
-    text: needle,
-    match = 'contains',
-    caseSensitive = false,
-    selector = '*',
-    deepest = true,
-    tag = false,
-    limit = DEFAULT_FIND_LIMIT
-  } = options;
+  const mode = options.match ?? 'contains';
+  const needle = options.text ?? null;
+  const { selector } = options;
+
+  const rejection = queryRejection(options, mode);
+
+  if (rejection != null) {
+    return errorText(rejection);
+  }
+
+  const args: QueryArgs = {
+    sel: selector ?? '*',
+    needle,
+    mode,
+    caseSensitive: options.caseSensitive ?? false,
+    // Text bleeds into ancestors, so pruning there drops an artifact. An ancestor matching a
+    // selector is a genuine match, and so is one matching empty text -- the icon-only control
+    // wrapping a text-free span -- so pruning either would drop what the caller asked for.
+    deepest: options.deepest ?? (needle != null && needle.length > 0),
+    tag: options.tag ?? false,
+    attributes: options.attributes ?? false,
+    limit: options.limit ?? DEFAULT_QUERY_LIMIT
+  };
 
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(findFn, {
-        sel: selector,
-        needle,
-        mode: match,
-        caseSensitive,
-        deepest,
-        tag,
-        limit
-      }),
+      expression: callPageFn(queryFn, args),
       returnByValue: true
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Find failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Query failed: ${formatException(res.exceptionDetails)}`);
     }
 
-    const value = res.result.value as FindResult | { error: string } | undefined;
+    const value = res.result.value as QueryResult | { error: string } | undefined;
 
     if (!value) {
-      return errorText(`game_find returned no result for selector ${JSON.stringify(selector)}.`);
+      return errorText(`game_query returned no result for selector ${JSON.stringify(args.sel)}.`);
     }
 
     if ('error' in value) {
-      return errorText(`game_find: ${value.error}`);
+      return errorText(`game_query: ${value.error}`);
     }
 
-    return text(JSON.stringify({ selector, match, ...value }, null, 2));
+    // The match mode describes an operation that never ran when no text was given, and the key is
+    // left undefined rather than null so it drops out of the JSON entirely: an explicit null would
+    // read as a filter that ran. deepest is reported either way, since unprunedTotal and total come
+    // back equal both when pruning found nothing and when it never ran.
+    const envelope = {
+      selector: args.sel,
+      match: args.needle == null ? undefined : args.mode,
+      deepest: args.deepest,
+      ...value
+    };
+
+    return text(JSON.stringify(envelope, null, 2));
   } catch (error) {
     return toErrorResult(error);
   }
 }
 
 /**
- * Clicks the element matching `selector` (the `index`-th match) by dispatching a realistic
- * bubbling pointer/mouse/click sequence in the page.
+ * Names the argument combinations gameQuery refuses rather than answering as asked.
+ * Returns undefined when the arguments are usable.
+ */
+function queryRejection(
+  options: GameQueryOptions,
+  mode: NonNullable<GameQueryOptions['match']>
+): string | undefined {
+  const { text: needle, selector } = options;
+
+  if (needle == null && selector == null) {
+    return `game_query needs text, selector, or both; neither was given.`;
+  }
+
+  if (selector != null && selector.trim().length == 0) {
+    return `game_query: selector is blank; pass a real one.`;
+  }
+
+  if (mode == 'equals' && needle != null && needle.trim() != needle) {
+    return oneLine`
+      game_query: equals compares against trimmed text, so trim yours; where that empties it, pass
+      '' with a selector to find elements carrying no text.
+    `;
+  }
+
+  if (needle == '' && mode != 'equals') {
+    return oneLine`
+      game_query: empty text matches every element under ${mode}; pass match: 'equals' with a
+      selector to find elements carrying no text.
+    `;
+  }
+
+  // Every void element in the document answers this one, head metadata included.
+  if (needle == '' && selector == null) {
+    return `game_query: empty text needs a selector to scope it.`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Clicks the element matching `selector` (the `index`-th match) by dispatching a realistic bubbling
+ * pointer/mouse/click sequence in the page.
  * We do NOT use CDP Input.dispatchMouseEvent: Gameface accepts it but never delivers it.
  */
 export async function gameClick(
@@ -1164,23 +1226,24 @@ function collectDomFn(sel: string, all: boolean, maxHtml: number): CollectDomRes
 }
 
 /**
- * Scans querySelectorAll matches and filters on trimmed textContent, the only text search Cohtml
- * affords (no XPath, TreeWalker, or innerText). Returns lean, actionable info per match and, when
- * tag=true, stamps handles so the discovery result feeds straight into the input tools.
+ * Selects querySelectorAll matches, optionally filtering them on trimmed textContent, the only text
+ * search Cohtml affords (no XPath, TreeWalker, or innerText).
+ * Returns lean, actionable info per match and, when tag=true, stamps handles so the result feeds
+ * straight into the input tools.
  */
-function findFn(args: FindArgs): FindResult | { error: string } {
-  const { sel, needle, mode, caseSensitive, deepest, tag, limit } = args;
+function queryFn(args: QueryArgs): QueryResult | { error: string } {
+  const { sel, needle, mode, caseSensitive, deepest, tag, attributes, limit } = args;
 
   // Cap on the returned text snippet, kept inline because page functions are self-contained.
   const SNIPPET_MAX = 100;
 
   // Precompile the matcher once. Case insensitivity lowercases both sides for equals/contains and
-  // adds the 'i' flag for regex.
-  const target = caseSensitive ? needle : needle.toLowerCase();
+  // adds the 'i' flag for regex. Unused where the selector alone selects, which the scan gates on.
+  const target = needle == null ? '' : caseSensitive ? needle : needle.toLowerCase();
 
   let regex: RegExp | undefined;
 
-  if (mode == 'regex') {
+  if (needle != null && mode == 'regex') {
     try {
       regex = new RegExp(needle, caseSensitive ? '' : 'i');
     } catch (error) {
@@ -1191,28 +1254,25 @@ function findFn(args: FindArgs): FindResult | { error: string } {
   const found: Element[] = [];
 
   for (const el of Array.from(document.querySelectorAll(sel))) {
-    if (matches((el.textContent || '').trim())) {
+    // Reading textContent materializes the whole subtree's text, so skip it with no filter to run.
+    if (needle == null || matches((el.textContent || '').trim())) {
       found.push(el);
     }
   }
 
-  // Deepest keeps only the innermost matches: an element's textContent includes its descendants',
-  // so an ancestor matches whenever a descendant does. Drop any match that contains another match.
-  const kept = deepest
-    ? found.filter(el => !found.some(other => other != el && el.contains(other)))
-    : found;
+  const kept = deepest ? innermost(found) : found;
 
   const chosen = kept.slice(0, limit);
 
   if (tag) {
-    // Clear-then-retag: strip every handle from a previous find first, so its handles die here.
+    // Clear-then-retag: strip every handle from a previous query first, so its handles die here.
     // Cohtml exposes setAttribute/removeAttribute but not the dataset DOMStringMap, so use those.
-    for (const stale of Array.from(document.querySelectorAll('[data-gf-find]'))) {
-      stale.removeAttribute('data-gf-find');
+    for (const stale of Array.from(document.querySelectorAll('[data-gf-tag]'))) {
+      stale.removeAttribute('data-gf-tag');
     }
 
     for (const [i, el] of chosen.entries()) {
-      el.setAttribute('data-gf-find', String(i + 1));
+      el.setAttribute('data-gf-tag', String(i + 1));
     }
   }
 
@@ -1223,6 +1283,20 @@ function findFn(args: FindArgs): FindResult | { error: string } {
     tagged: tag,
     elements: chosen.map((el, i) => describe(el, i))
   };
+
+  // Striking each match's ancestor chain costs depth per match; comparing every pair instead would
+  // cost the square of the match count, which a selector alone can make large.
+  function innermost(all: Element[]): Element[] {
+    const remaining = new Set(all);
+
+    for (const el of all) {
+      for (let parent = el.parentElement; parent != null; parent = parent.parentElement) {
+        remaining.delete(parent);
+      }
+    }
+
+    return Array.from(remaining);
+  }
 
   function matches(raw: string): boolean {
     if (mode == 'regex') {
@@ -1239,13 +1313,13 @@ function findFn(args: FindArgs): FindResult | { error: string } {
     return hay.includes(target);
   }
 
-  function describe(el: Element, i: number): FindMatch {
+  function describe(el: Element, i: number): QueryMatch {
     const rect = el.getBoundingClientRect();
     const classAttr = el.getAttribute('class');
     const raw = (el.textContent || '').trim();
     const truncated = raw.length > SNIPPET_MAX;
 
-    const info: FindMatch = {
+    const info: QueryMatch = {
       tagName: el.tagName ? el.tagName.toLowerCase() : null,
       id: el.id || null,
       classes: classAttr != null && classAttr.length > 0 ? classAttr : null,
@@ -1254,8 +1328,22 @@ function findFn(args: FindArgs): FindResult | { error: string } {
       truncated
     };
 
+    if (attributes) {
+      const map: Record<string, string> = {};
+
+      for (const attr of Array.from(el.attributes)) {
+        // The tool's own handle is never a durable anchor, so reporting it beside the page's own
+        // attributes would invite the next query to anchor on the one that dies first.
+        if (attr.name != 'data-gf-tag') {
+          map[attr.name] = attr.value;
+        }
+      }
+
+      info.attributes = map;
+    }
+
     if (tag) {
-      info.selector = `[data-gf-find="${i + 1}"]`;
+      info.selector = `[data-gf-tag="${i + 1}"]`;
     }
 
     return info;

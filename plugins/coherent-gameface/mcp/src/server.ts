@@ -22,9 +22,9 @@ import {
   gameDom,
   gameEval,
   gameFill,
-  gameFind,
   gameHover,
   gameKey,
+  gameQuery,
   gameScreenshot,
   gameStatus,
   gameType,
@@ -345,6 +345,8 @@ async function main(): Promise<void> {
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI.
         Set all=true to return every match.
+        outerHTML dominates the response: to locate elements, get a targetable handle, or read
+        attributes across many matches, use game_query.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector to query in the Gameface UI`),
@@ -363,21 +365,30 @@ async function main(): Promise<void> {
   );
 
   server.registerTool(
-    'game_find',
+    'game_query',
     {
-      title: `Find elements by text in the Gameface UI`,
+      title: `Find elements in the Gameface UI`,
       description: oneLine`
-        Locate elements by their text content in the live Gameface UI: scan a CSS selector's matches
-        (default: every element) and filter on trimmed textContent by equals/contains/regex
-        (case-insensitive by default).
-        Returns tag, id, classes, and bounding rect per match, plus match counts before and after
-        deepest pruning so pruning and limit truncation are both visible.
-        Set tag=true to stamp matches with data-gf-find handles and get back ready-to-use selectors
-        for game_click / game_hover / game_screenshot.
-        The go-to way to find an element when class names are build-hashed and there is no XPath.
+        Locate elements in the live Gameface UI by CSS selector, by trimmed textContent
+        (equals/contains/regex, case-insensitive by default), or by both; one of the two is
+        required, and match/caseSensitive are ignored without text.
+        A selector alone selects, reaching elements no text can match.
+        Returns tag, id, classes and bounding rect per match, attributes on request, with the
+        counts before and after deepest pruning and the limit, so both truncations are visible.
+        Set tag=true for data-gf-tag handles feeding game_click / game_hover / game_screenshot.
+        To read an element's markup, use game_dom.
       `,
       inputSchema: {
-        text: z.string().describe(`Text to match against each element's trimmed textContent`),
+        text: z
+          .string()
+          .optional()
+          .describe(
+            oneLine`
+              Text to match against each element's trimmed textContent, so pass it trimmed under
+              match=equals; omit it to select on the selector alone, or pass '' with match=equals
+              and a selector for elements carrying no text.
+            `
+          ),
         match: z
           .enum(['equals', 'contains', 'regex'])
           .optional()
@@ -386,21 +397,32 @@ async function main(): Promise<void> {
         selector: z
           .string()
           .optional()
-          .describe(`CSS selector scoping the scan (default: *, every element)`),
+          .describe(
+            `CSS selector to match, alone or scoping the text scan (with text, defaults to *)`
+          ),
         deepest: z
           .boolean()
           .optional()
           .describe(
-            `Keep only the innermost match, pruning ancestors that also matched (default: true)`
+            oneLine`
+              Keep only the innermost match, pruning ancestors that also matched (default: true
+              when non-empty text drives the match, false otherwise).
+            `
           ),
         tag: z
           .boolean()
           .optional()
           .describe(
             oneLine`
-              Stamp matches with data-gf-find handles and return them as selectors, clearing any
+              Stamp matches with data-gf-tag handles and return them as selectors, clearing any
               prior handles first (default: false).
             `
+          ),
+        attributes: z
+          .boolean()
+          .optional()
+          .describe(
+            `Return each match's attributes, this tool's own data-gf-tag aside (default: false)`
           ),
         limit: z
           .number()
@@ -411,8 +433,8 @@ async function main(): Promise<void> {
           .describe(`Max matches to return (default: 20); the total count is always reported`)
       }
     },
-    ({ text, match, caseSensitive, selector, deepest, tag, limit }) =>
-      gameFind(client, { text, match, caseSensitive, selector, deepest, tag, limit })
+    ({ text, match, caseSensitive, selector, deepest, tag, attributes, limit }) =>
+      gameQuery(client, { text, match, caseSensitive, selector, deepest, tag, attributes, limit })
   );
 
   server.registerTool(
