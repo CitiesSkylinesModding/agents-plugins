@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v0.4.0...unity-devtools-v0.5.0) (2026-08-08)
+
+
+### Features
+
+* **unity-devtools:** name every member a flags value carries, instead of printing a number ([15c7e4e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/15c7e4ed77ddf3e72dc6e9bc1cd8dde90beccbe0))
+* **unity-devtools:** teach the eval that captures the game's own frame ([7238c67](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7238c67536b3844315c77af1cea7ec843aa4e966))
+
+
+### Performance Improvements
+
+* **unity-devtools:** read an enum constant off its field instead of waking the game ([485b8dc](https://github.com/CitiesSkylinesModding/agents-plugins/commit/485b8dc67f32bd4a596c953dbae37a895663ccd4))
+* **unity-devtools:** stop re-asking the game what this attach already answered ([6516ec9](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6516ec99ba9f6d7f8e741c4ab9cd235eb48169ef))
+
 ## [0.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v0.3.0...unity-devtools-v0.4.0) (2026-07-30)
 
 
