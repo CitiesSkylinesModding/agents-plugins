@@ -54,8 +54,6 @@ PayWageSystem (kUpdatesPerDay = 32, UpdateFrame bucket):
 Being paid a wage clears `m_UnemploymentCounter`; each unemployed pay tick increments it.
 Taxable income is the amount minus `m_ResidentialMinimumEarnings / 32`, accumulated into `TaxPayer.m_UntaxedIncome` with a running average rate — commuters and outside-connection workers are excluded from that accumulation entirely, so they pay no residential tax.
 
-## Traps
-
 **Education is a ceiling, never a floor.**
 `GetBestFor` walks down, so an educated citizen takes an uneducated slot if that is what is free — and `m_Level` on both records is the slot's level, so the wage follows the job, not the education.
 Source: `src/Game/Game.Companies/FreeWorkplaces.cs`, `src/Game/Game.Simulation/PayWageSystem.cs`.
@@ -68,17 +66,15 @@ Source: `src/Game/Game.Simulation/PayWageSystem.cs`.
 `m_UnemploymentCounter` caps the benefit; `m_UnemploymentTimeCounter` feeds the wellbeing penalty, advances on every `CitizenFindJobSystem` pass over an unemployed citizen, and is cleared for workers on sight but for students only through a leisure-path roll they may keep failing.
 Source: `src/Game/Game.Simulation/CitizenFindJobSystem.cs`, `src/Game/Game.Simulation/CitizenBehaviorSystem.cs`.
 
-**An unreachable workplace un-employs the citizen.**
-When a `GoingToWork` pathfind returns no destination, `TripNeededSystem` removes `Worker` unless a household car is free to try — the household owning none, or the citizen already keeping one, both un-employ; on success the same block writes `m_LastCommuteTime` from the path duration.
-Source: `src/Game/Game.Simulation/TripNeededSystem.cs`.
-
-**Losing the workplace also resets the failed-education count.**
-`WorkerSystem` clears it when the workplace is gone, so unemployment re-opens school doors the failure cap had closed.
-Source: `src/Game/Game.Simulation/WorkerSystem.cs`.
-
 **The UI's household income projection is not the payment system.**
 `EconomyUtils.GetHouseholdIncome` pays teens `m_FamilyAllowance` where `PayWageSystem` pays them the unemployment benefit, so panel and ledger disagree on such households.
 Source: `src/Game/Game.Economy/EconomyUtils.cs`, `src/Game/Game.Simulation/PayWageSystem.cs`.
+
+## Traps
+
+**An unreachable workplace un-employs the citizen.**
+When a `GoingToWork` pathfind returns no destination, `TripNeededSystem` removes `Worker` unless a household car is free to try — the household owning none, or the citizen already keeping one, both un-employ; on success the same block writes `m_LastCommuteTime` from the path duration.
+Source: `src/Game/Game.Simulation/TripNeededSystem.cs`.
 
 ## Workplaces, workforce, the work day
 
@@ -108,5 +104,9 @@ work window (WorkerSystem.cs):
 ```
 
 The 40000-frame commute fallback means a citizen with no measured commute leaves absurdly early on their first trip, then settles.
+
+**Losing the workplace also resets the failed-education count.**
+`WorkerSystem` clears it when the workplace is gone, so unemployment re-opens school doors the failure cap had closed.
+Source: `src/Game/Game.Simulation/WorkerSystem.cs`.
 
 (VOLATILE: every component, system, field, formula and constant this file names — their declarations in `Game.Citizens`, `Game.Companies`, `Game.Economy`, `Game.Simulation` and `Game.Prefabs` under `src/Game/`, at the files the sections cite.)

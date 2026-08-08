@@ -43,8 +43,6 @@ CriminalSystem (interval 16, UpdateFrame tested inside the job) runs the state m
 Because the roll's ceiling grows with population, crime per citizen falls as the city grows unless `m_CrimePopulationReduction` is tuned with it — and the welfare shield thins the same way.
 The per-crime balance is `CrimeData` on each crime event prefab, behind an enableable `Locked`: occurrence and recurrence probabilities, alarm delay, duration, absolute and relative incomes, and jail and prison time ranges, all as min/max ranges, plus a plain prison probability (`src/Game/Game.Prefabs/CrimeData.cs`).
 
-## Traps
-
 **`Criminal` outlives its episode.**
 An escape clears only `Monitored`, so the robber keeps `Criminal { m_Event = Null, m_Flags = Robber }`, and the game's criminal count and occupation label read that residue.
 Read `m_Flags` for the stage — a sentenced or imprisoned citizen also has `m_Event == Entity.Null`.
@@ -57,6 +55,8 @@ Source: `src/Game/Game.Simulation/CrimeCheckSystem.cs`.
 **Criminality is not an archetype.**
 The citizen keeps its household, its education and whatever job it held before the episode; only the component and its flags move.
 Source: `src/Game/Game.Simulation/CriminalSystem.cs`, `src/Game/Game.Events/AddCriminalSystem.cs`.
+
+## Traps
 
 **A prisoner's happiness comes from the prison building instance, added on top of a school's.**
 `CitizenHappinessSystem` reads `Game.Buildings.Prison.m_PrisonerHealth/m_PrisonerWellbeing` on the building — not `PrisonData` on its prefab — and the prison and school branches accumulate into the same variable, because nothing stops an imprisoned citizen from staying enrolled.

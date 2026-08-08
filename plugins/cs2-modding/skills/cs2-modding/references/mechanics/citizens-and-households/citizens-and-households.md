@@ -56,7 +56,7 @@ Where the numbers live — the read is `GetSingleton<T>` unless the row says oth
 | Per-crime balance ranges                                                                                                                                            | `CrimeData` (`src/Game/Game.Prefabs/CrimeData.cs`)                                                                                            | on each crime event prefab, behind an enableable `Locked`                                                                                                                                            |
 | Spawn education mix, teen split, commuter spawn divisor, outside-connection weights                                                                                 | `DemandParameterData` (`src/Game/Game.Prefabs/DemandParameterData.cs`)                                                                        | singleton                                                                                                                                                                                            |
 | The old-age death curve                                                                                                                                             | `HealthcareParameterData.m_DeathRate`, `m_LegacyDeathRate` for old saves (`src/Game/Game.Prefabs/HealthcareParameterData.cs`)                 | singleton                                                                                                                                                                                            |
-| Days per year                                                                                                                                                       | `TimeSettingsData.m_DaysPerYear`                                                                                                              | singleton; `simulation-time-and-units` owns the conversions                                                                                                                                          |
+| Days per year                                                                                                                                                       | `TimeSettingsData.m_DaysPerYear`                                                                                                              | singleton; converting it belongs to `simulation-time-and-units`                                                                                                                                      |
 | Workplace size, complexity, shifts, work conditions                                                                                                                 | `WorkplaceData` (`src/Game/Game.Prefabs/WorkplaceData.cs`)                                                                                    | on the workplace prefab, through the instance's `PrefabRef` — the worker count the simulation reads is the instance `WorkProvider.m_MaxWorkers` ([employment-and-wages.md](employment-and-wages.md)) |
 | School capacity, granted level, graduation modifier                                                                                                                 | `SchoolData` (`src/Game/Game.Prefabs/SchoolData.cs`)                                                                                          | on the school prefab through `PrefabRef` — its wellbeing and health twins are not what the simulation reads ([education-pipeline.md](education-pipeline.md))                                         |
 | Hospital treatment bonus                                                                                                                                            | `HospitalData.m_TreatmentBonus` (`src/Game/Game.Prefabs/HospitalData.cs`)                                                                     | on the hospital prefab through `PrefabRef` — the death check reads the building-instance twin ([lifecycle.md](lifecycle.md))                                                                         |
@@ -94,17 +94,6 @@ Source: `src/Game/Game.Prefabs.Modes/GameModeSystem.cs`, `src/Game/Game.Prefabs.
 **A component query and the census count different homeless populations.**
 The census books a `MovingAway` chunk as moving away before counting it homeless, excludes `Deleted` and `Temp`, publishes the previous pass's snapshot, and applies its moved-in filter to citizens rather than households — the game's own UI reports the census, so a mod counting the component reports a different number than the panel.
 Source: `src/Game/Game.Simulation/CountHouseholdDataSystem.cs`, `src/Game/Game.Simulation/HouseholdBehaviorSystem.cs`.
-
-## Formulas
-
-Each mechanism's formulas sit in its sibling; what belongs to the citizen record itself is one property and one bucketing:
-
-```
-Citizen.Happiness = (m_WellBeing + m_Health) / 2          // read-only, nothing stores it
-GetHappinessKey:  > 70 Happy, > 55 Content, > 40 Neutral, > 25 Sad, else Depressed
-```
-
-Source: `src/Game/Game.Citizens/Citizen.cs`, `src/Game/Game.Citizens/CitizenUtils.cs`.
 
 ## Mechanisms
 
