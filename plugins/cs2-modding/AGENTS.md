@@ -100,6 +100,7 @@ Prose that has gone through a gate has been wrong on exactly these, and none of 
 Read these before re-deriving anything: [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md), and [a read that stopped where the code agreed with it](../../docs/solutions/decompile-read-stopped-at-the-confirming-line.md).
 Over-reach usually enters one stage before the prose carrying it: a reference is written by an agent holding a research file and no source, so a guard, a condition or a scope dropped while the research was written down is copied into the shipped file faithfully, and reads as well there as it did in the research.
 Aim finders at the research file's own citations as much as at the prose — open the line a claim rests on and read what surrounds it, rather than re-deriving only what the shipped sentence already says.
+A research error can underlie a correct shipped sentence — the authoring agent reads the decompile beside the file and silently fixes what it happens to catch — so a clean verdict on the shipped prose clears nothing about the research file.
 
 **A reference contradicting a shipped sibling is the normal output of partitioning one subject:** the slices overlap, and a topic that owns a mechanism reads its source more closely than one that merely mentions it.
 Fix it in the pass that found it — re-derive the claim from the decompile, then correct every file carrying the wrong version, a reference whose own work is long finished included.

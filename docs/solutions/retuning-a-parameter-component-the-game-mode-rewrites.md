@@ -44,13 +44,17 @@ Three independent unknowns, two of them outside the decompile entirely.
 - **Reach.** `GameModeSystem` runs `ModeSetting.ApplyMode` over the mode prefab list on the loaded
   save's `ModeSetting`. That list is authored asset data — live at 1.6.0f1, `NormalMode` carries zero
   entries and `EasyMode` carries 21. Whether a component is rewritten at all therefore depends on the
-  player's chosen mode and is invisible to any code read.
+  player's chosen mode and is invisible to any code read. The pass itself is never skipped:
+  `GameModeSystem` falls back to the prefab named `NormalMode` when the save names none, so an empty
+  authored list, not a skipped pass, is what spares a save.
 - **Scope.** Of the mode classes, roughly half derive from `LocalModePrefab` and declare no entity
   query: their targets are an authored `PrefabBase` array, also asset data. So even for a class that
   names your component, whether it reaches _your_ prefabs is unreadable.
 - **Shape.** Some classes assign, some multiply, and a component can be written by two or three in
   sequence — `CoverageData` is assigned by one class and then multiplied by another over the same
-  entities. A write before the pass is scaled by it; a write after discards what it contributed.
+  entities. The multipliers reach growable balance too: `ZoneServiceConsumptionGlobalMode` and
+  `ZonePollutionGlobalMode` multiply per-prefab `ConsumptionData` and `PollutionData`, found in
+  ticket 23's gate after a trap had scoped the threat to parameter singletons. A write before the pass is scaled by it; a write after discards what it contributed.
   Six classes also snapshot the component before applying and hand that back on restore. Two of
   those fall back to the authoring object where no snapshot exists, one restores its main component
   from authoring and uses the snapshot only for a buffer row, and five have a branch that restores

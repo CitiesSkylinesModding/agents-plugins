@@ -60,6 +60,15 @@ a `timestamp` field in standard CDP; verify Gameface populates it).
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools.
 
+### Value-binding reads
+
+Reading a C# value binding from the page means hand-writing the subscribe dance through
+`game_eval` — `engine.on("<group>.<name>.update", cb)`, then `engine.trigger("<group>.<name>.subscribe")`,
+then the matching unsubscribe — which the cs2-modding research pipeline ran to reach
+simulation-side data the DOM never renders (the workaround `docs/SOURCES.md` entry 9 records).
+A `game_binding` tool would make it one call: subscribe, capture the first payload, unsubscribe,
+return it.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
@@ -72,6 +81,15 @@ lazy-attach session.
 Discovery is netstat-based and Windows-only. Port discovery to Linux/macOS (parse `/proc` or
 `lsof`); the server itself now ships as a platform-agnostic NuGet dotnet tool, so distribution
 needs no per-RID artifacts.
+
+### Session-level discovery narrowing
+
+Only `status` takes a process-name prefix; every acting tool resolves discovery itself and fails
+outright when several processes look SDB-shaped (an IDE, GitKraken and Steam all qualified in one
+session), and the `UNITY_MCP_PROCESS` env filter is read once at server start, so the only recovery
+mid-session is editing the MCP config and having the user reconnect the server — the workaround a
+live session actually ran. Either honor a narrowed `status` call as a sticky session filter, or
+accept the prefix on every tool.
 
 ### An `ecs_query` seam in the SDB library
 
@@ -158,6 +176,13 @@ here is repository tooling of the kind `scripts/` already holds, not something t
 into a user's install; that makes it a maintenance tool for regenerating a shipped table, which is
 the honest framing rather than a user-facing feature. And two shipped files carry trailing bytes past
 their declared end, so end-of-file is not end-of-data and the decoder has to stop on the counts.
+
+### Marker namespace lint
+
+A mechanics file's `VOLATILE:` marker lists the namespaces its names live in, and re-closing that
+list by hand drifted across six files in one review gate. `check-skill-content.ts` can enforce the
+mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
+file's marker. Types named without a path stay the reviewer's job.
 
 ### The technique family's shape
 
