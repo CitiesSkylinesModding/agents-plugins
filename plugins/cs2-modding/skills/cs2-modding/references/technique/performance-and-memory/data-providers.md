@@ -43,7 +43,7 @@ A seventh queryable tree sits outside the `SearchSystem` naming: the buildings n
 
 `CommercialDemandSystem.AddReader`, `IndustrialDemandSystem.AddReader`, `ResidentialDemandSystem.AddReader`, `CountHouseholdDataSystem.AddHouseholdDataReader`, `CountCompanyDataSystem.AddReader`, `CountVehicleDataSystem.AddVehicleDataReader`, `TaxSystem.AddReader`, `ResourceSystem.AddPrefabsReader`, `ZoneSystem.AddPrefabsReader`.
 
-`economy-and-companies` and `zoning-buildings-and-land-value` are the mechanics topics that need these.
+`economy-and-companies`, `zoning-buildings-and-land-value` and `citizens-and-households` are the mechanics topics that need these.
 
 ## The rest
 

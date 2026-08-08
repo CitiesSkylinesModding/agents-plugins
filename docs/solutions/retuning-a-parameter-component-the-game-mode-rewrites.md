@@ -10,9 +10,10 @@ tags: [cs2, prefabs, game-modes, balance, unsolved, over-reach, review]
 
 # Retuning a parameter component the game mode rewrites
 
-**Nothing ships on this yet.** The passage this records was written during ticket 22's review gate,
-failed fourteen rounds, and was cut from that commit rather than shipped at the fourth attempt. Pick
-it up as its own ticket, from the discovery stage, with this file as the starting point.
+**What ships on this is one trap.** The full passage this records was written during ticket 22's
+review gate, failed fourteen rounds, and was cut from that commit; the citizens entry file now
+carries a trap on it. Pick the general treatment up as its own ticket, from the discovery stage,
+with this file as the starting point.
 
 ## Problem
 
