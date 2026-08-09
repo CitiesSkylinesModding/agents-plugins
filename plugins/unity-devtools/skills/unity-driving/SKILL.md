@@ -76,7 +76,7 @@ The file lands on the machine running the game and no tool here reads it back, s
 
 Where `eval` reads the game from outside, the `debug_*` tools stop it from inside: arm (`debug_set_breakpoint` / `debug_break_on_exception`), trigger the behavior in game, catch the hit (`debug_wait`), inspect (`debug_pause_state`, `debug_evaluate`), move (`debug_step`), release (`debug_step action=resume`).
 Burst decides what is debuggable: Burst-compiled jobs are native code the Mono debugger cannot see, no frames and no hits on any thread; managed code hits fine, worker threads included.
-Mod code is normally non-Burst, so it just works; to reach the game's own Burst-compiled systems, run the game with Burst compilation disabled (Unity games generally take a `-burst-disable-compilation` launch option) and everything becomes managed and visible.
+Mod code is normally non-Burst, so it just works; to reach the game's own Burst-compiled systems, run the game with Burst compilation disabled (Unity games generally take a `--burst-disable-compilation` launch option) and everything becomes managed and visible.
 A hit freezes the whole game until released, but every other unity tool keeps working against the frozen state (suspends are counted), so inspect at leisure; the UI stops rendering, which is normal, not a crash.
 Arm hot-path breakpoints with a `condition` gating on the instance you care about (an entity index, a parameter value, a field of `this`): false hits release the game automatically, so a method called every frame costs little until YOUR case arrives.
 A condition that fails to evaluate pauses with the error recorded in the pause state; fix the expression and re-arm rather than guessing.
