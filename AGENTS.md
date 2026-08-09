@@ -28,7 +28,7 @@ New plugins get a sibling directory and an entry in both marketplace files.
 - `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI). `hook-skill-content.ts` is a PostToolUse hook spawning the shipped-prose lint on any edit under that plugin's `skills/`, so a broken warning block, link or marker fails at the edit rather than at the commit; it adds no rule of its own.
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint and oxfmt ignore `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
-- `docs/mechanics-reference-shape.md`: the form every `cs2-modding` mechanics reference takes, disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches it. `check-skill-content.ts` enforces its prose-line budget.
+- `docs/authoring/`: standing authoring contracts. The ticket template any spec's tickets take, pointed at from `docs/agents/cantrips-loop.md`'s publish-tickets verb; and the `cs2-modding` reference pipeline's own — one shape doc per reference family and the reference-ticket protocol — disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches them. `check-skill-content.ts` enforces both families' prose-line budgets.
 - `docs/SOURCES.md`: every source the `cs2-modding` pipeline may read, what each settles, and how to locate it. Other files point at it; keep it pointing at as few as possible.
 - `docs/research/`: the `cs2-modding` pipeline's cited stage, sitting outside `plugins/` so none of it ships. Its `README.md` holds the conventions a research file satisfies; nothing under `plugins/` may reference it or `SOURCES.md`, and `check-skill-content.ts` fails any shipped link resolving outside the plugin directory, since existence alone passes one that works here and dead-ends for every installed user.
 
@@ -89,7 +89,7 @@ Five stores, checked in this order when writing something down:
 3. **`docs/solutions/`**: expensive investigations with dead ends, one file per problem, loaded on demand through a pointer placed where the problem bites.
 4. **`docs/adr/`**: why a choice was made, one record per decision.
 5. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
-   An `AGENTS.md` may disclose a contract only one branch of work reaches into a `docs/` file of its own, pointed at from the rule it elaborates — `docs/mechanics-reference-shape.md` is the one that does.
+   An `AGENTS.md` may disclose a contract only one branch of work reaches into a `docs/` file of its own, pointed at from the rule it elaborates — the `cs2-modding` contracts under `docs/authoring/` are the ones that do, and the ticket template there is the loop config's parallel case, disclosed from its publish-tickets verb.
 
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
 
@@ -112,6 +112,7 @@ Cite a checklist item by quoting its phrase, never its ordinal — an insertion 
 - Make the smallest safe change, but speak up when a refactor is overdue.
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
+- When correcting prose, quote the owning source or delete; a paraphrase or an added rationale is what the next review indicts. The `cs2-modding` `AGENTS.md` states the full rule for reference corrections.
 - Resolve a ticket only after its review gate passes.
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
 - The gameface and unity tools show their gaps in use: when you work around a missing tool, or a missing mode of one that exists, propose an entry in [`docs/ROADMAP.md`](docs/ROADMAP.md), with the workaround you used as its evidence.

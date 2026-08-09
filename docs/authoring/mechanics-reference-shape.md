@@ -1,14 +1,14 @@
 # The mechanics reference shape
 
 The form every reference under `plugins/cs2-modding/skills/cs2-modding/references/mechanics/` takes.
-Read it before authoring or editing one; [ADR 0005](adr/0005-every-reference-is-read-beside-the-decompile.md) is why the family has a shape of its own, and the plugin's `AGENTS.md` carries the rules this one sits under — the prefab-value rule most of all, which decides what a map row must state.
+Read it before authoring or editing one; [ADR 0005](../adr/0005-every-reference-is-read-beside-the-decompile.md) is why the family has a shape of its own, and the plugin's `AGENTS.md` carries the rules this one sits under — the prefab-value rule most of all, which decides what a map row must state.
 
 A mechanics reference **orients**: it maps what the game models in one area onto the components, fields and systems carrying it, and routes the reader to the code deciding the rest.
 What a system does across its branches is a read and the reader has the code, so the prose that over-produces is the sketch and the traps, and a sentence doing neither of their jobs is cut.
 
 ## Every file in the folder
 
-Each carries its title, its own version baseline, one blank line, and then the three-line decompile warning the plugin's `AGENTS.md` fixes. Its middle line is written per file everywhere else; here it resolves to one sentence, because it is true of every file in the family, and `scripts/check-skill-content.ts` asserts that exact sentence on any file in this folder and is authoritative where this block and the script disagree:
+Each carries its title, its own version baseline, one blank line, and then the three-line decompile warning the plugin's `AGENTS.md` fixes. Its middle line follows each family's own rule elsewhere; here it resolves to one sentence, because it is true of every file in the family, and `scripts/check-skill-content.ts` asserts that exact sentence on any file in this folder and is authoritative where this block and the script disagree:
 
 ```markdown
 **Read this with the decompile open.**
@@ -27,9 +27,9 @@ The entry file carries these sections after its warning, in this order:
 - **A sketch** — what the game tracks here and how the pieces connect, in a paragraph.
 - **`## The map`** — concept to component, field and system, in one table or several where the concepts group, each row carrying the access shape the prefab-value rule requires.
   A table's preamble may state the default read its rows share; a row then states its own only where it differs.
-  Before a row names a `*Data` component for a value the simulation consumes, read [a prefab value read where the simulation reads an instance](solutions/prefab-data-read-where-the-simulation-reads-an-instance.md): the prefab twin and the instance twin share a name, and the row that names the wrong one sends every reader after it to a number the citizens never receive.
-  And before a trap or a row treats a parameter component as written once, read [retuning a parameter component the game mode rewrites](solutions/retuning-a-parameter-component-the-game-mode-rewrites.md): whether the loaded game mode rebuilds it on load is authored asset data, invisible to any code read.
-  A prefab class's own field initializer is a Unity-serialized default the shipped asset overrides, not a C# constant: it ships as the field, never as the figure (ruled in `research/conflicts.md`; the test is what consumes the value).
+  Before a row names a `*Data` component for a value the simulation consumes, read [a prefab value read where the simulation reads an instance](../solutions/prefab-data-read-where-the-simulation-reads-an-instance.md): the prefab twin and the instance twin share a name, and the row that names the wrong one sends every reader after it to a number the citizens never receive.
+  And before a trap or a row treats a parameter component as written once, read [retuning a parameter component the game mode rewrites](../solutions/retuning-a-parameter-component-the-game-mode-rewrites.md): whether the loaded game mode rebuilds it on load is authored asset data, invisible to any code read.
+  A prefab class's own field initializer is a Unity-serialized default the shipped asset overrides, not a C# constant: it ships as the field, never as the figure (ruled in `docs/research/conflicts.md`; the test is what consumes the value).
   The access-shape cell carries the read, never a writer roster.
   A row whose value another topic owns carries "belongs to `<topic>`" in that cell, in place of the read or beside it where only part of the row routes — that fixed phrase is the only routing the column admits, so a lint or reader can tell the two apart.
 - **`## Traps`** — what a reader gets wrong by opening the file the map sends them to.
@@ -46,7 +46,7 @@ A section that outgrows the entry file discloses into a sibling and links it fro
 ```markdown
 **A stale `m_Workplace` earns nothing, not even the unemployment fallback.**
 Being paid requires the citizen to appear in the workplace's `Employee` buffer, not merely to hold a `Worker` pointing at it.
-Source: `Game.Simulation/PayWageSystem.cs`.
+Source: `src/Game/Game.Simulation/PayWageSystem.cs`.
 ```
 
 Write one only where an agent that opened the type the map sent it to would not find it by itself.

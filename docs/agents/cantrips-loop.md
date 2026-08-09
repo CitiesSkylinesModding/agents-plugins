@@ -13,7 +13,7 @@ A spec and its tickets are working material, not a record: they live in `.scratc
 - **Publish the spec** (`publish-spec`) — write the spec to `.scratch/<feature>/spec.md`.
 - **Fetch the spec** (`fetch-spec`) — read `.scratch/<feature>/spec.md`.
 - **Annotate the spec** (`annotate-spec`) — append the note under a `## Comments` heading at the end of the spec file, each entry prefixed with its date; the body above that heading stays frozen.
-- **Publish the tickets** (`publish-tickets`) — write one file per ticket to `.scratch/<feature>/NN-<slug>.md`, numbered from `01` in dependency order, blocking edges as the ticket body's "Blocked by" prose; the shared folder is what ties a ticket to its parent spec.
+- **Publish the tickets** (`publish-tickets`) — write one file per ticket to `.scratch/<feature>/NN-<slug>.md`, numbered from `01` in dependency order, blocking edges as the ticket body's "Blocked by" prose; the shared folder is what ties a ticket to its parent spec. A ticket's body takes the shape `docs/authoring/ticket-template.md` fixes.
 - **Fetch the ticket** (`fetch-ticket`) — read the ticket file.
 - **Resolve the ticket** (`resolve-ticket`) — add or flip a `Status: resolved` line directly under the ticket's title; the verified acceptance-criterion checkboxes remain as evidence.
 

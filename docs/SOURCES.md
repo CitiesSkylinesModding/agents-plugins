@@ -15,8 +15,8 @@ Two sources are first-party for something that is not the game: the Harmony libr
 Below them the order is flat and absolute. The wiki ships as authoritative only where nothing first-party covers the subject, and is a lead generator everywhere else. The mod corpus never settles anything about the game: it is evidence of what mod authors do, which is a different fact.
 
 **Locating a source.** Where the official toolchain is installed it sets `CSII_*` environment variables naming most of these paths, and each entry below gives the variable where one exists. Expect a variable to be missing rather than assuming it: an agent whose session started before the toolchain did will not have inherited them.
-Three roots are the user's own choice and no variable names them — the decompile, the mod corpus, and the reformatted UI bundle, the last of which the record also stores a line count for. The record is `~/.cs2-modding/setup.md`, which the setup skill writes and every skill reads before touching a local source; it is the route that works on both supported harnesses, so read it first. Under Claude Code the agent memory note `cs2-modding-source-paths` carries the same paths and is faster.
-Finding neither, ask the user to run the setup rather than guessing a path.
+Three roots are the user's own choice and no variable names them — the decompile, the mod corpus, and the reformatted UI bundle, the last of which the record also stores a line count for. The record is `~/.cs2-modding/setup.md`, which the setup skill writes and every skill reads before touching a local source; it is the route that works on both supported harnesses, so read it first.
+Finding no record, ask the user to run the setup rather than guessing a path.
 
 ---
 
