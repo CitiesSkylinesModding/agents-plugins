@@ -72,7 +72,7 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
 So a mechanics topic reads a catalogued mod for the one thing no other source gives: which vanilla systems and components that mod had to disable, fork or query to change the behaviour.
 Match on an entry's `Demonstrates` half rather than its `Does` half, as that catalog itself directs, and where no entry's `Demonstrates` names systems in your area, sweep it anyway and record the dead end rather than reaching for a mod whose subject merely sounds close.
 
-Done when each source bearing on the topic has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, whose bot challenge often wins — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
+Done when each source bearing on the topic has been used, or recorded in `## Dead ends` as checked and empty, or — for the wiki, when its bot challenge wins a fetch — cited through `survey-wiki-inventory.md`'s snapshot with that substitution stated; when every claim the reference will need carries its citation; when `## Bridge` names the other family's material rather than standing empty; and when every disagreement has become a verdict or an entry in `conflicts.md`.
 A file that read one source reads exactly like one that swept them all, and the agent writing the reference cannot see what was never looked at.
 
 A survey's or an agent's own recommendation is not a decision: the plugin's `AGENTS.md` governs what ships.

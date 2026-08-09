@@ -98,6 +98,7 @@ Settles the live DOM, computed styles, what a component actually renders, and co
 It also reaches simulation-side data the DOM never renders: a C# value binding is readable from the page.
 `engine.on("<group>.<name>.update", cb)` followed by `engine.trigger("<group>.<name>.subscribe")` returns the binding's current payload, and the matching `.unsubscribe` trigger ends it — no click, no input, so it is not an act on the user's running game.
 The binding groups are enumerated in the reformatted UI bundle copy, and their writers are `Game.UI.*` systems in the decompile.
+The module registry is the route that looks equivalent and is not: `window["cs2/modding"].getModule` throws `ReferenceError` on many mutable exports bundle-wide — dead accessors left by the bundle's packaging, with an error text that points at the wrong cause — while `findModule` never evaluates an accessor and is always safe, so discover with `findModule` and read values through the engine route above.
 Needs the game running with the UI debugging port open.
 
 **Both are ordinary tools when connected, and neither is yours to start.**
@@ -110,7 +111,7 @@ What this adds is what happens next: the phase resumes on their word rather than
 Primary for process — toolchain, debugging, publishing, key bindings, options — and it ships as authoritative wherever it is the only source, which for the _why_ and the _when_ of a procedure it usually is.
 Where the toolchain itself answers, source 7 wins: the wiki describes the build and the targets are the build, and the wiki's most load-bearing modding page is five versions stale.
 For internals it sets the agenda and is then verified against the game; it has been wrong on capability while right on convention.
-A plain fetch usually loses to the site's JavaScript bot challenge. Try a web-fetch tool, and ask the user when it comes back with the challenge instead of content.
+A web-fetch tool normally renders past the site's JavaScript bot challenge and returns full article content; a plain HTTP fetch is still expected to lose to it. Ask the user only when the challenge comes back instead of content.
 
 ## 11. The mod corpus
 

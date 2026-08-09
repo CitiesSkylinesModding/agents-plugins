@@ -36,6 +36,26 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 
 ## Ruled
 
+### Opening the developer menu from mod code needs no launch flag, and silently turns the player's achievements off
+
+**Sources.** The `debug-menu` pass established that `--developerMode` gates only three key bindings and nothing about the menu itself, so `DebugUISystem.Show()` is reachable from any mod on a vanilla launch. The same method sets `PlatformManager.instance.achievementsEnabled = false`. Nothing else in the pipeline has had to decide whether a capability that costs the player something ships as a teachable technique.
+
+**Established.** Both halves, from the decompile and confirmed live.
+The menu is ungated: `DebugUISystem.debugSystemEnabled` is the literal `true` (`src/Game/Game.UI.Debug/DebugUISystem.cs:136`), the system is registered into `SystemUpdatePhase.UIUpdate` unconditionally (`src/Game/Game.Common/SystemOrder.cs:900`), and `Show()` (`:181-210`) carries no flag check. The only thing `--developerMode` buys is the `Debug` action map's three composites, all marked `m_DeveloperOnly` and suppressed at `src/Game/Game.Input/InputManager.cs:1177` when the flag is off — read live off the running game as `Debug UI` → `<Keyboard>/tab` + `<Gamepad>/rightShoulder`, `Debug Prefab Tool` → `<Keyboard>/o`, `Debug Multiplier` → `<Keyboard>/shift`.
+The cost is real and one-way: `Show()` sets `PlatformManager.instance.achievementsEnabled = false` (`:200`/`:207`) and `Hide()` never restores it (`:212-220`). A confirmation dialog stands in front of it (`Common.DIALOG_MESSAGE[DisableAchievements]`, `:188-202`) — but only while achievements are still enabled and `"DebugMenu"` is not already in `SharedSettings.instance.userInterface.dismissedConfirmations`, so a player who once ticked "don't show again" gets no prompt on any later call by anybody. Read live after the menu had been opened: `achievementsEnabled=False`, `dismissedDebugMenu=False`, `DebugSystem.Enabled=True`.
+One corpus mod already calls the sibling method this way, `World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DebugUISystem>().Hide()` (`CS2-Platter/Platter/Tests/Utils/TestUtils.cs:12/27`), so the route is in use rather than hypothetical.
+
+**Needs a ruling on.** Whether the shipped `debug-menu` reference teaches `DebugUISystem.Show()` as a technique, and in what form.
+Three options and each costs something. **Teach it plainly**, as the answer to "how do I open the menu from my mod": it is the honest reading of the code, it is what a modder debugging their own build wants, and the plugin would be handing an agent a one-liner that disables a player's achievements with a dialog that may not appear. **Teach it with the cost attached as a condition** — state that the call is for a developer's own machine, that the flag it flips is not restored, and that a mod must not call it on a player's behalf: keeps the fact, spends three sentences of a technique reference on a policy the plugin cannot enforce, and an agent that reads the first sentence and stops has still been handed the one-liner. **Ship only the negative** — that the menu is not gated by the launch flag, which is the fact a reader needs to reason about the flag — and never name the entry point: the reference then withholds a public method whose name a reader will find in the first file this same reference sends them to.
+What turns on it is a rule the plugin has not needed before: whether a shipped technique reference may teach a first-party call whose cost falls on somebody other than the person running it. `debug-menu` is the first topic to hit it and is unlikely to be the last — the same shape sits behind anything that writes to a save or to settings.
+The ruling goes into the research file for `debug-menu`, and touches `diagnostics` only if that reference sends a reader to the menu by code rather than by key.
+
+**Ruling (2026-08-09, the maintainer, superseding the session's same-day delegated self-ruling).** Teach the call, and delete the achievements teaching from the shipped pair.
+
+The reference keeps the `Show()` one-liner and the dialog's mechanics — a first open can raise a confirmation dialog, the panels build only on its yes, and a once-ticked "don't show again" skips it for every later caller — and states nothing about the achievements flag. The flag's behaviour stays recorded here and in the research file as the pipeline's record, not as the reference's teaching.
+
+The general precedent the self-ruling attached is withdrawn with it.
+
 ### A prefab class's own field initializer is a C# literal and a prefab default at the same time, and the citizens-and-households pass licensed one and forbade the other
 
 **Sources.** The citizens-and-households pass's ruling below draws its line between two kinds of number: "C# constants ship, as numbers. A value compiled into the decompiled source is first-party, offline-checkable and citable to a line", against "a shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude."

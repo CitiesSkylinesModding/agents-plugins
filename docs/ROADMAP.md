@@ -60,6 +60,16 @@ a `timestamp` field in standard CDP; verify Gameface populates it).
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools.
 
+### Committing a programmatic fill
+
+`game_fill` sets a React-controlled input's DOM value without committing it: fields whose change
+handler only updates local state and whose blur handler fires the real commit read back the old
+value after a fill. The cs2-modding debug-menu pass hit this on the game's debug text inputs and
+had to follow every fill with a hand-written
+`el.dispatchEvent(new FocusEvent('focusout', {bubbles: true}))` through `game_eval` (the
+workaround its `driving-the-menu.md` reference now teaches). A `commit` option on `game_fill` —
+dispatch a bubbling `focusout` after setting the value — would make the fill one call.
+
 ### Value-binding reads
 
 Reading a C# value binding from the page means hand-writing the subscribe dance through

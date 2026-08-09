@@ -1,10 +1,11 @@
 ---
 date: 2026-08-04
-updated: 2026-08-08
+updated: 2026-08-09
 area: docs/research (the cs2-modding discovery pipeline, against any decompile)
 symptoms:
   - 'a correction lands, and the corrected sentence is wrong again for the same reason'
   - 'a citation range ends one line before the code that overturns it'
+  - 'a citation range contains the code that overturns the claim it supports'
   - 'a claim about what a method does, derived from the half of it that was read'
 tags: [research, decompile, verification, over-reach, correction, confirmation]
 ---
@@ -85,6 +86,18 @@ line and returns CONFIRMED. A review pass verified "`Criminal` is active only wh
 (`CriminalSystem.cs:262` nulls `m_Event` at sentencing), caught only when a later verifier was asked
 to trace the full state machine and report each field's value at every stage. Brief a verifier on
 the mechanism's trace, never on the claim's confirmation.
+
+## The mid-range variant
+
+The stop can happen inside the cited range itself, which defeats the wide-range habit below. The
+`debug-menu` pass derived "a same-named `[DebugTab]` appends to the vanilla tab" from
+`DebugManager.GetPanel` returning the existing panel, and cited `DebugSystem.AddPanel` at
+`:1085-1095` — a range containing the three lines that overturn the claim:
+`m_Panels.TryGetValue(name, out var value)` … `panel?.children.Remove(value)`
+(`src/Game/Game.Debug/DebugSystem.cs:1088-1093`) remove the previously registered widget list, so
+an exact-name collision replaces and only a case-varied name appends. The route shipped as
+sanctioned would have wiped the vanilla Gizmos tab. A wide citation reads as diligence and proves
+nothing about the reading: the range is evidence only when every line inside it was traced.
 
 ## Prevention
 
