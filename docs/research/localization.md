@@ -1,7 +1,7 @@
 # Localization
 
 **This file backs two shipped references, not one.**
-The review gate of 2026-08-03 split `localization` in two, and `units-and-formatting` is the 27th reference (`.scratch/cs2-modding/reference-structure.md`).
+`units-and-formatting` was split out of `localization` at the review gate of 2026-08-03 over the first technique batch.
 Everything below about **rendering a quantity** — the unit string table and its two declaring sides, the number, fraction, percentage, date and duration formatters, per-unit fraction and bounds coverage, the localized element types, and the three interface preference enums — is now that reference's material.
 Everything about **producing text the game will display** — the dictionary-source contract, entry ingestion, the key grammar, packaging, the vanilla namespaces, the translator export, the diagnosis walk — stays `localization`'s.
 The pass that produced this file predates the split, so it is left whole rather than cut in two: a research file records what one pass found, and slicing it after the fact would break the citations without adding a fact.
@@ -43,7 +43,7 @@ and is reachable from a mod as `GameManager.instance.localizationManager` (`Game
 Because that runs before `CreateWorld` (`GameManager.cs:2363`), and `mod-lifecycle-and-ordering.md:68` establishes that the world already exists when `OnLoad` runs, every shipped locale is registered by the time a mod's `OnLoad` is called. That is why eleven of the twenty repositories, across eighteen files, open a locale loader with `foreach (string localeID in GameManager.instance.localizationManager.GetSupportedLocales())` and trust the answer (`Anarchy/Anarchy/AnarchyMod.cs:176`, `PlopTheGrowables/Code/Localization.cs:50`, `LineTool-CS2/Code/Localization.cs:50`, `ExtraAssetsImporter/MOD/AssetImporter/Importers/LocalizationImporter.cs:47`, `RoadBuilder-CSII/RoadBuilder/Utilities/RoadNameUtil.cs:26`, and the same shape in Better Bulldozer, Move It, Platter, Recolor, Tree Controller and Water Features).
 
 Rots: `LoadAvailableLocales` running before `CreateWorld` — re-check `src/Game/Game.SceneFlow/GameManager.cs:2356-2372`.
-**Ruled (2026-08-03, ticket 15) not volatile**, and the reference ships it unmarked: boot ordering is architecture, and a marker here would put a claim that reads the same every sweep onto the next version's checklist. Recorded rather than deleted so a later pass does not re-propose it.
+**Ruled (2026-08-03, the localization pass) not volatile**, and the reference ships it unmarked: boot ordering is architecture, and a marker here would put a claim that reads the same every sweep onto the next version's checklist. Recorded rather than deleted so a later pass does not re-propose it.
 
 ### Three ways in, and only one of them is what a mod normally wants
 
@@ -402,7 +402,7 @@ Rots: the locale set and the per-locale entry counts — re-derive by decoding `
 
 ### The vanilla localization-key namespaces
 
-**Ruled (2026-08-03, ticket 15; conflicts.md).** The table ships in full — all 75 groups, both count columns — and the recipe for decoding it does not.
+**Ruled (2026-08-03, the localization pass; conflicts.md).** The table ships in full — all 75 groups, both count columns — and the recipe for decoding it does not.
 The provenance question this table was contested on is gone: it is first-party, taken from the game's own shipped data at a stated version, and it outranks both the decompile's 21-namespace subset and the vendored bundle.
 So the reference bakes it as fact, in its own voice, with no hedge about where it came from and no per-row marking.
 

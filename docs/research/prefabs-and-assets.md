@@ -4,7 +4,7 @@
 
 The two wiki pages are one topic by one author, as `survey-wiki-inventory.md:105-109` records: same maxim, same worked example, overlapping sections. They are treated as one source below and cited by whichever URL carries the sentence.
 
-The original pass predates `docs/SOURCES.md` and read three sources; the 2026-08-03 re-sweep (ticket 15b) added the user's own 1.6.0f1 install, cited by install-relative path, and the game running under the sibling Unity plugin. A claim below with no citation into either is one that has been checked against `src/`, the wiki and the corpus alone.
+The original pass predates `docs/SOURCES.md` and read three sources; the 2026-08-03 new-sources resweep added the user's own 1.6.0f1 install, cited by install-relative path, and the game running under the sibling Unity plugin. A claim below with no citation into either is one that has been checked against `src/`, the wiki and the corpus alone.
 
 ## Findings
 
@@ -426,7 +426,7 @@ Rots: the scheme names (`coui`, `assetdb`, `thumbnail`, `screencapture`, `userav
 
 ### What the install's packaged content actually holds (2026-08-03 re-sweep)
 
-Added by ticket 15b, the first pass to open a `.cok`. This topic's material had been derived from the loader alone.
+Added by the new-sources resweep, the first pass to open a `.cok`. This topic's material had been derived from the loader alone.
 
 **Every `.cok` is a plain zip**, stored rather than deflated, one entry per asset beside a `.cid` sibling; a zip reader opens the 4 GB `Blob.cok` without unpacking it. What is inside splits three ways, and the split is what nothing had recorded:
 
@@ -495,7 +495,7 @@ Going the other way, three technique topics take material from here rather than 
   This is the same residue class the `RoadBuilder` finding below records — `Entity` values held in managed memory that `ReplacePrefabSystem`'s sweep cannot reach — but the example is now **vanilla and first-party** rather than one mod's own dictionary, which is a much stronger thing to ship. It also relocates the risk: the failure surfaces during a save, in a game-mode system, naming neither prefabs nor the mod that caused it.
 
   Still not established: how many other vanilla systems hold a prefab-entity-keyed cache, and whether any of them corrupts state rather than merely logging.
-  **Amended 2026-08-03 (ticket 15b).** "Nothing exercises it either" was wrong: the sweep had looked at the corpus and not at the game. Four vanilla call sites outside `PrefabSystem` itself pass a prefab the caller did not mint — `src/Game/Game.UI.Editor/EditorHierarchyUISystem.cs:1241` (duplicate-and-replace a mesh, then update the prefab that referenced it), `src/Game/Game.UI.Editor/InspectorPanelSystem.cs:1167/1177` (reparenting, on the mesh and on the parent), and `src/Game/Game.Tools/ApplyPrefabsSystem.cs:66` (the asset-stamp path, on the prefab an entity's `PrefabRef` resolves to). All four are editor or editor-tool paths, so they establish that the call is a supported operation on a prefab the process did not create at runtime, and not that it is safe under a live simulation. The remaining question is narrower and still needs an experiment: a mutating one on the maintainer's own city, which this pass did not run.
+  **Amended 2026-08-03 (the new-sources resweep).** "Nothing exercises it either" was wrong: the sweep had looked at the corpus and not at the game. Four vanilla call sites outside `PrefabSystem` itself pass a prefab the caller did not mint — `src/Game/Game.UI.Editor/EditorHierarchyUISystem.cs:1241` (duplicate-and-replace a mesh, then update the prefab that referenced it), `src/Game/Game.UI.Editor/InspectorPanelSystem.cs:1167/1177` (reparenting, on the mesh and on the parent), and `src/Game/Game.Tools/ApplyPrefabsSystem.cs:66` (the asset-stamp path, on the prefab an entity's `PrefabRef` resolves to). All four are editor or editor-tool paths, so they establish that the call is a supported operation on a prefab the process did not create at runtime, and not that it is safe under a live simulation. The remaining question is narrower and still needs an experiment: a mutating one on the maintainer's own city, which this pass did not run.
 
 - **No count was taken of how many of the 292 `.m_Prefab]` lookups in `Game.Simulation` are reads versus writes.** All the ones I opened were `[ReadOnly]` lookups, but a full classification would mean reading 292 sites. The claim above is deliberately worded as "indexed reads" for the ones I checked and "lookups" for the count.
 - **The `AssemblyTypeRegistry` was excluded from every count**, as `ecs-in-this-game.md` also does. It is a generated 16,000-line list that would double any type count taken over `src/Game/`.

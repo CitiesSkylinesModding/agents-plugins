@@ -36,9 +36,9 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 
 ## Ruled
 
-### A prefab class's own field initializer is a C# literal and a prefab default at the same time, and ticket 23 licensed one and forbade the other
+### A prefab class's own field initializer is a C# literal and a prefab default at the same time, and the citizens-and-households pass licensed one and forbade the other
 
-**Sources.** The ticket-22 ruling below draws its line between two kinds of number: "C# constants ship, as numbers. A value compiled into the decompiled source is first-party, offline-checkable and citable to a line", against "a shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude."
+**Sources.** The citizens-and-households pass's ruling below draws its line between two kinds of number: "C# constants ship, as numbers. A value compiled into the decompiled source is first-party, offline-checkable and citable to a line", against "a shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude."
 A large class of number satisfies both descriptions and neither side of the ruling anticipates it: the **field initializer on a parameter prefab's own class**.
 `src/Game/Game.Prefabs/LandValuePrefab.cs:14-38` declares `m_LandValueBaseline = 10f`, `m_HealthCoverageBonusMultiplier = 5f`, `m_TelecomCoverageBonusMultiplier = 20f`, `m_TramSubwayBonusMultiplier = 50f`, `m_CommonFactorMaxBonus = 100` and eight more, each with a `[Tooltip]` in the authors' own words. `src/Game/Game.Prefabs/ZonePreferencePrefab.cs:12-43` does the same for all sixteen zone-suitability coefficients — `m_ResidentialSignificanceServices = 100f`, `m_ResidentialSignificancePollution = new float3(-100f, -100f, -100f)`, `m_CommercialSignificanceCompetitors = 200f`, `m_IndustrialNeutralLandValue = 5f`. `src/Game/Game.Prefabs/ZoneProperties.cs:21` and `:36` and `src/Game/Game.Prefabs/SignatureBuilding.cs:18` carry the same shape on per-prefab components rather than singletons.
 Every one of those is in the decompiled source, at a line, readable with the game closed — which is exactly the property the ruling gives as its reason for letting C# constants ship.
@@ -58,9 +58,9 @@ What turns on it is larger than one topic, exactly as the entry below was: the f
 The ruling goes into the research file of every mechanics topic whose parameters live on a prefab class of this shape. `zoning-buildings-and-land-value` is confirmed to be one, on the classes cited above; the other nine mechanics topics are named here as the likely set rather than a verified one, and whichever of them the shape reaches also needs it: `citizens-and-households`, `economy-and-companies`, `utilities-and-flow-networks`, `city-services-and-coverage`, `roads-and-traffic`, `transportation-and-vehicles`, `environment-and-pollution`, `city-state-and-progression` and `simulation-time-and-units`.
 Listed by name rather than by a rule, for the reason the entry below gives: a discovery agent can only tell whether its topic hits this after it has read the prefab classes.
 
-**Ruling (2026-08-08, ticket 24, made by the orchestrating session under the maintainer's delegated authority for this ticket).** The second option for the number, and the third option's honesty ships as a trap: a field initializer on a prefab class ships as no number, and a reference whose map or traps send a reader into a file carrying them states once, as a trap, that these are Unity-serialized defaults the shipped asset overrides, with nothing in the C# marking which survived.
+**Ruling (2026-08-08, the zoning-buildings-and-land-value pass, made by the orchestrating session under the maintainer's delegated authority for that pass).** The second option for the number, and the third option's honesty ships as a trap: a field initializer on a prefab class ships as no number, and a reference whose map or traps send a reader into a file carrying them states once, as a trap, that these are Unity-serialized defaults the shipped asset overrides, with nothing in the C# marking which survived.
 
-The line ticket 23 drew was never "citable to a line"; it was that the operative value is offline-checkable. A `const` or `static readonly` is the operative value, because the consuming code compiled it in and no data can replace it. A serialized field on a `ScriptableObject`-derived class takes its operative value from the asset, so the literal at the cited line is a default that survives only where the asset wrote nothing — a wrong number wearing a line citation is the most convincing form a wrong number takes, and that is ADR 0004's silent-divergence ground restated.
+The line the citizens-and-households pass drew was never "citable to a line"; it was that the operative value is offline-checkable. A `const` or `static readonly` is the operative value, because the consuming code compiled it in and no data can replace it. A serialized field on a `ScriptableObject`-derived class takes its operative value from the asset, so the literal at the cited line is a default that survives only where the asset wrote nothing — a wrong number wearing a line citation is the most convincing form a wrong number takes, and that is ADR 0004's silent-divergence ground restated.
 
 So the test is what consumes the value, not where it is written: a value the code reads from the class ships as a number; a value Unity deserialisation can replace is a prefab value whatever file declares it. `SignatureBuilding.kStatLevel = 5` ships and `SignatureBuilding.m_XPReward = 300` does not, and the two sit four lines apart in the same class, which is why the rule is stated by mechanism rather than by class list.
 
@@ -78,7 +78,7 @@ Its numbers are from a build nobody can reach.
 **Established.** All three columns with no counterpart on the live page are live game concepts in 1.6.0f1 rather than pre-launch relics: workplace complexity is an enum at `src/Game/Game.Prefabs/WorkplaceComplexity.cs:3-8`, carried on `src/Game/Game.Prefabs/Workplace.cs:22` and consumed at `src/Game/Game.Prefabs/ZonePrefabInitializeSystem.cs:140`; the circular flag is read as `GeometryFlags.Circular` at `src/Game/Game.Areas/ValidationHelpers.cs:233`; garbage accumulation is a field at `src/Game/Game.Prefabs/ConsumptionData.cs:17`.
 The schema survived the launch; only the values did not.
 
-**Established, amended 2026-08-03 (ticket 15b, the first pass to open the install's packaged content).** The real 1.6.0f1 values are on the machine, and what it costs to read one splits by which content it belongs to.
+**Established, amended 2026-08-03 (the new-sources resweep, the first pass to open the install's packaged content).** The real 1.6.0f1 values are on the machine, and what it costs to read one splits by which content it belongs to.
 
 Content-pack prefabs ship as loose `.Prefab` entries inside plain zips — a `Prefabs*.cok` per DLC directory plus `Cities2_Data/Content/Game/Prefabs_FreeUpdate02.cok`, 1,571 entries across the eight of them.
 Each entry is a **self-describing binary key/value stream**: UTF-16LE type names and field names inline, values inline, no schema needed.
@@ -101,7 +101,7 @@ They are listed by name rather than by a rule, because the rule would have to be
 A later decomposition that renames or splits one of them leaves a stale name here, which is a visible problem; a rule nobody can resolve is not.
 The 2026-08-03 amendment does not change the question and adds one option to it: a reference that wants the page's convenience can instead be pointed at first-party numbers, at one of the two costs above. Whether that is worth asking of seven topics is the same judgement, better informed.
 
-**Ruling (2026-08-06, ticket 23).** No mechanics reference borrows this page's columns, and none borrows a wiki stat table's numbers at all. First-party or nothing, for all seven topics.
+**Ruling (2026-08-06, the citizens-and-households pass).** No mechanics reference borrows this page's columns, and none borrows a wiki stat table's numbers at all. First-party or nothing, for all seven topics.
 
 What settles it is not the staleness the entry was opened on but the mixture. Checked against the live singletons, some of the `Citizens` page's money rows were current and some were stale, and nothing on the page marks which is which.
 A table that is uniformly stale is the safer artifact, because a reader distrusts all of it. A table where half the rows are current teaches a reader to trust the other half.
@@ -135,7 +135,7 @@ What turns on it is larger than this topic. Six other mechanics topics sit on th
 The ruling goes into the research file of every mechanics topic, listed by name as the entry above lists its seven: `citizens-and-households`, `zoning-buildings-and-land-value`, `economy-and-companies`, `utilities-and-flow-networks`, `city-services-and-coverage`, `roads-and-traffic`, `transportation-and-vehicles`, `environment-and-pollution`, `city-state-and-progression` and `simulation-time-and-units`.
 A rule instead of a list would not reach them: a discovery agent can only decide whether its topic states a prefab value after it has done the research, which is after it has recorded the numbers.
 
-**Ruling (2026-08-06, ticket 23).** The second option. A shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude.
+**Ruling (2026-08-06, the citizens-and-households pass).** The second option. A shipped reference states no prefab value. It names the component and the field, and that is the whole of what it says about the magnitude.
 
 Ruled first as "prefab-singleton", against the topic that raised it, and widened the same day: balance also lives on per-prefab components — a school's capacity, a hospital's treatment bonus, a crime's probability — which rot at the same rate and which a mod overwrites as easily, and `citizens-and-households` had withheld those too. The narrow word would have forbidden a figure at the area level and licensed the same figure one level down. [ADR 0004](../adr/0004-a-mechanics-reference-names-the-component-not-the-balance-value.md) is the durable record; what follows is the reasoning it was made on.
 
@@ -183,7 +183,7 @@ The on-disk half rides along and may need a separate answer: deleting a componen
 What turns on it is whether an agent that detects a competitor reaches for removal as the default remedy. This is the first reference in the plugin whose subject is what one author may do to another author's users, and an agent following it will not be the one who hears about it.
 The ruling goes into the research file for `mod-compatibility`, at the "Migrating another mod's data" finding, and touches `save-serialization` only if that reference also states who may remove a foreign component.
 
-**Ruling (2026-08-06, ticket 22).** None of the three, because the question was put to the wrong party: whether a mod replaces another mod, cooperates with it or ignores it is the mod author's own design decision, and the plugin's job is to make that decision informed rather than to license one of its outcomes.
+**Ruling (2026-08-06, the mod-compatibility pass).** None of the three, because the question was put to the wrong party: whether a mod replaces another mod, cooperates with it or ignores it is the mod author's own design decision, and the plugin's job is to make that decision informed rather than to license one of its outcomes.
 
 So all three positions ship, as postures a mod takes toward another mod's data, over one statement of the mechanism — resolve the foreign type by name, query it, and from there read, write or remove it, which is the same machinery in every case.
 **Replace** migrates the data, removes the foreign component and disables the other mod's system. **Cooperate** reads the foreign component as a signal and writes only the mod's own. **Coexist** leaves it alone.
@@ -217,7 +217,7 @@ Teach it bound to a condition — set it from a debug configuration or behind a 
 What turns on it is whether the plugin's readers get the one diagnostic that exists, against whether the plugin becomes the reason a player's frame time drops after installing a mod that never had a leak.
 The ruling goes into the research file for `performance-and-memory`, and touches `diagnostics` only if that reference also states a diagnosis order for a mod whose memory grows.
 
-**Ruling (2026-08-04, ticket 18).** The third option: the reference teaches the switch, bound to a condition — a debug configuration, or a mod setting that is off unless the player turns it on, and never a shipped default path.
+**Ruling (2026-08-04, the performance-and-memory pass).** The third option: the reference teaches the switch, bound to a condition — a debug configuration, or a mod setting that is off unless the player turns it on, and never a shipped default path.
 
 The ground is the asymmetry the `**Established**` section proves. The cost is not paid by the mod that opts in: the mode is a property of the native allocator rather than of the calling assembly, so it lands on the game's own allocations and on every other mod in the player's load order. A reader whose memory climbs still gets the one instrument this game has, which is what the "say nothing" option gives up and what the topic exists for.
 
@@ -242,11 +242,11 @@ What could not be established is whether the flag actually restores steppable ex
 Three options and each costs something.
 Teach the compile-time gate as the survey and the structure say: it is what the corpus reaches for, it is the only form verified to work here, and the reference would be teaching a technique whose failure mode is silent — a symbol defined nowhere produces no warning, no error, and a build that looks exactly like a working one, which is how seven repositories arrived where they are.
 Teach the runtime flag: it is first-party, it needs no build system change, it cannot be got wrong the way a `#if` can, and no evidence exists that anyone has run it against this game.
-Teach both, with the runtime flag first as the thing to try and the compile-time gate as what to set up if you are going to do this often — honest, and it makes this the second place in the plugin that ships an untested first-party path beside a proven corpus one, the first being `PostTool` in `placement-definitions` (this file, ticket 13).
+Teach both, with the runtime flag first as the thing to try and the compile-time gate as what to set up if you are going to do this often — honest, and it makes this the second place in the plugin that ships an untested first-party path beside a proven corpus one, the first being `PostTool` in `placement-definitions` (this file, the placement-definitions pass).
 What turns on it is whether an agent told to gate Burst writes a `#if` into a csproj it may not be able to verify, and whether shipped prose should carry the observation that a preprocessor gate whose symbol is undefined is indistinguishable from one that is defined — which is a fact about C# rather than about this game, and the reason the corpus's failure rate is what it is.
 The ruling goes into the research file for `performance-and-memory`, and touches `diagnostics` only if that reference also states how to get a mod's job into a debugger.
 
-**Ruling (2026-08-04, ticket 18).** The third option, and the order within it is the ruling: the reference teaches both gates and leads with the runtime one. `--burst-disable-compilation` or `UNITY_BURST_DISABLE_COMPILATION` is what a reader reaches for to get a job into a debugger; the `#if` gate is what to set up if you will do it often enough that a launch argument becomes tiresome.
+**Ruling (2026-08-04, the performance-and-memory pass).** The third option, and the order within it is the ruling: the reference teaches both gates and leads with the runtime one. `--burst-disable-compilation` or `UNITY_BURST_DISABLE_COMPILATION` is what a reader reaches for to get a job into a debugger; the `#if` gate is what to set up if you will do it often enough that a launch argument becomes tiresome.
 
 What decides it is the failure rate in the `**Established**` section rather than a preference between two working techniques. Seven of the ten repositories using the compile-time gate define the symbol nowhere in the checkout, and the reason that happens is worth stating in the reference: a preprocessor symbol defined nowhere produces no warning, no error, and a build indistinguishable from a working one. That is a fact about C# rather than about this game, and it is what makes the compile-time form the more dangerous of the two to hand to an agent — an agent writing a `#if` into a csproj it cannot run is precisely the case those seven repositories describe.
 
@@ -280,7 +280,7 @@ Shipping the recipe is what makes the table checkable rather than merely asserte
 Against it: it is procedure in a reference whose subject is writing strings, and the setup skill is where procedure normally lives.
 The ruling goes into the research file for `localization`, and touches `prefabs-and-assets` only if that reference also states the `Services`/`SubServices`/`Assets` key pairs a registered prefab is looked up by.
 
-**Ruling (2026-08-03, ticket 15).** The table ships in full — all 75 groups, both count columns — and the decode recipe does not.
+**Ruling (2026-08-03, the localization pass).** The table ships in full — all 75 groups, both count columns — and the decode recipe does not.
 
 The provenance half of this entry was not ruled but dissolved, and the distinction is worth keeping: the question was which source the plugin is willing to state 51 rows on, and the answer turned out to be a fourth source nobody had reached for. The game ships its own strings, readable from the user's own install at a version they can state. So the reference bakes the table in its own voice, with no hedge and no per-row marking, and the entry is kept as the record of how close the pipeline came to shipping a third party's copy of compiled game code as fact.
 
@@ -311,7 +311,7 @@ Teach both halves as two mechanisms with the same name — usages for the diagno
 What turns on it is a reader's whole model of why their hotkey stopped working, which is the single most common runtime complaint this area produces, and the notification the game pushes names their mod by name.
 The ruling goes into the research file for `settings-and-input`, and touches `custom-tools` only if that reference also states why a tool's inherited apply and cancel actions are exempt from this.
 
-**Ruling (2026-08-03, ticket 14).** The third option, in `settings-and-input`: both halves ship as two mechanisms that happen to share a name, and `shouldBeEnabled` gated on the mod's own state is what the reference hands the reader as the thing that scopes an action at runtime.
+**Ruling (2026-08-03, the settings-and-input pass).** The third option, in `settings-and-input`: both halves ship as two mechanisms that happen to share a name, and `shouldBeEnabled` gated on the mod's own state is what the reference hands the reader as the thing that scopes an action at runtime.
 
 A usage narrows the conflict the player is _shown_ — the warning triangle on the options row and the per-map notification — and at 1.6.0f1 that is the whole of its effect anywhere this pipeline can look.
 The pass that disables an action ignores usages entirely, pairs any two currently-enabled actions that share a control path, and always resolves against the mod.
@@ -340,7 +340,7 @@ Three options and each costs something. Teach the broad rule the mod and the sur
 What turns on it is a mod's entity archetype, which is the hardest thing to change once a save format depends on it — a reader who adds the prefab late has to migrate, and a reader who adds it needlessly has carried a dead component into every save.
 The ruling goes into the research file for `placement-definitions`, and touches `prefabs-and-assets` only if that reference also states a rule about when a mod-created entity needs a `PrefabRef`.
 
-**Ruling (2026-08-02, ticket 13).** The third option, in `placement-definitions`: the narrow provable rule ships as a rule, and the broad practice is named beside it as a practice.
+**Ruling (2026-08-02, the placement-definitions pass).** The third option, in `placement-definitions`: the narrow provable rule ships as a rule, and the broad practice is named beside it as a practice.
 An entity carrying a `PrefabRef` must point at a prefab entity registered through `PrefabSystem.AddPrefab` by the time the load pass runs, because the remap indexes `PrefabData` unguarded and the pre-deserialize hook is the last place to register it — that half is settled and states flat.
 The empty-prefab technique itself ships as what one mod does and why it believes it has to, carrying the limit of the evidence in the sentence: the vanilla site that faults on an entity with no `PrefabRef` at all was searched for across the tools, serialization and prefab code and not found.
 Neither half may ship alone, which is what makes this the third option rather than a softened first or second: the narrow rule by itself drops the case the technique was invented for, and the practice by itself would put one author's belief into this plugin's own voice.
@@ -349,13 +349,13 @@ The hedge the question objected to is accepted rather than argued away, and at t
 What the reader is deciding is an entity archetype, which the entry itself identifies as the hardest thing to change once a save format depends on it — a late addition is a migration and a needless one is a dead component in every save.
 A reader making that call is owed the difference between what was proven and what was believed, and a reference that stated the broad rule flat would be spending its own authority on a mod comment.
 
-**Addendum (2026-08-03, ticket 15b's re-sweep against `docs/SOURCES.md`).** The gap the ruling accepts is narrower than the `**Established.**` section states it, and the correction is about method rather than about the fact.
+**Addendum (2026-08-03, the new-sources resweep against `docs/SOURCES.md`).** The gap the ruling accepts is narrower than the `**Established.**` section states it, and the correction is about method rather than about the fact.
 "What could not be proved is the converse" reads as a property of the question; it is a property of the sweep. Whether an entity with no `PrefabRef` breaks anything is not a claim any static read settles — a search of `Game.Tools/`, `Game.Serialization/` and `Game.Prefabs/` can only ever return that no unconditional site was found, which is what it did — and it is a claim an experiment settles outright.
 The source that runs the experiment was on the list and unused: the running game through the sibling Unity plugin (`docs/SOURCES.md` entry 8), where creating an entity with the archetype the mod's connection entities carry, omitting the reference, and taking it through a save and load either faults or does not.
 The ruling survives this unchanged, and cannot be affected by the result: it already ships the narrow rule flat and the broad practice as a practice, and an experiment moves the sentence under it from a gap in the evidence to an observation, in whichever direction it lands.
 The game was not running for this pass, so this records the route and not the result.
 
-**Second addendum (2026-08-03, the review gate over tickets 07–15).** The ruling's uniqueness clause has stopped describing the tree, and the maintainer has since given the class a token, so the clause is amended rather than left to mislead.
+**Second addendum (2026-08-03, the review gate over the first technique batch).** The ruling's uniqueness clause has stopped describing the tree, and the maintainer has since given the class a token, so the clause is amended rather than left to mislead.
 Four more evidence hedges of the same shape now ship — `prefabs-and-assets` on `UpdatePrefab` against a vanilla prefab, `custom-tools` on a `Temp`-original check, `placement-definitions` on the `PostTool` window, and `ecs-in-this-game` on a lifecycle hook's position relative to the barrier window.
 Read the clause as what it was: a statement about the tree on the day it was ruled, and the reason the hedge was affordable, rather than a standing policy that hedging is reserved to this one entry.
 What replaces it is `UNVERIFIED:`, now the plugin's second marker (`plugins/cs2-modding/AGENTS.md`), which makes the whole class greppable the way `VOLATILE:` makes the rots-with-the-version class greppable. A maintainer with a running game can now sweep for what to confirm.
@@ -409,14 +409,14 @@ What is not established is whether `PostTool` works for a mod at all. Nothing ba
 
 **Needs a ruling on.** Which window the reference teaches as the default for rewriting a definition.
 Teaching `Modification1` ships what four mods do and what the pipeline can vouch for, and it ships the synchronous-playback rule as a hard requirement, which is the single fact most likely to save a reader a day. Teaching `PostTool` ships the architecture the game actually uses, lets the rewrite be a scheduled job instead of a main-thread loop, and rests on nothing anyone has run. Teaching both makes the reference the first source to state that the vanilla window exists, which is this plugin's stated value, at the price of pointing readers at an untested path.
-The evidence standard is the substance of the question rather than a side issue: `mod-lifecycle-and-ordering`'s ordering tree was ruled shippable while uncorroborated (this file, ticket 07), and the same argument applies here — but that derivation was a sweep of readable call sites, whereas this one would be a claim about runtime behaviour nobody has observed.
+The evidence standard is the substance of the question rather than a side issue: `mod-lifecycle-and-ordering`'s ordering tree was ruled shippable while uncorroborated (this file, the mod-lifecycle-and-ordering pass), and the same argument applies here — but that derivation was a sweep of readable call sites, whereas this one would be a claim about runtime behaviour nobody has observed.
 The ruling goes into the research file for `placement-definitions`, and touches `custom-tools` only if that reference also names a phase for a tool's helper systems.
 
-**Ruling (2026-08-02, ticket 13).** The third option, in `placement-definitions`, with the first as the default: both windows ship and `Modification1` is what the reference teaches.
+**Ruling (2026-08-02, the placement-definitions pass).** The third option, in `placement-definitions`, with the first as the default: both windows ship and `Modification1` is what the reference teaches.
 The front band of `Modification1` is where a definition rewriter goes, and the synchronous-playback rule ships as a hard requirement rather than as advice — `ModificationBarrier1` plays back at the end of the phase, after the consumers have read, so a rewrite queued into it lands too late, and the write goes through `EntityManager` or through an `Allocator.Temp` buffer the system plays back itself.
 `PostTool` with `ToolReadyBarrier` is named beside it as the window the game's own rewriter uses, with the property that makes it worth knowing — the barrier plays back before the modification phases, so the rewrite can be a scheduled job rather than a main-thread loop — and with its status in the same breath: no mod uses it, this pipeline cannot run the game, so what ships is the architecture rather than a tested path.
 
-The evidence standard the entry raised is what separates this from ticket 07's ruling rather than what aligns it.
+The evidence standard the entry raised is what separates this from the mod-lifecycle-and-ordering pass's ruling rather than what aligns it.
 That derivation was a sweep of readable call sites and could carry a shipped default; this one would be a claim about runtime behaviour nobody has observed, which is enough to name a window and not enough to send readers to it first.
 So the `PostTool` claim takes the volatility marker, and the next version's sweep re-checks both whether the window is still open and whether anyone has since used it.
 The `Modification1` default and the barrier timing behind it are architecture and take no marker.
@@ -439,7 +439,7 @@ Three options and each costs something. Teach it plainly, as six of twenty mods 
 The timing question rides along: reordering at `OnGameLoadingComplete` beats reordering at `OnCreate`, so whichever form ships also picks a hook, and picking the later hook is picking to win the race against mods that picked the earlier one.
 The ruling goes into the research file for `custom-tools`, and touches nothing else — no other topic owns `ToolSystem.tools`.
 
-**Ruling (2026-08-02, ticket 12).** The third option, in `custom-tools`: the restrained form is the default the reference teaches, and index 0 ships as an exception bound to the cooperative gate.
+**Ruling (2026-08-02, the custom-tools pass).** The third option, in `custom-tools`: the restrained form is the default the reference teaches, and index 0 ships as an exception bound to the cooperative gate.
 A tool takes the slot of the one tool it must precede, read back with `tools.IndexOf(...)`, rather than the front of the list.
 
 The cost the question attached to that option dissolves on the evidence the same pass produced: it objected that a reader has to know which vanilla tool they must precede, and the restrained form needs only that tool's type — the slot is read back live with `tools.IndexOf(...)`, so no list order is required. (Corrected by the addendum below.)
@@ -467,7 +467,7 @@ Three options and each costs something. Teach `IJobChunk` only: the reference is
 What turns on it is not correctness but whether the reference reads as a description of _this codebase_ or as a description of Unity ECS, which is the distinction the whole plugin exists on.
 The ruling goes into the research file for `ecs-in-this-game`, and touches `performance-and-memory` only if the chunk-level early exit is argued there as well.
 
-**Ruling (2026-08-02, ticket 10).** The third option, in `ecs-in-this-game`: the per-entity job interface is the default the reference teaches for new mod code, on the stated ground that it is the more modern replacement for the chunk interface.
+**Ruling (2026-08-02, the ecs-in-this-game pass).** The third option, in `ecs-in-this-game`: the per-entity job interface is the default the reference teaches for new mod code, on the stated ground that it is the more modern replacement for the chunk interface.
 
 The reference states the discrepancy plainly rather than papering over it — the game itself is `IJobChunk` throughout, so every line of vanilla code the reader opens next is written the other way, and that gap is a fact about the codebase's age rather than a reason to follow it.
 Both interfaces therefore ship. `IJobChunk` is taught well enough to read vanilla source and to fork it, because the fork technique starts from a decompiled body and that body is always `IJobChunk`; what it loses to the per-entity form is the chunk-level early exit, the chunk-scoped accessors and `unfilteredChunkIndex` as a parallel command buffer's sort key, and the reference names all three so a reader converting a fork knows what has no per-entity equivalent.
@@ -486,7 +486,7 @@ Both spellings work, so the contradiction is cosmetic and neither page is wrong.
 **Needs a ruling on.** Which spelling shipped prose writes, given that the sources disagree and the game does not care.
 No research file names a topic here: this was ruled before the stage existed, and a ruling made now would be written into every affected one.
 
-**Ruling (2026-08-01, ticket 02).** The double-dash form throughout, in `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md`.
+**Ruling (2026-08-01, the setup-skill pass).** The double-dash form throughout, in `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md`.
 With both spellings valid the choice is a house convention, so a reader finding the other form on the wiki has found a variant rather than an error.
 
 ### An orientation document in one decompile checkout teaches an ordering mechanism the game does not use
@@ -503,12 +503,12 @@ Against naming it: shipped prose otherwise states mechanisms on their own author
 For naming it: the attribute mechanism is what a modder arriving from stock ECS reaches for by default, so the warning earns its place whether or not anyone read that particular sentence.
 The ruling goes into the research file for mod lifecycle, loading and system ordering.
 
-**Ruling (2026-08-02, ticket 07).** Shipped prose states the trap, in `mod-lifecycle-and-ordering`, as a plain negative fact about the game rather than as a correction of any document: the attributes exist, compile, and do nothing here.
+**Ruling (2026-08-02, the mod-lifecycle-and-ordering pass).** Shipped prose states the trap, in `mod-lifecycle-and-ordering`, as a plain negative fact about the game rather than as a correction of any document: the attributes exist, compile, and do nothing here.
 That form keeps the rule the question was asked against — prose states mechanisms on its own authority and names no source — while still reaching the reader the warning is for, who arrives from stock ECS and reaches for the attributes by default, having read nothing at all.
-Ticket 07's discovery pass also widened the exposure past the checkout that raised it, which is what settles the doubt about whether the warning earns its line: a published mod in the corpus ships `[UpdateAfter(typeof(WeekSystem))]` on a system that, through the band rules, runs _before_ the system it names (`mod-lifecycle-and-ordering.md`, "Ordering is imperative, and the stock ECS attributes are inert here").
+The mod-lifecycle-and-ordering discovery pass also widened the exposure past the checkout that raised it, which is what settles the doubt about whether the warning earns its line: a published mod in the corpus ships `[UpdateAfter(typeof(WeekSystem))]` on a system that, through the band rules, runs _before_ the system it names (`mod-lifecycle-and-ordering.md`, "Ordering is imperative, and the stock ECS attributes are inert here").
 The same pass found the stronger proof the prose should rest on — the game imperatively registers a stock system that carries `[UpdateInGroup]` and never creates a system group, so no consumer of those attributes exists in the world — and that, rather than the absence of the attributes from game code, is the fact worth shipping, because it is the one a reader can act on.
 
-**Addendum (2026-08-05, ticket 21's verification pass over the decompile checkout).** The ruling stands and both cited files are gone from the working tree, so the `**Established.**` section no longer describes the checkout it was written against.
+**Addendum (2026-08-05, the navigating-the-decompile verification pass over the decompile checkout).** The ruling stands and both cited files are gone from the working tree, so the `**Established.**` section no longer describes the checkout it was written against.
 In `DecompiledCitiesSkylines2`, `docs/cohtml.md`, `docs/colossal.md` and `docs/game.md` were deleted and `AGENTS.md` cut from 64 lines to 14, committed in `565e22b7` and `190766c4`. The current `AGENTS.md` is a two-section orientation note carrying no modding guidance at all, so the `[UpdateAfter]` sentence and the three phase-name examples reach nobody reading that checkout today.
 Both citations in the `**Sources.**` and `**Established.**` text above now carry that commit, so they resolve where the evidence still exists rather than dangling at deleted paths.
 **Anchor the evidence to the commit, not to `HEAD`, which has since moved past it.** Both lines are verifiable at `ec7c3720`: `git show ec7c3720:AGENTS.md` line 56 is the `[UpdateAfter]`/`[UpdateBefore]` instruction, and `git show ec7c3720:docs/game.md` line 9 offers `Initialization`, `Simulation` and `Rendering` as `SystemUpdatePhase` examples, of which only `Rendering` exists (`src/Game/Game/SystemUpdatePhase.cs:20`). The zero-attribute grep over `src/Game/` reproduces unchanged at 1.6.0f1.
@@ -532,7 +532,7 @@ The evidence standard for shipping the ordering, since nothing corroborates what
 And the shape of what ships: a flat phase list would misrepresent the game, because a reader who assumes flatness reasons wrongly about what has already run by the time their system updates.
 The ruling goes into the research file for mod lifecycle, loading and system ordering, which is where the ordering material lands.
 
-**Ruling (2026-08-02, ticket 07).** The ordering ships, as a nesting tree, in `mod-lifecycle-and-ordering`.
+**Ruling (2026-08-02, the mod-lifecycle-and-ordering pass).** The ordering ships, as a nesting tree, in `mod-lifecycle-and-ordering`.
 
 On the shape: a flat list is not a simplification of this material but a different and false claim, because everything driven from `MainLoop` — the modification phases, the tools, the UI, rendering — runs before the frame's simulation steps, which hang off a system in `LateUpdate`.
 A reader holding the flat model reasons wrongly about what has already run by the time their system updates, which is the single question the ordering exists to answer.

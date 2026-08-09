@@ -10,10 +10,10 @@ tags: [cs2, prefabs, game-modes, balance, unsolved, over-reach, review]
 
 # Retuning a parameter component the game mode rewrites
 
-**What ships on this is one trap.** The full passage this records was written during ticket 23's
-review gate, failed fourteen rounds, and was cut from that commit; the citizens entry file now
-carries a trap on it. Pick the general treatment up as its own ticket, from the discovery stage,
-with this file as the starting point.
+**What ships on this is one trap.** The full passage this records was written during the
+citizens-and-households pass's review gate, failed fourteen rounds, and was cut from that commit;
+the citizens entry file now carries a trap on it. Pick the general treatment up as its own ticket,
+from the discovery stage, with this file as the starting point.
 
 ## Problem
 
@@ -44,7 +44,7 @@ Three independent unknowns, two of them outside the decompile entirely.
 - **Reach.** `GameModeSystem` runs `ModeSetting.ApplyMode` over the mode prefab list on the loaded
   save's `ModeSetting`. That list is authored asset data — live at 1.6.0f1, `NormalMode` carries zero
   entries and `EasyMode` carries 21. Whether a component is rewritten at all therefore depends on the
-  player's chosen mode and is invisible to any code read. The pass itself is never skipped:
+  player's chosen mode and is invisible to any code read. The mode-apply pass itself is never skipped:
   `GameModeSystem` falls back to the prefab named `NormalMode` when the save names none, so an empty
   authored list, not a skipped pass, is what spares a save.
 - **Scope.** Of the mode classes, roughly half derive from `LocalModePrefab` and declare no entity
@@ -53,8 +53,10 @@ Three independent unknowns, two of them outside the decompile entirely.
 - **Shape.** Some classes assign, some multiply, and a component can be written by two or three in
   sequence — `CoverageData` is assigned by one class and then multiplied by another over the same
   entities. The multipliers reach growable balance too: `ZoneServiceConsumptionGlobalMode` and
-  `ZonePollutionGlobalMode` multiply per-prefab `ConsumptionData` and `PollutionData`, found in
-  ticket 24's gate after a trap had scoped the threat to parameter singletons. A write before the pass is scaled by it; a write after discards what it contributed.
+  `ZonePollutionGlobalMode` multiply per-prefab `ConsumptionData` and `PollutionData`, found at
+  the zoning-buildings-and-land-value pass's review gate after a trap had scoped the threat to
+  parameter singletons. A write before the mode-apply pass is scaled by it; a write after discards
+  what it contributed.
   Six classes also snapshot the component before applying and hand that back on restore. Two of
   those fall back to the authoring object where no snapshot exists, one restores its main component
   from authoring and uses the snapshot only for a buffer row, and five have a branch that restores
@@ -71,8 +73,9 @@ per-prefab split was tried first and leaks: `PoliceConfigurationMode` multiplies
 on a settings-prefab singleton, and `ModeSettingData` is written by `ModeSetting` itself rather than
 by any `*Mode` class, so enumerating the mode classes misses it.
 
-**The write is solved.** `OnGameLoaded` fires after the whole `Deserialize` phase the pass runs in,
-so a write there lands last whatever the pass did. That holds for both kinds of component.
+**The write is solved.** `OnGameLoaded` fires after the whole `Deserialize` phase the mode-apply
+pass runs in, so a write there lands last whatever that pass did. That holds for both kinds of
+component.
 
 **The undo is `prefabs-and-assets`' rule unchanged: write the authoring value back.** No parameter
 component is ever snapshotted — only six per-prefab classes override `StoreDefaultData` — so reading
@@ -106,10 +109,11 @@ keep producing rules true of whatever case it examined, and each review round fi
 rather than the pattern — which is what the rounds cost.
 
 **But test that before declaring anything unsolved.** "Unsolved" was shipped twice here and was wrong
-both times: once for the write, which `OnGameLoaded` settles, and once for the undo, which the game's
-own restore-and-re-apply is public enough for a mod to replay. Both were called unsolved because a
-real mechanism had been traced and the next question — _is there a route out of it_ — had not been
-asked. Giving up is a claim like any other and takes the same evidence.
+both times: once for the write, which `OnGameLoaded` settles, and once for the undo, which writing
+the authoring value back settles for the parameter case — the read the game's own restore performs
+there. Both were called unsolved because a real mechanism had been traced and the next question —
+_is there a route out of it_ — had not been asked. Giving up is a claim like any other and takes
+the same evidence.
 
 The live game can settle reach for one save (`PrefabSystem.GetPrefab<ModeSetting>` on the
 `GameModeSettingData` entities) and is the only thing that can — but a reading from one city is

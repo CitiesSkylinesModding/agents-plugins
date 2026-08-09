@@ -173,7 +173,7 @@ Gains, all of them concrete:
 
 Losses: the boilerplate. An `IJobChunk` body must fetch each `NativeArray` from the chunk, loop, and index — see `src/Game/Game.Prefabs/ProcessingRequirementSystem.cs:37-55` for the compact form.
 
-**Ruled (2026-08-02, ticket 10; conflicts.md).** The shipped reference teaches `IJobEntity` as the default for new mod code, on the stated ground that it is the more modern replacement for `IJobChunk`. The question was whether to teach it at all; the answer is that it leads.
+**Ruled (2026-08-02, the ecs-in-this-game pass; conflicts.md).** The shipped reference teaches `IJobEntity` as the default for new mod code, on the stated ground that it is the more modern replacement for `IJobChunk`. The question was whether to teach it at all; the answer is that it leads.
 
 What the reference owes because of that, in four parts:
 
@@ -185,7 +185,7 @@ What the reference owes because of that, in four parts:
 The evidence above is unchanged by the ruling; only its position in the shipped prose is settled. Note that the corpus proportion — one repository in twenty — is a fact about what mod authors did, not a recommendation, and the ruling deliberately goes the other way.
 
 **The corpus's own Burst gate is worth carrying alongside this**, because a Burst-compiled job cannot be stepped: `Traffic` puts every `[BurstCompile]` behind `#if WITH_BURST` (`Traffic/Code/Traffic.csproj:450`), `CS2-MoveIt` uses `USE_BURST`, `CS2-WriteEverywhere` a `<Bursted>` property. `[BurstCompile]` counts per repo run from 57 (Traffic) and 46 (CS2-Platter) down to 0 (`RoadBuilder-CSII`, `ExtraAssetsImporter`), so an unbursted mod is a real and shipped choice.
-**Ruled (2026-08-04, ticket 18; conflicts.md).** `performance-and-memory` owns both gates and leads with the runtime one — `--burst-disable-compilation` or `UNITY_BURST_DISABLE_COMPILATION` — because seven of the ten corpus repositories using the compile-time gate define the symbol nowhere in the checkout, and a preprocessor symbol defined nowhere produces a build indistinguishable from a working one. This file's prose defers to that ordering. The launch argument was afterwards settled against the running game and ships unmarked, with the environment variable as its stated fallback; `performance-and-memory.md`'s own "Settled against the running game" section carries the evidence.
+**Ruled (2026-08-04, the performance-and-memory pass; conflicts.md).** `performance-and-memory` owns both gates and leads with the runtime one — `--burst-disable-compilation` or `UNITY_BURST_DISABLE_COMPILATION` — because seven of the ten corpus repositories using the compile-time gate define the symbol nowhere in the checkout, and a preprocessor symbol defined nowhere produces a build indistinguishable from a working one. This file's prose defers to that ordering. The launch argument was afterwards settled against the running game and ships unmarked, with the environment variable as its stated fallback; `performance-and-memory.md`'s own "Settled against the running game" section carries the evidence.
 
 Rots: the per-interface counts. The `IJobChunk.Execute` signature itself is Entities-package API and does not move within a package version.
 
@@ -434,7 +434,7 @@ Read `plugins/cs2-modding/skills/cs2-modding-setup/references/mod-catalog.md` in
 
 Do not edit that catalog from here; these are proposals.
 
-**Applied (2026-08-02, ticket 10).** All five went into the catalog, each as one sentence in the entry's **Demonstrates** paragraph, reworded for that file's voice rather than pasted verbatim. Nothing here is outstanding.
+**Applied (2026-08-02, the ecs-in-this-game pass).** All five went into the catalog, each as one sentence in the entry's **Demonstrates** paragraph, reworded for that file's voice rather than pasted verbatim. Nothing here is outstanding.
 
 ## Bridge
 

@@ -2,7 +2,7 @@
 
 **Baseline.** Decompiled game 1.6.0f1; the recipe was run against an installed game at `1.6.0f1 (419.d6c6) [6216.19404]`, the same build, on 2026-08-03.
 
-**This is a method file, not a topic file.** It carries no topic from the approved reference structure and no authoring agent is pointed at it. It exists because `localization.md`'s namespace table rests on this decode, and a table whose derivation lives only in a gitignored scratch folder is a table the next pass has to rediscover. The maintainer ruled the recipe out of the shipped reference and onto the roadmap as a script (ticket 15, 2026-08-03; `docs/ROADMAP.md`, "Extracting the shipped localization dictionaries").
+**This is a method file, not a topic file.** It carries no topic from the approved reference structure and no authoring agent is pointed at it. It exists because `localization.md`'s namespace table rests on this decode, and a table whose derivation lives only in a gitignored scratch folder is a table the next pass has to rediscover. The maintainer ruled the recipe out of the shipped reference and onto the roadmap as a script (the localization pass, 2026-08-03; `docs/ROADMAP.md`, "Extracting the shipped localization dictionaries").
 
 ## Why this source outranks the others
 

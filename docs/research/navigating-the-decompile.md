@@ -567,7 +567,7 @@ Entry 3 covers `index.js` and its reformatted copy in detail and names `index.cs
 
 ### The checkout's own orientation prose has been deleted since the ruling that named it
 
-`conflicts.md`'s ruled entry "An orientation document in one decompile checkout teaches an ordering mechanism the game does not use" (ruled 2026-08-02, ticket 07) cites `DecompiledCitiesSkylines2/AGENTS.md:56` and `DecompiledCitiesSkylines2/docs/game.md:9`.
+`conflicts.md`'s ruled entry "An orientation document in one decompile checkout teaches an ordering mechanism the game does not use" (ruled 2026-08-02, the mod-lifecycle-and-ordering pass) cites `DecompiledCitiesSkylines2/AGENTS.md:56` and `DecompiledCitiesSkylines2/docs/game.md:9`.
 
 Neither exists in the working tree now. `docs/cohtml.md`, `docs/colossal.md` and `docs/game.md` were deleted and `AGENTS.md` cut from **64** lines to **14**, committed in `565e22b7` and `190766c4`. The current `AGENTS.md` is a two-section orientation note with no modding guidance in it at all.
 
@@ -636,7 +636,7 @@ No repository documents how to search a decompile, and the catalog's `Demonstrat
 
 **Whether the twelve un-decompiled DLLs hold anything.** Not opened. Named as `Unconfirmed:` above with the artifact that would answer it (`ilspycmd` over one of them). None is reachable from a mod, so the answer changes nothing.
 
-**Whether the checkout's deleted `docs/*.md` were ever read by anything in this plugin.** Checked: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:70-93` provisions `src/` alone. No shipped path delivers that prose, which is what ticket 07's ruling already established and what makes the deletion a change to the evidence rather than to the product.
+**Whether the checkout's deleted `docs/*.md` were ever read by anything in this plugin.** Checked: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:70-93` provisions `src/` alone. No shipped path delivers that prose, which is what the mod-lifecycle-and-ordering pass's ruling already established and what makes the deletion a change to the evidence rather than to the product.
 
 **The running game was not used and did not need to be.** Every question this topic asks is about what is on disk. The one place a live source would help — enumerating a reflection-built registry's contents — belongs to the topics that own those registries, and `docs/SOURCES.md` entry 8 already routes there. No live question was recorded as unanswerable.
 

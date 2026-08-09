@@ -2,7 +2,7 @@
 
 **Baseline.** Decompiled game version 1.6.0f1. Mod corpus (20 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`) read 2026-08-02. Wiki fetched live 2026-08-02 — the bot challenge did not win this time, so the `Systems` and `ECS - Entity Component System` pages are cited from the live pages rather than through `survey-wiki-inventory.md`'s snapshot.
 
-**Re-swept 2026-08-03 (ticket 15b) against `docs/SOURCES.md`, which did not exist when this pass ran.** This topic makes no frontend claim, so the two sources the original pass could not have reached bear on it at exactly one seam: `AddUIModule`, where `@colossalorder/create-csii-ui-mod/template/types/modding.d.ts` declares the `ModuleRegistry` a loaded module talks to — `get`, `add`, `override`, `extend`, `append`, plus `hasAppend`, `find` and `reset`, and seven `AppendHookTargets`. That surface belongs to `frontend-and-injection`; what belongs here is the C# gate, amended at the deferral finding below. Nothing else in this file needed either source.
+**Re-swept 2026-08-03 (the new-sources resweep) against `docs/SOURCES.md`, which did not exist when this pass ran.** This topic makes no frontend claim, so the two sources the original pass could not have reached bear on it at exactly one seam: `AddUIModule`, where `@colossalorder/create-csii-ui-mod/template/types/modding.d.ts` declares the `ModuleRegistry` a loaded module talks to — `get`, `add`, `override`, `extend`, `append`, plus `hasAppend`, `find` and `reset`, and seven `AppendHookTargets`. That surface belongs to `frontend-and-injection`; what belongs here is the C# gate, amended at the deferral finding below. Nothing else in this file needed either source.
 
 ## Findings
 
@@ -77,7 +77,7 @@ The enum's declaration order is load-bearing for that comparison and is not chro
 
 Rots: the `GameManager.State` member names and their declaration order — re-read `src/Game/Game.SceneFlow/GameManager.cs:122-132`.
 
-The re-initialisation pass only ever adds a mod, never reloads one (corrected 2026-08-04 by ticket 17's orchestrator pass, which found the earlier reading contradicted by `patching`'s unpatch-lifecycle finding).
+The re-initialisation pass only ever adds a mod, never reloads one (corrected 2026-08-04 by the patching orchestrator pass, which found the earlier reading contradicted by `patching`'s unpatch-lifecycle finding).
 `m_ModManager?.Initialize(m_UpdateSystem, reinitialize: true)` (`:1628`) runs on a playset or mod-status change and re-runs `RegisterMods()` then `InitializeMods()` (`ModManager.cs:263-264`).
 `RegisterMods` keeps an existing entry's state through `ModInfo.TransferState` and gives only a genuinely new asset a fresh `ModInfo` (`ModManager.cs:397-428`, the transfer at `:414`), and `ModInfo.Load` returns immediately unless `state == State.Unknown` (`:95-98`).
 So an already-loaded mod is skipped rather than disposed and re-loaded, and `OnLoad` runs exactly once per mod per process.
@@ -102,7 +102,7 @@ Re-verified independently, and the evidence is stronger than "the attributes are
 
 So the exposure is not confined to one checkout's prose: a shipped mod in this corpus carries an ordering attribute whose declared relation is inverted by the mechanism that actually runs.
 
-**Ruled (2026-08-02, ticket 07; `conflicts.md`).** The reference states this, as a plain negative fact about the game and not as a correction of any document: the attributes exist, compile, and do nothing here.
+**Ruled (2026-08-02, the mod-lifecycle-and-ordering pass; `conflicts.md`).** The reference states this, as a plain negative fact about the game and not as a correction of any document: the attributes exist, compile, and do nothing here.
 Rest it on the no-consumer proof — the game imperatively registers a stock system carrying `[UpdateInGroup]` and never creates a system group — rather than on the absence of the attributes from game code, because the reader who needs the warning is arriving from stock ECS having read nothing, and "there is nothing here that reads them" is what they can act on.
 Name no source, no document and no mod.
 
@@ -163,7 +163,7 @@ The catalog's `Move It`, `Anarchy`, `Recolor`, `Platter` and `Node Controller` e
 This was the second open conflict entry, and the derivation below is what it asked for.
 The wiki still carries the literal placeholder `[insert infographic here]` where the ordering diagram belongs (https://cs2.paradoxwikis.com/Systems, confirmed on the live page 2026-08-02), so nothing corroborates this.
 
-**Ruled (2026-08-02, ticket 07; `conflicts.md`).** The ordering ships, and it ships as a tree.
+**Ruled (2026-08-02, the mod-lifecycle-and-ordering pass; `conflicts.md`).** The ordering ships, and it ships as a tree.
 A flat phase list is not a simplification of this material but a different and false claim, since everything driven from `MainLoop` runs before the frame's simulation steps.
 Uncorroborated is acceptable: being the first source to state it is this plugin's value rather than a risk.
 What the reference owes instead is provenance — one sentence saying the tree was derived from the registration table and the phase drivers rather than read from one file, so a reader re-checking it knows what to re-run.
@@ -352,7 +352,7 @@ Verdict: a hook throwing is **not** invisible to the player, against this file's
 The five hook wrappers log at `Error` through `COSystemBase.baseLog`, which is the `SceneFlow` logger, and that logger's `showsErrorsInUI` holds its `true` default — so each raises the modal error dialog and pauses the simulation.
 **The `OnUpdate` row is scoped and the others are not:** `UpdateSystem.Update` sets `showsErrorsInUI = false` around its own log call when `GameManager.instance.gameMode.IsEditor()` and restores it after (`src/Game/Game/UpdateSystem.cs:190-196`, identically `:238-245`), so that one raises no dialog in the editor.
 The `OnLoad` row is quieter still: `ModInfo.Dispose()` overwrites the error state with `Disposed` before the notification pass tests `state >= IsNotModWarning` (`src/Game/Game.Modding/ModManager.cs:170-173`, `:264` against `:270`), so it pushes no notification either.
-Established by ticket 19's `diagnostics` pass, which re-derived this code rather than trusting this file; `diagnostics.md` owns the surface and carries the chain from the logged level to the dialog.
+Established by the diagnostics pass, which re-derived this code rather than trusting this file; `diagnostics.md` owns the surface and carries the chain from the logged level to the dialog.
 
 Verdict: the dialog appears, confirmed by the maintainer on 2026-08-05 against the running game, so the claim ships flat rather than marked.
 
@@ -398,7 +398,7 @@ The tick is `MainThreadDispatcher.UpdateUpdaters()` at `GameManager.cs:713`, cal
 - Cross-mod API registration: `FindIt-CSII/FindIt/Mod.cs:73-74`.
 - Another mod's bridge: `ExtraDetailingTools/EDT.cs:93`.
 - Forcing a UI module asset to load through `GameManager.instance.modManager.AddUIModule` — which requires `ModManager.m_Initialized`, so it cannot run inside `OnLoad` at all (`CS2-WriteEverywhere/BelzontWE/WriteEverywhereCS2Mod.cs:104-109`, gate at `ModManager.cs:475-483`).
-  **Amended 2026-08-03 (ticket 15b): the gate is `if (m_Initialized)` with no `else`** (`src/Game/Game.Modding/ModManager.cs:477-482`), so an early call is a silent no-op and not a throw — which is the half a reader diagnosing a missing UI module needs, and which this file had left to inference. The body it skips is the one that registers the `"ui-mods"` host location for the module's directory and pushes the module's `coui` path into the frontend's app bindings, so nothing partial happens either.
+  **Amended 2026-08-03 (the new-sources resweep): the gate is `if (m_Initialized)` with no `else`** (`src/Game/Game.Modding/ModManager.cs:477-482`), so an early call is a silent no-op and not a throw — which is the half a reader diagnosing a missing UI module needs, and which this file had left to inference. The body it skips is the one that registers the `"ui-mods"` host location for the module's directory and pushes the module's `coui` path into the frontend's app bindings, so nothing partial happens either.
 - Lazily reflecting a private field on a vanilla system that must already exist: `RoadBuilder-CSII/RoadBuilder/Systems/RoadBuilderSystem.cs:63`.
 - Marshalling prefab registration back to the main thread from a background import: `ExtraAssetsImporter/MOD/AssetImporter/ImportersUtils.cs:67/198/310` uses `RunOnMainThread`, and `AssetsImporterManager.cs:402` blocks a worker on `WaitXFrames(2).Wait()`.
 
