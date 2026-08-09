@@ -87,6 +87,15 @@ line and returns CONFIRMED. A review pass verified "`Criminal` is active only wh
 to trace the full state machine and report each field's value at every stage. Brief a verifier on
 the mechanism's trace, never on the claim's confirmation.
 
+Four moves make that briefing hold. **Bar the verifier from the prose under test**, so it cannot
+cite the thing it is checking. **Order the work**: derive from the source first, compare with the
+claim second. **Say that a disagreement is a useful result**, or the agent reads its own contrary
+derivation as its own failure. **Demand the negatives by name** — every call site, every writer,
+every consumer — because proving one forces the enumeration that a confirming read never performs.
+A fan-out briefed this way over eight shipped reference claims came back disagreeing on four, three
+of them a right conclusion resting on a wrong mechanism: the shape a confirmation pass returns
+CONFIRMED on every time.
+
 ## The mid-range variant
 
 The stop can happen inside the cited range itself, which defeats the wide-range habit below. The
