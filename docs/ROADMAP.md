@@ -194,6 +194,37 @@ list by hand drifted across six files in one review gate. `check-skill-content.t
 mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
 file's marker. Types named without a path stay the reviewer's job.
 
+### A second benchmark question set
+
+The first full `bench/` invocation scored 9.81 for the control arm against 10.00 for the treatment
+one, three of its four questions saturating at 10/10 in both: what the skill measurably buys on that
+set is cost and time, roughly a fifth of the dollars and a third of the turns, and not correctness.
+A recall question the references cover is one Opus at medium effort answers cold given the same
+roots. Getting off that ceiling needs harder questions, and the set can only widen once every
+techniques and mechanics file has landed — until then a new question either duplicates one of the
+four or aims at prose that does not exist yet.
+
+Code generation is the candidate shape. A recall question asks what the game does; a code-generation
+one asks for a system, a component or a patch, which is where the traps bite — update ordering,
+values baked at initialisation, surviving a save, the update interval that must be a power of two —
+and where a good practice either shows up in the produced code or does not. It also breaks the
+saturation, since a run can miss one trap while getting everything else right.
+
+What the harness would need, smallest first:
+
+- Nothing in the arms. An answer already travels as text and code travels the same way, so
+  `Read,Glob,Grep` stays the right tool set: no workspace writes, no build, no new isolation
+  question.
+- Nothing in the rubric format. A rubric line is free prose with a weight, so "does not read the
+  value before the system that writes it has run" scores exactly like a fact point, and the judge
+  stays blind and tool-free.
+- A far more expensive verified answer: a reference implementation the maintainer has compiled and
+  run, not a paragraph. That authoring cost, not the harness, is what gates this facet.
+- An open question on compilation. The judge cannot build, so scoring "it compiles" means a scratch
+  mod project, a per-question skeleton the answer drops into, and a `dotnet build` per run. Worth
+  building only if judged scores turn out to disagree with the compiler — build a handful of answers
+  by hand first and find out.
+
 ### Asset, map and editor authoring
 
 Scope is code mods, so loading assets _from code_ is covered and authoring the assets themselves is
