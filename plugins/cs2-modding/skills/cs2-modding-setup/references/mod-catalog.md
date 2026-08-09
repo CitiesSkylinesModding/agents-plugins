@@ -75,6 +75,7 @@ Terrain-only raycasting by narrowing the raycast type mask.
 A preview entity path that renders an outline before anything is committed.
 Its own native containers and a line-sweep intersection pass, which is what reading it costs and what it teaches.
 Each job owns its component and buffer lookups behind an assign-once and a refresh-per-update method, which is the clearest hand-written form of the type-handle discipline the source generator otherwise supplies.
+Adding a panel to the game's developer menu imperatively — one panel taken from the render pipeline's panel registry at mod load and held in a static, appended to from each system's own `OnCreate`, so the menu shows live getters, toggles and numeric fields with no game type involved beyond the registry itself.
 No runtime patching anywhere.
 
 ### Network Tools
@@ -84,6 +85,8 @@ Source: [lucarager/CS2-NetworkTools](https://github.com/lucarager/CS2-NetworkToo
 **Does:** Freehand network editing beyond the road tools — adding and removing nodes, sliding and dragging them, connecting distant nodes with generated curves, offsetting a selection into parallel networks, and generating grids and circles of segments.
 
 **Demonstrates:** A shared tool base class carrying raycast filtering, eligibility marking and handle lifecycle for a family of tools.
+That base class and one intermediate layer are both abstract, with concrete tools registered at load — the layering the developer menu's tool enumeration survives only because a concrete descendant already exists when it runs.
+A vanilla React widget table that pulls its multi-component float sliders out of the game's debug UI module tree, where alone those widgets exist, while every other entry comes from the editor's.
 Resolving an edge raycast hit down to the nearest node.
 One output-mode switch that decides whether a job writes preview definitions or mutates the network directly on apply.
 Interactive 3D handles as their own drawable, cullable entities.
@@ -130,7 +133,8 @@ Prefab-data initialisation systems anchored immediately after the vanilla initia
 A patch that records whether it was the one that widened a filter, and narrows the results only in that case, so it composes with another mod doing the same thing and degrades to a no-op if the game starts doing it too.
 Hand-built input actions registered by reflection, because scroll bindings are not exposed.
 Taking a placement definition away from its vanilla consumer by removing the creation component from a system spliced immediately before that consumer, played back synchronously because a phase barrier would land after the consumer has already run.
-An in-engine test scenario system, debug-only.
+An in-engine test scenario system, debug-only: its scenario classes carry the test framework's own descriptor attribute, and the mod reflects them into that framework's private scenario dictionary after load, so they appear as buttons on the developer menu's `--qaDeveloperMode`-gated test tab beside the game's own — the framework registers its roster once, before a mod's assembly is reachable, and the re-sort it exposes returns a new dictionary, which is what forces the write back through the private field.
+Hiding the developer menu's own UI system from test setup, so a scenario runs against a clean screen.
 A build-time export of its English string table into the repository, locating the destination from the compiler's caller-file-path rather than a hard-coded developer directory.
 A mod-owned spatial index following the vanilla search systems closely: outstanding handles completed before disposal, and the tree cleared from the pre-deserialize hook and refilled on the next update through a first-load flag.
 Building and owning zone blocks outside the road network — creating cell buffers, running a fork of the vanilla cell-check pipeline after it, and managing a block's `Owner` by hand, which the vanilla spawner requires of any block it will spawn on.
@@ -158,6 +162,7 @@ Its own placement-definition component beside the game's, with a generator, a va
 An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
 Its own language dropdown independent of the game's, registering the chosen translation under whatever locale the game is currently set to and re-applying the swap whenever the player changes language.
 Two mod-owned quadtrees published behind the game's own reader/writer handle protocol, and every Burst attribute gated behind a symbol only its Release configuration defines.
+A gizmo debug system on the game's own debug base class that renders its own developer-menu panel rather than joining the vanilla gizmos tab — a port of the game's option-rendering method into a mod-created panel, with the whole registration behind a build symbol so a release build carries neither the panel nor the system.
 
 ## Replacing a vanilla system instead of patching it
 
@@ -300,6 +305,8 @@ Player-authored translations: the player names and translates their own palettes
 
 Source: [klyte45/CS2-WriteEverywhere](https://github.com/klyte45/CS2-WriteEverywhere)
 
+Clone with `--recurse-submodules`: three submodules carry shared code the mod project references, a plain clone leaves all three empty, and the compatibility patching lives in one of them.
+
 **Does:** Attaches custom text and images to buildings, props and vehicles, driven by properties of the target object, with reusable layouts, custom fonts, image atlases and imported meshes.
 
 **Demonstrates:** Rendering that leaves the entity renderer entirely — hooking the render pipeline's context callback and issuing draw calls per element with hand-built matrices.
@@ -310,6 +317,8 @@ A version int read into a local that bails when the save was written by a newer 
 The same classes serve as both the mod's XML file format and its save payload, which works because the reader's overload for a reference type deserializes into an instance the caller has already allocated.
 The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
+A transpiler that repairs the developer menu's tool enumeration for every mod in the session, not just its own, and stands down when the patched loop's opcodes show another mod already fixed it.
+(UNVERIFIED: the transpiler's own source — it lives in the submodule a plain clone leaves empty, and its shape is read from the repository's change record.)
 
 ### Hall of Fame
 

@@ -29,6 +29,8 @@ The heavier base is the minority choice, because most tools select, edit or pain
 Two shapes are worth adopting.
 **Every tool is declared `partial`**, which the source generators require anyway (`ecs-in-this-game`) and which lets a large tool split across files by concern rather than by nothing.
 **A family of tools that all raycast and mark eligibility the same way gets its own abstract layer** between the tools and `ToolBaseSystem`; that is the answer to "I have six tools and they differ only in what they do with the hit", and it scales to eight tools under two such layers without strain.
+**An abstract layer with no concrete descendant yet created kills the developer menu's whole `Simulation` tab**: that tab's tool enumeration instantiates every `ToolBaseSystem` descendant through the world with no abstract filter, so the layer is safe only once a concrete tool below it exists — `debug-menu` owns the mechanism and the repair.
+Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
 ## Registration is automatic, and it happens in `OnCreate`
 

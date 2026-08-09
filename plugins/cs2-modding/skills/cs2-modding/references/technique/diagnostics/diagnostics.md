@@ -221,6 +221,13 @@ The type name in the message is the system's short name, so it greps.
 
 Which of the five hooks each message belongs to, and what a disabled system leaves running in the rest of the mod, is `mod-lifecycle-and-ordering`.
 
+## A developer-menu tab that throws logs under two names
+
+A debug-menu tab method that throws loses its tab, and the same exception is caught twice: the attribute scan logs `Failed to register '<tab name>' Debug UI`, then the explicit rebuild logs the same message with the method name — and the method-name form repeats on every rebuild while the menu stays open.
+Grep for `Failed to register`, and read repeated method-name lines as one defect re-thrown rather than several.
+`debug-menu` owns the menu, its registration paths, and the one mod shape known to throw there.
+Source: `src/Game/Game.Debug/DebugSystem.cs`.
+
 ## An `Error` from a logger is a modal dialog and a paused simulation
 
 **`showsErrorsInUI` defaults to true on every new logger.**
