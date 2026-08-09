@@ -60,6 +60,7 @@ Each plugin has two release units (the plugin and its mcp) joined by `linked-ver
 Never hand-edit a version: each unit's number lives in a private `package.json` anchor, and release-please syncs it into the plugin manifests, the unity csproj `<Version>`, and the `dotnet dnx` version pins.
 
 - Any releasable commit under a plugin's directory bumps BOTH of that plugin's units.
+- Keep a commit inside one release unit: each unit's changelog is written from the commits touching it, so a `feat` spanning a plugin and the root files root tooling under that plugin's release notes.
 - Pre-1.0: `feat` bumps minor, `fix` patch. 1.0.0 only via a deliberate `Release-As:` footer.
 - Publishing stays MANUAL (`mise publish` for npm, `mise publish:unity` for NuGet, run by the user). No CI publish job; do not add one.
 - CI runs `mise check:agents` + `mise build:gameface` with `git diff --exit-code` (catching a stale committed bundle), then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the gameface bundle, and runs `dotnet test` on staged C# changes.
