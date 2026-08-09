@@ -35,12 +35,12 @@ Neither is in the original source; both are the decompiler's output style, and t
 
 Only four assemblies carry a `VersionInternal` attribute at all, and only one of them is the game's:
 
-| Assembly                | `VersionInternal`                 |
-| ----------------------- | --------------------------------- |
-| `Game`                  | `1.6.0f1 (419.d6c6) [6216.19404]` |
-| `Colossal.UI`           | `1.0.0f1 (419.d6c6) [6216.19385]` |
+| Assembly | `VersionInternal` |
+| --- | --- |
+| `Game` | `1.6.0f1 (419.d6c6) [6216.19404]` |
+| `Colossal.UI` | `1.0.0f1 (419.d6c6) [6216.19385]` |
 | `Colossal.Localization` | `1.0.0a1 (419.d6c6) [6216.19385]` |
-| `Colossal.Core`         | `1.0.0f1`, no build stamp         |
+| `Colossal.Core` | `1.0.0f1`, no build stamp |
 
 Three of the four share the changelist `419.d6c6`, which is what corroborates that they came off one build; `Colossal.Core` carries a bare version and settles nothing.
 The trap is pure adjacency: `AssemblyVersion("0.0.0.0")` sits one line under the real answer in the same file, so a reader who greps `AssemblyVersion` concludes the checkout is version-blind.

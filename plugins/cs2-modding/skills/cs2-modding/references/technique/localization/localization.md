@@ -124,11 +124,11 @@ Register one instance under every supported locale and have its `ReadEntries` wa
 
 A localization identifier is parsed by four regexes and nothing else.
 
-| Shape           | Regex                                                                   | Written as         |
-| --------------- | ----------------------------------------------------------------------- | ------------------ |
-| `Single`        | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)$`                                      | `Group.ID`         |
-| `Hashed`        | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)\[([-a-zA-Z0-9+/*._&<> ]+)\]+$`         | `Group.ID[hash]`   |
-| `Indexed`       | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+):([0-9]+)$`                             | `Group.ID:0`       |
+| Shape | Regex | Written as |
+| --- | --- | --- |
+| `Single` | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)$` | `Group.ID` |
+| `Hashed` | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)\[([-a-zA-Z0-9+/*._&<> ]+)\]+$` | `Group.ID[hash]` |
+| `Indexed` | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+):([0-9]+)$` | `Group.ID:0` |
 | `HashedIndexed` | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)\[([-a-zA-Z0-9+/*._&<> ]+)\]:([0-9]+)$` | `Group.ID[hash]:0` |
 
 Read off the regexes: **exactly one dot separates group from id**, neither part may start with a digit, both are `\w`-or-`$`, and the hash body accepts a far wider set — letters, digits, `-+/*._&<>` and the space — which is why a generated key can carry a whole dotted type name or a slashed path inside the brackets.
@@ -178,19 +178,19 @@ A mod that wants one name out of a pool writes `Group.ID:0` through `Group.ID:n`
 The settings base class exposes eleven public key builders.
 `<id>` is the page id and `<name>` is the settings class's own type name; `settings-and-input` owns how both are composed and owns the widget on the other end of each key.
 
-| Helper                                       | Key produced                                    |
-| -------------------------------------------- | ----------------------------------------------- |
-| `GetSettingsLocaleID()`                      | `Options.SECTION[<id>]`                         |
-| `GetOptionLabelLocaleID(opt)`                | `Options.OPTION[<id>.<name>.<opt>]`             |
-| `GetOptionDescLocaleID(opt)`                 | `Options.OPTION_DESCRIPTION[<id>.<name>.<opt>]` |
-| `GetOptionWarningLocaleID(opt)`              | `Options.WARNING[<id>.<name>.<opt>]`            |
-| `GetOptionTabLocaleID(tab)`                  | `Options.TAB[<id>.<tab>]`                       |
-| `GetOptionGroupLocaleID(group)`              | `Options.GROUP[<id>.<group>]`                   |
-| `GetEnumValueLocaleID<T>(value)`             | `Options.<id>.<ENUMTYPENAME>[<Member>]`         |
-| `GetOptionFormatLocaleID(opt)`               | `Options.FORMAT[<id>.<name>.<opt>]`             |
-| `GetBindingKeyLocaleID(action[, component])` | `Options.OPTION[<id>/<action>/<component>]`     |
-| `GetBindingKeyHintLocaleID(action)`          | `Common.ACTION[<id>/<action>]`                  |
-| `GetBindingMapLocaleID()`                    | `Options.INPUT_MAP[<id>]`                       |
+| Helper | Key produced |
+| --- | --- |
+| `GetSettingsLocaleID()` | `Options.SECTION[<id>]` |
+| `GetOptionLabelLocaleID(opt)` | `Options.OPTION[<id>.<name>.<opt>]` |
+| `GetOptionDescLocaleID(opt)` | `Options.OPTION_DESCRIPTION[<id>.<name>.<opt>]` |
+| `GetOptionWarningLocaleID(opt)` | `Options.WARNING[<id>.<name>.<opt>]` |
+| `GetOptionTabLocaleID(tab)` | `Options.TAB[<id>.<tab>]` |
+| `GetOptionGroupLocaleID(group)` | `Options.GROUP[<id>.<group>]` |
+| `GetEnumValueLocaleID<T>(value)` | `Options.<id>.<ENUMTYPENAME>[<Member>]` |
+| `GetOptionFormatLocaleID(opt)` | `Options.FORMAT[<id>.<name>.<opt>]` |
+| `GetBindingKeyLocaleID(action[, component])` | `Options.OPTION[<id>/<action>/<component>]` |
+| `GetBindingKeyHintLocaleID(action)` | `Common.ACTION[<id>/<action>]` |
+| `GetBindingMapLocaleID()` | `Options.INPUT_MAP[<id>]` |
 
 Build the key with the helper and never by hand: the page id is derived, and a hand-written key that drifts from it renders as itself.
 
@@ -329,13 +329,13 @@ The groups a mod normally writes into are `Assets.NAME[<prefab name>]` and `Asse
 **One reuse is a mechanism rather than a convention, and it is not optional.**
 A prefab a mod registers has its display name and description looked up by the prefab UI system, which picks the key pair from the prefab's type and components:
 
-| Prefab shape                           | Key pair                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| `UIAssetMenuPrefab` or `ServicePrefab` | `Services.NAME[<name>]` / `Services.DESCRIPTION[<name>]`                |
-| `UIAssetCategoryPrefab`                | `SubServices.NAME[<name>]` / `Assets.SUB_SERVICE_DESCRIPTION[<name>]`   |
-| carries a service-upgrade component    | `Assets.UPGRADE_NAME[<name>]` / `Assets.UPGRADE_DESCRIPTION[<name>]`    |
-| anything else                          | `Assets.NAME[<name>]` / `Assets.DESCRIPTION[<name>]`                    |
-| unresolvable                           | the obsolete identifier's name, and `Assets.MISSING_PREFAB_DESCRIPTION` |
+| Prefab shape | Key pair |
+| --- | --- |
+| `UIAssetMenuPrefab` or `ServicePrefab` | `Services.NAME[<name>]` / `Services.DESCRIPTION[<name>]` |
+| `UIAssetCategoryPrefab` | `SubServices.NAME[<name>]` / `Assets.SUB_SERVICE_DESCRIPTION[<name>]` |
+| carries a service-upgrade component | `Assets.UPGRADE_NAME[<name>]` / `Assets.UPGRADE_DESCRIPTION[<name>]` |
+| anything else | `Assets.NAME[<name>]` / `Assets.DESCRIPTION[<name>]` |
+| unresolvable | the obsolete identifier's name, and `Assets.MISSING_PREFAB_DESCRIPTION` |
 
 So naming a prefab is not a free choice: the mod ships the key the system will ask for, and the prefab's name and its key are one decision rather than two.
 `prefabs-and-assets` owns the registration on the other side of that seam.

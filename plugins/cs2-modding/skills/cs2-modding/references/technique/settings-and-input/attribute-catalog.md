@@ -13,15 +13,15 @@ Which attribute does which job, and every trap in the set, is the grouped listin
 
 ## Widget selectors
 
-| Attribute                   | Parameters                                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `SettingsUIButton`          | none                                                                                                                            |
-| `SettingsUISlider`          | fields `min`, `max = 100f`, `step = 1f`, `unit = "integer"`, `scalarMultiplier = 1f`, `scaleDragVolume`, `updateOnDragEnd`      |
-| `SettingsUIDropdown`        | `(Type itemsGetterType, string itemsGetterMethod)`                                                                              |
-| `SettingsUITextInput`       | none                                                                                                                            |
-| `SettingsUIDirectoryPicker` | none                                                                                                                            |
-| `SettingsUIMultilineText`   | `(string icon = null)`                                                                                                          |
-| `SettingsUIConfirmation`    | `(string overrideConfirmMessageId = null, string overrideConfirmMessageValue = null)` — upgrades a button to a confirmed button |
+| Attribute | Parameters |
+| --- | --- |
+| `SettingsUIButton` | none |
+| `SettingsUISlider` | fields `min`, `max = 100f`, `step = 1f`, `unit = "integer"`, `scalarMultiplier = 1f`, `scaleDragVolume`, `updateOnDragEnd` |
+| `SettingsUIDropdown` | `(Type itemsGetterType, string itemsGetterMethod)` |
+| `SettingsUITextInput` | none |
+| `SettingsUIDirectoryPicker` | none |
+| `SettingsUIMultilineText` | `(string icon = null)` |
+| `SettingsUIConfirmation` | `(string overrideConfirmMessageId = null, string overrideConfirmMessageValue = null)` — upgrades a button to a confirmed button |
 
 `SettingsUICustomFormat` carries the fields `fractionDigits`, `separateThousands = true`, `maxValueWithFraction = 100f` and `signed`, and only a float slider reads all four; the entry file states what that costs on an `int`.
 
@@ -41,25 +41,25 @@ Which attribute does which job, and every trap in the set, is the grouped listin
 
 The reflection pass reads each public instance property's type, its accessors and its attributes, and dispatches to a widget type.
 
-| Property type     | Condition                                                                                                         | Widget built                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `bool`            | `[SettingsUIButton]` + `[SettingsUIConfirmation]`                                                                 | button with confirmation     |
-| `bool`            | `[SettingsUIButton]`                                                                                              | button, inside a button row  |
-| `bool`            | readable **and** writable                                                                                         | toggle field                 |
-| `bool`            | write-only                                                                                                        | button, inside a button row  |
-| `int`             | `[SettingsUIDropdown]`                                                                                            | int dropdown                 |
-| `int`             | `[SettingsUISlider]`                                                                                              | int slider                   |
-| `float`           | `[SettingsUISlider]`                                                                                              | float slider                 |
-| `string`          | read+write, `[SettingsUITextInput]`                                                                               | string input field           |
-| `string`          | read+write, `[SettingsUIDropdown]`                                                                                | string dropdown              |
-| `string`          | read+write, `[SettingsUIDirectoryPicker]`                                                                         | directory picker             |
-| `string`          | read-only, `[SettingsUIMultilineText]`                                                                            | multiline text               |
-| `string`          | read-only, no attribute                                                                                           | localized value field        |
-| `LocalizedString` | read-only                                                                                                         | localized value field        |
-| enum              | `[SettingsUIDropdown]`                                                                                            | int dropdown                 |
-| enum              | no attribute                                                                                                      | enum field                   |
-| `ProxyBinding`    | unconditional                                                                                                     | input binding field          |
-| anything else     | `[SettingsUIDropdown]`, and the type is both `IJsonWritable` and `IJsonReadable` with a parameterless constructor | dropdown built by reflection |
+| Property type | Condition | Widget built |
+| --- | --- | --- |
+| `bool` | `[SettingsUIButton]` + `[SettingsUIConfirmation]` | button with confirmation |
+| `bool` | `[SettingsUIButton]` | button, inside a button row |
+| `bool` | readable **and** writable | toggle field |
+| `bool` | write-only | button, inside a button row |
+| `int` | `[SettingsUIDropdown]` | int dropdown |
+| `int` | `[SettingsUISlider]` | int slider |
+| `float` | `[SettingsUISlider]` | float slider |
+| `string` | read+write, `[SettingsUITextInput]` | string input field |
+| `string` | read+write, `[SettingsUIDropdown]` | string dropdown |
+| `string` | read+write, `[SettingsUIDirectoryPicker]` | directory picker |
+| `string` | read-only, `[SettingsUIMultilineText]` | multiline text |
+| `string` | read-only, no attribute | localized value field |
+| `LocalizedString` | read-only | localized value field |
+| enum | `[SettingsUIDropdown]` | int dropdown |
+| enum | no attribute | enum field |
+| `ProxyBinding` | unconditional | input binding field |
+| anything else | `[SettingsUIDropdown]`, and the type is both `IJsonWritable` and `IJsonReadable` with a parameterless constructor | dropdown built by reflection |
 
 Everything else produces no widget, and the three consequences of that which every settings page runs into are stated in the entry file.
 

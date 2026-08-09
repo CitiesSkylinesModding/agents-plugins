@@ -54,11 +54,11 @@ Rots: the archetype list. Re-check `src/Game/Game.Prefabs/CitizenPrefab.cs:21-33
 
 `m_State` is a 16-bit flag word (`src/Game/Game.Citizens/CitizenFlags.cs:8-23`) and **three multi-valued fields are packed into it alongside the plain booleans**:
 
-| Meaning                       | Bits                                                                   | Accessor                                                              |
-| ----------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Age                           | `AgeBit1` (1), `AgeBit2` (2)                                           | `GetAge()` / `SetAge()` (`Citizen.cs:109-117`)                        |
-| Education level 0–4           | `EducationBit1` (0x10), `EducationBit2` (0x20), `EducationBit3` (0x40) | `GetEducationLevel()` / `SetEducationLevel()` (`:47-82`)              |
-| Failed education attempts 0–3 | `FailedEducationBit1` (0x80), `FailedEducationBit2` (0x100)            | `GetFailedEducationCount()` / `SetFailedEducationCount()` (`:84-107`) |
+| Meaning | Bits | Accessor |
+| --- | --- | --- |
+| Age | `AgeBit1` (1), `AgeBit2` (2) | `GetAge()` / `SetAge()` (`Citizen.cs:109-117`) |
+| Education level 0–4 | `EducationBit1` (0x10), `EducationBit2` (0x20), `EducationBit3` (0x40) | `GetEducationLevel()` / `SetEducationLevel()` (`:47-82`) |
+| Failed education attempts 0–3 | `FailedEducationBit1` (0x80), `FailedEducationBit2` (0x100) | `GetFailedEducationCount()` / `SetFailedEducationCount()` (`:84-107`) |
 
 Age and the failed-education count are ordinary two-bit integers; **education is not**. `EducationBit3` alone means level 4, and levels 0–3 are `2*bit1 + bit2` (`:47-54`), so the three bits encode five values with three combinations unused. A mod that writes the bits directly rather than calling `SetEducationLevel` will produce levels the game never produces.
 
@@ -106,11 +106,11 @@ Rots: the single-writer property. Re-grep `HouseholdFlags.MovedIn` under `src/Ga
 
 The thresholds are hard-coded static methods, not prefab data (`AgingSystem.cs:244-257`):
 
-| Becomes | At age (days) | Verified live                              |
-| ------- | ------------- | ------------------------------------------ |
-| Teen    | 21            | `AgingSystem.GetTeenAgeLimitInDays()` → 21 |
-| Adult   | 36            | `GetAdultAgeLimitInDays()` → 36            |
-| Elderly | 84            | `GetElderAgeLimitInDays()` → 84            |
+| Becomes | At age (days) | Verified live |
+| --- | --- | --- |
+| Teen | 21 | `AgingSystem.GetTeenAgeLimitInDays()` → 21 |
+| Adult | 36 | `GetAdultAgeLimitInDays()` → 36 |
+| Elderly | 84 | `GetElderAgeLimitInDays()` → 84 |
 
 Those three day counts are C# and ship as numbers.
 The **conversion to game years does not**: it divides by `TimeSettingsData.m_DaysPerYear`, a prefab-singleton value (read live at 12, which is why 1.75 / 3 / 7 game years is what a reader would have seen at 1.6.0f1). This is the derived-ratio trap the ruling names — the reference states the thresholds in days, names `m_DaysPerYear` as the divisor, and leaves the arithmetic to a reader who has read their own value.
@@ -143,13 +143,13 @@ The baby is created with `m_BirthDay = 0`, which `CitizenInitializeSystem` reads
 
 `CitizenInitializeSystem` (registered at `SystemUpdatePhase.Modification5`, `SystemOrder.cs:230`) treats small `m_BirthDay` values as an enum rather than a day (`CitizenInitializeSystem.cs:119-183`):
 
-| `m_BirthDay` at creation | Result                                                                                |
-| ------------------------ | ------------------------------------------------------------------------------------- |
-| 0                        | Newborn child, birth triggers fire                                                    |
-| 1                        | Adult, random age in `[36, 84)`, education drawn from levels 0–3 (0–4 for a commuter) |
-| 2                        | Child or teen, split on `DemandParameterData.m_TeenSpawnPercentage`                   |
-| 3                        | Elderly, age `84 + rand(5)`, education 0–4                                            |
-| anything else            | Adult, age `36 + rand(daysPerYear)`, education 2–3                                    |
+| `m_BirthDay` at creation | Result |
+| --- | --- |
+| 0 | Newborn child, birth triggers fire |
+| 1 | Adult, random age in `[36, 84)`, education drawn from levels 0–3 (0–4 for a commuter) |
+| 2 | Child or teen, split on `DemandParameterData.m_TeenSpawnPercentage` |
+| 3 | Elderly, age `84 + rand(5)`, education 0–4 |
+| anything else | Adult, age `36 + rand(daysPerYear)`, education 2–3 |
 
 `HouseholdInitializeSystem.SpawnCitizen` passes these literals (`src/Game/Game.Citizens/HouseholdInitializeSystem.cs:165-181`): student count spawns with 4, adult count with 1, child count with 2, elder count with 3.
 The initializer then overwrites `m_BirthDay` with the real day number (`CitizenInitializeSystem.cs:210`).
@@ -258,12 +258,12 @@ Losing the job is `WorkerSystem` finding the workplace gone (`:139-149`, `:224-2
 
 `PayWageSystem` (`SystemOrder.cs:477`, `kUpdatesPerDay = 32` at `src/Game/Game.Simulation/PayWageSystem.cs:253`) walks every household's citizens and pays each one `1/32` of a daily figure into the household's money (`:95-163`).
 
-| Case                      | Amount per day                                                                               | Source     |
-| ------------------------- | -------------------------------------------------------------------------------------------- | ---------- |
-| Employed                  | `GetWage(worker.m_Level)`, ×`m_CommuterWageMultiplier` for a commuter                        | `:114-119` |
-| Employed at a company     | the same amount is _debited_ from the company                                                | `:120-127` |
-| Child                     | `m_FamilyAllowance`                                                                          | `:138-140` |
-| Elderly                   | `m_Pension`                                                                                  | `:141-143` |
+| Case | Amount per day | Source |
+| --- | --- | --- |
+| Employed | `GetWage(worker.m_Level)`, ×`m_CommuterWageMultiplier` for a commuter | `:114-119` |
+| Employed at a company | the same amount is _debited_ from the company | `:120-127` |
+| Child | `m_FamilyAllowance` | `:138-140` |
+| Elderly | `m_Pension` | `:141-143` |
 | Adult or teen, unemployed | `m_UnemploymentBenefit`, while `m_UnemploymentCounter < m_UnemploymentAllowanceMaxDays * 32` | `:144-151` |
 
 Taxable income is `amount - m_ResidentialMinimumEarnings / 32`, accumulated into `TaxPayer.m_UntaxedIncome` with a running average rate (`:155-162`).
@@ -504,19 +504,19 @@ A `grep -c UpdateFrame` returns zero for `StudentSystem`, `CountHouseholdDataSys
 
 The measured intervals and rates at 1.6.0f1:
 
-| System                                                                                                                 | Interval | `UpdateFrame` | Per entity, per day |
-| ---------------------------------------------------------------------------------------------------------------------- | -------- | ------------- | ------------------- |
-| `AgingSystem`, `CrimeCheckSystem`, `GraduationSystem`                                                                  | 16384    | yes           | 1                   |
-| `LeaveHouseholdSystem`                                                                                                 | 8192     | **no**        | **32**              |
-| `LookForPartnerSystem`, `DivorceSystem`                                                                                | 4096     | yes           | 4                   |
-| `PartnerSystem`                                                                                                        | 4096     | **no**        | **64**              |
-| `ServiceFeeSystem`                                                                                                     | 2048     | **no**        | 128                 |
-| `BirthSystem`, `DeathCheckSystem`                                                                                      | 1024     | yes           | 16                  |
-| `PayWageSystem`, `ApplyToSchoolSystem`                                                                                 | 512      | yes           | 32                  |
-| `HouseholdBehaviorSystem`, `CitizenFindJobSystem`, `LeisureSystem`                                                     | 64       | yes           | 256                 |
-| `CitizenBehaviorSystem`, `CitizenHappinessSystem`, `WorkerSystem`, `CriminalSystem`                                    | 16       | yes           | 1024                |
-| `StudentSystem`, `CitizenTravelPurposeSystem`, `TripNeededSystem`, `CountHouseholdDataSystem`, `CountWorkplacesSystem` | 16       | **no**        | **16384**           |
-| `FindJobSystem`, `FindSchoolSystem`, `HouseholdSpawnSystem`, `TouristSpawnSystem`, `CommuterSpawnSystem`               | 16       | no            | 16384               |
+| System | Interval | `UpdateFrame` | Per entity, per day |
+| --- | --- | --- | --- |
+| `AgingSystem`, `CrimeCheckSystem`, `GraduationSystem` | 16384 | yes | 1 |
+| `LeaveHouseholdSystem` | 8192 | **no** | **32** |
+| `LookForPartnerSystem`, `DivorceSystem` | 4096 | yes | 4 |
+| `PartnerSystem` | 4096 | **no** | **64** |
+| `ServiceFeeSystem` | 2048 | **no** | 128 |
+| `BirthSystem`, `DeathCheckSystem` | 1024 | yes | 16 |
+| `PayWageSystem`, `ApplyToSchoolSystem` | 512 | yes | 32 |
+| `HouseholdBehaviorSystem`, `CitizenFindJobSystem`, `LeisureSystem` | 64 | yes | 256 |
+| `CitizenBehaviorSystem`, `CitizenHappinessSystem`, `WorkerSystem`, `CriminalSystem` | 16 | yes | 1024 |
+| `StudentSystem`, `CitizenTravelPurposeSystem`, `TripNeededSystem`, `CountHouseholdDataSystem`, `CountWorkplacesSystem` | 16 | **no** | **16384** |
+| `FindJobSystem`, `FindSchoolSystem`, `HouseholdSpawnSystem`, `TouristSpawnSystem`, `CommuterSpawnSystem` | 16 | no | 16384 |
 
 **`kUpdatesPerDay` is not the rate**, and two conventions coexist.
 Most constant-carrying systems compute `262144 / (kUpdatesPerDay * 16)`, where the constant is the _intended_ per-entity rate and matches the last column only because the system also partitions — it does not for `LeaveHouseholdSystem` (2 against 32) or `PartnerSystem` (4 against 64).
@@ -605,16 +605,16 @@ The entry "A pre-launch balance page whose values are stale and whose schema is 
 
 For this topic the answer is unusually favourable: **every number the wiki's `Citizens` page tabulates lives in a prefab singleton reachable from a running game in one component read**, not in `resources.assets`.
 
-| Wiki table                                                | First-party source                                 | Cost               |
-| --------------------------------------------------------- | -------------------------------------------------- | ------------------ |
-| Wages by education                                        | `EconomyParameterData.m_Wage0..4`                  | one read           |
-| Family allowance, pension, unemployment benefit, max days | same component                                     | same read          |
-| Residential minimum earnings, commuter multiplier         | same component                                     | same read          |
-| School fees                                               | `ServiceFeeParameterData.m_BasicEducationFee` etc. | one read           |
-| Work efficiency formula                                   | `EconomyUtils.GetWorkerWorkforce`                  | decompile, no cost |
-| Life-stage lengths                                        | `AgingSystem.GetTeenAgeLimitInDays()` etc.         | decompile, no cost |
-| Happiness factor list                                     | `CitizenHappinessSystem.HappinessFactor`           | decompile, no cost |
-| Happiness factor magnitudes                               | `CitizenHappinessParameterData`                    | one read           |
+| Wiki table | First-party source | Cost |
+| --- | --- | --- |
+| Wages by education | `EconomyParameterData.m_Wage0..4` | one read |
+| Family allowance, pension, unemployment benefit, max days | same component | same read |
+| Residential minimum earnings, commuter multiplier | same component | same read |
+| School fees | `ServiceFeeParameterData.m_BasicEducationFee` etc. | one read |
+| Work efficiency formula | `EconomyUtils.GetWorkerWorkforce` | decompile, no cost |
+| Life-stage lengths | `AgingSystem.GetTeenAgeLimitInDays()` etc. | decompile, no cost |
+| Happiness factor list | `CitizenHappinessSystem.HappinessFactor` | decompile, no cost |
+| Happiness factor magnitudes | `CitizenHappinessParameterData` | one read |
 
 This pass ran all of those, against the eight money claims the wiki's page makes. **Four matched** (the five wages, residential minimum earnings, commuter wage multiplier, unemployment allowance max days). **Three were stale** (family allowance, pension, unemployment benefit). **One came back at exactly half the wiki's figures** — the school fees, 25/50/100 against ₡50/₡100/₡200.
 That half-ratio is worth flagging for the ruling rather than resolved here: it could be a balance change, or it could be that the wiki's "per month" is a different unit from `m_Default`, since `ServiceFeeSystem` charges `m_Default / 128` per invocation and this pass did not derive the per-month total. Either reading leaves the wiki's number unusable as a citable figure without stating which unit it is in.

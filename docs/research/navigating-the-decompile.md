@@ -54,18 +54,18 @@ Re-derived file counts, all **held** against the survey except where noted.
 
 **Tier A — the reading universe.**
 
-| Assembly                    | `.cs` files | Survey | What it owns                                                                                                                                                                                   |
-| --------------------------- | ----------: | :----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Game`                      |       4,388 |  held  | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`.                                                                                         |
-| `Colossal.Core`             |         303 |  held  | `COSystemBase`, `Colossal.Entities` (3 files), `Colossal.Serialization.Entities` (47), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Versioning`.                |
-| `Colossal.IO.AssetDatabase` |         165 |  held  | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`.                                                                |
-| `Colossal.UI.Binding`       |          69 |  held  | The whole C#↔JS binding vocabulary.                                                                                                                                                            |
-| `Colossal.Collections`      |          54 |  held  | `NativeQuadTree`, `NativeHeapAllocator`, `NativeAccumulator`. **Corrected (review gate, 2026-08-06): `NativeHeap` does not exist; the types are `NativeHeapAllocator` and `NativeHeapBlock`.** |
-| `Colossal.UI`               |          43 |  held  | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem`.                                                                                                                                   |
-| `Colossal.IO`               |          33 |  held  | `IOUtils`, `MultiPartFileStream`, `ZipUtilities`, the large `BinaryReaderExtensions`/`BinaryWriterExtensions`.                                                                                 |
-| `Colossal.Mathematics`      |          27 |  held  | `Bezier4x3`, `Bounds3`, `Line3`.                                                                                                                                                               |
-| `Colossal.Logging`          |          20 |  held  | `LogManager.GetLogger`.                                                                                                                                                                        |
-| `Colossal.Localization`     |          18 |  held  | `LocalizationManager.AddSource`, `MemorySource`, `CSVFileSource`.                                                                                                                              |
+| Assembly | `.cs` files | Survey | What it owns |
+| --- | ---: | :---: | --- |
+| `Game` | 4,388 | held | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. |
+| `Colossal.Core` | 303 | held | `COSystemBase`, `Colossal.Entities` (3 files), `Colossal.Serialization.Entities` (47), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Versioning`. |
+| `Colossal.IO.AssetDatabase` | 165 | held | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`. |
+| `Colossal.UI.Binding` | 69 | held | The whole C#↔JS binding vocabulary. |
+| `Colossal.Collections` | 54 | held | `NativeQuadTree`, `NativeHeapAllocator`, `NativeAccumulator`. **Corrected (review gate, 2026-08-06): `NativeHeap` does not exist; the types are `NativeHeapAllocator` and `NativeHeapBlock`.** |
+| `Colossal.UI` | 43 | held | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem`. |
+| `Colossal.IO` | 33 | held | `IOUtils`, `MultiPartFileStream`, `ZipUtilities`, the large `BinaryReaderExtensions`/`BinaryWriterExtensions`. |
+| `Colossal.Mathematics` | 27 | held | `Bezier4x3`, `Bounds3`, `Line3`. |
+| `Colossal.Logging` | 20 | held | `LogManager.GetLogger`. |
+| `Colossal.Localization` | 18 | held | `LocalizationManager.AddSource`, `MemorySource`, `CSVFileSource`. |
 
 The survey listed `Colossal.IO` under Tier B and gave the Tier A total as "~5,100 files".
 Counting the nine it names gives **5,087**; adding `Colossal.IO` gives **5,120**, which is **22.3% of the tree**.
@@ -94,34 +94,34 @@ Part of the gap is a directory the survey's table names nowhere — `Game.PSI.Pd
 
 Every per-namespace file count in the survey's table reproduced exactly. The full current ranking, all 75, for the authoring agent to use directly:
 
-| Directory            | Files |     | Directory                                                                                                                       |  Files |
-| -------------------- | ----: | --- | ------------------------------------------------------------------------------------------------------------------------------- | -----: |
-| `Game.Prefabs`       |  1274 |     | `Game.City`                                                                                                                     |     34 |
-| `Game.Simulation`    |   479 |     | `Game.Companies`                                                                                                                |     30 |
-| `Game.UI.InGame`     |   224 |     | `Game` (root ns)                                                                                                                |     27 |
-| `Game.Rendering`     |   155 |     | `Game.Zones`                                                                                                                    |     27 |
-| `Game.Net`           |   148 |     | `Game.SceneFlow`                                                                                                                |     22 |
-| `Game.UI.Widgets`    |   145 |     | `Game.UI.Menu`                                                                                                                  |     21 |
-| `Game.Buildings`     |   145 |     | `Game.Triggers`                                                                                                                 |     20 |
-| `Game.UI.Editor`     |   111 |     | `Game.Prefabs.Climate`                                                                                                          |     19 |
-| `Game.Tools`         |   111 |     | `Game.Modding.Toolchain.Dependencies`                                                                                           |     19 |
-| `Game.Vehicles`      |    92 |     | `Game.Effects`                                                                                                                  |     18 |
-| `Game.Prefabs.Modes` |    86 |     | `Game.Notifications`                                                                                                            |     17 |
-| `Game.Tutorials`     |    85 |     | `Game.Simulation.Flow`                                                                                                          |     16 |
-| `Game.Objects`       |    85 |     | `Game.Reflection`                                                                                                               |     15 |
-| `Game.Settings`      |    80 |     | `Game.Serialization.DataMigration`                                                                                              |     12 |
-| `Game.Pathfind`      |    80 |     | `Game.UI.Localization`                                                                                                          |     11 |
-| `Game.Serialization` |    74 |     | `Game.Rendering.Utilities`                                                                                                      |     11 |
-| `Game.Routes`        |    70 |     | `Game.Prefabs.Effects`                                                                                                          |     11 |
-| `Game.Debug`         |    69 |     | `Game.UI.Debug`                                                                                                                 |     10 |
-| `Game.Citizens`      |    64 |     | `Game.Modding.Toolchain`                                                                                                        |     10 |
-| `Game.Events`        |    63 |     | `Game.Policies`                                                                                                                 |      8 |
-| `Game.Input`         |    61 |     | `Game.Achievements`                                                                                                             |      8 |
-| `Game.Areas`         |    51 |     | `Colossal.Atmosphere`                                                                                                           |      8 |
-| `Game.Common`        |    49 |     | `Game.PSI` / `Game.Economy` / `Game.Assets` / `Game.Agents`                                                                     | 7 each |
-| `Game.UI`            |    41 |     | `Game.Rendering.Debug` / `Game.Prefabs.Terrain`                                                                                 | 6 each |
-| `Game.UI.Tooltip`    |    39 |     | `Game.Glossary` / `Game.Audio`                                                                                                  | 5 each |
-| `Game.Creatures`     |    37 |     | `Game.UI.Editor.Widgets`, `Game.Rendering.CinematicCamera`, `Game.PSI.PdxSdk`, `Game.Modding`, `Game.Dlc`, `Game.AssetPipeline` | 3 each |
+| Directory | Files |  | Directory | Files |
+| --- | ---: | --- | --- | ---: |
+| `Game.Prefabs` | 1274 |  | `Game.City` | 34 |
+| `Game.Simulation` | 479 |  | `Game.Companies` | 30 |
+| `Game.UI.InGame` | 224 |  | `Game` (root ns) | 27 |
+| `Game.Rendering` | 155 |  | `Game.Zones` | 27 |
+| `Game.Net` | 148 |  | `Game.SceneFlow` | 22 |
+| `Game.UI.Widgets` | 145 |  | `Game.UI.Menu` | 21 |
+| `Game.Buildings` | 145 |  | `Game.Triggers` | 20 |
+| `Game.UI.Editor` | 111 |  | `Game.Prefabs.Climate` | 19 |
+| `Game.Tools` | 111 |  | `Game.Modding.Toolchain.Dependencies` | 19 |
+| `Game.Vehicles` | 92 |  | `Game.Effects` | 18 |
+| `Game.Prefabs.Modes` | 86 |  | `Game.Notifications` | 17 |
+| `Game.Tutorials` | 85 |  | `Game.Simulation.Flow` | 16 |
+| `Game.Objects` | 85 |  | `Game.Reflection` | 15 |
+| `Game.Settings` | 80 |  | `Game.Serialization.DataMigration` | 12 |
+| `Game.Pathfind` | 80 |  | `Game.UI.Localization` | 11 |
+| `Game.Serialization` | 74 |  | `Game.Rendering.Utilities` | 11 |
+| `Game.Routes` | 70 |  | `Game.Prefabs.Effects` | 11 |
+| `Game.Debug` | 69 |  | `Game.UI.Debug` | 10 |
+| `Game.Citizens` | 64 |  | `Game.Modding.Toolchain` | 10 |
+| `Game.Events` | 63 |  | `Game.Policies` | 8 |
+| `Game.Input` | 61 |  | `Game.Achievements` | 8 |
+| `Game.Areas` | 51 |  | `Colossal.Atmosphere` | 8 |
+| `Game.Common` | 49 |  | `Game.PSI` / `Game.Economy` / `Game.Assets` / `Game.Agents` | 7 each |
+| `Game.UI` | 41 |  | `Game.Rendering.Debug` / `Game.Prefabs.Terrain` | 6 each |
+| `Game.UI.Tooltip` | 39 |  | `Game.Glossary` / `Game.Audio` | 5 each |
+| `Game.Creatures` | 37 |  | `Game.UI.Editor.Widgets`, `Game.Rendering.CinematicCamera`, `Game.PSI.PdxSdk`, `Game.Modding`, `Game.Dlc`, `Game.AssetPipeline` | 3 each |
 
 The 62 rows above, plus five directories at 2 files (`Game.UI.Thumbnails`, `Game.Rendering.Legacy`, `Game.Prefabs.Water`, `Game.Audio.Radio`, `Colossal.Rendering`) and eight at 1 (`Unity.Mathematics`, `Unity.Entities.CodeGeneratedRegistry`, `System.Runtime.CompilerServices`, `Properties`, `Game.Rendering.Climate`, `Game.PSI.Internal`, `Game.CinematicCamera`, `Colossal.Atmosphere.Internal`), make 75.
 `src/Game/*.cs` at the assembly root holds **10 files**, four more than the survey names: `__JobReflectionRegistrationOutput__17016606566994089001.cs`, `-BurstDirectCallInitializer.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `DayNightCycleData.cs`, `DebugCamera.cs`, `DepthFadePass.cs`, `GameModeSettingData.cs`, `ShowIfAttribute.cs`, `UberZOrdererTest.cs`, `VTTestGameManager.cs`.
@@ -130,14 +130,14 @@ The 62 rows above, plus five directories at 2 files (`Game.UI.Thumbnails`, `Game
 
 Two spot-check families in the survey's table, re-derived so the authoring agent knows which method produced them (this matters — see the family trap below):
 
-| Namespace        | Declares `IComponentData` | ~~Anchored pattern finds~~ (withdrawn) | Files containing the token |
-| ---------------- | ------------------------: | -------------------------------------: | -------------------------: |
-| `Game.Prefabs`   |                       409 |                                ~~390~~ |                        413 |
-| `Game.Buildings` |                        82 |                                 ~~80~~ |                         82 |
-| `Game.Net`       |                        63 |                                 ~~58~~ |                         64 |
-| `Game.Vehicles`  |                        47 |                                 ~~28~~ |                         48 |
-| `Game.Citizens`  |                        35 |                                 ~~29~~ |                          — |
-| `Game.Objects`   |                        42 |                                 ~~31~~ |                          — |
+| Namespace | Declares `IComponentData` | ~~Anchored pattern finds~~ (withdrawn) | Files containing the token |
+| --- | ---: | ---: | ---: |
+| `Game.Prefabs` | 409 | ~~390~~ | 413 |
+| `Game.Buildings` | 82 | ~~80~~ | 82 |
+| `Game.Net` | 63 | ~~58~~ | 64 |
+| `Game.Vehicles` | 47 | ~~28~~ | 48 |
+| `Game.Citizens` | 35 | ~~29~~ | — |
+| `Game.Objects` | 42 | ~~31~~ | — |
 
 **The middle column is the broken pattern's output, kept struck so the correction below has something to point at.** Read the left column as the answer.
 
@@ -158,13 +158,13 @@ A glob written as `src/*/*/<Name>.cs` misses all 181. `src/**/<Name>.cs` catches
 
 Verified with the harness's own `Glob` tool against this checkout:
 
-| Goal                            | Pattern                                            | Result                                                                                                                                               |
-| ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A type by name                  | `src/**/<TypeName>.cs`                             | `src/**/AgingSystem.cs` → exactly one file, `src/Game/Game.Simulation/AgingSystem.cs`                                                                |
-| A type whose name collides      | same                                               | `src/**/SearchSystem.cs` → six files, all under `src/Game`, in `Game.Zones`, `Game.Routes`, `Game.Net`, `Game.Effects`, `Game.Objects`, `Game.Areas` |
-| Every system in a domain        | `src/Game/Game.Simulation/*System.cs`              | the directory _is_ the namespace                                                                                                                     |
-| Everything in a namespace       | `src/Game/<Namespace>/`                            | verbatim, dots and all                                                                                                                               |
-| Which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'` | the only reliable route, because of the exceptions below                                                                                             |
+| Goal | Pattern | Result |
+| --- | --- | --- |
+| A type by name | `src/**/<TypeName>.cs` | `src/**/AgingSystem.cs` → exactly one file, `src/Game/Game.Simulation/AgingSystem.cs` |
+| A type whose name collides | same | `src/**/SearchSystem.cs` → six files, all under `src/Game`, in `Game.Zones`, `Game.Routes`, `Game.Net`, `Game.Effects`, `Game.Objects`, `Game.Areas` |
+| Every system in a domain | `src/Game/Game.Simulation/*System.cs` | the directory _is_ the namespace |
+| Everything in a namespace | `src/Game/<Namespace>/` | verbatim, dots and all |
+| Which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'` | the only reliable route, because of the exceptions below |
 
 **How often a name-glob lands on one file.** Over the whole tree there are 21,510 distinct basenames and 20,611 of them occur once — **95.8%**.
 Inside the Tier A reading universe (5,120 files) there are 4,898 distinct basenames and 4,726 occur once — **96.5%**.
@@ -172,14 +172,14 @@ The survey's "works ~99% of the time" **moved down** to 96.5%, and the gap is no
 
 **Grep recipes that still work**, each re-run:
 
-| Question                       | Pattern                                              | Measured against 1.6.0f1                                       |
-| ------------------------------ | ---------------------------------------------------- | -------------------------------------------------------------- |
-| When does system X run         | `X>` in `src/Game/Game.Common/SystemOrder.cs`        | the only file with registrations at all (below)                |
-| What runs in phase P           | `SystemUpdatePhase.P` in `SystemOrder.cs`            | 31 of the 32 phases appear                                     |
-| Every subclass of B            | `class [A-Za-z0-9_]+ : B\b`                          | 280 hits for `ComponentBase`, 112 for `PrefabBase`             |
-| Every binding a system exposes | `AddBinding\|AddUpdateBinding` in that file          | 880 call sites across `src/Game`                               |
-| Which archetype carries C      | `GetArchetypeComponents` in `src/Game/Game.Prefabs/` | 374 sites                                                      |
-| The settings vocabulary        | `SettingsUI` in `src/Game/Game.Settings/`            | 38 `SettingsUI*Attribute.cs` files of 40 `*Attribute.cs` there |
+| Question | Pattern | Measured against 1.6.0f1 |
+| --- | --- | --- |
+| When does system X run | `X>` in `src/Game/Game.Common/SystemOrder.cs` | the only file with registrations at all (below) |
+| What runs in phase P | `SystemUpdatePhase.P` in `SystemOrder.cs` | 31 of the 32 phases appear |
+| Every subclass of B | `class [A-Za-z0-9_]+ : B\b` | 280 hits for `ComponentBase`, 112 for `PrefabBase` |
+| Every binding a system exposes | `AddBinding\|AddUpdateBinding` in that file | 880 call sites across `src/Game` |
+| Which archetype carries C | `GetArchetypeComponents` in `src/Game/Game.Prefabs/` | 374 sites |
+| The settings vocabulary | `SettingsUI` in `src/Game/Game.Settings/` | 38 `SettingsUI*Attribute.cs` files of 40 `*Attribute.cs` there |
 
 The survey's "all 40+ `SettingsUI*Attribute` types" **moved**: there are exactly **38**, in a directory holding 40 attribute files.
 
@@ -268,16 +268,16 @@ Verdict: the survey's stated pattern is wrong and the decompile overturns it. `s
 
 **The eight `RO`/`RW` shapes and their populations**, measured across `src/Game` (33,330 occurrences total):
 
-| Suffix                    | Occurrences |
-| ------------------------- | ----------: |
-| `_RO_ComponentLookup`     |      16,016 |
-| `_RO_ComponentTypeHandle` |       7,032 |
-| `_RO_BufferLookup`        |       4,224 |
-| `_RW_ComponentTypeHandle` |       1,689 |
-| `_RW_ComponentLookup`     |       1,365 |
-| `_RO_BufferTypeHandle`    |       1,274 |
-| `_RW_BufferLookup`        |         904 |
-| `_RW_BufferTypeHandle`    |         826 |
+| Suffix | Occurrences |
+| --- | ---: |
+| `_RO_ComponentLookup` | 16,016 |
+| `_RO_ComponentTypeHandle` | 7,032 |
+| `_RO_BufferLookup` | 4,224 |
+| `_RW_ComponentTypeHandle` | 1,689 |
+| `_RW_ComponentLookup` | 1,365 |
+| `_RO_BufferTypeHandle` | 1,274 |
+| `_RW_BufferLookup` | 904 |
+| `_RW_BufferTypeHandle` | 826 |
 
 **What this buys, measured.** For `Game.Citizens.Citizen`:
 

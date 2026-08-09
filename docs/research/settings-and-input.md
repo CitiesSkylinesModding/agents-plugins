@@ -118,25 +118,25 @@ The automatic path is `FillSettingsPage(SettingPageData, Setting)` (`AutomaticSe
 
 `GetWidgetType` is a flat dispatch on the property's CLR type and its accessors (`:1049-1144`):
 
-| Property type     | Condition                                                                                                 | `WidgetType`                 | Widget built                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
-| `bool`            | `[SettingsUIButton]` + `[SettingsUIConfirmation]`                                                         | `BoolButtonWithConfirmation` | `ButtonWithConfirmation` (`:1169-1191`)                                            |
-| `bool`            | `[SettingsUIButton]`                                                                                      | `BoolButton`                 | `Button` in a `ButtonRow` (`:1219-1244`)                                           |
-| `bool`            | readable **and** writable                                                                                 | `BoolToggle`                 | `ToggleField` (`:1193-1217`)                                                       |
-| `bool`            | write-only                                                                                                | `BoolButton`                 | `Button` in a `ButtonRow`                                                          |
-| `int`             | `[SettingsUIDropdown]`                                                                                    | `IntDropdown`                | `DropdownField<int>` (`:1246-1272`)                                                |
-| `int`             | `[SettingsUISlider]`                                                                                      | `IntSlider`                  | `IntSliderField` (`:1274-1313`)                                                    |
-| `float`           | `[SettingsUISlider]`                                                                                      | `FloatSlider`                | `FloatSliderField` (`:1315-1352`)                                                  |
-| `string`          | read+write, `[SettingsUITextInput]`                                                                       | `StringTextInput`            | `StringInputField` (`:1354-1374`)                                                  |
-| `string`          | read+write, `[SettingsUIDropdown]`                                                                        | `StringDropdown`             | `DropdownField<string>` (`:1376-1402`)                                             |
-| `string`          | read+write, `[SettingsUIDirectoryPicker]`                                                                 | `DirectoryPicker`            | `DirectoryPickerField` (`:1527-1555`)                                              |
-| `string`          | read-only, `[SettingsUIMultilineText]`                                                                    | `MultilineText`              | `MultilineText` (`src/Game/Game.UI.Widgets/MultilineTextSettingItemData.cs:17-28`) |
-| `string`          | read-only, no attribute                                                                                   | `StringField`                | `LocalizedValueField` (`:1404-1421`)                                               |
-| `LocalizedString` | read-only                                                                                                 | `LocalizedStringField`       | `LocalizedValueField` (`:1423-1440`)                                               |
-| enum              | `[SettingsUIDropdown]`                                                                                    | `AdvancedEnumDropdown`       | `DropdownField<int>` (`:1442-1464`)                                                |
-| enum              | no attribute                                                                                              | `EnumDropdown`               | `EnumField` (`:1466-1490`)                                                         |
-| `ProxyBinding`    | unconditional                                                                                             | `KeyBinding`                 | `InputBindingField` (`:1492-1525`)                                                 |
-| anything else     | `[SettingsUIDropdown]` and the type is `IJsonWritable` + `IJsonReadable` with a parameterless constructor | `CustomDropdown`             | `DropdownField<T>` by reflection (`:1557-1576`)                                    |
+| Property type | Condition | `WidgetType` | Widget built |
+| --- | --- | --- | --- |
+| `bool` | `[SettingsUIButton]` + `[SettingsUIConfirmation]` | `BoolButtonWithConfirmation` | `ButtonWithConfirmation` (`:1169-1191`) |
+| `bool` | `[SettingsUIButton]` | `BoolButton` | `Button` in a `ButtonRow` (`:1219-1244`) |
+| `bool` | readable **and** writable | `BoolToggle` | `ToggleField` (`:1193-1217`) |
+| `bool` | write-only | `BoolButton` | `Button` in a `ButtonRow` |
+| `int` | `[SettingsUIDropdown]` | `IntDropdown` | `DropdownField<int>` (`:1246-1272`) |
+| `int` | `[SettingsUISlider]` | `IntSlider` | `IntSliderField` (`:1274-1313`) |
+| `float` | `[SettingsUISlider]` | `FloatSlider` | `FloatSliderField` (`:1315-1352`) |
+| `string` | read+write, `[SettingsUITextInput]` | `StringTextInput` | `StringInputField` (`:1354-1374`) |
+| `string` | read+write, `[SettingsUIDropdown]` | `StringDropdown` | `DropdownField<string>` (`:1376-1402`) |
+| `string` | read+write, `[SettingsUIDirectoryPicker]` | `DirectoryPicker` | `DirectoryPickerField` (`:1527-1555`) |
+| `string` | read-only, `[SettingsUIMultilineText]` | `MultilineText` | `MultilineText` (`src/Game/Game.UI.Widgets/MultilineTextSettingItemData.cs:17-28`) |
+| `string` | read-only, no attribute | `StringField` | `LocalizedValueField` (`:1404-1421`) |
+| `LocalizedString` | read-only | `LocalizedStringField` | `LocalizedValueField` (`:1423-1440`) |
+| enum | `[SettingsUIDropdown]` | `AdvancedEnumDropdown` | `DropdownField<int>` (`:1442-1464`) |
+| enum | no attribute | `EnumDropdown` | `EnumField` (`:1466-1490`) |
+| `ProxyBinding` | unconditional | `KeyBinding` | `InputBindingField` (`:1492-1525`) |
+| anything else | `[SettingsUIDropdown]` and the type is `IJsonWritable` + `IJsonReadable` with a parameterless constructor | `CustomDropdown` | `DropdownField<T>` by reflection (`:1557-1576`) |
 
 Everything else is `WidgetType.None`.
 Three consequences worth stating flat.

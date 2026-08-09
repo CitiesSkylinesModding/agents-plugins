@@ -60,15 +60,15 @@ A mod whose references cannot all be resolved never loads either, with the unres
 
 The routes answer different questions.
 
-| Route                                                                                                                                                       | What it answers                              | When it is correct             |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------ |
-| Enumerate the mod manager — it is `IEnumerable<ModInfo>`; match `modInfo.asset.name`, the **simple** assembly name                                          | Is it registered, before any load is decided | Anywhere, `OnLoad` included    |
-| `modManager.ListModsEnabled()`                                                                                                                              | Is it installed — code mods and UI modules   | After every mod has loaded     |
-| Asset database by exact name, then `asset.assembly.GetType(...)`                                                                                            | Is its assembly loaded, and hand me a type   | After that mod has loaded      |
-| `AppDomain.CurrentDomain.GetAssemblies()`, matching a name or probing each for a type                                                                       | Is its code in the process                   | After that mod has loaded      |
-| `Type.GetType("Ns.Type, Assembly")`, falling back to the assembly scan                                                                                      | Hand me a type by assembly-qualified name    | After that mod has loaded      |
-| A game registry another mod pushed itself into — `ToolSystem.tools` is a plain `List<ToolBaseSystem>` you scan for a `toolID`, or a system resolved by type | Hand me its live instance                    | After that mod's system exists |
-| An `EntityQuery` over a component type resolved by name, plus `RequireForUpdate`                                                                            | **Is it doing something right now**          | In a system's update           |
+| Route | What it answers | When it is correct |
+| --- | --- | --- |
+| Enumerate the mod manager — it is `IEnumerable<ModInfo>`; match `modInfo.asset.name`, the **simple** assembly name | Is it registered, before any load is decided | Anywhere, `OnLoad` included |
+| `modManager.ListModsEnabled()` | Is it installed — code mods and UI modules | After every mod has loaded |
+| Asset database by exact name, then `asset.assembly.GetType(...)` | Is its assembly loaded, and hand me a type | After that mod has loaded |
+| `AppDomain.CurrentDomain.GetAssemblies()`, matching a name or probing each for a type | Is its code in the process | After that mod has loaded |
+| `Type.GetType("Ns.Type, Assembly")`, falling back to the assembly scan | Hand me a type by assembly-qualified name | After that mod has loaded |
+| A game registry another mod pushed itself into — `ToolSystem.tools` is a plain `List<ToolBaseSystem>` you scan for a `toolID`, or a system resolved by type | Hand me its live instance | After that mod's system exists |
+| An `EntityQuery` over a component type resolved by name, plus `RequireForUpdate` | **Is it doing something right now** | In a system's update |
 
 **The mod manager is the only route correct from `OnLoad`.**
 Reach it as `GameManager.instance.modManager` and enumerate it directly.

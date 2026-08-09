@@ -37,12 +37,12 @@ Where this file records a magnitude below, it is evidence for the maintainer and
 
 For the read machinery: a parameter singleton needs no new prose, and a mechanics reference bridges to `ecs-in-this-game`'s `GetSingleton<T>` and stops. Everything else in this topic needs the access shape stated, and the shapes here are four:
 
-| Where the value lives                                                                                                           | How it is read                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `LandValueParameterData`, `EconomyParameterData`, `DemandParameterData`, `ZonePreferenceData`, `BuildingConfigurationData`      | singleton component on a settings-prefab entity, via a one-type `EntityQuery` and `GetSingleton<T>` (`LandValueSystem.cs:324/355`) |
-| `ZoneData`, `ZonePropertiesData`, `ZonePollutionData`, `ZoneServiceConsumptionData`                                             | per-**zone-prefab** component, reached from `SpawnableBuildingData.m_ZonePrefab` (`RentAdjustSystem.cs:256-264`)                   |
-| `BuildingData`, `BuildingPropertyData`, `SpawnableBuildingData`, `ConsumptionData`, `PollutionData`                             | per-**building-prefab** component, reached from the instance's `PrefabRef.m_Prefab` (`BuildingUpkeepSystem.cs:181-186`)            |
-| `ZoneLevelUpResourceData`, `LevelUpResourceData`, `VacantLot`, `Cell`, `ProcessEstimate`, `DistrictModifier`, `ServiceDistrict` | dynamic buffer, on a prefab entity or an instance                                                                                  |
+| Where the value lives | How it is read |
+| --- | --- |
+| `LandValueParameterData`, `EconomyParameterData`, `DemandParameterData`, `ZonePreferenceData`, `BuildingConfigurationData` | singleton component on a settings-prefab entity, via a one-type `EntityQuery` and `GetSingleton<T>` (`LandValueSystem.cs:324/355`) |
+| `ZoneData`, `ZonePropertiesData`, `ZonePollutionData`, `ZoneServiceConsumptionData` | per-**zone-prefab** component, reached from `SpawnableBuildingData.m_ZonePrefab` (`RentAdjustSystem.cs:256-264`) |
+| `BuildingData`, `BuildingPropertyData`, `SpawnableBuildingData`, `ConsumptionData`, `PollutionData` | per-**building-prefab** component, reached from the instance's `PrefabRef.m_Prefab` (`BuildingUpkeepSystem.cs:181-186`) |
+| `ZoneLevelUpResourceData`, `LevelUpResourceData`, `VacantLot`, `Cell`, `ProcessEstimate`, `DistrictModifier`, `ServiceDistrict` | dynamic buffer, on a prefab entity or an instance |
 
 Getting one of these wrong fails silently rather than at compile time — `LevelUpResourceData` sits on the _building_ prefab and `ZoneLevelUpResourceData` on the _zone_ prefab, and `BuildingUpkeepSystem` tries them in exactly that order, building first (`BuildingUpkeepSystem.cs:250-276`). (Corrected 2026-08-08, the zoning-buildings-and-land-value pass's `/review-gate`, twice: `ZonePreferenceData` previously sat in both the singleton row and the per-zone-prefab row — it is the singleton — and this sentence previously read zone-first.)
 
@@ -136,12 +136,12 @@ The block prefab comes from the road: `RoadPrefab.m_ZoneBlock` (`src/Game/Game.P
 
 Three systems produce six demand values, all in `SystemUpdatePhase.GameSimulation` at interval 16, on staggered offsets that `DemandUtils` names as constants (`src/Game/Game.Simulation/DemandUtils.cs:7-17`: `kUpdateInterval = 16`, count-companies at 1, commercial at 4, industrial at 7, residential at 10, zone spawn at 13). Those are C# constants and ship as numbers.
 
-| System                           | Registered           | Outputs                                                                                                                              |
-| -------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| System | Registered | Outputs |
+| --- | --- | --- |
 | `CountResidentialPropertySystem` | `SystemOrder.cs:387` | `ResidentialPropertyData { m_FreeProperties: int3, m_TotalProperties: int3 }` by density (`CountResidentialPropertySystem.cs:24-37`) |
-| `ResidentialDemandSystem`        | `:388`               | `m_HouseholdDemand: int`, `m_BuildingDemand: int3` (low/medium/high)                                                                 |
-| `CommercialDemandSystem`         | `:389`               | `m_CompanyDemand`, `m_BuildingDemand`, plus per-resource arrays                                                                      |
-| `IndustrialDemandSystem`         | `:391`               | industrial, storage and office company and building demand                                                                           |
+| `ResidentialDemandSystem` | `:388` | `m_HouseholdDemand: int`, `m_BuildingDemand: int3` (low/medium/high) |
+| `CommercialDemandSystem` | `:389` | `m_CompanyDemand`, `m_BuildingDemand`, plus per-resource arrays |
+| `IndustrialDemandSystem` | `:391` | industrial, storage and office company and building demand |
 
 **Residential demand is a sum of nine weighted terms, clamped, then split three ways.**
 `ResidentialDemandSystem.UpdateResidentialDemandJob.Execute` (`src/Game/Game.Simulation/ResidentialDemandSystem.cs:81-192`) is the readable one and worth reading whole. Its shape:
@@ -280,17 +280,17 @@ Affordability is then compared against income: a household's is `EconomyUtils.Ge
 
 **Nothing intrinsic.** A level is a different prefab (see `SelectSpawnableBuilding` above), so everything a level "gains" is either a field on that other prefab or a term in a formula that reads `SpawnableBuildingData.m_Level`. The complete set of level-dependent expressions at 1.6.0f1:
 
-| What changes with level                                                                                                 | Where                                 |
-| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| Rent asked, linearly in `level`                                                                                         | `PropertyUtils.cs:399`                |
-| Upkeep, as `pow(level, exponent)`                                                                                       | `PropertyRenterSystem.cs:226-245`     |
-| Leveling cost, as `pow(2, 2 * level)`                                                                                   | `BuildingUtils.cs:304-312`            |
-| Condition change per tick, as `pow(2, level)`                                                                           | `BuildingUpkeepSystem.cs:216`, `:220` |
-| Abandon cost, as `(6 - level)` for multi-apartment residential                                                          | `BuildingUtils.cs:335-338`            |
-| Apartment count, as `(1 + 0.25 * (level - 1)) * lotSize * m_ResidentialProperties`, **only when `m_ScaleResidentials`** | `ZoneProperties.cs:111-123`           |
-| Apartment wellbeing, as `+4 * (level - 1)` inside `0.8 * (...)`                                                         | `CitizenHappinessSystem.cs:1050-1053` |
-| Level-up material list, selected by level                                                                               | `BuildingUpkeepSystem.cs:257-276`     |
-| The prefab's own `ConsumptionData`, `PollutionData`, workplaces and geometry                                            | per-prefab, authored                  |
+| What changes with level | Where |
+| --- | --- |
+| Rent asked, linearly in `level` | `PropertyUtils.cs:399` |
+| Upkeep, as `pow(level, exponent)` | `PropertyRenterSystem.cs:226-245` |
+| Leveling cost, as `pow(2, 2 * level)` | `BuildingUtils.cs:304-312` |
+| Condition change per tick, as `pow(2, level)` | `BuildingUpkeepSystem.cs:216`, `:220` |
+| Abandon cost, as `(6 - level)` for multi-apartment residential | `BuildingUtils.cs:335-338` |
+| Apartment count, as `(1 + 0.25 * (level - 1)) * lotSize * m_ResidentialProperties`, **only when `m_ScaleResidentials`** | `ZoneProperties.cs:111-123` |
+| Apartment wellbeing, as `+4 * (level - 1)` inside `0.8 * (...)` | `CitizenHappinessSystem.cs:1050-1053` |
+| Level-up material list, selected by level | `BuildingUpkeepSystem.cs:257-276` |
+| The prefab's own `ConsumptionData`, `PollutionData`, workplaces and geometry | per-prefab, authored |
 
 `ZoneProperties.GetBuildingPropertyData` (`ZoneProperties.cs:111-123`) is the one place the apartment scaling lives, and it runs at prefab initialisation for each level, not at runtime.
 The three coefficients in it — `1f`, `0.25f`, and `4f`/`0.8f` in the wellbeing curve — are literals in C# and ship as part of the formula.

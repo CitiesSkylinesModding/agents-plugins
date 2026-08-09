@@ -24,19 +24,19 @@ Rots: the `CreationDefinition` field set and the `Updated` requirement on the co
 
 A `CreationDefinition` alone does nothing. What is created is decided by the **second** component on the definition entity, and each one is claimed by exactly one system.
 
-| Kind component                                                                  | Consumer                      | Phase                                 | Consumer query                                                                                                 |
-| ------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ObjectDefinition` (`src/Game/Game.Tools/ObjectDefinition.cs:6-33`)             | `GenerateObjectsSystem`       | `Modification1` (`SystemOrder.cs:95`) | `{CreationDefinition, Updated}` + `Any = {ObjectDefinition, NetCourse}` (`GenerateObjectsSystem.cs:1721-1733`) |
-| `NetCourse` (`src/Game/Game.Tools/NetCourse.cs:7-20`)                           | `GenerateNodesSystem`         | `Modification1` (`:96`)               | same `All`, `Any = {NetCourse, ObjectDefinition}` (`GenerateNodesSystem.cs:2016-2028`)                         |
-| `NetCourse`                                                                     | `GenerateEdgesSystem`         | `Modification2` (`:111`)              | `{CreationDefinition, NetCourse, Updated}` (`GenerateEdgesSystem.cs:2111-2118`)                                |
-| `Zoning` (`src/Game/Game.Tools/Zoning.cs:6-11`)                                 | `GenerateZonesSystem`         | `Modification1` (`:97`)               | `{CreationDefinition, Zoning, Updated}` (`GenerateZonesSystem.cs:569`)                                         |
-| `Game.Areas.Node` buffer (`src/Game/Game.Areas/Node.cs:9-13`)                   | `GenerateAreasSystem`         | `Modification1` (`:98`)               | `{CreationDefinition, Node, Updated}` (`GenerateAreasSystem.cs:532`)                                           |
-| `WaypointDefinition` buffer (`src/Game/Game.Routes/WaypointDefinition.cs:7-13`) | `GenerateWaypointsSystem`     | `Modification1` (`:99`)               | `{CreationDefinition, WaypointDefinition, Updated}` (`GenerateWaypointsSystem.cs:600`)                         |
-| `WaypointDefinition` buffer                                                     | `GenerateRoutesSystem`        | `Modification2` (`:112`)              | same triple (`GenerateRoutesSystem.cs:211`)                                                                    |
-| `IconDefinition` (`src/Game/Game.Tools/IconDefinition.cs:7-15`)                 | `GenerateNotificationsSystem` | `Modification1` (`:100`)              | `{CreationDefinition, Updated}` + `Any = {IconDefinition}` (`GenerateNotificationsSystem.cs:149-157`)          |
-| `BrushDefinition` (`src/Game/Game.Tools/BrushDefinition.cs:7-23`)               | `GenerateBrushesSystem`       | `Modification1` (`:101`)              | `{CreationDefinition, Updated}` + `Any = {BrushDefinition}` (`GenerateBrushesSystem.cs:158-166`)               |
-| `AggregateElement` buffer (`src/Game/Game.Net/AggregateElement.cs:8-10`)        | `GenerateAggregatesSystem`    | `Modification1` (`:102`)              | `{CreationDefinition, AggregateElement, Updated}` (`GenerateAggregatesSystem.cs:174`)                          |
-| `WaterSourceDefinition` (`src/Game/Game.Tools/WaterSourceDefinition.cs:6-21`)   | `GenerateWaterSourcesSystem`  | `Modification1` (`:103`)              | `{CreationDefinition, Updated}` + `Any = {WaterSourceDefinition}` (`GenerateWaterSourcesSystem.cs:122-130`)    |
+| Kind component | Consumer | Phase | Consumer query |
+| --- | --- | --- | --- |
+| `ObjectDefinition` (`src/Game/Game.Tools/ObjectDefinition.cs:6-33`) | `GenerateObjectsSystem` | `Modification1` (`SystemOrder.cs:95`) | `{CreationDefinition, Updated}` + `Any = {ObjectDefinition, NetCourse}` (`GenerateObjectsSystem.cs:1721-1733`) |
+| `NetCourse` (`src/Game/Game.Tools/NetCourse.cs:7-20`) | `GenerateNodesSystem` | `Modification1` (`:96`) | same `All`, `Any = {NetCourse, ObjectDefinition}` (`GenerateNodesSystem.cs:2016-2028`) |
+| `NetCourse` | `GenerateEdgesSystem` | `Modification2` (`:111`) | `{CreationDefinition, NetCourse, Updated}` (`GenerateEdgesSystem.cs:2111-2118`) |
+| `Zoning` (`src/Game/Game.Tools/Zoning.cs:6-11`) | `GenerateZonesSystem` | `Modification1` (`:97`) | `{CreationDefinition, Zoning, Updated}` (`GenerateZonesSystem.cs:569`) |
+| `Game.Areas.Node` buffer (`src/Game/Game.Areas/Node.cs:9-13`) | `GenerateAreasSystem` | `Modification1` (`:98`) | `{CreationDefinition, Node, Updated}` (`GenerateAreasSystem.cs:532`) |
+| `WaypointDefinition` buffer (`src/Game/Game.Routes/WaypointDefinition.cs:7-13`) | `GenerateWaypointsSystem` | `Modification1` (`:99`) | `{CreationDefinition, WaypointDefinition, Updated}` (`GenerateWaypointsSystem.cs:600`) |
+| `WaypointDefinition` buffer | `GenerateRoutesSystem` | `Modification2` (`:112`) | same triple (`GenerateRoutesSystem.cs:211`) |
+| `IconDefinition` (`src/Game/Game.Tools/IconDefinition.cs:7-15`) | `GenerateNotificationsSystem` | `Modification1` (`:100`) | `{CreationDefinition, Updated}` + `Any = {IconDefinition}` (`GenerateNotificationsSystem.cs:149-157`) |
+| `BrushDefinition` (`src/Game/Game.Tools/BrushDefinition.cs:7-23`) | `GenerateBrushesSystem` | `Modification1` (`:101`) | `{CreationDefinition, Updated}` + `Any = {BrushDefinition}` (`GenerateBrushesSystem.cs:158-166`) |
+| `AggregateElement` buffer (`src/Game/Game.Net/AggregateElement.cs:8-10`) | `GenerateAggregatesSystem` | `Modification1` (`:102`) | `{CreationDefinition, AggregateElement, Updated}` (`GenerateAggregatesSystem.cs:174`) |
+| `WaterSourceDefinition` (`src/Game/Game.Tools/WaterSourceDefinition.cs:6-21`) | `GenerateWaterSourcesSystem` | `Modification1` (`:103`) | `{CreationDefinition, Updated}` + `Any = {WaterSourceDefinition}` (`GenerateWaterSourcesSystem.cs:122-130`) |
 
 Two more components ride along rather than selecting a consumer.
 `OwnerDefinition { Entity m_Prefab; float3 m_Position; quaternion m_Rotation; }` (`src/Game/Game.Tools/OwnerDefinition.cs:7-13`) names an owner that **does not exist yet** — a sub-object of a building being placed points at the building's own definition rather than at an entity, which is what lets a whole composite be described before any of it is created.
@@ -59,21 +59,21 @@ A definition without `Permanent` becomes a `Temp` preview waiting for `ApplyTool
 
 The rest of the flags are read by the consumer and translated into `TempFlags` and into components on the created entity. The mapping, all in `GenerateObjectsSystem`'s `CreationData` handler:
 
-| `CreationFlags`                                   | Effect                                                                                                                        | Line                       |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `Delete`                                          | `TempFlags.Delete`, and a refund computed from the original's `Recent` component                                              | `:998-1005`                |
-| `Select`                                          | `TempFlags.Select`; with `Dragging`, also `TempFlags.Dragging`                                                                | `:1006-1013`               |
-| `Relocate`                                        | `TempFlags.Modify` plus a relocation cost when the transform actually moved                                                   | `:1016-1032`               |
-| `Upgrade`                                         | `TempFlags.Upgrade` plus an upgrade cost diffed against the original prefab's cost                                            | `:1033-1056`               |
-| `Duplicate`                                       | `TempFlags.Duplicate`                                                                                                         | `:1057-1060`               |
-| `Repair`                                          | a rebuild cost, only when the original carries `Destroyed`; also suppresses copying `Damaged`/`Destroyed` onto the new entity | `:1061-1071`, `:1270-1280` |
-| `Parent`                                          | `TempFlags.Parent`                                                                                                            | `:1072-1075`               |
-| `Optional`                                        | `TempFlags.Optional` on a create                                                                                              | `:1081-1084`               |
-| `Lowered`                                         | `ElevationFlags.Lowered`                                                                                                      | `:1099-1102`               |
-| `Attach`                                          | an `Attached` component built from `m_Attached`                                                                               | `:1120-1125`, `:1266-1269` |
-| `Native`                                          | a `Native` component                                                                                                          | `:1294-1297`               |
-| `Construction`                                    | routes the new building through the under-construction path                                                                   | `:1408`                    |
-| neither `Delete` nor `Select` nor an `m_Original` | `TempFlags.Create` and a cost equal to the construction cost                                                                  | `:1078-1089`               |
+| `CreationFlags` | Effect | Line |
+| --- | --- | --- |
+| `Delete` | `TempFlags.Delete`, and a refund computed from the original's `Recent` component | `:998-1005` |
+| `Select` | `TempFlags.Select`; with `Dragging`, also `TempFlags.Dragging` | `:1006-1013` |
+| `Relocate` | `TempFlags.Modify` plus a relocation cost when the transform actually moved | `:1016-1032` |
+| `Upgrade` | `TempFlags.Upgrade` plus an upgrade cost diffed against the original prefab's cost | `:1033-1056` |
+| `Duplicate` | `TempFlags.Duplicate` | `:1057-1060` |
+| `Repair` | a rebuild cost, only when the original carries `Destroyed`; also suppresses copying `Damaged`/`Destroyed` onto the new entity | `:1061-1071`, `:1270-1280` |
+| `Parent` | `TempFlags.Parent` | `:1072-1075` |
+| `Optional` | `TempFlags.Optional` on a create | `:1081-1084` |
+| `Lowered` | `ElevationFlags.Lowered` | `:1099-1102` |
+| `Attach` | an `Attached` component built from `m_Attached` | `:1120-1125`, `:1266-1269` |
+| `Native` | a `Native` component | `:1294-1297` |
+| `Construction` | routes the new building through the under-construction path | `:1408` |
+| neither `Delete` nor `Select` nor an `m_Original` | `TempFlags.Create` and a cost equal to the construction cost | `:1078-1089` |
 
 **`m_RandomSeed` outlives the definition.** `GenerateObjectsSystem` writes `new PseudoRandomSeed((ushort)definitionData.m_RandomSeed)` onto the created entity whenever the original had none (`:1174`, and `:1372` on the create path), so the definition's seed becomes the entity's permanent variation seed. `ecs-in-this-game.md:373` records `PseudoRandomSeed` itself. Rewriting `m_RandomSeed` on a definition therefore changes what the placed thing looks like forever, not just this frame.
 

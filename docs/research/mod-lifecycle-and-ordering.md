@@ -112,13 +112,13 @@ Rots: nothing here. This is architecture — the absence of a system-group world
 
 `UpdateSystem` exposes five registration methods (`src/Game/Game/UpdateSystem.cs:141-164`):
 
-| Method                          | `addIndex` assigned      | Effect                             |
-| ------------------------------- | ------------------------ | ---------------------------------- |
-| `UpdateBefore<T>(phase)`        | `++m_AddIndex - 1000000` | front band of `phase`              |
-| `UpdateAt<T>(phase)`            | `++m_AddIndex`           | middle band of `phase`             |
-| `UpdateAfter<T>(phase)`         | `++m_AddIndex + 1000000` | back band of `phase`               |
+| Method | `addIndex` assigned | Effect |
+| --- | --- | --- |
+| `UpdateBefore<T>(phase)` | `++m_AddIndex - 1000000` | front band of `phase` |
+| `UpdateAt<T>(phase)` | `++m_AddIndex` | middle band of `phase` |
+| `UpdateAfter<T>(phase)` | `++m_AddIndex + 1000000` | back band of `phase` |
 | `UpdateBefore<T, Other>(phase)` | `++m_AddIndex - 1000000` | spliced immediately before `Other` |
-| `UpdateAfter<T, Other>(phase)`  | `++m_AddIndex + 1000000` | spliced immediately after `Other`  |
+| `UpdateAfter<T, Other>(phase)` | `++m_AddIndex + 1000000` | spliced immediately after `Other` |
 
 The single-type forms append to `m_Systems`; the two-type forms instead append to `m_RefMap[Other]` (`:254-275`).
 `Refresh()` sorts `m_Systems` by `(phase, addIndex)` (`:29-37`, `:299`) and walks each phase's run building `m_Updates`, splicing in the `m_RefMap` entries recursively as it goes (`:292-363`, `:365-438`); `Update(phase)` then walks one contiguous range of `m_Updates` and returns (`:172-183`).
@@ -319,13 +319,13 @@ Several corpus overrides are dead by the rule above: `CS2-WriteEverywhere/Belzon
 
 `GameSystemBase` subscribes four lifecycle hooks in `OnCreate` (`src/Game/Game/GameSystemBase.cs:17-31`) and wraps each in try/catch. **They do not behave the same way.**
 
-| Wrapper                        | Hook                                       | Log message                                                | Sets `Enabled = false`?     |
-| ------------------------------ | ------------------------------------------ | ---------------------------------------------------------- | --------------------------- |
-| `WorldReady` `:98-109`         | `OnWorldReady()`                           | `"<TypeName>: Error on game preload, disabling system..."` | **yes** `:107`              |
-| `GamePreload` `:85-96`         | `OnGamePreload(Purpose, GameMode)`         | `"<TypeName>: Error on game preload, disabling system..."` | **yes** `:94`               |
-| `GameLoaded` `:72-83`          | `OnGameLoaded(Context)`                    | `"<TypeName>: Error on game load, disabling system..."`    | **yes** `:81`               |
+| Wrapper | Hook | Log message | Sets `Enabled = false`? |
+| --- | --- | --- | --- |
+| `WorldReady` `:98-109` | `OnWorldReady()` | `"<TypeName>: Error on game preload, disabling system..."` | **yes** `:107` |
+| `GamePreload` `:85-96` | `OnGamePreload(Purpose, GameMode)` | `"<TypeName>: Error on game preload, disabling system..."` | **yes** `:94` |
+| `GameLoaded` `:72-83` | `OnGameLoaded(Context)` | `"<TypeName>: Error on game load, disabling system..."` | **yes** `:81` |
 | `GameLoadingComplete` `:60-70` | `OnGameLoadingComplete(Purpose, GameMode)` | `"<TypeName>: Error on state change, disabling system..."` | **no** — the line is absent |
-| `FocusChanged` `:33-43`        | `OnFocusChanged(bool)`                     | `"<TypeName>: Error on Focus change"`                      | no                          |
+| `FocusChanged` `:33-43` | `OnFocusChanged(bool)` | `"<TypeName>: Error on Focus change"` | no |
 
 Two things in that table are the payload:
 
@@ -341,12 +341,12 @@ All five log through `COSystemBase.baseLog`, which is `LogManager.GetLogger("Sce
 
 So there are three distinct failure surfaces for a mod, and the "silent disable" belongs to exactly one of them:
 
-| Where it throws                                              | Outcome                                                         |
-| ------------------------------------------------------------ | --------------------------------------------------------------- |
-| Mod `OnLoad` (including any system's `OnCreate`)             | whole mod fails, `State.GeneralError`, `OnDispose` still called |
-| A system's `OnWorldReady` / `OnGamePreload` / `OnGameLoaded` | that system disabled for the session                            |
-| A system's `OnGameLoadingComplete` / `OnFocusChanged`        | logged, system keeps running                                    |
-| A system's `OnUpdate`                                        | logged every frame at `Critical`, system keeps running          |
+| Where it throws | Outcome |
+| --- | --- |
+| Mod `OnLoad` (including any system's `OnCreate`) | whole mod fails, `State.GeneralError`, `OnDispose` still called |
+| A system's `OnWorldReady` / `OnGamePreload` / `OnGameLoaded` | that system disabled for the session |
+| A system's `OnGameLoadingComplete` / `OnFocusChanged` | logged, system keeps running |
+| A system's `OnUpdate` | logged every frame at `Critical`, system keeps running |
 
 Verdict: a hook throwing is **not** invisible to the player, against this file's earlier reading of it as "one log line, no user-visible symptom".
 The five hook wrappers log at `Error` through `COSystemBase.baseLog`, which is the `SceneFlow` logger, and that logger's `showsErrorsInUI` holds its `true` default — so each raises the modal error dialog and pauses the simulation.

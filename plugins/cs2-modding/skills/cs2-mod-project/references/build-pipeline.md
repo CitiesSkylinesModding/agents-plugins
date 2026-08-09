@@ -12,22 +12,22 @@ The toolchain writes these as **user** environment variables when it installs, a
 The C# side reads the user scope directly, so a rewritten value reaches the next build however long the shell or IDE has been open.
 The UI build is the exception: it reads the inherited process environment, so a rewritten path only reaches it from a shell opened afterwards.
 
-| Variable                    | Points at                                       | Why it matters                                                                      |
-| --------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `CSII_INSTALLATIONPATH`     | the game folder                                 | the root the managed and mscorlib paths are derived from                            |
-| `CSII_MANAGEDPATH`          | the game's managed assemblies                   | every `Game`, `Colossal.*` and `Unity.*` reference resolves from here               |
-| `CSII_MSCORLIBPATH`         | the game's `mscorlib.dll`                       | referenced explicitly so the mod compiles against the game's runtime, not the SDK's |
-| `CSII_USERDATAPATH`         | the user data folder                            | holds `Player.log`, the settings, and the local mods folder                         |
-| `CSII_LOCALMODSPATH`        | `<user data>\Mods`                              | where every build installs the mod                                                  |
-| `CSII_TOOLPATH`             | the per-user toolchain folder                   | holds `Mod.props`, `Mod.targets` and the Unity mod project                          |
-| `CSII_UNITYMODPROJECTPATH`  | that Unity project                              | source of the Entities source generators and of the packages Burst compiles against |
-| `CSII_ENTITIESVERSION`      | the Entities package version                    | selects the source-generator folder inside the package cache                        |
-| `CSII_UNITYVERSION`         | the editor version installed for compiling mods | locates the editor whose IL post-processor the post-processing stage runs           |
-| `CSII_MODPOSTPROCESSORPATH` | the post-processor executable                   | the post-processing stage                                                           |
-| `CSII_MODPUBLISHERPATH`     | the publisher executable                        | what the publish path runs                                                          |
-| `CSII_PDXCACHEPATH`         | the mod platform's cache                        | the publisher reads it to sign in                                                   |
-| `CSII_PDXMODSPATH`          | downloaded platform mods                        | the publisher's mod root                                                            |
-| `CSII_ASSEMBLYSEARCHPATH`   | extra assembly search paths, empty by default   | the supported hook for referencing assemblies outside the game folder               |
+| Variable | Points at | Why it matters |
+| --- | --- | --- |
+| `CSII_INSTALLATIONPATH` | the game folder | the root the managed and mscorlib paths are derived from |
+| `CSII_MANAGEDPATH` | the game's managed assemblies | every `Game`, `Colossal.*` and `Unity.*` reference resolves from here |
+| `CSII_MSCORLIBPATH` | the game's `mscorlib.dll` | referenced explicitly so the mod compiles against the game's runtime, not the SDK's |
+| `CSII_USERDATAPATH` | the user data folder | holds `Player.log`, the settings, and the local mods folder |
+| `CSII_LOCALMODSPATH` | `<user data>\Mods` | where every build installs the mod |
+| `CSII_TOOLPATH` | the per-user toolchain folder | holds `Mod.props`, `Mod.targets` and the Unity mod project |
+| `CSII_UNITYMODPROJECTPATH` | that Unity project | source of the Entities source generators and of the packages Burst compiles against |
+| `CSII_ENTITIESVERSION` | the Entities package version | selects the source-generator folder inside the package cache |
+| `CSII_UNITYVERSION` | the editor version installed for compiling mods | locates the editor whose IL post-processor the post-processing stage runs |
+| `CSII_MODPOSTPROCESSORPATH` | the post-processor executable | the post-processing stage |
+| `CSII_MODPUBLISHERPATH` | the publisher executable | what the publish path runs |
+| `CSII_PDXCACHEPATH` | the mod platform's cache | the publisher reads it to sign in |
+| `CSII_PDXMODSPATH` | downloaded platform mods | the publisher's mod root |
+| `CSII_ASSEMBLYSEARCHPATH` | extra assembly search paths, empty by default | the supported hook for referencing assemblies outside the game folder |
 
 ## The stages
 

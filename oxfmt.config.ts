@@ -12,14 +12,16 @@ export default defineConfig({
     // .config/dotnet-tools.json is the dotnet local-tools manifest, managed by the dotnet CLI.
     '.config',
     // "vendor" holds vendored submodules (e.g., unity-devtools' Mono.Debugger.Soft): the tree must
-    // stay pristine, and its sparse checkout carries root .md/.json files oxfmt would rewrite.
+    // stay pristine, and its sparse checkout carries root .json files oxfmt would rewrite.
     'vendor',
-    // "release-please" generates CHANGELOG.md files; reformatting them makes CI fail on release PRs
-    // (dirty tree after the format check).
-    '**/CHANGELOG.md',
+    // Markdown here is mostly agent-facing prose, where every character is context an agent pays
+    // for: oxfmt pads table cells to a common column width, and that padding is pure cost with no
+    // option to turn it off. Ignoring .md also covers the CHANGELOG.md files release-please
+    // generates, whose reformatting made CI fail on release PRs (dirty tree after the check).
+    '**/*.md',
     // The release-please json extra-files rewrite the unity dnx version pin here, re-expanding the
-    // "args" array oxfmt would collapse; ignoring these keeps release commits CI-clean, same reason
-    // as the CHANGELOG.md rule above.
+    // "args" array oxfmt would collapse; ignoring these keeps release commits CI-clean, the same
+    // reason the generated CHANGELOG.md files above are out.
     'plugins/unity-devtools/.mcp.json',
     'plugins/unity-devtools/.codex-plugin/mcp.json'
   ],

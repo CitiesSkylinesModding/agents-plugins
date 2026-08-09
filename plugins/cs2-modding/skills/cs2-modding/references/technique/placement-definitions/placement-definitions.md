@@ -20,15 +20,15 @@ Everything the placed thing ends up carrying is derived from that definition plu
 The whole seam is one component.
 `CreationDefinition : IComponentData, IQueryTypeParameter` carries seven fields and nothing else:
 
-| Field                   | What it names                                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Entity m_Prefab`       | The prefab **entity** to instantiate; null on a definition that only acts on an existing entity                                                   |
-| `Entity m_SubPrefab`    | A second prefab entity beside it, which the vanilla object producer fills from the tool's transform prefab and a producer without one leaves null |
-| `Entity m_Original`     | The existing entity this definition acts on — delete, select, relocate, upgrade, duplicate                                                        |
-| `Entity m_Owner`        | An existing owner for the thing created, used when the owner is already in the world                                                              |
-| `Entity m_Attached`     | The entity to attach to, read when `CreationFlags.Attach` is set                                                                                  |
-| `CreationFlags m_Flags` | What kind of act this is; see below                                                                                                               |
-| `int m_RandomSeed`      | Becomes the created entity's permanent variation seed                                                                                             |
+| Field | What it names |
+| --- | --- |
+| `Entity m_Prefab` | The prefab **entity** to instantiate; null on a definition that only acts on an existing entity |
+| `Entity m_SubPrefab` | A second prefab entity beside it, which the vanilla object producer fills from the tool's transform prefab and a producer without one leaves null |
+| `Entity m_Original` | The existing entity this definition acts on — delete, select, relocate, upgrade, duplicate |
+| `Entity m_Owner` | An existing owner for the thing created, used when the owner is already in the world |
+| `Entity m_Attached` | The entity to attach to, read when `CreationFlags.Attach` is set |
+| `CreationFlags m_Flags` | What kind of act this is; see below |
+| `int m_RandomSeed` | Becomes the created entity's permanent variation seed |
 
 It is a request rather than a result: the entity carrying it describes something the game should create, delete, move or select, and a later system creates a **separate** entity to satisfy it.
 
@@ -60,19 +60,19 @@ So a definition is visible to its consumer for exactly the frame it was created 
 A `CreationDefinition` alone does nothing.
 What gets built is decided by the **second** component on the definition entity, and each kind is claimed by a fixed set of consumers — one apiece, except the two kinds whose work spans two modification phases:
 
-| Kind component              | Consumer                      | Phase           |
-| --------------------------- | ----------------------------- | --------------- |
-| `ObjectDefinition`          | `GenerateObjectsSystem`       | `Modification1` |
-| `NetCourse`                 | `GenerateNodesSystem`         | `Modification1` |
-| `NetCourse`                 | `GenerateEdgesSystem`         | `Modification2` |
-| `Zoning`                    | `GenerateZonesSystem`         | `Modification1` |
-| `Game.Areas.Node` buffer    | `GenerateAreasSystem`         | `Modification1` |
-| `WaypointDefinition` buffer | `GenerateWaypointsSystem`     | `Modification1` |
-| `WaypointDefinition` buffer | `GenerateRoutesSystem`        | `Modification2` |
-| `IconDefinition`            | `GenerateNotificationsSystem` | `Modification1` |
-| `BrushDefinition`           | `GenerateBrushesSystem`       | `Modification1` |
-| `AggregateElement` buffer   | `GenerateAggregatesSystem`    | `Modification1` |
-| `WaterSourceDefinition`     | `GenerateWaterSourcesSystem`  | `Modification1` |
+| Kind component | Consumer | Phase |
+| --- | --- | --- |
+| `ObjectDefinition` | `GenerateObjectsSystem` | `Modification1` |
+| `NetCourse` | `GenerateNodesSystem` | `Modification1` |
+| `NetCourse` | `GenerateEdgesSystem` | `Modification2` |
+| `Zoning` | `GenerateZonesSystem` | `Modification1` |
+| `Game.Areas.Node` buffer | `GenerateAreasSystem` | `Modification1` |
+| `WaypointDefinition` buffer | `GenerateWaypointsSystem` | `Modification1` |
+| `WaypointDefinition` buffer | `GenerateRoutesSystem` | `Modification2` |
+| `IconDefinition` | `GenerateNotificationsSystem` | `Modification1` |
+| `BrushDefinition` | `GenerateBrushesSystem` | `Modification1` |
+| `AggregateElement` buffer | `GenerateAggregatesSystem` | `Modification1` |
+| `WaterSourceDefinition` | `GenerateWaterSourcesSystem` | `Modification1` |
 
 Every one of those queries is `{CreationDefinition, <kind>, Updated}`, some written with the kind in an `Any` clause so that one system can claim two kinds: the object generator matches `Any = {ObjectDefinition, NetCourse}`, and the node generator matches the same pair.
 
@@ -103,21 +103,21 @@ That is the flag the simulation uses, and a tool that sets it has skipped the en
 
 The rest of the flags are translated by the consumer into `TempFlags` and into components on the created entity:
 
-| `CreationFlags`                                   | Effect on the created entity                                                                                           |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `Delete`                                          | `TempFlags.Delete`, plus a refund computed from the original's `Recent` component                                      |
-| `Select`                                          | `TempFlags.Select`; with `Dragging`, also `TempFlags.Dragging`                                                         |
-| `Relocate`                                        | `TempFlags.Modify`, plus a relocation cost when the transform actually moved                                           |
-| `Upgrade`                                         | `TempFlags.Upgrade`, plus an upgrade cost diffed against the original prefab's cost                                    |
-| `Duplicate`                                       | `TempFlags.Duplicate`                                                                                                  |
-| `Repair`                                          | A rebuild cost when the original carries `Destroyed`, and suppresses copying `Damaged`/`Destroyed` onto the new entity |
-| `Parent`                                          | `TempFlags.Parent`                                                                                                     |
-| `Optional`                                        | `TempFlags.Optional` on a create                                                                                       |
-| `Lowered`                                         | `ElevationFlags.Lowered`                                                                                               |
-| `Attach`                                          | An `Attached` component built from `m_Attached`                                                                        |
-| `Native`                                          | A `Native` component                                                                                                   |
-| `Construction`                                    | Routes the new building through the under-construction path                                                            |
-| Neither `Delete` nor `Select` nor an `m_Original` | `TempFlags.Create`, and a cost equal to the construction cost                                                          |
+| `CreationFlags` | Effect on the created entity |
+| --- | --- |
+| `Delete` | `TempFlags.Delete`, plus a refund computed from the original's `Recent` component |
+| `Select` | `TempFlags.Select`; with `Dragging`, also `TempFlags.Dragging` |
+| `Relocate` | `TempFlags.Modify`, plus a relocation cost when the transform actually moved |
+| `Upgrade` | `TempFlags.Upgrade`, plus an upgrade cost diffed against the original prefab's cost |
+| `Duplicate` | `TempFlags.Duplicate` |
+| `Repair` | A rebuild cost when the original carries `Destroyed`, and suppresses copying `Damaged`/`Destroyed` onto the new entity |
+| `Parent` | `TempFlags.Parent` |
+| `Optional` | `TempFlags.Optional` on a create |
+| `Lowered` | `ElevationFlags.Lowered` |
+| `Attach` | An `Attached` component built from `m_Attached` |
+| `Native` | A `Native` component |
+| `Construction` | Routes the new building through the under-construction path |
+| Neither `Delete` nor `Select` nor an `m_Original` | `TempFlags.Create`, and a cost equal to the construction cost |
 
 **`m_RandomSeed` outlives the definition.**
 The consumer writes `new PseudoRandomSeed((ushort)definition.m_RandomSeed)` onto the created entity whenever the original had none, so the definition's seed becomes that entity's permanent variation seed.
@@ -322,12 +322,12 @@ The protocol is open rather than a fixed list of nine: nothing in it privileges 
 
 Declare an ordinary `IComponentData` of your own, emit it exactly the way a vanilla tool emits `ObjectDefinition` — `CreateEntity()`, `AddComponent<CreationDefinition>`, `AddComponent<MyDefinition>`, `AddComponent(default(Updated))`, plus any buffer your consumer needs — and then reproduce the vanilla four-stage shape around it, each stage spliced next to the vanilla system it parallels:
 
-| Your system  | Where it goes                                                                  |
-| ------------ | ------------------------------------------------------------------------------ |
-| Generator    | The modification phase your kind needs, before your consumer's inputs are gone |
-| Validator    | `UpdateAfter<MyValidation, ValidationSystem>(ModificationEnd)`                 |
-| Clear system | `ClearTool`                                                                    |
-| Apply system | `UpdateBefore<MyApply, ApplyNetSystem>(ApplyTool)`                             |
+| Your system | Where it goes |
+| --- | --- |
+| Generator | The modification phase your kind needs, before your consumer's inputs are gone |
+| Validator | `UpdateAfter<MyValidation, ValidationSystem>(ModificationEnd)` |
+| Clear system | `ClearTool` |
+| Apply system | `UpdateBefore<MyApply, ApplyNetSystem>(ApplyTool)` |
 
 A generator that needs the vanilla `Temp` entities to exist runs later than `Modification1` — `Modification3` with a second query of `{Node, Temp, Updated}` is the worked shape — because at `Modification1` the vanilla nodes it wants to attach to have not been created yet.
 

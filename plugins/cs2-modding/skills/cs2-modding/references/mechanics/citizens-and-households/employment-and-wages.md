@@ -44,12 +44,12 @@ PayWageSystem (kUpdatesPerDay = 32, UpdateFrame bucket):
   into the household's Resource.Money; a company workplace is debited the same amount
 ```
 
-| Case                      | Daily figure                                                                                    |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| Employed                  | `EconomyParameterData.GetWage(worker.m_Level)`, times `m_CommuterWageMultiplier` for a commuter |
-| Child                     | `m_FamilyAllowance`                                                                             |
-| Elderly                   | `m_Pension`                                                                                     |
-| Teen or adult, unemployed | `m_UnemploymentBenefit`, while `m_UnemploymentCounter < m_UnemploymentAllowanceMaxDays * 32`    |
+| Case | Daily figure |
+| --- | --- |
+| Employed | `EconomyParameterData.GetWage(worker.m_Level)`, times `m_CommuterWageMultiplier` for a commuter |
+| Child | `m_FamilyAllowance` |
+| Elderly | `m_Pension` |
+| Teen or adult, unemployed | `m_UnemploymentBenefit`, while `m_UnemploymentCounter < m_UnemploymentAllowanceMaxDays * 32` |
 
 Being paid a wage clears `m_UnemploymentCounter`; each unemployed pay tick increments it.
 Taxable income is the amount minus `m_ResidentialMinimumEarnings / 32`, accumulated into `TaxPayer.m_UntaxedIncome` with a running average rate — commuters and outside-connection workers are excluded from that accumulation entirely, so they pay no residential tax.

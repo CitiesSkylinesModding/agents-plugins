@@ -109,10 +109,10 @@ On Steam that is Properties → General → Launch Options, where `%command%` st
 %command% --developerMode --uiDeveloperMode
 ```
 
-| Flag                          | What it gives you                                                                                                                                                                                         |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--developerMode`             | The in-game debug menu, opened with TAB. Not required for anything, and the fastest way to inspect what the simulation thinks is true.                                                                    |
-| `--uiDeveloperMode`           | UI inspection and debugging on `localhost:9444`; also forces the game to keep running while unfocused.                                                                                                    |
+| Flag | What it gives you |
+| --- | --- |
+| `--developerMode` | The in-game debug menu, opened with TAB. Not required for anything, and the fastest way to inspect what the simulation thinks is true. |
+| `--uiDeveloperMode` | UI inspection and debugging on `localhost:9444`; also forces the game to keep running while unfocused. |
 | `--burst-disable-compilation` | Turns Burst compilation off. Leave it off for normal play — it slows the game down heavily — and add it when debugging a native crash, or when a debugger must step into the game's own jobified systems. |
 
 Press hardest on `--uiDeveloperMode`: it is what opens the UI debugging port, which is also what the sibling `coherent-gameface` plugin connects to.

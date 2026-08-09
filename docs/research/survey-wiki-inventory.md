@@ -6,12 +6,12 @@
 
 ## 0. What worked (step 1)
 
-| Attempt                                                                              | Result                                                                                                      |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `https://cs2.paradoxwikis.com/Special:AllPages`                                      | **Worked.** Returned the full namespace-0 listing, `1.2` → `Trees`, plus a continuation link.               |
-| `https://cs2.paradoxwikis.com/index.php?title=Special:AllPages&from=Tutorial+videos` | **Worked.** Returned `Tutorial videos` → end, including 14 Chinese-language pages.                          |
-| `https://cs2.paradoxwikis.com/Special:Categories`                                    | **Worked** (paginated; second call with `&offset=DLC+icons&limit=500` completed it). ~156 categories total. |
-| Main-page navbox (`Cities_Skylines_II_Wiki`)                                         | **Worked.** Gave the community's own top-level grouping — see §7.                                           |
+| Attempt | Result |
+| --- | --- |
+| `https://cs2.paradoxwikis.com/Special:AllPages` | **Worked.** Returned the full namespace-0 listing, `1.2` → `Trees`, plus a continuation link. |
+| `https://cs2.paradoxwikis.com/index.php?title=Special:AllPages&from=Tutorial+videos` | **Worked.** Returned `Tutorial videos` → end, including 14 Chinese-language pages. |
+| `https://cs2.paradoxwikis.com/Special:Categories` | **Worked** (paginated; second call with `&offset=DLC+icons&limit=500` completed it). ~156 categories total. |
+| Main-page navbox (`Cities_Skylines_II_Wiki`) | **Worked.** Gave the community's own top-level grouping — see §7. |
 
 `WebFetch` rendered past the Fastly challenge on every single call. Nothing was unreachable. Total page count in namespace 0: **~420 pages**, of which roughly 90 are DLC signature-building/radio-station entries and ~14 are Chinese translations.
 
@@ -289,18 +289,18 @@ Radio stations: `Atmospheric Piano Channel`, `Cloud Lounge FM`, `Cold Wave Chann
 
 ### Stale / contradictory
 
-| Page                                                        | Issue                                                                                                                                                                                                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Modding Toolchain`                                         | Verified 1.1.12f1; game is at 1.6.0f1.                                                                                                                                                                                                            |
-| `ECS - Entity Component System`, `Systems`                  | Marked WIP, verification pending for **1.0**.                                                                                                                                                                                                     |
-| `Citizens`, `Pollution`, `Services`, `Traffic`, `Districts` | "Last verified for version 1.0" banners.                                                                                                                                                                                                          |
-| `Progression`                                               | "Potentially outdated"; contains its own 1.1.5f1 before/after table, so numbers elsewhere on the page may be from either era.                                                                                                                     |
-| `Service building data test`                                | Last edited **2 August 2023** — pre-launch data. Do not trust values.                                                                                                                                                                             |
-| `Debugging`                                                 | Documents that the automated NuGet path is **broken as of 1.5.7f1** — an internal contradiction with its own recommendation.                                                                                                                      |
-| `Developer mode` vs `Launch Parameters`                     | `-developerMode` (single dash) vs `--developerMode` (double dash).                                                                                                                                                                                |
-| `Beginner's guide`                                          | Self-declared as CS1 content of uncertain applicability.                                                                                                                                                                                          |
-| `Policies`                                                  | 14 policies only; near-certainly incomplete for 1.6.                                                                                                                                                                                              |
-| Wiki-wide                                                   | Category **"Potentially outdated" = 30 members**, **"Need editing" = 16**, **"Under construction" = 7**, **"To be split" = 2**, **"Verification needed" = 2**, **"Articles with potentially outdated sections" = 3**, **"…outdated tables" = 2**. |
+| Page | Issue |
+| --- | --- |
+| `Modding Toolchain` | Verified 1.1.12f1; game is at 1.6.0f1. |
+| `ECS - Entity Component System`, `Systems` | Marked WIP, verification pending for **1.0**. |
+| `Citizens`, `Pollution`, `Services`, `Traffic`, `Districts` | "Last verified for version 1.0" banners. |
+| `Progression` | "Potentially outdated"; contains its own 1.1.5f1 before/after table, so numbers elsewhere on the page may be from either era. |
+| `Service building data test` | Last edited **2 August 2023** — pre-launch data. Do not trust values. |
+| `Debugging` | Documents that the automated NuGet path is **broken as of 1.5.7f1** — an internal contradiction with its own recommendation. |
+| `Developer mode` vs `Launch Parameters` | `-developerMode` (single dash) vs `--developerMode` (double dash). |
+| `Beginner's guide` | Self-declared as CS1 content of uncertain applicability. |
+| `Policies` | 14 policies only; near-certainly incomplete for 1.6. |
+| Wiki-wide | Category **"Potentially outdated" = 30 members**, **"Need editing" = 16**, **"Under construction" = 7**, **"To be split" = 2**, **"Verification needed" = 2**, **"Articles with potentially outdated sections" = 3**, **"…outdated tables" = 2**. |
 
 ### Duplicate / near-duplicate titles
 

@@ -56,18 +56,18 @@ Source: `src/Game/Game.Simulation/TripNeededSystem.cs`.
 
 `GetPriority` maps purposes onto the fields of `TripPriorityParametersData`, a singleton; the reader reads the magnitudes themselves (`src/Game/Game.Prefabs/TripPriorityParametersData.cs`):
 
-| Purpose                                                             | Field                                                                                                                 |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `GoingHome`                                                         | `m_PriorityGoingHome`                                                                                                 |
-| `GoingToWork`                                                       | `m_PriorityGoingToWork`                                                                                               |
-| `GoingToSchool`                                                     | `m_PriorityGoingToSchool`                                                                                             |
-| `Shopping`, `CompanyShopping`                                       | `m_PriorityShopping`                                                                                                  |
+| Purpose | Field |
+| --- | --- |
+| `GoingHome` | `m_PriorityGoingHome` |
+| `GoingToWork` | `m_PriorityGoingToWork` |
+| `GoingToSchool` | `m_PriorityGoingToSchool` |
+| `Shopping`, `CompanyShopping` | `m_PriorityShopping` |
 | `Hospital` / `Safety` / `Escape` / `EmergencyShelter` / `Deathcare` | `m_PriorityHospital` / `m_PrioritySafety` / `m_PriorityEscape` / `m_PriorityEmergencyShelter` / `m_PriorityDeathcare` |
-| `MovingAway`                                                        | `m_PriorityMovingAway`                                                                                                |
-| `Traveling`, `Relaxing`, `Sightseeing`, `VisitAttractions`          | `m_PriorityTourist`                                                                                                   |
-| `Crime`, `GoingToJail`, `GoingToPrison`                             | `m_PriorityCriminal`                                                                                                  |
-| `Leisure`                                                           | `lerp(m_LeisurePriorityMin, m_LeisurePriorityMax, 1 - m_LeisureCounter / 255)`                                        |
-| anything else                                                       | 128                                                                                                                   |
+| `MovingAway` | `m_PriorityMovingAway` |
+| `Traveling`, `Relaxing`, `Sightseeing`, `VisitAttractions` | `m_PriorityTourist` |
+| `Crime`, `GoingToJail`, `GoingToPrison` | `m_PriorityCriminal` |
+| `Leisure` | `lerp(m_LeisurePriorityMin, m_LeisurePriorityMax, 1 - m_LeisureCounter / 255)` |
+| anything else | 128 |
 
 So a citizen with a full leisure counter paths for leisure at `m_LeisurePriorityMin`, and a save older than `FormatTags.TripPriority` reads back 128 for every stored trip (`src/Game/Game.Citizens/TripNeeded.cs`).
 A priority buys pathfind cost budget through `GetMaxCost` — purposes are never ranked against each other.

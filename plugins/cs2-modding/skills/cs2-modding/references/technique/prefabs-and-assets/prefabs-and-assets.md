@@ -15,11 +15,11 @@ Authoring the content itself — meshes, textures, surfaces, maps, editor scenes
 
 This is the number-one conceptual trap in the subject, and almost every prefab bug an agent writes is a confusion between two of these three layers.
 
-| Layer             | What it is                                                                                        | Lives as                                                |
-| ----------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Authoring**     | the values a designer typed, one managed object per prefab, plus a list of attached components    | `PrefabBase` / `ComponentBase`, both `ScriptableObject` |
-| **Prefab entity** | the ECS entity the game registers for that prefab, carrying blittable `*Data` copies of the above | an `Entity` with `PrefabData` on it                     |
-| **Instance**      | one placed building, vehicle, tree or net segment, whose archetype the prefab declared            | an `Entity` with `PrefabRef` on it                      |
+| Layer | What it is | Lives as |
+| --- | --- | --- |
+| **Authoring** | the values a designer typed, one managed object per prefab, plus a list of attached components | `PrefabBase` / `ComponentBase`, both `ScriptableObject` |
+| **Prefab entity** | the ECS entity the game registers for that prefab, carrying blittable `*Data` copies of the above | an `Entity` with `PrefabData` on it |
+| **Instance** | one placed building, vehicle, tree or net segment, whose archetype the prefab declared | an `Entity` with `PrefabRef` on it |
 
 One vanilla file shows all three at once.
 `Game.Prefabs.DeathcareFacility` is an authoring `ComponentBase` holding `m_HearseCapacity`, `m_StorageCapacity`, `m_ProcessingRate` and `m_LongTermStorage`.
@@ -194,12 +194,12 @@ Of the thirteen that are not authoring types, seven fail loudly too: five are en
 **The remaining six are the dangerous ones, because both sides compile.**
 They are `WaterSourceData`, which is `IComponentData` on both sides, `CompanyInitializeSystem`, which is a system class on both sides and so is a valid type argument either way, and four buffers that exist once on the prefab entity and once on the instance under the same short name:
 
-| Short name  | Prefab-entity version (the recipe)                                                 | Instance version                                 |
-| ----------- | ---------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Short name | Prefab-entity version (the recipe) | Instance version |
+| --- | --- | --- |
 | `SubObject` | `m_Prefab`, `m_Flags`, `m_Position`, `m_Rotation`, `m_ParentIndex`, `m_GroupIndex` | `Game.Objects.SubObject.m_SubObject`, one entity |
-| `SubNet`    | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`, `m_InvertMode`, `m_Upgrades` | `Game.Net.SubNet.m_SubNet`                       |
-| `SubLane`   | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`                               | `Game.Net.SubLane.m_SubLane`, `m_PathMethods`    |
-| `SubArea`   | `m_Prefab`, `m_NodeRange`                                                          | `Game.Areas.SubArea.m_Area`                      |
+| `SubNet` | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh`, `m_InvertMode`, `m_Upgrades` | `Game.Net.SubNet.m_SubNet` |
+| `SubLane` | `m_Prefab`, `m_Curve`, `m_NodeIndex`, `m_ParentMesh` | `Game.Net.SubLane.m_SubLane`, `m_PathMethods` |
+| `SubArea` | `m_Prefab`, `m_NodeRange` | `Game.Areas.SubArea.m_Area` |
 
 Both members of each pair are `IBufferElementData` and both bind in a query.
 Reading the wrong one gives you the list of prefabs a building is _made of_ when you wanted the entities it _has_, or the reverse, with no error anywhere.
@@ -339,13 +339,13 @@ Derive your class from the closest vanilla prefab base rather than from `PrefabB
 So `OnLoad` is too early to _find_ a vanilla prefab to build on, and a mod that needs one defers.
 The workable timings, in rough order of how much control they give:
 
-| Timing                                                                                                 | Use it when                                                                            |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| A system registered into the prefab-update phase, anchored after the vanilla initializer it depends on | the new prefab's data has to be right by the time the rest of the phase reads it       |
-| `OnGamePreload` on a system you create but never register into a phase                                 | registration must happen before a game loads and after the asset database is populated |
-| `IPreDeserialize` through the pre-deserialize wrapper                                                  | the prefab entity must exist before the save's entities are read                       |
-| The game manager's loading-complete event                                                              | nothing in the load path depends on the prefab                                         |
-| The main-thread dispatcher, from a background import                                                   | the prefab is built off-thread and only registration must be on the main thread        |
+| Timing | Use it when |
+| --- | --- |
+| A system registered into the prefab-update phase, anchored after the vanilla initializer it depends on | the new prefab's data has to be right by the time the rest of the phase reads it |
+| `OnGamePreload` on a system you create but never register into a phase | registration must happen before a game loads and after the asset database is populated |
+| `IPreDeserialize` through the pre-deserialize wrapper | the prefab entity must exist before the save's entities are read |
+| The game manager's loading-complete event | nothing in the load path depends on the prefab |
+| The main-thread dispatcher, from a background import | the prefab is built off-thread and only registration must be on the main thread |
 
 Creating a system without giving it a phase is a real option, not a workaround: `mod-lifecycle-and-ordering` records the same shape under "Not every mod system needs a phase".
 

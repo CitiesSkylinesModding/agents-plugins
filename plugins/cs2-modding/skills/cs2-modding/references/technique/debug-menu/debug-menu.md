@@ -20,11 +20,11 @@ What reads it is the input system and the settings screen, and the menu is neith
 
 The bindings the flag turns on, read off the `Debug` action map:
 
-| Action              | Bindings                      |
-| ------------------- | ----------------------------- |
-| `Debug UI`          | `Tab`, gamepad right shoulder |
-| `Debug Prefab Tool` | `O`                           |
-| `Debug Multiplier`  | `Shift`                       |
+| Action | Bindings |
+| --- | --- |
+| `Debug UI` | `Tab`, gamepad right shoulder |
+| `Debug Prefab Tool` | `O` |
+| `Debug Multiplier` | `Shift` |
 
 (VOLATILE: the map name, the three action names and their bindings — the input action asset inside `Cities2_Data/resources.assets`, or a live read of `InputManager.instance.FindActionMap("Debug")`.)
 
@@ -155,12 +155,12 @@ internal sealed class MyModDebugUI
 The scan sweeps every loaded assembly whose name does not start with `Unity`, so a mod is found with no registration call and no ordering concern — the reflection type cache is invalidated on every assembly load, so an assembly loaded late is still found.
 The method may be private (every vanilla one is), and may take any of four shapes, decided by parameter count and declaring type:
 
-| Shape                                                       | What the game does                                                                                                                                        |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Method, no parameters, on a plain concrete class            | `Activator.CreateInstance` on the class — needs a public parameterless constructor — then invoke on the instance, static or not                           |
-| Method, no parameters, on a `ComponentSystemBase`           | `World.GetOrCreateSystemManaged` on the declaring type, then invoke on the system                                                                         |
-| Static method, no parameters, on a static or abstract class | invoked with no target                                                                                                                                    |
-| Method taking one `World`                                   | invoked with the world — on the created instance for a plain concrete class, with no target otherwise, so on a system or abstract class it must be static |
+| Shape | What the game does |
+| --- | --- |
+| Method, no parameters, on a plain concrete class | `Activator.CreateInstance` on the class — needs a public parameterless constructor — then invoke on the instance, static or not |
+| Method, no parameters, on a `ComponentSystemBase` | `World.GetOrCreateSystemManaged` on the declaring type, then invoke on the system |
+| Static method, no parameters, on a static or abstract class | invoked with no target |
+| Method taking one `World` | invoked with the world — on the created instance for a plain concrete class, with no target otherwise, so on a system or abstract class it must be static |
 
 Returning `null` registers no tab, and a method taking two or more parameters registers nothing at all — no exception and no log line.
 A plain container class implementing `IDisposable` is disposed on menu close, which is the hook for turning a debug-only helper off with the menu.
@@ -206,12 +206,12 @@ Source: `src/Unity.RenderPipelines.Core.Runtime/UnityEngine.Rendering/DebugManag
 
 The `Watchers` tab is built by `DebugWatchSystem` from four public attributes in `Game.Debug`:
 
-| Attribute            | Target                    | What it does                                                        |
-| -------------------- | ------------------------- | ------------------------------------------------------------------- |
-| `[DebugWatchValue]`  | field, property or method | a graphed value, with `color`, `updateInterval` and `historyLength` |
-| `[DebugWatchOption]` | field                     | an enum field rendered as an option control                         |
-| `[DebugWatchDeps]`   | field                     | a `JobHandle` the accessor completes before reading                 |
-| `[DebugWatchOnly]`   | class                     | the system runs only while its foldout is open or a watch is active |
+| Attribute | Target | What it does |
+| --- | --- | --- |
+| `[DebugWatchValue]` | field, property or method | a graphed value, with `color`, `updateInterval` and `historyLength` |
+| `[DebugWatchOption]` | field | an enum field rendered as an option control |
+| `[DebugWatchDeps]` | field | a `JobHandle` the accessor completes before reading |
+| `[DebugWatchOnly]` | class | the system runs only while its foldout is open or a watch is active |
 
 **The sweep is over `World.Systems`, not over types.**
 The attributes work on any managed system already created in the world — a mod's included — and on nothing else: a static class, a plain object or an unmanaged `ISystem` never appears.

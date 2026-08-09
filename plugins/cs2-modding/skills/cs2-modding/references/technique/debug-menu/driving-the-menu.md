@@ -14,21 +14,21 @@ The general operating manual — connecting, clicking, filling, waiting on a liv
 
 `DebugUISystem` declares the group; this table quotes its declarations:
 
-| Binding                                              | Kind                                                         |
-| ---------------------------------------------------- | ------------------------------------------------------------ |
-| `debug.enabled`                                      | `ValueBinding<bool>`, the literal `true`                     |
-| `debug.visible`                                      | `ValueBinding<bool>`                                         |
-| `debug.panels`                                       | `GetterValueBinding<List<string>>` — the tab names, in order |
-| `debug.selectedIndex`                                | `GetterValueBinding<int>`                                    |
-| `debug.selectedPanel`                                | `ValueBinding<Panel>`, nullable, carrying `displayName` only |
-| `debug.children`                                     | `RawValueBinding` — the whole widget tree                    |
-| `debug.observedBinding`                              | `ValueBinding<IDebugBinding>`, nullable                      |
-| `debug.bindingTriggered`                             | `EventBinding<IDebugBinding>`                                |
-| `debug.developerInfoVisible`                         | `GetterValueBinding<bool>`                                   |
-| `debug.watches`                                      | `GetterValueBinding<List<DebugWatchSystem.Watch>>`           |
-| `debug.show`, `debug.hide`                           | `TriggerBinding`                                             |
-| `debug.selectPanel`                                  | `TriggerBinding<int>`                                        |
-| `debug.selectPreviousPanel`, `debug.selectNextPanel` | `TriggerBinding`                                             |
+| Binding | Kind |
+| --- | --- |
+| `debug.enabled` | `ValueBinding<bool>`, the literal `true` |
+| `debug.visible` | `ValueBinding<bool>` |
+| `debug.panels` | `GetterValueBinding<List<string>>` — the tab names, in order |
+| `debug.selectedIndex` | `GetterValueBinding<int>` |
+| `debug.selectedPanel` | `ValueBinding<Panel>`, nullable, carrying `displayName` only |
+| `debug.children` | `RawValueBinding` — the whole widget tree |
+| `debug.observedBinding` | `ValueBinding<IDebugBinding>`, nullable |
+| `debug.bindingTriggered` | `EventBinding<IDebugBinding>` |
+| `debug.developerInfoVisible` | `GetterValueBinding<bool>` |
+| `debug.watches` | `GetterValueBinding<List<DebugWatchSystem.Watch>>` |
+| `debug.show`, `debug.hide` | `TriggerBinding` |
+| `debug.selectPanel` | `TriggerBinding<int>` |
+| `debug.selectPreviousPanel`, `debug.selectNextPanel` | `TriggerBinding` |
 
 The shared widget action triggers land in the same group through `WidgetBindings`: `debug.invoke`, `debug.setValue`, `debug.setExpanded`, the list operations and `debug.setCurrentPageIndex`.
 (VOLATILE: every binding name above — `Game.UI.Debug.DebugUISystem`'s binding declarations and `Game.UI.Widgets.WidgetBindings`.)

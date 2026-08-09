@@ -94,15 +94,15 @@ Fallback without node: `curl -s <url>`, then read the HTML between `<main` and `
 
 Key pages (paths under the base):
 
-| Page                                                                    | Path                                                                                                                                                |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Differences to traditional browsers (prose, the quirks)                 | `what_is_gfp/htmlfeaturesupport/`                                                                                                                   |
-| Supported-features hub                                                  | `content_development/supported_features_tables/`                                                                                                    |
+| Page | Path |
+| --- | --- |
+| Differences to traditional browsers (prose, the quirks) | `what_is_gfp/htmlfeaturesupport/` |
+| Supported-features hub | `content_development/supported_features_tables/` |
 | HTML / CSS properties / CSS selectors / JS events / canvas / SVG tables | `content_development/supported_features_tables/` + `htmlelements/`, `cssproperties/`, `cssselectors/`, `jsevents/`, `canvassupport/`, `svgsupport/` |
-| Feature changelog (all versions, one page)                              | `changelog/feature/`                                                                                                                                |
-| LTS changelog (post-branch fixes)                                       | `changelog/lts/`                                                                                                                                    |
-| Content development (guides, tooling)                                   | `content_development/`                                                                                                                              |
-| UI scripting (engine API, data binding)                                 | `integration/ui_scripting/`                                                                                                                         |
+| Feature changelog (all versions, one page) | `changelog/feature/` |
+| LTS changelog (post-branch fixes) | `changelog/lts/` |
+| Content development (guides, tooling) | `content_development/` |
+| UI scripting (engine API, data binding) | `integration/ui_scripting/` |
 
 Reading the support tables:
 

@@ -52,19 +52,19 @@ Expressions limited to arithmetic, comparisons, `toFixed()`, and `Math.floor/rou
 Array indexing inside `{{ }}` takes numeric literals only.
 Evaluation order across attributes is unspecified; keep expressions side-effect free.
 
-| Attribute                                                                         | Effect                                                                                                                        |
-| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `data-bind-value`                                                                 | Sets `textContent`.                                                                                                           |
-| `data-bind-html`                                                                  | Sets `innerHTML` (keep small; nested `data-bind-*` inside is unsupported).                                                    |
-| `data-bind-if`                                                                    | Conditional presence of the element (boolean expression).                                                                     |
-| `data-bind-for`                                                                   | `"iter:{{m.arr}}"` or `"index, iter:{{m.arr}}"`; repeats the element per item.                                                |
-| `data-bind-class`                                                                 | `"expr[;expr]"`, each resolving to a class name to add.                                                                       |
-| `data-bind-class-toggle`                                                          | `"cls:boolExpr[;cls:boolExpr]"`; toggles classes per condition.                                                               |
-| `data-bind-style-left/top/width/height`                                           | Number means px.                                                                                                              |
-| `data-bind-style-opacity`, `-color`, `-background-color`, `-background-image-url` | Style shorthands; colors accept CSS strings or unsigned ABGR numbers.                                                         |
-| `data-bind-style-transform2d`, `-transform-rotate`                                | 6-number matrix; number means degrees.                                                                                        |
-| `data-bind-style-PROPERTYNAME`                                                    | Generalized form for every supported CSS property (dynamic binder).                                                           |
-| `data-bind-<domEvent>`                                                            | Handler expression for DOM events (`data-bind-click`, `data-bind-mouseover`, ...); receives `event` and `this` (the element). |
+| Attribute | Effect |
+| --- | --- |
+| `data-bind-value` | Sets `textContent`. |
+| `data-bind-html` | Sets `innerHTML` (keep small; nested `data-bind-*` inside is unsupported). |
+| `data-bind-if` | Conditional presence of the element (boolean expression). |
+| `data-bind-for` | `"iter:{{m.arr}}"` or `"index, iter:{{m.arr}}"`; repeats the element per item. |
+| `data-bind-class` | `"expr[;expr]"`, each resolving to a class name to add. |
+| `data-bind-class-toggle` | `"cls:boolExpr[;cls:boolExpr]"`; toggles classes per condition. |
+| `data-bind-style-left/top/width/height` | Number means px. |
+| `data-bind-style-opacity`, `-color`, `-background-color`, `-background-image-url` | Style shorthands; colors accept CSS strings or unsigned ABGR numbers. |
+| `data-bind-style-transform2d`, `-transform-rotate` | 6-number matrix; number means degrees. |
+| `data-bind-style-PROPERTYNAME` | Generalized form for every supported CSS property (dynamic binder). |
+| `data-bind-<domEvent>` | Handler expression for DOM events (`data-bind-click`, `data-bind-mouseover`, ...); receives `event` and `this` (the element). |
 
 Custom attributes: `engine.registerBindingAttribute(name, class { init?; update?; deinit? })` creates `data-bind-<name>`.
 `init`/`deinit` fire on DOM attach/detach (including via if/for).

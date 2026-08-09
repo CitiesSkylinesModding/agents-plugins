@@ -17,39 +17,39 @@ A note on the shipped docs first: `AGENTS.md` and `docs/*.md` are useful orienta
 
 ### Tier A — core modding surface (you will read these)
 
-| Assembly                    | .cs files | Why it matters                                                                                                                                                                                                                                                             |
-| --------------------------- | --------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Game`                      |  **4388** | Everything: simulation, prefabs, tools, UI, the modding API itself (`Game.Modding`), `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. This is ~90% of what a mod touches.                                                                                             |
-| `Colossal.Core`             |       303 | `COSystemBase` (root of every game system), `Colossal.Entities` ECS extension methods, `Colossal.Serialization.Entities` (save/load `Context`, `Purpose`, `IJsonWritable` plumbing), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Version`. |
-| `Colossal.IO.AssetDatabase` |       165 | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user/packages`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`, `ParadoxModsDataSource`. The asset-injection entry point.                                                                         |
-| `Colossal.UI.Binding`       |        69 | The entire C#↔JS binding vocabulary. Any mod with UI reads all 69 files' worth of concepts.                                                                                                                                                                                |
-| `Colossal.UI`               |        43 | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem` — how you register a UI resource host / mod UI module.                                                                                                                                                         |
-| `Colossal.Localization`     |        18 | `LocalizationManager.AddSource(localeId, IDictionarySource)` (`Colossal.Localization/Colossal.Localization/LocalizationManager.cs:313`) — how mods add translations. `MemorySource`, `CSVFileSource`.                                                                      |
-| `Colossal.Mathematics`      |        27 | `Bezier4x3`, `Bounds3`, `Line3` — pervasive in net/geometry code; you cannot read `Game.Net` without it.                                                                                                                                                                   |
-| `Colossal.Collections`      |        54 | `NativeQuadTree`, `NativeHeap`, `NativeAccumulator` etc. used by nearly every jobified system.                                                                                                                                                                             |
-| `Colossal.Logging`          |        20 | `LogManager.GetLogger` — the logger every mod uses.                                                                                                                                                                                                                        |
+| Assembly | .cs files | Why it matters |
+| --- | ---: | --- |
+| `Game` | **4388** | Everything: simulation, prefabs, tools, UI, the modding API itself (`Game.Modding`), `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. This is ~90% of what a mod touches. |
+| `Colossal.Core` | 303 | `COSystemBase` (root of every game system), `Colossal.Entities` ECS extension methods, `Colossal.Serialization.Entities` (save/load `Context`, `Purpose`, `IJsonWritable` plumbing), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Version`. |
+| `Colossal.IO.AssetDatabase` | 165 | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user/packages`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`, `ParadoxModsDataSource`. The asset-injection entry point. |
+| `Colossal.UI.Binding` | 69 | The entire C#↔JS binding vocabulary. Any mod with UI reads all 69 files' worth of concepts. |
+| `Colossal.UI` | 43 | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem` — how you register a UI resource host / mod UI module. |
+| `Colossal.Localization` | 18 | `LocalizationManager.AddSource(localeId, IDictionarySource)` (`Colossal.Localization/Colossal.Localization/LocalizationManager.cs:313`) — how mods add translations. `MemorySource`, `CSVFileSource`. |
+| `Colossal.Mathematics` | 27 | `Bezier4x3`, `Bounds3`, `Line3` — pervasive in net/geometry code; you cannot read `Game.Net` without it. |
+| `Colossal.Collections` | 54 | `NativeQuadTree`, `NativeHeap`, `NativeAccumulator` etc. used by nearly every jobified system. |
+| `Colossal.Logging` | 20 | `LogManager.GetLogger` — the logger every mod uses. |
 
 **Tier A total: ~5,100 files.** That is the realistic reading universe.
 
 ### Tier B — occasionally relevant (read when your mod goes there)
 
-| Assembly                                                    |  .cs files | When                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------- | ---------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Unity.Entities`                                            |        654 | You need DOTS semantics: `EntityQuery`, `ComponentLookup`, `EntityCommandBuffer`, `IJobChunk`, `TypeManager`. Reference material, not modding surface — but `TypeManager.InitializeAdditionalTypes` is called on your assembly (`src/Game/Game.Modding/ModManager.cs:148`). |
-| `Colossal.PSI.Common`                                       |         89 | Achievements, platform gating, DLC checks. `PlatformManager`.                                                                                                                                                                                                               |
-| `PDX.ModsUI`                                                |        240 | Paradox Mods browser UI. Relevant only if you touch mod distribution/playsets.                                                                                                                                                                                              |
-| `PDX.SDK`                                                   |        909 | Paradox backend contracts (`PDX.SDK.Contracts.Service.Mods.Models` is imported by `ModManager`). Mostly opaque; skim only.                                                                                                                                                  |
-| `Colossal.Collections`/`Colossal.IO`                        |      54/33 | Low-level containers and file IO.                                                                                                                                                                                                                                           |
-| `Cohtml.Runtime` / `cohtml.Net` / `Cohtml.RenderingBackend` | 69/160/193 | Only if you are doing something exotic with the HTML view itself. The `Colossal.UI` wrapper is normally sufficient.                                                                                                                                                         |
-| `Unity.Mathematics`                                         |         79 | `float3`, `quaternion`, `math.*`. Reference.                                                                                                                                                                                                                                |
-| `Unity.Collections`                                         |        195 | `NativeArray`, `NativeList`, `Allocator`. Reference.                                                                                                                                                                                                                        |
-| `Unity.Burst`                                               |         38 | `[BurstCompile]` semantics.                                                                                                                                                                                                                                                 |
-| `Colossal.OdinSerializer`                                   |        214 | Prefab/ScriptableObject serialization internals. Read only when debugging asset load failures.                                                                                                                                                                              |
-| `Colossal.AssetPipeline`                                    |        132 | Custom asset import (meshes, textures). Relevant for asset-creation mods.                                                                                                                                                                                                   |
-| `Colossal.Mono.Cecil`                                       |        580 | Used by `ExecutableAsset` to scan your DLL for `IMod` without loading it. Understand _that fact_; don't read the assembly.                                                                                                                                                  |
-| `Game.ArtPipeline`                                          |         48 | Editor-time art tooling.                                                                                                                                                                                                                                                    |
-| `Colossal.ATL`                                              |         89 | Audio tagging library.                                                                                                                                                                                                                                                      |
-| `Backtrace.Unity`                                           |        101 | Crash reporting — matters because mod exceptions get reported.                                                                                                                                                                                                              |
+| Assembly | .cs files | When |
+| --- | ---: | --- |
+| `Unity.Entities` | 654 | You need DOTS semantics: `EntityQuery`, `ComponentLookup`, `EntityCommandBuffer`, `IJobChunk`, `TypeManager`. Reference material, not modding surface — but `TypeManager.InitializeAdditionalTypes` is called on your assembly (`src/Game/Game.Modding/ModManager.cs:148`). |
+| `Colossal.PSI.Common` | 89 | Achievements, platform gating, DLC checks. `PlatformManager`. |
+| `PDX.ModsUI` | 240 | Paradox Mods browser UI. Relevant only if you touch mod distribution/playsets. |
+| `PDX.SDK` | 909 | Paradox backend contracts (`PDX.SDK.Contracts.Service.Mods.Models` is imported by `ModManager`). Mostly opaque; skim only. |
+| `Colossal.Collections`/`Colossal.IO` | 54/33 | Low-level containers and file IO. |
+| `Cohtml.Runtime` / `cohtml.Net` / `Cohtml.RenderingBackend` | 69/160/193 | Only if you are doing something exotic with the HTML view itself. The `Colossal.UI` wrapper is normally sufficient. |
+| `Unity.Mathematics` | 79 | `float3`, `quaternion`, `math.*`. Reference. |
+| `Unity.Collections` | 195 | `NativeArray`, `NativeList`, `Allocator`. Reference. |
+| `Unity.Burst` | 38 | `[BurstCompile]` semantics. |
+| `Colossal.OdinSerializer` | 214 | Prefab/ScriptableObject serialization internals. Read only when debugging asset load failures. |
+| `Colossal.AssetPipeline` | 132 | Custom asset import (meshes, textures). Relevant for asset-creation mods. |
+| `Colossal.Mono.Cecil` | 580 | Used by `ExecutableAsset` to scan your DLL for `IMod` without loading it. Understand _that fact_; don't read the assembly. |
+| `Game.ArtPipeline` | 48 | Editor-time art tooling. |
+| `Colossal.ATL` | 89 | Audio tagging library. |
+| `Backtrace.Unity` | 101 | Crash reporting — matters because mod exceptions get reported. |
 
 ### Tier C — noise (never read unless chasing a specific API)
 
@@ -67,59 +67,59 @@ A note on the shipped docs first: `AGENTS.md` and `docs/*.md` are useful orienta
 
 Ranked by size. "Rel" = mod relevance (★★★ = you will live here).
 
-| Namespace dir                                                                                                                                                                                                       |    Files | Rel | What lives there                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------: | :-: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Game.Prefabs`                                                                                                                                                                                                      | **1274** | ★★★ | The data-driven layer. 280 `ComponentBase` subclasses, 112 `PrefabBase` subclasses, 390 files with `IComponentData`, plus `PrefabSystem`. Biggest namespace by far.                                                                                                                   |
-| `Game.Simulation`                                                                                                                                                                                                   |      479 | ★★★ | 300 `GameSystemBase` subclasses — the actual simulation. Citizens, traffic, economy, water, climate, pathfinding setup.                                                                                                                                                               |
-| `Game.UI.InGame`                                                                                                                                                                                                    |      224 | ★★★ | 67 UI systems + their DTOs: info panels, infoviews, Chirper, budget, selected-info sections.                                                                                                                                                                                          |
-| `Game.Rendering`                                                                                                                                                                                                    |      155 |  ★  | 63 systems: batching, culling, overlays, infoview rendering. Only for visual mods.                                                                                                                                                                                                    |
-| `Game.Net`                                                                                                                                                                                                          |      148 | ★★★ | Road/rail/pipe network components + 26 systems. 58 files with `IComponentData` (`Edge`, `Node`, `Lane`, `Curve`, …).                                                                                                                                                                  |
-| `Game.UI.Widgets`                                                                                                                                                                                                   |      145 | ★★  | The declarative widget model (`IWidget`, `DropdownField`, `IntSliderField`, …) used by the editor and by the options UI that renders `ModSetting`.                                                                                                                                    |
-| `Game.Buildings`                                                                                                                                                                                                    |      145 | ★★★ | 80 files with `IComponentData` — building state components.                                                                                                                                                                                                                           |
-| `Game.UI.Editor`                                                                                                                                                                                                    |      111 |  ★  | Map/asset editor panels.                                                                                                                                                                                                                                                              |
-| `Game.Tools`                                                                                                                                                                                                        |      111 | ★★★ | `ToolBaseSystem` (`Game.Tools/ToolBaseSystem.cs:28`) + 53 tool systems. `Temp`, `Hidden`, `Error` components live here.                                                                                                                                                               |
-| `Game.Vehicles`                                                                                                                                                                                                     |       92 | ★★  | Vehicle state components (28 with `IComponentData`) + AI-adjacent data.                                                                                                                                                                                                               |
-| `Game.Prefabs.Modes`                                                                                                                                                                                                |       86 |  ★  | Game-mode prefab definitions.                                                                                                                                                                                                                                                         |
-| `Game.Tutorials`                                                                                                                                                                                                    |       85 |  ·  | Tutorial triggers (32 `IComponentData`). Mostly noise.                                                                                                                                                                                                                                |
-| `Game.Objects`                                                                                                                                                                                                      |       85 | ★★★ | `Transform`, `Elevation`, `Static`, `Attached` — the spatial-object components everything references.                                                                                                                                                                                 |
-| `Game.Settings`                                                                                                                                                                                                     |       80 | ★★★ | `Setting` base class + **all 40+ `SettingsUI*Attribute` types** that `ModSetting` uses.                                                                                                                                                                                               |
-| `Game.Pathfind`                                                                                                                                                                                                     |       80 |  ★  | Pathfinding data structures and the async pathfind service.                                                                                                                                                                                                                           |
-| `Game.Serialization`                                                                                                                                                                                                |       74 | ★★  | 62 systems: `LoadGameSystem`, `SaveGameSystem`, `SerializerSystem`. Mods that persist data must understand this.                                                                                                                                                                      |
-| `Game.Routes`                                                                                                                                                                                                       |       70 | ★★  | Transit lines, waypoints, stops.                                                                                                                                                                                                                                                      |
-| `Game.Debug`                                                                                                                                                                                                        |       69 |  ★  | `BaseDebugSystem` (29 subclasses), debug UI/watch — useful for mod diagnostics.                                                                                                                                                                                                       |
-| `Game.Citizens`                                                                                                                                                                                                     |       64 | ★★★ | `Citizen`, `Household`, `Worker`, `Student`, `TravelPurpose`.                                                                                                                                                                                                                         |
-| `Game.Events`                                                                                                                                                                                                       |       63 |  ★  | Disasters, crime, accidents.                                                                                                                                                                                                                                                          |
-| `Game.Input`                                                                                                                                                                                                        |       61 | ★★  | `InputManager`, `ProxyAction`, `ProxyBinding` — mod keybindings.                                                                                                                                                                                                                      |
-| `Game.Areas`                                                                                                                                                                                                        |       51 |  ★  | Districts, map tiles, lots, surfaces.                                                                                                                                                                                                                                                 |
-| `Game.Common`                                                                                                                                                                                                       |       49 | ★★★ | **`SystemOrder.cs` (the master system registry)**, plus the universal tag components: `Created`, `Updated`, `Deleted`, `Applied`, `Destroyed`, `Overridden`, `Owner`, `Target`, `Temp`-adjacent, the 8 `ModificationBarrier*` command-buffer systems, `RaycastSystem`, `TimeData`.    |
-| `Game.UI`                                                                                                                                                                                                           |       41 | ★★★ | `UISystemBase` — the base class for any mod UI system.                                                                                                                                                                                                                                |
-| `Game.UI.Tooltip`                                                                                                                                                                                                   |       39 | ★★  | `TooltipSystemBase` (24 subclasses).                                                                                                                                                                                                                                                  |
-| `Game.Creatures`                                                                                                                                                                                                    |       37 |  ★  | Pedestrians, animals.                                                                                                                                                                                                                                                                 |
-| `Game.City`                                                                                                                                                                                                         |       34 | ★★  | City-level singletons: stats, milestones, policies, budget.                                                                                                                                                                                                                           |
-| `Game.Companies`                                                                                                                                                                                                    |       30 | ★★  | Commercial/industrial/office company components.                                                                                                                                                                                                                                      |
-| `Game.Zones`                                                                                                                                                                                                        |       27 | ★★  | Zone blocks and cells.                                                                                                                                                                                                                                                                |
-| `Game` (root ns)                                                                                                                                                                                                    |       27 | ★★★ | **`SystemUpdatePhase`, `UpdateSystem`, `GameSystemBase`, `GameMode`, `Version`, `EndFrameBarrier`, `SafeCommandBufferSystem`, `AutoSaveSystem`, camera controllers.** Tiny but the single most important directory.                                                                   |
-| `Game.SceneFlow`                                                                                                                                                                                                    |       22 | ★★★ | `GameManager` (2425 lines — the app lifecycle god-object), `UserInterface`, `AssetLibrary`, loading screens.                                                                                                                                                                          |
-| `Game.UI.Menu`                                                                                                                                                                                                      |       21 | ★★★ | `OptionsUISystem` and **`AutomaticSettings`** — the reflection engine that turns your `ModSetting` + attributes into widgets.                                                                                                                                                         |
-| `Game.Triggers`                                                                                                                                                                                                     |       20 |  ·  | Chirper/social triggers.                                                                                                                                                                                                                                                              |
-| `Game.Prefabs.Climate`                                                                                                                                                                                              |       19 |  ·  | Weather prefabs.                                                                                                                                                                                                                                                                      |
-| `Game.Modding.Toolchain.Dependencies`                                                                                                                                                                               |       19 |  ·  | Dev-toolchain dependency install (.NET SDK etc.). Not runtime modding.                                                                                                                                                                                                                |
-| `Game.Effects`                                                                                                                                                                                                      |       18 |  ·  | VFX/SFX effect components.                                                                                                                                                                                                                                                            |
-| `Game.Notifications`                                                                                                                                                                                                |       17 |  ★  | Icon/notification system.                                                                                                                                                                                                                                                             |
-| `Game.Simulation.Flow`                                                                                                                                                                                              |       16 |  ·  | Electricity/water flow graph internals.                                                                                                                                                                                                                                               |
-| `Game.Reflection`                                                                                                                                                                                                   |       15 |  ★  | `DelegateAccessor`, `IValueAccessor` — used by the widget/settings binding machinery.                                                                                                                                                                                                 |
-| `Game.Serialization.DataMigration`                                                                                                                                                                                  |       12 |  ★  | 12 systems that upgrade old saves — the practical reference for "how save versioning works".                                                                                                                                                                                          |
-| `Game.UI.Localization`                                                                                                                                                                                              |       11 | ★★★ | `LocalizedString`, `LocalizedNumber`, `LocalizationUtils` — how UI text is produced.                                                                                                                                                                                                  |
-| `Game.Rendering.Utilities`, `Game.Prefabs.Effects`                                                                                                                                                                  |    11/11 |  ·  |                                                                                                                                                                                                                                                                                       |
-| `Game.UI.Debug`, `Game.Modding.Toolchain`                                                                                                                                                                           |    10/10 |  ·  |                                                                                                                                                                                                                                                                                       |
-| `Game.Policies`, `Game.Achievements`, `Colossal.Atmosphere`                                                                                                                                                         |   8 each | ★/· | Policies matter for gameplay mods.                                                                                                                                                                                                                                                    |
-| `Game.PSI`, `Game.Economy`, `Game.Assets`, `Game.Agents`                                                                                                                                                            |   7 each | ★★  | `Game.Economy` is tiny but holds `Resource`/`EconomyUtils`.                                                                                                                                                                                                                           |
-| **`Game.Modding`**                                                                                                                                                                                                  |    **3** | ★★★ | `IMod.cs`, `ModManager.cs`, `ModSetting.cs`. The entire public mod API is three files.                                                                                                                                                                                                |
-| `Game.Dlc`, `Game.AssetPipeline`, `Game.Rendering.CinematicCamera`, `Game.UI.Editor.Widgets`, `Colossal.Rendering`                                                                                                  |      2–3 |  ·  |                                                                                                                                                                                                                                                                                       |
-| `Game.Glossary`, `Game.Audio`, `Game.Prefabs.Terrain`, `Game.Rendering.Debug`                                                                                                                                       |      5–6 |  ·  |                                                                                                                                                                                                                                                                                       |
-| `Game.UI.Thumbnails`, `Game.Audio.Radio`, `Game.Prefabs.Water`, `Game.Rendering.Legacy`                                                                                                                             |        2 |  ·  |                                                                                                                                                                                                                                                                                       |
-| `Properties`, `Unity.Mathematics`, `Unity.Entities.CodeGeneratedRegistry`, `System.Runtime.CompilerServices`, `Game.PSI.Internal`, `Game.CinematicCamera`, `Colossal.Atmosphere.Internal`, `Game.Rendering.Climate` |        1 |  ·  | Codegen/attribute stubs.                                                                                                                                                                                                                                                              |
-| `src/Game/*.cs` (root, no namespace dir)                                                                                                                                                                            |       10 |  ·  | `__JobReflectionRegistrationOutput__17016606566994089001.cs`, `-BurstDirectCallInitializer.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` + a handful of orphans (`ShowIfAttribute`, `DayNightCycleData`, `GameModeSettingData`, `DebugCamera`). **Pure codegen — ignore.** |
+| Namespace dir | Files | Rel | What lives there |
+| --- | ---: | :---: | --- |
+| `Game.Prefabs` | **1274** | ★★★ | The data-driven layer. 280 `ComponentBase` subclasses, 112 `PrefabBase` subclasses, 390 files with `IComponentData`, plus `PrefabSystem`. Biggest namespace by far. |
+| `Game.Simulation` | 479 | ★★★ | 300 `GameSystemBase` subclasses — the actual simulation. Citizens, traffic, economy, water, climate, pathfinding setup. |
+| `Game.UI.InGame` | 224 | ★★★ | 67 UI systems + their DTOs: info panels, infoviews, Chirper, budget, selected-info sections. |
+| `Game.Rendering` | 155 | ★ | 63 systems: batching, culling, overlays, infoview rendering. Only for visual mods. |
+| `Game.Net` | 148 | ★★★ | Road/rail/pipe network components + 26 systems. 58 files with `IComponentData` (`Edge`, `Node`, `Lane`, `Curve`, …). |
+| `Game.UI.Widgets` | 145 | ★★ | The declarative widget model (`IWidget`, `DropdownField`, `IntSliderField`, …) used by the editor and by the options UI that renders `ModSetting`. |
+| `Game.Buildings` | 145 | ★★★ | 80 files with `IComponentData` — building state components. |
+| `Game.UI.Editor` | 111 | ★ | Map/asset editor panels. |
+| `Game.Tools` | 111 | ★★★ | `ToolBaseSystem` (`Game.Tools/ToolBaseSystem.cs:28`) + 53 tool systems. `Temp`, `Hidden`, `Error` components live here. |
+| `Game.Vehicles` | 92 | ★★ | Vehicle state components (28 with `IComponentData`) + AI-adjacent data. |
+| `Game.Prefabs.Modes` | 86 | ★ | Game-mode prefab definitions. |
+| `Game.Tutorials` | 85 | · | Tutorial triggers (32 `IComponentData`). Mostly noise. |
+| `Game.Objects` | 85 | ★★★ | `Transform`, `Elevation`, `Static`, `Attached` — the spatial-object components everything references. |
+| `Game.Settings` | 80 | ★★★ | `Setting` base class + **all 40+ `SettingsUI*Attribute` types** that `ModSetting` uses. |
+| `Game.Pathfind` | 80 | ★ | Pathfinding data structures and the async pathfind service. |
+| `Game.Serialization` | 74 | ★★ | 62 systems: `LoadGameSystem`, `SaveGameSystem`, `SerializerSystem`. Mods that persist data must understand this. |
+| `Game.Routes` | 70 | ★★ | Transit lines, waypoints, stops. |
+| `Game.Debug` | 69 | ★ | `BaseDebugSystem` (29 subclasses), debug UI/watch — useful for mod diagnostics. |
+| `Game.Citizens` | 64 | ★★★ | `Citizen`, `Household`, `Worker`, `Student`, `TravelPurpose`. |
+| `Game.Events` | 63 | ★ | Disasters, crime, accidents. |
+| `Game.Input` | 61 | ★★ | `InputManager`, `ProxyAction`, `ProxyBinding` — mod keybindings. |
+| `Game.Areas` | 51 | ★ | Districts, map tiles, lots, surfaces. |
+| `Game.Common` | 49 | ★★★ | **`SystemOrder.cs` (the master system registry)**, plus the universal tag components: `Created`, `Updated`, `Deleted`, `Applied`, `Destroyed`, `Overridden`, `Owner`, `Target`, `Temp`-adjacent, the 8 `ModificationBarrier*` command-buffer systems, `RaycastSystem`, `TimeData`. |
+| `Game.UI` | 41 | ★★★ | `UISystemBase` — the base class for any mod UI system. |
+| `Game.UI.Tooltip` | 39 | ★★ | `TooltipSystemBase` (24 subclasses). |
+| `Game.Creatures` | 37 | ★ | Pedestrians, animals. |
+| `Game.City` | 34 | ★★ | City-level singletons: stats, milestones, policies, budget. |
+| `Game.Companies` | 30 | ★★ | Commercial/industrial/office company components. |
+| `Game.Zones` | 27 | ★★ | Zone blocks and cells. |
+| `Game` (root ns) | 27 | ★★★ | **`SystemUpdatePhase`, `UpdateSystem`, `GameSystemBase`, `GameMode`, `Version`, `EndFrameBarrier`, `SafeCommandBufferSystem`, `AutoSaveSystem`, camera controllers.** Tiny but the single most important directory. |
+| `Game.SceneFlow` | 22 | ★★★ | `GameManager` (2425 lines — the app lifecycle god-object), `UserInterface`, `AssetLibrary`, loading screens. |
+| `Game.UI.Menu` | 21 | ★★★ | `OptionsUISystem` and **`AutomaticSettings`** — the reflection engine that turns your `ModSetting` + attributes into widgets. |
+| `Game.Triggers` | 20 | · | Chirper/social triggers. |
+| `Game.Prefabs.Climate` | 19 | · | Weather prefabs. |
+| `Game.Modding.Toolchain.Dependencies` | 19 | · | Dev-toolchain dependency install (.NET SDK etc.). Not runtime modding. |
+| `Game.Effects` | 18 | · | VFX/SFX effect components. |
+| `Game.Notifications` | 17 | ★ | Icon/notification system. |
+| `Game.Simulation.Flow` | 16 | · | Electricity/water flow graph internals. |
+| `Game.Reflection` | 15 | ★ | `DelegateAccessor`, `IValueAccessor` — used by the widget/settings binding machinery. |
+| `Game.Serialization.DataMigration` | 12 | ★ | 12 systems that upgrade old saves — the practical reference for "how save versioning works". |
+| `Game.UI.Localization` | 11 | ★★★ | `LocalizedString`, `LocalizedNumber`, `LocalizationUtils` — how UI text is produced. |
+| `Game.Rendering.Utilities`, `Game.Prefabs.Effects` | 11/11 | · |  |
+| `Game.UI.Debug`, `Game.Modding.Toolchain` | 10/10 | · |  |
+| `Game.Policies`, `Game.Achievements`, `Colossal.Atmosphere` | 8 each | ★/· | Policies matter for gameplay mods. |
+| `Game.PSI`, `Game.Economy`, `Game.Assets`, `Game.Agents` | 7 each | ★★ | `Game.Economy` is tiny but holds `Resource`/`EconomyUtils`. |
+| **`Game.Modding`** | **3** | ★★★ | `IMod.cs`, `ModManager.cs`, `ModSetting.cs`. The entire public mod API is three files. |
+| `Game.Dlc`, `Game.AssetPipeline`, `Game.Rendering.CinematicCamera`, `Game.UI.Editor.Widgets`, `Colossal.Rendering` | 2–3 | · |  |
+| `Game.Glossary`, `Game.Audio`, `Game.Prefabs.Terrain`, `Game.Rendering.Debug` | 5–6 | · |  |
+| `Game.UI.Thumbnails`, `Game.Audio.Radio`, `Game.Prefabs.Water`, `Game.Rendering.Legacy` | 2 | · |  |
+| `Properties`, `Unity.Mathematics`, `Unity.Entities.CodeGeneratedRegistry`, `System.Runtime.CompilerServices`, `Game.PSI.Internal`, `Game.CinematicCamera`, `Colossal.Atmosphere.Internal`, `Game.Rendering.Climate` | 1 | · | Codegen/attribute stubs. |
+| `src/Game/*.cs` (root, no namespace dir) | 10 | · | `__JobReflectionRegistrationOutput__17016606566994089001.cs`, `-BurstDirectCallInitializer.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` + a handful of orphans (`ShowIfAttribute`, `DayNightCycleData`, `GameModeSettingData`, `DebugCamera`). **Pure codegen — ignore.** |
 
 **Biggest:** `Game.Prefabs` (1274). **Most mod-relevant, in order:** `Game` (root, 27 files), `Game.Modding` (3), `Game.Common` (49), `Game.Simulation` (479), `Game.Prefabs` (1274), `Game.UI` + `Game.UI.InGame`, `Game.Settings`.
 
@@ -190,17 +190,17 @@ public enum SystemUpdatePhase
 
 `src/Game/Game/UpdateSystem.cs:13` (`public class UpdateSystem : GameSystemBase`)
 
-| Method                                                         | Line                          |
-| -------------------------------------------------------------- | ----------------------------- |
-| `RegisterGPUSystem<SystemType>()`                              | `UpdateSystem.cs:128`         |
-| `RegisterGPUSystem(IGPUSystem)`                                | `UpdateSystem.cs:133`         |
-| `UpdateAt<SystemType>(SystemUpdatePhase)`                      | `UpdateSystem.cs:141`         |
-| `UpdateBefore<SystemType>(SystemUpdatePhase)`                  | `UpdateSystem.cs:146`         |
-| `UpdateAfter<SystemType>(SystemUpdatePhase)`                   | `UpdateSystem.cs:151`         |
-| `UpdateBefore<SystemType, OtherType>(SystemUpdatePhase)`       | `UpdateSystem.cs:156`         |
-| `UpdateAfter<SystemType, OtherType>(SystemUpdatePhase)`        | `UpdateSystem.cs:161`         |
+| Method | Line |
+| --- | --- |
+| `RegisterGPUSystem<SystemType>()` | `UpdateSystem.cs:128` |
+| `RegisterGPUSystem(IGPUSystem)` | `UpdateSystem.cs:133` |
+| `UpdateAt<SystemType>(SystemUpdatePhase)` | `UpdateSystem.cs:141` |
+| `UpdateBefore<SystemType>(SystemUpdatePhase)` | `UpdateSystem.cs:146` |
+| `UpdateAfter<SystemType>(SystemUpdatePhase)` | `UpdateSystem.cs:151` |
+| `UpdateBefore<SystemType, OtherType>(SystemUpdatePhase)` | `UpdateSystem.cs:156` |
+| `UpdateAfter<SystemType, OtherType>(SystemUpdatePhase)` | `UpdateSystem.cs:161` |
 | `Update(phase)` / `Update(phase, updateIndex, iterationIndex)` | `UpdateSystem.cs:166`, `:206` |
-| `currentPhase` property                                        | `UpdateSystem.cs:73`          |
+| `currentPhase` property | `UpdateSystem.cs:73` |
 
 Ordering mechanics worth teaching: `UpdateBefore` registers with `addIndex - 1000000`, `UpdateAfter` with `addIndex + 1000000`, `UpdateAt` with plain `addIndex` (`UpdateSystem.cs:143-153`). Sorting is `(phase, addIndex)` (`UpdateSystem.cs:29-37`). So _within a phase_, all `UpdateBefore`-registered systems run first (in registration order), then `UpdateAt`, then `UpdateAfter`. The two-type overloads register relative to another system via `m_RefMap` (`UpdateSystem.cs:261`).
 
@@ -284,51 +284,51 @@ All under `src/Colossal.UI.Binding/Colossal.UI.Binding/`.
 
 **Interfaces**
 
-| Type                               | path:line                               |
-| ---------------------------------- | --------------------------------------- |
-| `IBinding`                         | `IBinding.cs:5`                         |
-| `IUpdateBinding : IBinding`        | `IUpdateBinding.cs:3`                   |
-| `IBindingGroup`                    | `IBindingGroup.cs:5`                    |
-| `IBindingRegistry : IBindingGroup` | `IBindingRegistry.cs:3`                 |
-| `IDebugBinding`                    | `IDebugBinding.cs`                      |
-| `IJsonReader` / `IJsonWriter`      | `IJsonReader.cs` / `IJsonWriter.cs`     |
-| `IJsonReadable` / `IJsonWritable`  | `IJsonReadable.cs` / `IJsonWritable.cs` |
-| `IReader` / `IWriter`              | `IReader.cs` / `IWriter.cs`             |
+| Type | path:line |
+| --- | --- |
+| `IBinding` | `IBinding.cs:5` |
+| `IUpdateBinding : IBinding` | `IUpdateBinding.cs:3` |
+| `IBindingGroup` | `IBindingGroup.cs:5` |
+| `IBindingRegistry : IBindingGroup` | `IBindingRegistry.cs:3` |
+| `IDebugBinding` | `IDebugBinding.cs` |
+| `IJsonReader` / `IJsonWriter` | `IJsonReader.cs` / `IJsonWriter.cs` |
+| `IJsonReadable` / `IJsonWritable` | `IJsonReadable.cs` / `IJsonWritable.cs` |
+| `IReader` / `IWriter` | `IReader.cs` / `IWriter.cs` |
 
 **Abstract bases**
 
-| Type                                                        | path:line                    |
-| ----------------------------------------------------------- | ---------------------------- |
-| `BindingBase : IBinding, IDebugBinding`                     | `BindingBase.cs:7`           |
-| `EventBindingBase : BindingBase`                            | `EventBindingBase.cs:6`      |
-| `RawEventBindingBase : EventBindingBase`                    | `RawEventBindingBase.cs:6`   |
-| `RawTriggerBindingBase : BindingBase`                       | `RawTriggerBindingBase.cs:6` |
-| `RawCallBindingBase<TResult> : BindingBase`                 | `RawCallBindingBase.cs:6`    |
-| `MapBindingBase<K> : BindingBase, IUpdateBinding, IBinding` | `MapBindingBase.cs:7`        |
+| Type | path:line |
+| --- | --- |
+| `BindingBase : IBinding, IDebugBinding` | `BindingBase.cs:7` |
+| `EventBindingBase : BindingBase` | `EventBindingBase.cs:6` |
+| `RawEventBindingBase : EventBindingBase` | `RawEventBindingBase.cs:6` |
+| `RawTriggerBindingBase : BindingBase` | `RawTriggerBindingBase.cs:6` |
+| `RawCallBindingBase<TResult> : BindingBase` | `RawCallBindingBase.cs:6` |
+| `MapBindingBase<K> : BindingBase, IUpdateBinding, IBinding` | `MapBindingBase.cs:7` |
 
 **Concrete bindings** (C# → JS state)
 
-| Type                                                                           | path:line                 |
-| ------------------------------------------------------------------------------ | ------------------------- |
-| `ValueBinding<T> : RawEventBindingBase`                                        | `ValueBinding.cs:6`       |
-| `GetterValueBinding<T> : RawEventBindingBase, IUpdateBinding`                  | `GetterValueBinding.cs:6` |
-| `RawValueBinding : RawEventBindingBase, IUpdateBinding`                        | `RawValueBinding.cs:7`    |
-| `GetterMapBinding<K,V> : MapBindingBase<K>`                                    | `GetterMapBinding.cs:6`   |
-| `RawMapBinding<K> : MapBindingBase<K>`                                         | `RawMapBinding.cs:5`      |
-| `StackBinding<T> : IBinding, IBindingGroup`                                    | `StackBinding.cs:8`       |
-| `CompositeBinding : IUpdateBinding, IBinding, IBindingRegistry, IBindingGroup` | `CompositeBinding.cs:9`   |
+| Type | path:line |
+| --- | --- |
+| `ValueBinding<T> : RawEventBindingBase` | `ValueBinding.cs:6` |
+| `GetterValueBinding<T> : RawEventBindingBase, IUpdateBinding` | `GetterValueBinding.cs:6` |
+| `RawValueBinding : RawEventBindingBase, IUpdateBinding` | `RawValueBinding.cs:7` |
+| `GetterMapBinding<K,V> : MapBindingBase<K>` | `GetterMapBinding.cs:6` |
+| `RawMapBinding<K> : MapBindingBase<K>` | `RawMapBinding.cs:5` |
+| `StackBinding<T> : IBinding, IBindingGroup` | `StackBinding.cs:8` |
+| `CompositeBinding : IUpdateBinding, IBinding, IBindingRegistry, IBindingGroup` | `CompositeBinding.cs:9` |
 
 **Concrete bindings** (JS → C# invocation)
 
-| Type                                        | path:line                                |
-| ------------------------------------------- | ---------------------------------------- |
-| `TriggerBinding : BindingBase`              | `TriggerBinding.cs:7`                    |
-| `TriggerBinding<T>` … `<T1,T2,T3,T4>`       | `TriggerBinding.cs:45, 71, 101, 135`     |
-| `RawTriggerBinding : RawTriggerBindingBase` | `RawTriggerBinding.cs:6`                 |
+| Type | path:line |
+| --- | --- |
+| `TriggerBinding : BindingBase` | `TriggerBinding.cs:7` |
+| `TriggerBinding<T>` … `<T1,T2,T3,T4>` | `TriggerBinding.cs:45, 71, 101, 135` |
+| `RawTriggerBinding : RawTriggerBindingBase` | `RawTriggerBinding.cs:6` |
 | `CallBinding<TResult>` … `<T1..T5,TResult>` | `CallBinding.cs:6, 29, 56, 87, 122, 161` |
-| `EventBinding : EventBindingBase`           | `EventBinding.cs:3`                      |
-| `EventBinding<T> : RawEventBindingBase`     | `EventBinding.cs:15`                     |
-| `RawEventBinding : RawEventBindingBase`     | `RawEventBinding.cs:3`                   |
+| `EventBinding : EventBindingBase` | `EventBinding.cs:3` |
+| `EventBinding<T> : RawEventBindingBase` | `EventBinding.cs:15` |
+| `RawEventBinding : RawEventBindingBase` | `RawEventBinding.cs:3` |
 
 **Serialization helpers** (readers/writers registry, ~30 files): `JsonReader`/`JsonWriter`, `ValueReaders`/`ValueWriters`/`ValueWritersStruct`, `ArrayReader`/`ArrayWriter`, `ListReader`/`ListWriter`, `DictionaryReader`/`DictionaryWriter`, `CollectionWriter`, `EnumReader`/`EnumWriter`/`EnumNameWriter`, `NullableReader`/`NullableWriter`/`NullableStructWriter`, `StringReader`/`StringWriter`, `LongReader`/`LongWriter`, `ULongReader`/`ULongWriter`, `DelegateReader`/`DelegateWriter`, `ReaderDelegate`/`WriterDelegate`, `MathematicsReaders`/`MathematicsWriters`, `UnityReaders`/`UnityWriters`, `JsonWriterExtensions`, `RawValueBindingExtensions`, `DebugBindingWriter`/`DebugBindingType`.
 
@@ -398,24 +398,24 @@ In `src/Game/`:
 
 Clustering of `IComponentData` by namespace:
 
-| Namespace                        | files with `IComponentData` |
-| -------------------------------- | --------------------------: |
-| `Game.Prefabs`                   |                         390 |
-| `Game.Buildings`                 |                          80 |
-| `Game.Net`                       |                          58 |
-| `Game.Tutorials`                 |                          32 |
-| `Game.Objects`                   |                          31 |
-| `Game.Citizens`                  |                          29 |
-| `Game.Vehicles`                  |                          28 |
-| `Game.Events`                    |                          28 |
-| `Game.Routes`                    |                          27 |
-| `Game.Tools`                     |                          23 |
-| `Game.Companies`                 |                          22 |
-| `Game.Simulation`                |                          21 |
-| `Game.Areas`                     |                          15 |
-| `Game.Creatures` / `Game.Common` |                     14 each |
-| `Game.City`                      |                          11 |
-| rest                             |                     ≤5 each |
+| Namespace | files with `IComponentData` |
+| --- | ---: |
+| `Game.Prefabs` | 390 |
+| `Game.Buildings` | 80 |
+| `Game.Net` | 58 |
+| `Game.Tutorials` | 32 |
+| `Game.Objects` | 31 |
+| `Game.Citizens` | 29 |
+| `Game.Vehicles` | 28 |
+| `Game.Events` | 28 |
+| `Game.Routes` | 27 |
+| `Game.Tools` | 23 |
+| `Game.Companies` | 22 |
+| `Game.Simulation` | 21 |
+| `Game.Areas` | 15 |
+| `Game.Creatures` / `Game.Common` | 14 each |
+| `Game.City` | 11 |
+| rest | ≤5 each |
 
 The dominance of `Game.Prefabs` (390/991) reflects the two-tier design: for most gameplay concepts there is a _prefab-side_ `IComponentData` (the template, e.g. `BuildingData`) and an _instance-side_ one (`Game.Buildings.Building`). Understanding that split is the single most important conceptual thing for a prefab-modifying mod.
 
@@ -467,26 +467,26 @@ Cross-system communication is by `Game.Common` tag components (`Created`, `Updat
 
 **Glob patterns.** The layout is `src/<Assembly>/<FullNamespace>/<TypeName>.cs`, exactly two levels, no nesting. So:
 
-| Goal                                 | Pattern                                                                            |
-| ------------------------------------ | ---------------------------------------------------------------------------------- |
-| Find a type by name                  | `src/**/<TypeName>.cs` — works ~99% of the time, one file per type                 |
-| All systems in a domain              | `src/Game/Game.Simulation/*System.cs`                                              |
-| All components in a domain           | `src/Game/Game.Citizens/*.cs`                                                      |
-| Everything in a namespace            | `src/Game/<Namespace>/` — the directory _is_ the namespace, verbatim, dots and all |
-| Find which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'`                                 |
+| Goal | Pattern |
+| --- | --- |
+| Find a type by name | `src/**/<TypeName>.cs` — works ~99% of the time, one file per type |
+| All systems in a domain | `src/Game/Game.Simulation/*System.cs` |
+| All components in a domain | `src/Game/Game.Citizens/*.cs` |
+| Everything in a namespace | `src/Game/<Namespace>/` — the directory _is_ the namespace, verbatim, dots and all |
+| Find which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'` |
 
 **Grep patterns that work.**
 
-| Question                           | Pattern                                                                                                     |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| "when does system X run?"          | grep `X>` in `src/Game/Game.Common/SystemOrder.cs` — **always start here**                                  |
-| "what systems run in phase P?"     | grep `SystemUpdatePhase.P` in `SystemOrder.cs`                                                              |
-| "who reads component C?"           | `ComponentLookup<C>\|ComponentTypeHandle<C>\|ReadOnly<C>()`                                                 |
-| "who writes component C?"          | `_RW_ComponentLookup` + `C` in the same file; or `SetComponentData<C>\|AddComponent<C>`                     |
-| "which archetype has C?"           | grep `C` in `src/Game/Game.Prefabs/*.cs` for the `GetArchetypeComponents` that adds it                      |
-| "how does the UI get value V?"     | grep `"V"` (the literal JS-side key string) across `src/Game/Game.UI*/` — binding names are string literals |
-| find all subclasses of B           | `class [A-Za-z0-9_]+ : B\b`                                                                                 |
-| find all bindings a system exposes | `AddBinding\|AddUpdateBinding` in that file                                                                 |
+| Question | Pattern |
+| --- | --- |
+| "when does system X run?" | grep `X>` in `src/Game/Game.Common/SystemOrder.cs` — **always start here** |
+| "what systems run in phase P?" | grep `SystemUpdatePhase.P` in `SystemOrder.cs` |
+| "who reads component C?" | `ComponentLookup<C>\|ComponentTypeHandle<C>\|ReadOnly<C>()` |
+| "who writes component C?" | `_RW_ComponentLookup` + `C` in the same file; or `SetComponentData<C>\|AddComponent<C>` |
+| "which archetype has C?" | grep `C` in `src/Game/Game.Prefabs/*.cs` for the `GetArchetypeComponents` that adds it |
+| "how does the UI get value V?" | grep `"V"` (the literal JS-side key string) across `src/Game/Game.UI*/` — binding names are string literals |
+| find all subclasses of B | `class [A-Za-z0-9_]+ : B\b` |
+| find all bindings a system exposes | `AddBinding\|AddUpdateBinding` in that file |
 
 **File-per-type is near-perfect**: only 5 files in all of `src/Game/` (4388 files) declare more than one top-level type — `Game.Reflection/DelegateAccessor.cs`, `Game.Settings/QualitySetting.cs`, `Game.UI.Editor/DualPopupValueField.cs`, `Game.UI.Editor/HierarchyMenu.cs`, `Game.UI.Widgets/FloatSliderField.cs`. Nested types are always inside the parent's file.
 

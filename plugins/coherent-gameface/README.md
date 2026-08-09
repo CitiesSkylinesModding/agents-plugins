@@ -156,12 +156,12 @@ MCP is working properly.
 
 The server reads these environment variables (all optional):
 
-| Variable                      | Default     | Purpose                                  |
-| ----------------------------- | ----------- | ---------------------------------------- |
-| `GAMEFACE_HOST`               | `localhost` | Host of the Gameface CDP endpoint.       |
-| `GAMEFACE_PORT`               | `9444`      | Port of the Gameface CDP endpoint.       |
-| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000`      | HTTP discovery / WebSocket open timeout. |
-| `GAMEFACE_CALL_TIMEOUT_MS`    | `15000`     | Per-command reply timeout.               |
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `GAMEFACE_HOST` | `localhost` | Host of the Gameface CDP endpoint. |
+| `GAMEFACE_PORT` | `9444` | Port of the Gameface CDP endpoint. |
+| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000` | HTTP discovery / WebSocket open timeout. |
+| `GAMEFACE_CALL_TIMEOUT_MS` | `15000` | Per-command reply timeout. |
 
 **On Claude Code**, the plugin's [`.mcp.json`](.mcp.json) forwards `GAMEFACE_HOST` and
 `GAMEFACE_PORT` from your environment (`${VAR:-default}`); the timeout variables fall back to

@@ -4,11 +4,11 @@ Verified against game version 1.6.0f1.
 
 Three modes, one per publish profile in `Properties/PublishProfiles/`, run with the IDE's publish command.
 
-| Profile                        | Does                                                           | Builds | Requires                |
-| ------------------------------ | -------------------------------------------------------------- | ------ | ----------------------- |
-| `PublishNewMod`                | creates a new mod entry and uploads content and metadata       | yes    | `ModId` empty or `0`    |
-| `PublishNewVersion`            | uploads a new version of an existing mod                       | yes    | `ModId` and `ChangeLog` |
-| `UpdatePublishedConfiguration` | replaces metadata, thumbnail and screenshots, and nothing else | no     | `ModId` and `ChangeLog` |
+| Profile | Does | Builds | Requires |
+| --- | --- | --- | --- |
+| `PublishNewMod` | creates a new mod entry and uploads content and metadata | yes | `ModId` empty or `0` |
+| `PublishNewVersion` | uploads a new version of an existing mod | yes | `ModId` and `ChangeLog` |
+| `UpdatePublishedConfiguration` | replaces metadata, thumbnail and screenshots, and nothing else | no | `ModId` and `ChangeLog` |
 
 Reach for `UpdatePublishedConfiguration` to fix a description, a tag or a screenshot without shipping a version nobody needed.
 

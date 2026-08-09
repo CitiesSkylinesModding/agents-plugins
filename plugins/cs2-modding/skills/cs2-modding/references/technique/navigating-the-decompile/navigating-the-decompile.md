@@ -22,18 +22,18 @@ That guarantee belongs to the provisioning and not to the decompiler: in a tree 
 
 **Ten assemblies are the reading universe:**
 
-| Assembly                    | What it owns                                                                                                    |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `Game`                      | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`.          |
-| `Colossal.Core`             | `COSystemBase`, `Colossal.Entities`, `Colossal.Serialization.Entities`, `Colossal.Json`, `Colossal.Reflection`. |
-| `Colossal.IO.AssetDatabase` | Mod discovery and loading, `ExecutableAsset`, the asset databases, `LocaleAsset`, `PrefabAsset`.                |
-| `Colossal.UI.Binding`       | The whole C#↔JS binding vocabulary.                                                                             |
-| `Colossal.Collections`      | `NativeQuadTree`, `NativeHeapAllocator`, `NativeAccumulator`.                                                   |
-| `Colossal.UI`               | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem`.                                                    |
-| `Colossal.IO`               | `IOUtils`, `ZipUtilities` (the `.cok` package format), the large binary reader and writer extensions.           |
-| `Colossal.Mathematics`      | `Bezier4x3`, `Bounds3`, `Line3`.                                                                                |
-| `Colossal.Logging`          | `LogManager.GetLogger`.                                                                                         |
-| `Colossal.Localization`     | `LocalizationManager.AddSource`, `MemorySource`, `CSVFileSource`.                                               |
+| Assembly | What it owns |
+| --- | --- |
+| `Game` | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. |
+| `Colossal.Core` | `COSystemBase`, `Colossal.Entities`, `Colossal.Serialization.Entities`, `Colossal.Json`, `Colossal.Reflection`. |
+| `Colossal.IO.AssetDatabase` | Mod discovery and loading, `ExecutableAsset`, the asset databases, `LocaleAsset`, `PrefabAsset`. |
+| `Colossal.UI.Binding` | The whole C#↔JS binding vocabulary. |
+| `Colossal.Collections` | `NativeQuadTree`, `NativeHeapAllocator`, `NativeAccumulator`. |
+| `Colossal.UI` | `UIManager`, `UIView`, `DefaultResourceHandler`, `UISystem`. |
+| `Colossal.IO` | `IOUtils`, `ZipUtilities` (the `.cok` package format), the large binary reader and writer extensions. |
+| `Colossal.Mathematics` | `Bezier4x3`, `Bounds3`, `Line3`. |
+| `Colossal.Logging` | `LogManager.GetLogger`. |
+| `Colossal.Localization` | `LocalizationManager.AddSource`, `MemorySource`, `CSVFileSource`. |
 
 `Game` dwarfs the other nine and carries the bulk of everything a mod touches.
 **`src/Game/Game.Modding/` is three files** — `IMod.cs`, `ModManager.cs` and `ModSetting.cs` — and that is the whole entry-point and settings-base surface.
@@ -54,11 +54,11 @@ The namespace directory is the **fully-qualified namespace, verbatim, dots and a
 **Some files sit one level up**, directly in an assembly directory with no namespace folder — `src/Game` has ten.
 A glob written `src/*/*/<Name>.cs` misses every one; `src/**/<Name>.cs` catches them.
 
-| Goal                            | Pattern                                            |
-| ------------------------------- | -------------------------------------------------- |
-| A type by name                  | `src/**/<TypeName>.cs`                             |
-| Every system in one namespace   | `src/Game/<Namespace>/*System.cs`                  |
-| Everything in a namespace       | `src/Game/<Namespace>/`                            |
+| Goal | Pattern |
+| --- | --- |
+| A type by name | `src/**/<TypeName>.cs` |
+| Every system in one namespace | `src/Game/<Namespace>/*System.cs` |
+| Everything in a namespace | `src/Game/<Namespace>/` |
 | Which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'` |
 
 **A name-glob usually lands on exactly one file**, and where it does not, the collision is not academic: the names that repeat are the ones a mod author reaches for.

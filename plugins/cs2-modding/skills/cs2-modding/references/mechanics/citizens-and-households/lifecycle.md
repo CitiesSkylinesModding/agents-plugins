@@ -11,11 +11,11 @@ Without one you cannot check anything below.
 `CitizenAge` declares `Child, Teen, Adult, Elderly` (`src/Game/Game.Citizens/CitizenAge.cs`).
 The thresholds are C# static methods on `AgingSystem`, not prefab data:
 
-| Becomes | At age (days) | Declared                              |
-| ------- | ------------- | ------------------------------------- |
-| Teen    | 21            | `AgingSystem.GetTeenAgeLimitInDays()` |
-| Adult   | 36            | `GetAdultAgeLimitInDays()`            |
-| Elderly | 84            | `GetElderAgeLimitInDays()`            |
+| Becomes | At age (days) | Declared |
+| --- | --- | --- |
+| Teen | 21 | `AgingSystem.GetTeenAgeLimitInDays()` |
+| Adult | 36 | `GetAdultAgeLimitInDays()` |
+| Elderly | 84 | `GetElderAgeLimitInDays()` |
 
 Converting any of them to game years divides by `TimeSettingsData.m_DaysPerYear` (`simulation-time-and-units` owns the conversion).
 
@@ -61,13 +61,13 @@ Source: `src/Game/Game.Citizens/Citizen.cs`.
 
 At creation, `CitizenInitializeSystem` first reads small `m_BirthDay` values as an enum, then overwrites the field with the real day number:
 
-| `m_BirthDay` at creation | Result                                                                              |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| 0                        | Newborn child, birth triggers fire                                                  |
-| 1                        | Adult, random age in [36, 84), education drawn from levels 0–3 (0–4 for a commuter) |
-| 2                        | Child or teen, split on `DemandParameterData.m_TeenSpawnPercentage`                 |
-| 3                        | Elderly, age 84 + rand(5), education 0–4                                            |
-| anything else            | Adult, age 36 + rand(daysPerYear), education 2–3                                    |
+| `m_BirthDay` at creation | Result |
+| --- | --- |
+| 0 | Newborn child, birth triggers fire |
+| 1 | Adult, random age in [36, 84), education drawn from levels 0–3 (0–4 for a commuter) |
+| 2 | Child or teen, split on `DemandParameterData.m_TeenSpawnPercentage` |
+| 3 | Elderly, age 84 + rand(5), education 0–4 |
+| anything else | Adult, age 36 + rand(daysPerYear), education 2–3 |
 
 `HouseholdInitializeSystem.SpawnCitizen` passes these literals: student count spawns with 4, adult count with 1, child count with 2, elder count with 3 (`src/Game/Game.Citizens/HouseholdInitializeSystem.cs`).
 Initial health and wellbeing are `40 + rand(20)` each; the leisure counter starts at `128 + rand(92)` for a resident and `rand(128)` for a tourist; gender is a coin flip (`CitizenInitializeSystem.cs`).

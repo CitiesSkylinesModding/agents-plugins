@@ -16,14 +16,14 @@ The protocol is used throughout the game assembly; the ones below are what a mod
 Each owns one or two `NativeQuadTree` instances.
 **The type arguments vary by system**, so match the pair in the table below rather than assuming `<Entity, QuadTreeBoundsXZ>` everywhere.
 
-| Namespace's `SearchSystem` | Trees          | Type arguments                        | Accessors                                    |
-| -------------------------- | -------------- | ------------------------------------- | -------------------------------------------- |
-| `Game.Objects`             | static, moving | `<Entity, QuadTreeBoundsXZ>`          | `GetStaticSearchTree`, `GetMovingSearchTree` |
-| `Game.Net`                 | net, lane      | `<Entity, QuadTreeBoundsXZ>`          | `GetNetSearchTree`, `GetLaneSearchTree`      |
-| `Game.Zones`               | one            | `<Entity, Bounds2>`                   | `GetSearchTree`                              |
-| `Game.Areas`               | one            | `<AreaSearchItem, QuadTreeBoundsXZ>`  | `GetSearchTree`                              |
-| `Game.Routes`              | one            | `<RouteSearchItem, QuadTreeBoundsXZ>` | `GetSearchTree`                              |
-| `Game.Effects`             | one            | `<SourceInfo, QuadTreeBoundsXZ>`      | `GetSearchTree`                              |
+| Namespace's `SearchSystem` | Trees | Type arguments | Accessors |
+| --- | --- | --- | --- |
+| `Game.Objects` | static, moving | `<Entity, QuadTreeBoundsXZ>` | `GetStaticSearchTree`, `GetMovingSearchTree` |
+| `Game.Net` | net, lane | `<Entity, QuadTreeBoundsXZ>` | `GetNetSearchTree`, `GetLaneSearchTree` |
+| `Game.Zones` | one | `<Entity, Bounds2>` | `GetSearchTree` |
+| `Game.Areas` | one | `<AreaSearchItem, QuadTreeBoundsXZ>` | `GetSearchTree` |
+| `Game.Routes` | one | `<RouteSearchItem, QuadTreeBoundsXZ>` | `GetSearchTree` |
+| `Game.Effects` | one | `<SourceInfo, QuadTreeBoundsXZ>` | `GetSearchTree` |
 
 Each accessor has a matching `Add…Reader` and `Add…Writer` named after the same tree.
 

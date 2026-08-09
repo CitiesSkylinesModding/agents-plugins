@@ -38,14 +38,14 @@ agent directly, without waking anything.
 Measured against the reference target, N=200 per operation over 3 runs, inside one held suspend,
 5 warm-ups discarded, run-to-run drift under 4%:
 
-| operation                          | mean   | median |
-| ---------------------------------- | ------ | ------ |
+| operation | mean | median |
+| --- | --- | --- |
 | instance invoke (`World.get_Name`) | 927 µs | 910 µs |
-| `VM_GetTypes`                      | 93 µs  | 88 µs  |
-| batched static read, 6 fields      | 54 µs  | 52 µs  |
-| `Method_MakeGenericMethod`         | 41 µs  | 37 µs  |
-| single static field read           | 37 µs  | 35 µs  |
-| `Type_GetObject`                   | 36 µs  | 34 µs  |
+| `VM_GetTypes` | 93 µs | 88 µs |
+| batched static read, 6 fields | 54 µs | 52 µs |
+| `Method_MakeGenericMethod` | 41 µs | 37 µs |
+| single static field read | 37 µs | 35 µs |
+| `Type_GetObject` | 36 µs | 34 µs |
 
 An invoke costs about **26x** a bare wire command, with a hard floor near 790 µs and no long tail.
 
@@ -58,14 +58,14 @@ smallest real call that exercises the memo, and ~10% of it is the threshold wort
 Measured against the reference target, arms interleaved across 3 rounds × 20 repetitions, each
 repetition a full operation cycle, pooled medians:
 
-| call                                         | invokes | wire | freeze |
-| -------------------------------------------- | ------: | ---: | -----: |
-| read one component off an entity             |       6 |   14 |  16 ms |
-| list a 17-component archetype                |       9 |   23 |  20 ms |
-| the same listing, with values                |      18 |   41 |  36 ms |
-| list a 36-component archetype, with values   |      25 |   55 |  45 ms |
-| query on one component type                  |       9 |   26 |  15 ms |
-| evaluate an expression naming an enum member |       0 |    7 |   1 ms |
+| call | invokes | wire | freeze |
+| --- | ---: | ---: | ---: |
+| read one component off an entity | 6 | 14 | 16 ms |
+| list a 17-component archetype | 9 | 23 | 20 ms |
+| the same listing, with values | 18 | 41 | 36 ms |
+| list a 36-component archetype, with values | 25 | 55 | 45 ms |
+| query on one component type | 9 | 26 | 15 ms |
+| evaluate an expression naming an enum member | 0 | 7 | 1 ms |
 
 A call that opens its own suspend window pays ~0.5 ms for it, and **a running simulation costs no more
 than a paused one** (15.6 ms against 16.7 for the same component read): the main thread parks at a safe

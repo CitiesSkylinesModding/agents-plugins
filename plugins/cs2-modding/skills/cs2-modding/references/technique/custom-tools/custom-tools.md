@@ -50,19 +50,19 @@ Setting it false again yourself is harmless and redundant.
 `ToolBaseSystem` seals the parameterless `OnUpdate()` and redirects it: it assigns `Dependency = OnUpdate(Dependency)`, then clears its focus-changed and force-update flags.
 A tool therefore overrides `protected virtual JobHandle OnUpdate(JobHandle inputDeps)` and can never override the other one.
 
-| Member                                                                          | Kind                          | What it is for                                                       |
-| ------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------- |
-| `toolID`                                                                        | `public abstract string`      | Identity for the UI binding and for cross-mod string checks          |
-| `GetPrefab()`                                                                   | `public abstract PrefabBase`  | The prefab the toolbar should highlight; `null` is legal             |
-| `TrySetPrefab(PrefabBase)`                                                      | `public abstract bool`        | Claim or decline a prefab during the tool-list walk                  |
-| `OnUpdate(JobHandle)`                                                           | `protected virtual JobHandle` | The per-frame body; return the tool's job handle                     |
-| `InitializeRaycast()`                                                           | `public virtual void`         | Configure this frame's cast; the base resets every field first       |
-| `GetRaycastResult(out ControlPoint)` and its `out bool forceUpdate` twin        | `protected virtual bool`      | Turn a hit into a control point; the seam for substituting your cast |
-| `GetAllowApply()`                                                               | `protected virtual bool`      | Whether the current preview may be committed                         |
-| `GetAvailableSnapMask(out Snap, out Snap)`                                      | `public virtual void`         | Which snap flags exist, and which of them are forced on              |
-| `GetUIModes(List<ToolMode>)` and `uiModeIndex`                                  | `public virtual`              | Publish the tool's modes and say which one is current                |
-| `SetUnderground(bool)`, `ElevationUp()`, `ElevationDown()`, `ElevationScroll()` | `public virtual void`         | Empty hooks the tool-options UI calls                                |
-| `OnCreate`, `OnStartRunning`, `OnStopRunning`                                   | overridden by the base itself | Call `base`: the tool-specific work lives in the base body           |
+| Member | Kind | What it is for |
+| --- | --- | --- |
+| `toolID` | `public abstract string` | Identity for the UI binding and for cross-mod string checks |
+| `GetPrefab()` | `public abstract PrefabBase` | The prefab the toolbar should highlight; `null` is legal |
+| `TrySetPrefab(PrefabBase)` | `public abstract bool` | Claim or decline a prefab during the tool-list walk |
+| `OnUpdate(JobHandle)` | `protected virtual JobHandle` | The per-frame body; return the tool's job handle |
+| `InitializeRaycast()` | `public virtual void` | Configure this frame's cast; the base resets every field first |
+| `GetRaycastResult(out ControlPoint)` and its `out bool forceUpdate` twin | `protected virtual bool` | Turn a hit into a control point; the seam for substituting your cast |
+| `GetAllowApply()` | `protected virtual bool` | Whether the current preview may be committed |
+| `GetAvailableSnapMask(out Snap, out Snap)` | `public virtual void` | Which snap flags exist, and which of them are forced on |
+| `GetUIModes(List<ToolMode>)` and `uiModeIndex` | `public virtual` | Publish the tool's modes and say which one is current |
+| `SetUnderground(bool)`, `ElevationUp()`, `ElevationDown()`, `ElevationScroll()` | `public virtual void` | Empty hooks the tool-options UI calls |
+| `OnCreate`, `OnStartRunning`, `OnStopRunning` | overridden by the base itself | Call `base`: the tool-specific work lives in the base body |
 
 The game-lifecycle hooks a tool shares with every other system — loading-complete, focus changed, preload, loaded, world ready — behave exactly as `mod-lifecycle-and-ordering` describes, including which of them disable the system when they throw.
 

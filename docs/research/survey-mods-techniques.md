@@ -9,20 +9,20 @@
 
 **Scale/health snapshot** (C# file count / last commit):
 
-| Mod                 | .cs | .ts(x) | Last commit | Character                                                              |
-| ------------------- | --- | ------ | ----------- | ---------------------------------------------------------------------- |
-| CS2-WriteEverywhere | 236 | 41     | 2026-07-27  | Most technically extreme (rendering, fonts, custom RPC, own framework) |
-| CS2-MoveIt          | 141 | 35     | 2026-05-03  | Deepest tool/undo architecture                                         |
-| Traffic             | 128 | 32     | 2026-01-27  | Deepest ECS/Burst/serialization; best all-round reference              |
-| CS2-Platter         | 103 | 37     | 2026-06-22  | Best modern Harmony + prefab + tests + CI                              |
-| RoadBuilder-CSII    | 101 | 54     | 2026-05-15  | Best prefab synthesis; almost zero Burst                               |
-| FindIt-CSII         | 83  | 32     | 2026-06-11  | Best prefab indexing / cross-mod API                                   |
-| Cities2-TLE         | 62  | 102    | 2026-04-06  | System-replacement instead of Harmony; JSON-string bindings            |
-| Anarchy             | 53  | 27     | 2026-05-27  | Best "intercept tool definitions" reference                            |
-| Tree_Controller     | 37  | 19     | 2026-07-19  | Mixed quality; legacy DOM hacks                                        |
-| BetterBulldozer     | 30  | 15     | 2026-04-29  | Raycast-filtering reference; legacy DOM hacks                          |
-| LineTool-CS2        | 23  | 14     | 2026-07-05  | Cleanest single-tool reference                                         |
-| PlopTheGrowables    | 12  | 0      | 2026-05-18  | Cleanest "replace a vanilla system" reference                          |
+| Mod | .cs | .ts(x) | Last commit | Character |
+| --- | --- | --- | --- | --- |
+| CS2-WriteEverywhere | 236 | 41 | 2026-07-27 | Most technically extreme (rendering, fonts, custom RPC, own framework) |
+| CS2-MoveIt | 141 | 35 | 2026-05-03 | Deepest tool/undo architecture |
+| Traffic | 128 | 32 | 2026-01-27 | Deepest ECS/Burst/serialization; best all-round reference |
+| CS2-Platter | 103 | 37 | 2026-06-22 | Best modern Harmony + prefab + tests + CI |
+| RoadBuilder-CSII | 101 | 54 | 2026-05-15 | Best prefab synthesis; almost zero Burst |
+| FindIt-CSII | 83 | 32 | 2026-06-11 | Best prefab indexing / cross-mod API |
+| Cities2-TLE | 62 | 102 | 2026-04-06 | System-replacement instead of Harmony; JSON-string bindings |
+| Anarchy | 53 | 27 | 2026-05-27 | Best "intercept tool definitions" reference |
+| Tree_Controller | 37 | 19 | 2026-07-19 | Mixed quality; legacy DOM hacks |
+| BetterBulldozer | 30 | 15 | 2026-04-29 | Raycast-filtering reference; legacy DOM hacks |
+| LineTool-CS2 | 23 | 14 | 2026-07-05 | Cleanest single-tool reference |
+| PlopTheGrowables | 12 | 0 | 2026-05-18 | Cleanest "replace a vanilla system" reference |
 
 ---
 
@@ -498,42 +498,42 @@ Ranked by how much they teach:
 
 ## Best exemplar index (what to cite in a skill)
 
-| Technique                               | Best exemplar                                                                                                           |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Minimal correct `IMod`                  | `PlopTheGrowables/Code/Mod.cs:47-83`                                                                                    |
-| Full `IMod` with everything             | `Anarchy/Anarchy/AnarchyMod.cs:80-168`                                                                                  |
-| System ordering + compat detection      | `Traffic/Code/Mod.cs:50-239`                                                                                            |
-| System-graph documentation              | `CS2-WriteEverywhere/BelzontWE/WriteEverywhereCS2Mod.cs:24-66`                                                          |
-| Raycast mask catalogue                  | `BetterBulldozer/BetterBulldozer/Patches/BulldozeToolSystemInitializeRaycastPatch.cs:20-90`                             |
-| Mod-compatible Harmony patching         | `CS2-Platter/Platter/Patches/MarkerPatches.cs:30-231`                                                                   |
-| Patching overloads with out/ref         | `BetterBulldozer/.../ToolBaseSystemGetRaycastResultPatch.cs:20-30`                                                      |
-| Replacing a vanilla job schedule        | `CS2-Platter/Platter/Patches/ToolSystemPatch.cs:100-178`                                                                |
-| Cached reflection accessors             | `CS2-Platter/Platter/Patches/Accessors/ObjectToolSystemFieldAccessor.cs:23-50`                                          |
-| Harmony-free vanilla-query surgery      | `Cities2-TrafficLightsEnhancement/.../Utils/EntityQueryUtils.cs:21-74`                                                  |
-| Forking a vanilla system                | `PlopTheGrowables/Code/Systems/SelectiveZoneCheckSystem.cs` + `Mod.cs:74,82`                                            |
-| Intercepting tool definitions           | `Anarchy/Anarchy/Systems/ObjectElevation/ElevateObjectDefinitionSystem.cs:51-120`                                       |
-| Reimplementing `CreateDefinitions`      | `LineTool-CS2/Code/Systems/CreateDefinitions.cs` + `LineToolSystem.cs:1035-1100`                                        |
-| Barrier + ECB + job dependency contract | `Traffic/Code/Systems/LaneConnections/ApplyLaneConnectionsSystem.cs:44-98`                                              |
-| `IJobChunk` with chunk masks            | `Anarchy/.../PreventCullingSystem.cs:164-190`                                                                           |
-| Custom quadtree search system           | `Traffic/Code/Systems/LaneConnections/SearchSystem.cs`; `CS2-Platter/.../P_ParcelSearchSystem.cs:30-80`                 |
-| Custom raycast pipeline                 | `Traffic/Code/Systems/ModRaycastSystem.cs:25-130` + `LaneConnectorToolSystem.cs:298-330,469-512`                        |
-| Cleanest `ToolBaseSystem`               | `LineTool-CS2/Code/Systems/LineToolSystem.cs` (whole file)                                                              |
-| Most complex tool state machine         | `Traffic/Code/Tools/LaneConnectorToolSystem.cs:557-912`                                                                 |
-| Undo/redo architecture                  | `CS2-MoveIt/Code/MoveIt/Managers/QueueManager.cs` + `Actions/`                                                          |
-| Prefab cloning (documented)             | `Anarchy/Anarchy/ExtendedRoadUpgrades/UpgradesManager.cs:143-205`                                                       |
-| Prefab synthesis at scale               | `CS2-Platter/Platter/Systems/P_PrefabsCreateSystem.cs:220-345`                                                          |
-| Runtime prefab regeneration             | `RoadBuilder-CSII/RoadBuilder/Systems/RoadBuilderSystem.cs:241-274` + `Utilities/NetworkPrefabGenerationUtil.cs:36-128` |
-| Deriving assets from the game DB        | `FindIt-CSII/FindIt/Systems/AutoVehiclePropGeneratorSystem.cs:92-180`                                                   |
-| Prefab-data init system                 | `CS2-Platter/Platter/Systems/Parcels/P_ParcelInitializeSystem.cs:25-120`                                                |
-| Binding helper template                 | `CS2-Platter/Platter/Extensions/{ExtendedUISystemBase,ValueBindingHelper,GenericUIWriter}.cs`                           |
-| UI injection (`extend`/`append`)        | `Anarchy/Anarchy/UI/src/index.tsx:14-47`; `CS2-WriteEverywhere/_Frontends/UI/k45-we-vuio/src/index.tsx:9-45`            |
-| Vanilla component reuse                 | `Anarchy/.../UI/src/mods/VanillaComponentResolver/VanillaComponentResolver.tsx:39-84`                                   |
-| `engine.call` RPC                       | `CS2-WriteEverywhere/BelzontWE/Controllers/WELayoutController.cs:24-52` + `_Frontends/.../services/LayoutsService.tsx`  |
-| C#→TS type generation                   | `Traffic/Code/Utils/ReinforcedTypingsConfiguration.cs:19-51`                                                            |
-| Settings + keybinds                     | `Traffic/Code/ModSettings.cs` + `ModSettings.Keybindings.cs`                                                            |
-| Versioned save serialization            | `Traffic/Code/Components/LaneConnections/ModifiedLaneConnections.cs:40-72` + `DataMigrationVersion.cs`                  |
-| Build engineering                       | `CS2-MoveIt/Code/MoveIt/MoveIt.csproj`                                                                                  |
-| Cross-platform CI without game DLLs     | `Cities2-TrafficLightsEnhancement/.github/workflows/release.yml`                                                        |
+| Technique | Best exemplar |
+| --- | --- |
+| Minimal correct `IMod` | `PlopTheGrowables/Code/Mod.cs:47-83` |
+| Full `IMod` with everything | `Anarchy/Anarchy/AnarchyMod.cs:80-168` |
+| System ordering + compat detection | `Traffic/Code/Mod.cs:50-239` |
+| System-graph documentation | `CS2-WriteEverywhere/BelzontWE/WriteEverywhereCS2Mod.cs:24-66` |
+| Raycast mask catalogue | `BetterBulldozer/BetterBulldozer/Patches/BulldozeToolSystemInitializeRaycastPatch.cs:20-90` |
+| Mod-compatible Harmony patching | `CS2-Platter/Platter/Patches/MarkerPatches.cs:30-231` |
+| Patching overloads with out/ref | `BetterBulldozer/.../ToolBaseSystemGetRaycastResultPatch.cs:20-30` |
+| Replacing a vanilla job schedule | `CS2-Platter/Platter/Patches/ToolSystemPatch.cs:100-178` |
+| Cached reflection accessors | `CS2-Platter/Platter/Patches/Accessors/ObjectToolSystemFieldAccessor.cs:23-50` |
+| Harmony-free vanilla-query surgery | `Cities2-TrafficLightsEnhancement/.../Utils/EntityQueryUtils.cs:21-74` |
+| Forking a vanilla system | `PlopTheGrowables/Code/Systems/SelectiveZoneCheckSystem.cs` + `Mod.cs:74,82` |
+| Intercepting tool definitions | `Anarchy/Anarchy/Systems/ObjectElevation/ElevateObjectDefinitionSystem.cs:51-120` |
+| Reimplementing `CreateDefinitions` | `LineTool-CS2/Code/Systems/CreateDefinitions.cs` + `LineToolSystem.cs:1035-1100` |
+| Barrier + ECB + job dependency contract | `Traffic/Code/Systems/LaneConnections/ApplyLaneConnectionsSystem.cs:44-98` |
+| `IJobChunk` with chunk masks | `Anarchy/.../PreventCullingSystem.cs:164-190` |
+| Custom quadtree search system | `Traffic/Code/Systems/LaneConnections/SearchSystem.cs`; `CS2-Platter/.../P_ParcelSearchSystem.cs:30-80` |
+| Custom raycast pipeline | `Traffic/Code/Systems/ModRaycastSystem.cs:25-130` + `LaneConnectorToolSystem.cs:298-330,469-512` |
+| Cleanest `ToolBaseSystem` | `LineTool-CS2/Code/Systems/LineToolSystem.cs` (whole file) |
+| Most complex tool state machine | `Traffic/Code/Tools/LaneConnectorToolSystem.cs:557-912` |
+| Undo/redo architecture | `CS2-MoveIt/Code/MoveIt/Managers/QueueManager.cs` + `Actions/` |
+| Prefab cloning (documented) | `Anarchy/Anarchy/ExtendedRoadUpgrades/UpgradesManager.cs:143-205` |
+| Prefab synthesis at scale | `CS2-Platter/Platter/Systems/P_PrefabsCreateSystem.cs:220-345` |
+| Runtime prefab regeneration | `RoadBuilder-CSII/RoadBuilder/Systems/RoadBuilderSystem.cs:241-274` + `Utilities/NetworkPrefabGenerationUtil.cs:36-128` |
+| Deriving assets from the game DB | `FindIt-CSII/FindIt/Systems/AutoVehiclePropGeneratorSystem.cs:92-180` |
+| Prefab-data init system | `CS2-Platter/Platter/Systems/Parcels/P_ParcelInitializeSystem.cs:25-120` |
+| Binding helper template | `CS2-Platter/Platter/Extensions/{ExtendedUISystemBase,ValueBindingHelper,GenericUIWriter}.cs` |
+| UI injection (`extend`/`append`) | `Anarchy/Anarchy/UI/src/index.tsx:14-47`; `CS2-WriteEverywhere/_Frontends/UI/k45-we-vuio/src/index.tsx:9-45` |
+| Vanilla component reuse | `Anarchy/.../UI/src/mods/VanillaComponentResolver/VanillaComponentResolver.tsx:39-84` |
+| `engine.call` RPC | `CS2-WriteEverywhere/BelzontWE/Controllers/WELayoutController.cs:24-52` + `_Frontends/.../services/LayoutsService.tsx` |
+| C#→TS type generation | `Traffic/Code/Utils/ReinforcedTypingsConfiguration.cs:19-51` |
+| Settings + keybinds | `Traffic/Code/ModSettings.cs` + `ModSettings.Keybindings.cs` |
+| Versioned save serialization | `Traffic/Code/Components/LaneConnections/ModifiedLaneConnections.cs:40-72` + `DataMigrationVersion.cs` |
+| Build engineering | `CS2-MoveIt/Code/MoveIt/MoveIt.csproj` |
+| Cross-platform CI without game DLLs | `Cities2-TrafficLightsEnhancement/.github/workflows/release.yml` |
 
 ## Quality flags
 

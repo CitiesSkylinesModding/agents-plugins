@@ -132,13 +132,13 @@ An agent arriving from stock ECS should read the attributes it knows as inert an
 `UpdateSystem` exposes exactly five registration methods, and nothing else registers a system for updating.
 There is no unregister method; registration is one-way for the session.
 
-| Method                           | Effect                              |
-| -------------------------------- | ----------------------------------- |
-| `UpdateBefore<T>(phase)`         | front band of `phase`               |
-| `UpdateAt<T>(phase)`             | middle band of `phase`              |
-| `UpdateAfter<T>(phase)`          | back band of `phase`                |
+| Method | Effect |
+| --- | --- |
+| `UpdateBefore<T>(phase)` | front band of `phase` |
+| `UpdateAt<T>(phase)` | middle band of `phase` |
+| `UpdateAfter<T>(phase)` | back band of `phase` |
 | `UpdateBefore<T, TOther>(phase)` | spliced immediately before `TOther` |
-| `UpdateAfter<T, TOther>(phase)`  | spliced immediately after `TOther`  |
+| `UpdateAfter<T, TOther>(phase)` | spliced immediately after `TOther` |
 
 Each single-type call assigns the system a monotonically increasing index, offset by minus one million for the front band and plus one million for the back band.
 The update system then sorts by phase, then by that index, and rebuilds one contiguous run of systems per phase.
@@ -318,13 +318,13 @@ This is where the interval interacts with `performance-and-memory`.
 `GameSystemBase` wraps five lifecycle hooks in try/catch and subscribes them during `OnCreate`.
 **They do not behave the same way, and the log message does not tell you which happened.**
 
-| Hook                                       | Log message                                              | Disables the system? |
-| ------------------------------------------ | -------------------------------------------------------- | -------------------- |
-| `OnWorldReady()`                           | `<TypeName>: Error on game preload, disabling system...` | **yes**              |
-| `OnGamePreload(Purpose, GameMode)`         | `<TypeName>: Error on game preload, disabling system...` | **yes**              |
-| `OnGameLoaded(Context)`                    | `<TypeName>: Error on game load, disabling system...`    | **yes**              |
-| `OnGameLoadingComplete(Purpose, GameMode)` | `<TypeName>: Error on state change, disabling system...` | **no**               |
-| `OnFocusChanged(bool)`                     | `<TypeName>: Error on Focus change`                      | no                   |
+| Hook | Log message | Disables the system? |
+| --- | --- | --- |
+| `OnWorldReady()` | `<TypeName>: Error on game preload, disabling system...` | **yes** |
+| `OnGamePreload(Purpose, GameMode)` | `<TypeName>: Error on game preload, disabling system...` | **yes** |
+| `OnGameLoaded(Context)` | `<TypeName>: Error on game load, disabling system...` | **yes** |
+| `OnGameLoadingComplete(Purpose, GameMode)` | `<TypeName>: Error on state change, disabling system...` | **no** |
+| `OnFocusChanged(bool)` | `<TypeName>: Error on Focus change` | no |
 
 Two things in that table are the payload.
 
@@ -344,12 +344,12 @@ All five log through the system base's own logger, named `SceneFlow` — **not**
 
 So there are four distinct failure surfaces, and the disable is exactly one of them:
 
-| Where it throws                                              | Outcome                                                                 |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| The mod's `OnLoad`, including any system's `OnCreate`        | whole mod fails, `OnDispose` is still called, and the failure is logged |
-| A system's `OnWorldReady`, `OnGamePreload` or `OnGameLoaded` | logged; that system is disabled for the session                         |
-| A system's `OnGameLoadingComplete` or `OnFocusChanged`       | logged; system keeps running                                            |
-| A system's `OnUpdate`                                        | logged every frame; system keeps running and throws again               |
+| Where it throws | Outcome |
+| --- | --- |
+| The mod's `OnLoad`, including any system's `OnCreate` | whole mod fails, `OnDispose` is still called, and the failure is logged |
+| A system's `OnWorldReady`, `OnGamePreload` or `OnGameLoaded` | logged; that system is disabled for the session |
+| A system's `OnGameLoadingComplete` or `OnFocusChanged` | logged; system keeps running |
+| A system's `OnUpdate` | logged every frame; system keeps running and throws again |
 
 **The `OnLoad` row is the quiet one on screen, and the other three are not.**
 The loader's own logger has its errors suppressed from the UI, and the mod's state is overwritten before the notification pass reads it, so an `OnLoad` failure raises no dialog and pushes no notification either — `Modding.log` is the whole of the record.
@@ -411,12 +411,12 @@ That is the escape hatch for anything that cannot be decided during `OnLoad`, in
 
 The main-thread dispatcher is the mechanism, and it has four shapes with different semantics:
 
-| Call                          | Semantics                                                                                             |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `RegisterUpdater(Action)`     | runs **once** on the next dispatcher tick, then unregisters itself                                    |
+| Call | Semantics |
+| --- | --- |
+| `RegisterUpdater(Action)` | runs **once** on the next dispatcher tick, then unregisters itself |
 | `RegisterUpdater(Func<bool>)` | re-runs **every tick until the delegate returns true** — the polling form, for waiting on a condition |
-| `RunOnMainThread(Action)`     | runs inline when already on the main thread, otherwise defers                                         |
-| `WaitXFrames(int)`            | returns a task completing after N ticks                                                               |
+| `RunOnMainThread(Action)` | runs inline when already on the main thread, otherwise defers |
+| `WaitXFrames(int)` | returns a task completing after N ticks |
 
 The tick sits in the frame update **outside** the guard that stops the world, so deferred work runs even while the world is not updating.
 

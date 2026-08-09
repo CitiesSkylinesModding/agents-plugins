@@ -26,11 +26,11 @@ The flag itself sets one bool: `configuration.developerMode` (`src/Game/Game.Sce
 
 **Which bindings the flag actually gates was read live off the running game**, because the input action asset ships inside `Cities2_Data/resources.assets` and reading it offline needs the Unity serialized-file parser `docs/SOURCES.md` entry 5 describes. Method: `Game.Input.InputManager.instance.FindActionMap("Debug")` over SDB, then each action's first `ProxyBinding` and its source composite's `m_DeveloperOnly`. The `Debug` action map holds exactly three actions and all three composites are developer-only:
 
-| Action              | Bindings                                    |
-| ------------------- | ------------------------------------------- |
-| `Debug UI`          | `<Keyboard>/tab`, `<Gamepad>/rightShoulder` |
-| `Debug Prefab Tool` | `<Keyboard>/o`                              |
-| `Debug Multiplier`  | `<Keyboard>/shift`                          |
+| Action | Bindings |
+| --- | --- |
+| `Debug UI` | `<Keyboard>/tab`, `<Gamepad>/rightShoulder` |
+| `Debug Prefab Tool` | `<Keyboard>/o` |
+| `Debug Multiplier` | `<Keyboard>/shift` |
 
 `Rots:` the three action names, their bindings and the `Debug` map name — re-check by repeating that live read, or against the input action asset.
 
@@ -70,21 +70,21 @@ The menu is not an engine overlay and is not IMGUI. Three layers, and knowing wh
 
 The `debug` group, complete (`DebugUISystem.cs:142-157`; the constant `kGroup` at `:75` is unused, every call passes the literal):
 
-| Binding                                         | Kind                                                                           | Line       |
-| ----------------------------------------------- | ------------------------------------------------------------------------------ | ---------- |
-| `debug.enabled`                                 | `ValueBinding<bool>`, initial value the literal `true`                         | `:142`     |
-| `debug.visible`                                 | `ValueBinding<bool>`, initial `false`                                          | `:143`     |
-| `debug.panels`                                  | `GetterValueBinding<List<string>>` — the tab names, in order                   | `:144`     |
-| `debug.selectedIndex`                           | `GetterValueBinding<int>`                                                      | `:145`     |
-| `debug.selectedPanel`                           | `ValueBinding<Panel>`, nullable, writes `{displayName}` only                   | `:146`     |
-| `debug.children`                                | `RawValueBinding` inside `new WidgetBindings("debug")` — the whole widget tree | `:147`     |
-| `debug.observedBinding`                         | `ValueBinding<IDebugBinding>`, nullable                                        | `:149`     |
-| `debug.bindingTriggered`                        | `EventBinding<IDebugBinding>`                                                  | `:150`     |
-| `debug.developerInfoVisible`                    | `GetterValueBinding<bool>`                                                     | `:151`     |
-| `debug.watches`                                 | `GetterValueBinding<List<DebugWatchSystem.Watch>>`                             | `:152`     |
-| `debug.show` / `debug.hide`                     | `TriggerBinding`                                                               | `:153-154` |
-| `debug.selectPanel`                             | `TriggerBinding<int>`                                                          | `:155`     |
-| `debug.selectPreviousPanel` / `selectNextPanel` | `TriggerBinding`                                                               | `:156-157` |
+| Binding | Kind | Line |
+| --- | --- | --- |
+| `debug.enabled` | `ValueBinding<bool>`, initial value the literal `true` | `:142` |
+| `debug.visible` | `ValueBinding<bool>`, initial `false` | `:143` |
+| `debug.panels` | `GetterValueBinding<List<string>>` — the tab names, in order | `:144` |
+| `debug.selectedIndex` | `GetterValueBinding<int>` | `:145` |
+| `debug.selectedPanel` | `ValueBinding<Panel>`, nullable, writes `{displayName}` only | `:146` |
+| `debug.children` | `RawValueBinding` inside `new WidgetBindings("debug")` — the whole widget tree | `:147` |
+| `debug.observedBinding` | `ValueBinding<IDebugBinding>`, nullable | `:149` |
+| `debug.bindingTriggered` | `EventBinding<IDebugBinding>` | `:150` |
+| `debug.developerInfoVisible` | `GetterValueBinding<bool>` | `:151` |
+| `debug.watches` | `GetterValueBinding<List<DebugWatchSystem.Watch>>` | `:152` |
+| `debug.show` / `debug.hide` | `TriggerBinding` | `:153-154` |
+| `debug.selectPanel` | `TriggerBinding<int>` | `:155` |
+| `debug.selectPreviousPanel` / `selectNextPanel` | `TriggerBinding` | `:156-157` |
 
 `m_WidgetBindings.AddDefaultBindings()` (`:148`) adds the shared widget action triggers into the same group (`src/Game/Game.UI.Widgets/WidgetBindings.cs:31-38`): `debug.invoke` (`InvokableBindings.cs:11`), `debug.setValue` (`SettableBindings.cs:11`), `debug.setExpanded` (`ExpandableBindings.cs:11`), the five list operations (`ListBindings.cs:11/23/35/47/59`) and `debug.setCurrentPageIndex` (`PagedBindings.cs:11`). `Rots:` every binding name in this table.
 
@@ -180,12 +180,12 @@ Four things about that scan a mod author has to know, and none of them is guessa
 
 **The declaration may take four shapes**, decided by `ExecuteMethod` (`DebugSystem.cs:996-1024`) from the method's parameter count and whether an instance was created:
 
-| Shape                                                       | What the game does                                                                                                                                                                                                                            |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Method, no parameters, on a plain concrete class            | `Activator.CreateInstance(type)` first (`CreateDebugClass`, `:1057-1066`), then invoke on the instance (`:1004`), static or not — the target is simply ignored for a static method. Needs a **public parameterless constructor**.             |
-| Method, no parameters, on a `ComponentSystemBase`           | `World.GetOrCreateSystemManaged(method.DeclaringType)` and invoke on the system (`:1006-1010`). `CreateDebugClass` deliberately returns `null` for a system type so this branch is taken, and an instance method works here.                  |
-| Static method, no parameters, on a static or abstract class | Invoked with no target (`:1013`) — the branch taken whenever no instance was created and the type is not a system.                                                                                                                            |
-| Method taking one `World`                                   | Invoked with `base.World` (`:1016-1019`) — on the created instance for a plain concrete class, with no target otherwise, so on a system or abstract class it must be static or the null-target invoke throws into the caught-and-logged path. |
+| Shape | What the game does |
+| --- | --- |
+| Method, no parameters, on a plain concrete class | `Activator.CreateInstance(type)` first (`CreateDebugClass`, `:1057-1066`), then invoke on the instance (`:1004`), static or not — the target is simply ignored for a static method. Needs a **public parameterless constructor**. |
+| Method, no parameters, on a `ComponentSystemBase` | `World.GetOrCreateSystemManaged(method.DeclaringType)` and invoke on the system (`:1006-1010`). `CreateDebugClass` deliberately returns `null` for a system type so this branch is taken, and an instance method works here. |
+| Static method, no parameters, on a static or abstract class | Invoked with no target (`:1013`) — the branch taken whenever no instance was created and the type is not a system. |
+| Method taking one `World` | Invoked with `base.World` (`:1016-1019`) — on the created instance for a plain concrete class, with no target otherwise, so on a system or abstract class it must be static or the null-target invoke throws into the caught-and-logged path. |
 
 `Verdict:` the first draft keyed rows on static-versus-instance; the verification pass overturned that — `ExecuteMethod` dispatches on parameter count and `target != null` only, never on the method's own staticness. Every shape returns `List<DebugUI.Widget>`, returning `null` registers no tab, and a method with two or more parameters leaves the list `null` past both branches (`:1000/:1016`), registering nothing with no exception and no log line. **The method may be private**: every vanilla one is, because `GetAllMethodsWithAttribute` passes `BindingFlags.Instance | Static | Public | NonPublic` (`src/Colossal.Core/Colossal.Reflection/ReflectionUtils.cs:493-496`). Vanilla uses all four shapes: `AssetDatabaseDebugUI.BuildAssetDatabaseDebugUI()` is instance-on-a-plain-class (`src/Game/Game.Debug/AssetDatabaseDebugUI.cs:32-33`), `DebugSystem.BuildECSComponentsDebugUI()` is instance-on-a-system (`DebugSystem.cs:733-734`), `TestsDebugUI.BuildTestScenariosDebugUI()` is static (`src/Game/Game.Debug/TestsDebugUI.cs:12-13`), and `DebugSystem.BuildGizmosDebugUI(World)` is static-taking-`World` (`DebugSystem.cs:6708-6709`). `WatchersDebugUI.BuildWatchersDebugUI(World)` is the fifth combination, instance-on-a-plain-class taking `World` (`src/Game/Game.Debug/WatchersDebugUI.cs:23-24`), which the one-parameter branch handles alongside the static case.
 
@@ -229,12 +229,12 @@ Live evidence for the merge: while the menu was hidden, `Virtual Texturing` rema
 
 Four attributes, all public, all in `Game.Debug`:
 
-| Attribute                                                                                      | Target                    | File                               |
-| ---------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------- |
+| Attribute | Target | File |
+| --- | --- | --- |
 | `[DebugWatchValue]` with `color`, `updateInterval` (default −1), `historyLength` (default 128) | method, property or field | `DebugWatchValueAttribute.cs:5-13` |
-| `[DebugWatchOption]`                                                                           | field                     | `DebugWatchOptionAttribute.cs:5-8` |
-| `[DebugWatchDeps]`                                                                             | field                     | `DebugWatchDepsAttribute.cs:5-8`   |
-| `[DebugWatchOnly]`                                                                             | class                     | `DebugWatchOnlyAttribute.cs:5-8`   |
+| `[DebugWatchOption]` | field | `DebugWatchOptionAttribute.cs:5-8` |
+| `[DebugWatchDeps]` | field | `DebugWatchDepsAttribute.cs:5-8` |
+| `[DebugWatchOnly]` | class | `DebugWatchOnlyAttribute.cs:5-8` |
 
 They are collected by `DebugWatchSystem.BuildSystemFoldouts` (`src/Game/Game.Debug/DebugWatchSystem.cs:467-655`), which the `Watchers` tab calls (`src/Game/Game.Debug/WatchersDebugUI.cs:39`).
 
@@ -414,11 +414,11 @@ The actual bindings live in the minified locals `YJ, $J, qJ, XJ, QJ, ZJ, JJ, e0,
 
 Reproduced live, all seventeen exports of that module read through `getModule`:
 
-| Export                                                                                                                                                      | Result                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Export | Result |
+| --- | --- |
 | `enabled`, `visible`, `panels`, `selectedIndex`, `selectedPanel`, `debugChildren`, `observedBinding`, `bindingTriggered`, `developerInfoVisible`, `watches` | `ReferenceError: <name> is not defined` |
-| `showDebugUI`, `hideDebugUI`, `selectPreviousPanel`, `selectPanel`, `selectNextPanel`                                                                       | `function`                              |
-| `DebugBindingType`, `DebugWatchType`                                                                                                                        | the enum object                         |
+| `showDebugUI`, `hideDebugUI`, `selectPreviousPanel`, `selectPanel`, `selectNextPanel` | `function` |
+| `DebugBindingType`, `DebugWatchType` | the enum object |
 
 **The error text is the diagnosis.** `is not defined` is a free-variable miss, not the TDZ message `Cannot access 'X' before initialization`. There is no lazy module body and no circular-import stub: the declarations are plain `var … = bindValue(…)` evaluated eagerly at module-eval time. The setters are equally dead — assigning to an undeclared identifier in strict-mode module code is the same `ReferenceError`.
 

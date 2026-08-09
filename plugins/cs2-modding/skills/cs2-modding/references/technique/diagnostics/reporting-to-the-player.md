@@ -40,13 +40,13 @@ Three behaviours a caller needs:
 
 Dialogs go through `GameManager.instance.userInterface.appBindings`:
 
-| Entry point                                                                | Shape                                                        |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `ShowMessageDialog(MessageDialog, Action<int>)`                            | one confirm action plus optional others                      |
-| `ShowConfirmationDialog(ConfirmationDialog, Action<int>)`                  | confirm and cancel                                           |
-| `ShowConfirmationDialogAndWait(ConfirmationDialog)`                        | the same, returning a `Task<int>`                            |
+| Entry point | Shape |
+| --- | --- |
+| `ShowMessageDialog(MessageDialog, Action<int>)` | one confirm action plus optional others |
+| `ShowConfirmationDialog(ConfirmationDialog, Action<int>)` | confirm and cancel |
+| `ShowConfirmationDialogAndWait(ConfirmationDialog)` | the same, returning a `Task<int>` |
 | `ShowConfirmationDialog(DismissibleConfirmationDialog, Action<int, bool>)` | second callback argument is the "do not show again" checkbox |
-| `ShowErrorDialog(ErrorDialog)` and `DismissAllErrors()`                    | the error dialog, built by hand                              |
+| `ShowErrorDialog(ErrorDialog)` and `DismissAllErrors()` | the error dialog, built by hand |
 
 The callback's integer is **positional**: `0` is the confirm action, `1` the cancel action, and the other actions start at `2`.
 A message dialog passes no cancel action, so its buttons yield `0` and then `2..n` — but **the frame can answer for the player**: closing the dialog rather than pressing a button invokes the same callback, with `1` on the default skin and `-1` on the Paradox one.

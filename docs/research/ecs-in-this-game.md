@@ -9,13 +9,13 @@ A fourth source appears in two findings: the **installed official modding toolch
 
 Counted over `src/Game/`, excluding `Game/Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs` (a generated 16,000-line type list that would double every count), by files declaring each interface:
 
-| Kind                    | Files in `src/Game/` | Files in the corpus (of 20 repos) |
-| ----------------------- | -------------------- | --------------------------------- |
-| `IComponentData`        | 1007                 | 161, in 17 repos                  |
-| `IBufferElementData`    | 242                  | 42, in 7 repos                    |
-| `ISharedComponentData`  | **5**                | **0**                             |
-| `IEnableableComponent`  | 13                   | 9, in 2 repos                     |
-| `ICleanupComponentData` | **0**                | 3 declarations, in 1 repo         |
+| Kind | Files in `src/Game/` | Files in the corpus (of 20 repos) |
+| --- | --- | --- |
+| `IComponentData` | 1007 | 161, in 17 repos |
+| `IBufferElementData` | 242 | 42, in 7 repos |
+| `ISharedComponentData` | **5** | **0** |
+| `IEnableableComponent` | 13 | 9, in 2 repos |
+| `ICleanupComponentData` | **0** | 3 declarations, in 1 repo |
 
 Three repositories declare no component at all: `ExtraAssetsImporter`, `FindIt-CSII` and `LineTool-CS2`.
 
@@ -78,13 +78,13 @@ Rots: `UpdateFrame`, `UpdateFrameData.m_UpdateGroupIndex`, the sixteen-bucket co
 
 Four APIs exist. Counts under `src/Game/`, excluding the generated registry:
 
-| API                                       | `src/Game/`               | Corpus |
-| ----------------------------------------- | ------------------------- | ------ |
-| `GetEntityQuery(ComponentType…)`          | 1471                      | 97     |
-| `GetEntityQuery(new EntityQueryDesc{…})`  | 412                       | 154    |
-| `SystemAPI.QueryBuilder()`                | 0 literal / 104 generated | 300    |
-| `SystemAPI.Query<T>()` (the foreach form) | **0**                     | **0**  |
-| `Entities.ForEach`                        | **0**                     | **0**  |
+| API | `src/Game/` | Corpus |
+| --- | --- | --- |
+| `GetEntityQuery(ComponentType…)` | 1471 | 97 |
+| `GetEntityQuery(new EntityQueryDesc{…})` | 412 | 154 |
+| `SystemAPI.QueryBuilder()` | 0 literal / 104 generated | 300 |
+| `SystemAPI.Query<T>()` (the foreach form) | **0** | **0** |
+| `Entities.ForEach` | **0** | **0** |
 
 **`SystemAPI.QueryBuilder()` does not survive decompilation, which is why the game looks like it never uses it.** Every `SystemAPI` member throws `InternalCompilerInterface.ThrowCodeGenException()` in the shipped assembly (`src/Unity.Entities/Unity.Entities/SystemAPI.cs:105-107` for `QueryBuilder`, and identically for `Query<T1..T7>` at `:110-148`, `GetComponentLookup` at `:145`); the Roslyn source generator rewrites each call site into a cached field. In the decompile that rewriting shows up as a `private EntityQuery __query_<hash>_<n>` field, an `__AssignQueries(ref SystemState)` method building it with `new EntityQueryBuilder(Allocator.Temp).WithAll<T>().WithOptions(EntityQueryOptions.IncludeSystems).Build(ref state)`, and `OnCreateForCompiler` calling it (`src/Game/Game.Simulation/AdjustElectricityConsumptionSystem.cs:379-383`, `:480-495`, `:497-502`).
 
@@ -92,28 +92,28 @@ Four APIs exist. Counts under `src/Game/`, excluding the generated registry:
 
 **The corpus went the other way.** 13 of 20 repositories use `SystemAPI.QueryBuilder()`, 300 call sites in total, and five repositories use it exclusively:
 
-| Repo                | `QueryBuilder` | `EntityQueryDesc` | `GetEntityQuery(ComponentType…)` |
-| ------------------- | -------------- | ----------------- | -------------------------------- |
-| Recolor             | 57             | 5                 | 0                                |
-| CS2-NetworkTools    | 46             | 0                 | 0                                |
-| CS2-Platter         | 39             | 0                 | 0                                |
-| RoadBuilder-CSII    | 36             | 0                 | 0                                |
-| InfoLoom            | 28             | 3                 | 5                                |
-| CS2-MoveIt          | 20             | 0                 | 0                                |
-| Tree_Controller     | 19             | 3                 | 1                                |
-| BetterBulldozer     | 18             | 13                | 0                                |
-| Anarchy             | 13             | 19                | 0                                |
-| Traffic             | 9              | 37                | 8                                |
-| FindIt-CSII         | 7              | 1                 | 3                                |
-| PlopTheGrowables    | 6              | 0                 | 3                                |
-| Water_Features      | 2              | 15                | 1                                |
-| CS2-WriteEverywhere | 0              | 22                | 0                                |
-| Time2Work           | 0              | 30                | 60                               |
-| AreaBucket          | 0              | 6                 | 3                                |
-| NodeController      | 0              | 0                 | 5                                |
-| ExtraDetailingTools | 0              | 0                 | 5                                |
-| LineTool-CS2        | 0              | 0                 | 2                                |
-| ExtraAssetsImporter | 0              | 0                 | 0                                |
+| Repo | `QueryBuilder` | `EntityQueryDesc` | `GetEntityQuery(ComponentType…)` |
+| --- | --- | --- | --- |
+| Recolor | 57 | 5 | 0 |
+| CS2-NetworkTools | 46 | 0 | 0 |
+| CS2-Platter | 39 | 0 | 0 |
+| RoadBuilder-CSII | 36 | 0 | 0 |
+| InfoLoom | 28 | 3 | 5 |
+| CS2-MoveIt | 20 | 0 | 0 |
+| Tree_Controller | 19 | 3 | 1 |
+| BetterBulldozer | 18 | 13 | 0 |
+| Anarchy | 13 | 19 | 0 |
+| Traffic | 9 | 37 | 8 |
+| FindIt-CSII | 7 | 1 | 3 |
+| PlopTheGrowables | 6 | 0 | 3 |
+| Water_Features | 2 | 15 | 1 |
+| CS2-WriteEverywhere | 0 | 22 | 0 |
+| Time2Work | 0 | 30 | 60 |
+| AreaBucket | 0 | 6 | 3 |
+| NodeController | 0 | 0 | 5 |
+| ExtraDetailingTools | 0 | 0 | 5 |
+| LineTool-CS2 | 0 | 0 | 2 |
+| ExtraAssetsImporter | 0 | 0 | 0 |
 
 **What decides between them, stated from the evidence rather than from taste.**
 
@@ -145,14 +145,14 @@ Rots: nothing here is a name that moves; `EntityQueryOptions` member names are E
 
 Struct declarations under `src/Game/`, against the corpus:
 
-| Interface              | `src/Game/` | Corpus                                                       |
-| ---------------------- | ----------- | ------------------------------------------------------------ |
-| `IJobChunk`            | 771         | 172 declarations / 152 `Execute(in ArchetypeChunk …)` bodies |
-| `IJob`                 | 460         | 93                                                           |
-| `IJobParallelFor`      | 67          | 28 mentions                                                  |
-| `IJobParallelForDefer` | 82          | folded into the row above                                    |
-| `IJobFor`              | 4           | 9                                                            |
-| **`IJobEntity`**       | **0**       | **1**                                                        |
+| Interface | `src/Game/` | Corpus |
+| --- | --- | --- |
+| `IJobChunk` | 771 | 172 declarations / 152 `Execute(in ArchetypeChunk …)` bodies |
+| `IJob` | 460 | 93 |
+| `IJobParallelFor` | 67 | 28 mentions |
+| `IJobParallelForDefer` | 82 | folded into the row above |
+| `IJobFor` | 4 | 9 |
+| **`IJobEntity`** | **0** | **1** |
 
 The corpus rows for the two parallel-for interfaces count mentions rather than declarations, because several repositories name them only in a schedule call; the `IJobChunk` and `IJobEntity` rows are declarations.
 
@@ -270,20 +270,20 @@ The game exposes command buffers as **named systems**, not as raw `EntityCommand
 
 The twelve, with where each plays back (`src/Game/Game.Common/SystemOrder.cs`):
 
-| Barrier                  | Registration                         | Plays back                                                                       |
-| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------------- |
-| `EndFrameBarrier`        | `UpdateBefore(MainLoop)` `:49`       | front of `MainLoop`; anything recorded after that point waits for the next frame |
-| `ModificationBarrier1`   | `UpdateAfter(Modification1)` `:86`   | end of `Modification1`                                                           |
-| `ModificationBarrier2`   | `UpdateAfter(Modification2)` `:87`   | end of `Modification2`                                                           |
-| `ModificationBarrier2B`  | `UpdateAfter(Modification2B)` `:88`  | end of `Modification2B`                                                          |
-| `ModificationBarrier3`   | `UpdateAfter(Modification3)` `:89`   | end of `Modification3`                                                           |
-| `ModificationBarrier4`   | `UpdateAfter(Modification4)` `:90`   | end of `Modification4`                                                           |
-| `ModificationBarrier4B`  | `UpdateAfter(Modification4B)` `:91`  | end of `Modification4B`                                                          |
-| `ModificationBarrier5`   | `UpdateAfter(Modification5)` `:92`   | end of `Modification5`                                                           |
-| `ModificationEndBarrier` | `UpdateAfter(ModificationEnd)` `:93` | end of `ModificationEnd`                                                         |
-| `ToolOutputBarrier`      | `UpdateAfter(ToolUpdate)` `:695`     | end of `ToolUpdate`                                                              |
-| `ToolReadyBarrier`       | `UpdateAfter(PostTool)` `:697`       | end of `PostTool`                                                                |
-| `DeserializationBarrier` | `UpdateAfter(Deserialize)` `:797`    | end of `Deserialize`                                                             |
+| Barrier | Registration | Plays back |
+| --- | --- | --- |
+| `EndFrameBarrier` | `UpdateBefore(MainLoop)` `:49` | front of `MainLoop`; anything recorded after that point waits for the next frame |
+| `ModificationBarrier1` | `UpdateAfter(Modification1)` `:86` | end of `Modification1` |
+| `ModificationBarrier2` | `UpdateAfter(Modification2)` `:87` | end of `Modification2` |
+| `ModificationBarrier2B` | `UpdateAfter(Modification2B)` `:88` | end of `Modification2B` |
+| `ModificationBarrier3` | `UpdateAfter(Modification3)` `:89` | end of `Modification3` |
+| `ModificationBarrier4` | `UpdateAfter(Modification4)` `:90` | end of `Modification4` |
+| `ModificationBarrier4B` | `UpdateAfter(Modification4B)` `:91` | end of `Modification4B` |
+| `ModificationBarrier5` | `UpdateAfter(Modification5)` `:92` | end of `Modification5` |
+| `ModificationEndBarrier` | `UpdateAfter(ModificationEnd)` `:93` | end of `ModificationEnd` |
+| `ToolOutputBarrier` | `UpdateAfter(ToolUpdate)` `:695` | end of `ToolUpdate` |
+| `ToolReadyBarrier` | `UpdateAfter(PostTool)` `:697` | end of `PostTool` |
+| `DeserializationBarrier` | `UpdateAfter(Deserialize)` `:797` | end of `Deserialize` |
 
 A thirteenth type exists and is dead: `AudioEndBarrier` and its `AllowAudioEndBarrier` (`src/Game/Game.Common/AudioEndBarrier.cs:6`, `AllowAudioEndBarrier.cs:5`) appear in the generated type registry and are registered with `UpdateSystem` nowhere and referenced by no system. Do not reach for it.
 
@@ -320,20 +320,20 @@ with the barrier itself resolved once in `OnCreate`: `m_EndFrameBarrier = base.W
 
 **Corpus**, by barrier, with the repositories that touch each:
 
-| Barrier                  | Mentions | Repositories                                                                                           |
-| ------------------------ | -------- | ------------------------------------------------------------------------------------------------------ |
-| `EndFrameBarrier`        | 170      | Anarchy, CS2-WriteEverywhere, ExtraDetailingTools, Recolor, Time2Work, Tree_Controller, Water_Features |
-| `ToolOutputBarrier`      | 137      | 14 of 20                                                                                               |
-| `ModificationEndBarrier` | 36       | Anarchy, BetterBulldozer, CS2-WriteEverywhere, ExtraDetailingTools, PlopTheGrowables, Recolor, Traffic |
-| `ModificationBarrier1`   | 22       | Anarchy, AreaBucket, CS2-Platter, RoadBuilder-CSII                                                     |
-| `ModificationBarrier2`   | 15       | Anarchy, CS2-NetworkTools, CS2-Platter, Recolor                                                        |
-| `ModificationBarrier5`   | 14       | Anarchy, BetterBulldozer, CS2-Platter, Traffic                                                         |
-| `ModificationBarrier4`   | 9        | CS2-NetworkTools, CS2-Platter, Traffic                                                                 |
-| `ModificationBarrier3`   | 4        | Anarchy, Traffic                                                                                       |
-| `ModificationBarrier4B`  | 4        | CS2-Platter, Traffic                                                                                   |
-| `DeserializationBarrier` | 2        | BetterBulldozer                                                                                        |
-| `ModificationBarrier2B`  | 1        | CS2-NetworkTools                                                                                       |
-| `ToolReadyBarrier`       | **0**    | —                                                                                                      |
+| Barrier | Mentions | Repositories |
+| --- | --- | --- |
+| `EndFrameBarrier` | 170 | Anarchy, CS2-WriteEverywhere, ExtraDetailingTools, Recolor, Time2Work, Tree_Controller, Water_Features |
+| `ToolOutputBarrier` | 137 | 14 of 20 |
+| `ModificationEndBarrier` | 36 | Anarchy, BetterBulldozer, CS2-WriteEverywhere, ExtraDetailingTools, PlopTheGrowables, Recolor, Traffic |
+| `ModificationBarrier1` | 22 | Anarchy, AreaBucket, CS2-Platter, RoadBuilder-CSII |
+| `ModificationBarrier2` | 15 | Anarchy, CS2-NetworkTools, CS2-Platter, Recolor |
+| `ModificationBarrier5` | 14 | Anarchy, BetterBulldozer, CS2-Platter, Traffic |
+| `ModificationBarrier4` | 9 | CS2-NetworkTools, CS2-Platter, Traffic |
+| `ModificationBarrier3` | 4 | Anarchy, Traffic |
+| `ModificationBarrier4B` | 4 | CS2-Platter, Traffic |
+| `DeserializationBarrier` | 2 | BetterBulldozer |
+| `ModificationBarrier2B` | 1 | CS2-NetworkTools |
+| `ToolReadyBarrier` | **0** | — |
 
 Corpus totals: 217 `CreateCommandBuffer()` against 110 `AddJobHandleForProducer` and 118 `AsParallelWriter()` — so roughly half of the mod-created buffers are written from the main thread, where no producer handle is needed, and the ratio is not evidence of a missing call on its own. 34 raw `new EntityCommandBuffer(` exist, `CS2-MoveIt` holding most of them for its undo queue.
 
@@ -393,14 +393,14 @@ Rots: all fourteen tag type names, the six-member `ComponentTypeSet` at `CleanUp
 
 **Save cost is decided by one interface, and by nothing else.** `ComponentSerializerLibrary.Initialize` walks every type the `TypeManager` knows (`TypeManager.GetTypeCount()`) and registers a serializer for each that implements `Colossal.Serialization.Entities.IEmptySerializable` or `ISerializable` (`src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs:45-99`). The branch table:
 
-| Declares                                      | Serializer chosen                                                                     | Line     |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- | -------- |
-| `IEmptySerializable`, not enableable          | `EmptyComponentSerializer`                                                            | `:57-63` |
+| Declares | Serializer chosen | Line |
+| --- | --- | --- |
+| `IEmptySerializable`, not enableable | `EmptyComponentSerializer` | `:57-63` |
 | `IEmptySerializable` + `IEnableableComponent` | `EnableableEmptyComponentSerializer<T>` / `EnableableEmptyBufferElementSerializer<T>` | `:64-71` |
-| `ISerializable` component                     | `ComponentDataSerializer<T>` or `EnableableComponentDataSerializer<T>`                | `:80-83` |
-| `ISerializable` buffer                        | `BufferElementDataSerializer<T>` or `EnableableBufferElementDataSerializer<T>`        | `:84-87` |
-| `ISerializable` shared component              | `SharedComponentDataSerializer<T>`                                                    | `:88-91` |
-| neither                                       | none — the component is not written                                                   | —        |
+| `ISerializable` component | `ComponentDataSerializer<T>` or `EnableableComponentDataSerializer<T>` | `:80-83` |
+| `ISerializable` buffer | `BufferElementDataSerializer<T>` or `EnableableBufferElementDataSerializer<T>` | `:84-87` |
+| `ISerializable` shared component | `SharedComponentDataSerializer<T>` | `:88-91` |
+| neither | none — the component is not written | — |
 
 `ISerializeAsEnabled` is the opt-out from the enableable-aware serializer: a type carrying it takes the plain serializer even though it is enableable (`:57`, `:82`, `:86`), i.e. its disabled state is not persisted. Only two game types use it — `PrefabData` and `NotificationIconDisplayData` (`src/Game/Game.Prefabs/PrefabData.cs:7`, `NotificationIconDisplayData.cs:7`) — and no corpus type does.
 

@@ -71,12 +71,12 @@ The shape is fixed:
 **Four: cache a reflection accessor** rather than patching just to reach a private member.
 Four idioms exist and they differ in what each access costs:
 
-| Accessor                                                                                        | Cost per access                                                                  | Where it works                                                                                                                      |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `Traverse.Create(obj).Field<T>("name").Value`                                                   | Allocates a traverse, then `FieldInfo.GetValue`; only the field lookup is cached | Anywhere; also writes with `.SetValue`                                                                                              |
-| A `FieldInfo` resolved once in a static constructor, closed over by a `Func<TInstance, TField>` | One `GetValue`, no lookup                                                        | Anywhere; the common shape when a mod needs several fields off one system                                                           |
-| `AccessTools.FieldRefAccess<TInstance, TField>("name")`                                         | A field load — the emitted method body is `Ldarg_0; Ldflda; Ret`                 | Class instances only, and `TField` must be exactly the field's type for a value-type field; returns a `ref`, so it reads and writes |
-| The `___fieldName` injected parameter                                                           | Nothing extra                                                                    | Inside a patch body only                                                                                                            |
+| Accessor | Cost per access | Where it works |
+| --- | --- | --- |
+| `Traverse.Create(obj).Field<T>("name").Value` | Allocates a traverse, then `FieldInfo.GetValue`; only the field lookup is cached | Anywhere; also writes with `.SetValue` |
+| A `FieldInfo` resolved once in a static constructor, closed over by a `Func<TInstance, TField>` | One `GetValue`, no lookup | Anywhere; the common shape when a mod needs several fields off one system |
+| `AccessTools.FieldRefAccess<TInstance, TField>("name")` | A field load — the emitted method body is `Ldarg_0; Ldflda; Ret` | Class instances only, and `TField` must be exactly the field's type for a value-type field; returns a `ref`, so it reads and writes |
+| The `___fieldName` injected parameter | Nothing extra | Inside a patch body only |
 
 **`AccessTools.Field` walks base types**, so a lookup naming a derived class still resolves a field the base declares — which is why an accessor built against the wrong class works, and why a miss means the field is nowhere in the hierarchy rather than merely on the wrong type.
 
@@ -119,17 +119,17 @@ Nothing in this ecosystem uses them, and mod load order is dictionary iteration 
 
 Declare a parameter with one of these names in your patch method and the patcher supplies it.
 
-| Name               | What it is                                                                                                              |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `__instance`       | The instance the original was called on                                                                                 |
-| `__originalMethod` | The `MethodBase` being patched                                                                                          |
-| `__args`           | All arguments, as `object[]`                                                                                            |
-| `__result`         | The return value; take it `ref` to rewrite it                                                                           |
-| `__state`          | A value you pass from your prefix to your postfix; the prefix must take it `ref` or `out`, or its write lands on a copy |
-| `__exception`      | The exception, in a finalizer                                                                                           |
-| `__runOriginal`    | Whether the original is still going to run                                                                              |
-| `__0`, `__1`, …    | A positional argument, by index                                                                                         |
-| `___fieldName`     | A private field on the original's declaring type                                                                        |
+| Name | What it is |
+| --- | --- |
+| `__instance` | The instance the original was called on |
+| `__originalMethod` | The `MethodBase` being patched |
+| `__args` | All arguments, as `object[]` |
+| `__result` | The return value; take it `ref` to rewrite it |
+| `__state` | A value you pass from your prefix to your postfix; the prefix must take it `ref` or `out`, or its write lands on a copy |
+| `__exception` | The exception, in a finalizer |
+| `__runOriginal` | Whether the original is still going to run |
+| `__0`, `__1`, … | A positional argument, by index |
+| `___fieldName` | A private field on the original's declaring type |
 
 Three of them carry traps.
 

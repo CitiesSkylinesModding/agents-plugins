@@ -15,13 +15,13 @@ Both take their declaration rules from here.
 
 ## The five component kinds, and how unevenly the game uses them
 
-| Kind                    | Where it appears                                                                |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `IComponentData`        | Everywhere. Over a thousand game types; the default choice.                     |
-| `IBufferElementData`    | Common. A variable-length list owned by one entity.                             |
-| `ISharedComponentData`  | **A handful** of game types; the simulation's bucketing is the one a mod meets. |
-| `IEnableableComponent`  | **Uncommon**, and some of them change what your query means.                    |
-| `ICleanupComponentData` | Honoured by the engine, and not the game's own cleanup idiom — see below.       |
+| Kind | Where it appears |
+| --- | --- |
+| `IComponentData` | Everywhere. Over a thousand game types; the default choice. |
+| `IBufferElementData` | Common. A variable-length list owned by one entity. |
+| `ISharedComponentData` | **A handful** of game types; the simulation's bucketing is the one a mod meets. |
+| `IEnableableComponent` | **Uncommon**, and some of them change what your query means. |
+| `ICleanupComponentData` | Honoured by the engine, and not the game's own cleanup idiom — see below. |
 
 **A shared component's value lives once per chunk, not once per entity**, so every distinct value is a distinct set of chunks.
 That is the whole reason to declare one and the whole reason to be careful: a shared component with many values shatters an archetype into many part-full chunks.
@@ -116,12 +116,12 @@ What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
 
 Four APIs exist in the package, and the game reaches for them unevenly.
 
-| Form                                       | Expresses                       | Needs the generators |
-| ------------------------------------------ | ------------------------------- | -------------------- |
-| `GetEntityQuery(ComponentType…)`           | `All`, `None`                   | no                   |
-| `GetEntityQuery(new EntityQueryDesc{…})`   | `All`, `Any`, `None`, `Options` | no                   |
-| `SystemAPI.QueryBuilder()`                 | all four, fluently              | **yes**              |
-| `SystemAPI.Query<T>()`, `Entities.ForEach` | iteration, not a query object   | **yes**              |
+| Form | Expresses | Needs the generators |
+| --- | --- | --- |
+| `GetEntityQuery(ComponentType…)` | `All`, `None` | no |
+| `GetEntityQuery(new EntityQueryDesc{…})` | `All`, `Any`, `None`, `Options` | no |
+| `SystemAPI.QueryBuilder()` | all four, fluently | **yes** |
+| `SystemAPI.Query<T>()`, `Entities.ForEach` | iteration, not a query object | **yes** |
 
 **Every iteration query in the game is hand-built with `GetEntityQuery`.**
 The game's use of `SystemAPI` is singleton access and nothing else: `GetSingleton<T>`, `TryGetSingleton<T>`, `GetSingletonEntity<T>`, `GetSingletonBuffer<T>`, `HasSingleton<T>`.
@@ -303,20 +303,20 @@ Flipping the bit yourself leaves all of them unnotified, with nothing logged.
 The game exposes command buffers as **named barrier systems**, not as raw `EntityCommandBuffer`s.
 Resolve the one you want once in `OnCreate` with `World.GetOrCreateSystemManaged<T>()` and hold it in a field of its concrete type.
 
-| Barrier                  | Plays back                                         |
-| ------------------------ | -------------------------------------------------- |
-| `EndFrameBarrier`        | front of the main loop — see the window rule below |
-| `ModificationBarrier1`   | end of `Modification1`                             |
-| `ModificationBarrier2`   | end of `Modification2`                             |
-| `ModificationBarrier2B`  | end of `Modification2B`                            |
-| `ModificationBarrier3`   | end of `Modification3`                             |
-| `ModificationBarrier4`   | end of `Modification4`                             |
-| `ModificationBarrier4B`  | end of `Modification4B`                            |
-| `ModificationBarrier5`   | end of `Modification5`                             |
-| `ModificationEndBarrier` | end of `ModificationEnd`                           |
-| `ToolOutputBarrier`      | end of `ToolUpdate`                                |
-| `ToolReadyBarrier`       | end of `PostTool`                                  |
-| `DeserializationBarrier` | front of `Deserialize`'s back band                 |
+| Barrier | Plays back |
+| --- | --- |
+| `EndFrameBarrier` | front of the main loop — see the window rule below |
+| `ModificationBarrier1` | end of `Modification1` |
+| `ModificationBarrier2` | end of `Modification2` |
+| `ModificationBarrier2B` | end of `Modification2B` |
+| `ModificationBarrier3` | end of `Modification3` |
+| `ModificationBarrier4` | end of `Modification4` |
+| `ModificationBarrier4B` | end of `Modification4B` |
+| `ModificationBarrier5` | end of `Modification5` |
+| `ModificationEndBarrier` | end of `ModificationEnd` |
+| `ToolOutputBarrier` | end of `ToolUpdate` |
+| `ToolReadyBarrier` | end of `PostTool` |
+| `DeserializationBarrier` | front of `Deserialize`'s back band |
 
 `DeserializationBarrier` is the one that does not play back at the end of its phase: it is the first `UpdateAfter` registration in `Deserialize`, so it plays back before the rest of that band rather than after it, and a system placed there cannot ask it for a command buffer.
 `save-serialization` maps that band, in the census file its entry points to, and states what a system placed there should use instead.
@@ -434,14 +434,14 @@ Prefix your components rather than naming them after the concept alone.
 
 **Runtime cost, by kind:**
 
-| Kind                         | Cost                                                                                                                                                |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Zero-field `IComponentData`  | No per-entity bytes at all. The cost is the extra archetype: adding or removing it moves every affected entity between chunks.                      |
-| `IComponentData` with fields | Its size, per entity, in every chunk of every archetype carrying it.                                                                                |
-| `IBufferElementData`         | `InternalBufferCapacity` elements reserved inline in the chunk, spilling to the heap beyond that. Default capacity is 128 bytes' worth of elements. |
-| `ISharedComponentData`       | Nothing per entity, and one set of chunks per distinct value.                                                                                       |
-| `IEnableableComponent`       | Its own bits in the chunk's enabled masks, and a toggle that is not a structural change.                                                            |
-| `ICleanupComponentData`      | A residue entity that outlives `DestroyEntity` until you remove the component.                                                                      |
+| Kind | Cost |
+| --- | --- |
+| Zero-field `IComponentData` | No per-entity bytes at all. The cost is the extra archetype: adding or removing it moves every affected entity between chunks. |
+| `IComponentData` with fields | Its size, per entity, in every chunk of every archetype carrying it. |
+| `IBufferElementData` | `InternalBufferCapacity` elements reserved inline in the chunk, spilling to the heap beyond that. Default capacity is 128 bytes' worth of elements. |
+| `ISharedComponentData` | Nothing per entity, and one set of chunks per distinct value. |
+| `IEnableableComponent` | Its own bits in the chunk's enabled masks, and a toggle that is not a structural change. |
+| `ICleanupComponentData` | A residue entity that outlives `DestroyEntity` until you remove the component. |
 
 `[InternalBufferCapacity(0)]` means **never inline**: every non-empty buffer becomes a heap allocation and an empty one allocates nothing, which keeps chunks dense when most entities carry an empty buffer.
 Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
@@ -450,13 +450,13 @@ Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a sm
 **Save cost is decided by one interface and nothing else.**
 The serializer library walks every type the type manager knows and registers a serializer for each that implements one of two interfaces; a component implementing neither is simply not written.
 
-| Declares                            | Result                                                                                                |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `IEmptySerializable`                | Presence is persisted; there is no payload. The whole declaration for a tag that must survive a save. |
-| `ISerializable`                     | Your `Serialize<TWriter>` and `Deserialize<TReader>` are called.                                      |
-| Either, plus `IEnableableComponent` | An enableable-aware serializer, so the enabled bit persists too.                                      |
-| Either, plus `ISerializeAsEnabled`  | The plain serializer instead: the disabled state is **not** persisted.                                |
-| Neither                             | Not written. Reconstruct it on load or lose it.                                                       |
+| Declares | Result |
+| --- | --- |
+| `IEmptySerializable` | Presence is persisted; there is no payload. The whole declaration for a tag that must survive a save. |
+| `ISerializable` | Your `Serialize<TWriter>` and `Deserialize<TReader>` are called. |
+| Either, plus `IEnableableComponent` | An enableable-aware serializer, so the enabled bit persists too. |
+| Either, plus `ISerializeAsEnabled` | The plain serializer instead: the disabled state is **not** persisted. |
+| Neither | Not written. Reconstruct it on load or lose it. |
 
 So a persisted tag is one line:
 

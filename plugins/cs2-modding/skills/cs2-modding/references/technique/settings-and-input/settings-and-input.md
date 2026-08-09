@@ -317,13 +317,13 @@ The three key enums: `BindingKeyboard` has 96 members from `None = 0` to `OEM5 =
 **The class level declares the action** those bindings feed, and is the only place its behaviour can be set: `[SettingsUIKeyboardAction]`, `[SettingsUIMouseAction]` and `[SettingsUIGamepadAction]`, all repeatable on the class.
 Their fields are `name`, `device`, `type`, `rebindOptions`, `modifierOptions`, `canBeEmpty`, `developerOnly`, `mode`, `interactions`, `processors` and a `usages` list, with these defaults:
 
-| Field             | Default                                                          |
-| ----------------- | ---------------------------------------------------------------- |
-| `rebindOptions`   | `RebindOptions.All`                                              |
-| `modifierOptions` | `ModifierOptions.Allow`                                          |
-| `canBeEmpty`      | `true`                                                           |
-| `developerOnly`   | `false`                                                          |
-| `mode`            | `Mode.DigitalNormalized` for keyboard, `Mode.Analog` for gamepad |
+| Field | Default |
+| --- | --- |
+| `rebindOptions` | `RebindOptions.All` |
+| `modifierOptions` | `ModifierOptions.Allow` |
+| `canBeEmpty` | `true` |
+| `developerOnly` | `false` |
+| `mode` | `Mode.DigitalNormalized` for keyboard, `Mode.Analog` for gamepad |
 
 `RebindOptions` is a flags enum — `None = 0`, `Key = 1`, `Modifiers = 2`, `All = 3`.
 `ModifierOptions` is `Disallow`, `Allow`, `Ignore`; `Mode` is `DigitalNormalized`, `Digital`, `Analog`; `ActionType` is `Button`, `Axis`, `Vector2`.

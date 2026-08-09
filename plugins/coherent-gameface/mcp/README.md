@@ -125,20 +125,20 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 
 ## Tools
 
-| Tool              | What it does                                                                                                                  | Under the hood                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `game_status`     | Reachability + page target + engine info + view-reload tracking (count, last reload, context id). Run first when things fail. | `/json/list` + `/json/version` + `Runtime.executionContextCreated` |
-| `game_eval`       | Evaluate a JS expression in the Gameface UI, returns the value as JSON.                                                       | `Runtime.evaluate` (returnByValue)                                 |
-| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image.                                                             | `Page.captureScreenshot` (+ `clip`)                                |
-| `game_dom`        | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector.                                                   | `Runtime.evaluate`                                                 |
-| `game_query`      | Find elements by selector and/or text; returns rect + optional attributes and handles.                                        | `Runtime.evaluate`                                                 |
-| `game_wait`       | Wait for a view reload and/or until a selector matches (optionally visible) or a JS predicate is truthy.                      | polled `Runtime.evaluate` + `Runtime.executionContextCreated`      |
-| `game_click`      | Click an element by dispatching real bubbling DOM events.                                                                     | `Runtime.evaluate` (see note)                                      |
-| `game_fill`       | Set an input/textarea/contenteditable value.                                                                                  | `Runtime.evaluate` (see note)                                      |
-| `game_type`       | Type text key by key (real KeyboardEvents + value sync).                                                                      | `Runtime.evaluate` (see note)                                      |
-| `game_key`        | Press a named key (Escape/Enter/arrows/…) as bubbling keydown+keyup, with modifiers/repeats.                                  | `Runtime.evaluate` (see note)                                      |
-| `game_hover`      | Hover an element (over/enter/move sequence) to trigger tooltips/hover state.                                                  | `Runtime.evaluate` (see note)                                      |
-| `game_console`    | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI.                                                | `Log` + `Runtime.consoleAPICalled`                                 |
+| Tool | What it does | Under the hood |
+| --- | --- | --- |
+| `game_status` | Reachability + page target + engine info + view-reload tracking (count, last reload, context id). Run first when things fail. | `/json/list` + `/json/version` + `Runtime.executionContextCreated` |
+| `game_eval` | Evaluate a JS expression in the Gameface UI, returns the value as JSON. | `Runtime.evaluate` (returnByValue) |
+| `game_screenshot` | Screenshot the viewport (or a selector's box) as an inline image. | `Page.captureScreenshot` (+ `clip`) |
+| `game_dom` | DOM details (tag, classes, attributes, rect, outerHTML) for a CSS selector. | `Runtime.evaluate` |
+| `game_query` | Find elements by selector and/or text; returns rect + optional attributes and handles. | `Runtime.evaluate` |
+| `game_wait` | Wait for a view reload and/or until a selector matches (optionally visible) or a JS predicate is truthy. | polled `Runtime.evaluate` + `Runtime.executionContextCreated` |
+| `game_click` | Click an element by dispatching real bubbling DOM events. | `Runtime.evaluate` (see note) |
+| `game_fill` | Set an input/textarea/contenteditable value. | `Runtime.evaluate` (see note) |
+| `game_type` | Type text key by key (real KeyboardEvents + value sync). | `Runtime.evaluate` (see note) |
+| `game_key` | Press a named key (Escape/Enter/arrows/…) as bubbling keydown+keyup, with modifiers/repeats. | `Runtime.evaluate` (see note) |
+| `game_hover` | Hover an element (over/enter/move sequence) to trigger tooltips/hover state. | `Runtime.evaluate` (see note) |
+| `game_console` | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI. | `Log` + `Runtime.consoleAPICalled` |
 
 > [!IMPORTANT]
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
@@ -152,16 +152,16 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 The Gameface UI's V8 `Debugger` domain is fully supported, so these drive a real source-level
 debugger.
 
-| Tool                           | What it does                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `game_debug_status`            | Debugger state: paused?/where, pause-on-exceptions, breakpoints, script count. Also sets pause-on-exceptions. |
-| `game_debug_scripts`           | List parsed UI scripts (scriptId + url), filterable by url substring.                                         |
-| `game_debug_source`            | Get a script's source (by scriptId) with line numbers, optionally a line range.                               |
-| `game_debug_set_breakpoint`    | Break at url-substring + line (1-based), with an optional JS condition.                                       |
-| `game_debug_remove_breakpoint` | Remove a breakpoint by id, or `all`.                                                                          |
-| `game_debug_pause_state`       | When paused: the call stack, optionally with each frame's local/closure variables.                            |
-| `game_debug_evaluate`          | Evaluate in the paused frame's scope (read locals), or globally when running.                                 |
-| `game_debug_step`              | `resume` / `over` / `into` / `out` / `pause`.                                                                 |
+| Tool | What it does |
+| --- | --- |
+| `game_debug_status` | Debugger state: paused?/where, pause-on-exceptions, breakpoints, script count. Also sets pause-on-exceptions. |
+| `game_debug_scripts` | List parsed UI scripts (scriptId + url), filterable by url substring. |
+| `game_debug_source` | Get a script's source (by scriptId) with line numbers, optionally a line range. |
+| `game_debug_set_breakpoint` | Break at url-substring + line (1-based), with an optional JS condition. |
+| `game_debug_remove_breakpoint` | Remove a breakpoint by id, or `all`. |
+| `game_debug_pause_state` | When paused: the call stack, optionally with each frame's local/closure variables. |
+| `game_debug_evaluate` | Evaluate in the paused frame's scope (read locals), or globally when running. |
+| `game_debug_step` | `resume` / `over` / `into` / `out` / `pause`. |
 
 > **Hitting a breakpoint or pausing FREEZES the UI thread until you resume** (`game_debug_step`
 > with `resume`). Prefer conditional breakpoints to limit freezes, and while paused inspect with
@@ -172,12 +172,12 @@ debugger.
 
 All are optional, read by the server from the environment:
 
-| Variable                      | Default     | Purpose                                  |
-| ----------------------------- | ----------- | ---------------------------------------- |
-| `GAMEFACE_HOST`               | `localhost` | Host of the Gameface CDP endpoint.       |
-| `GAMEFACE_PORT`               | `9444`      | Port of the Gameface CDP endpoint.       |
-| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000`      | HTTP discovery / WebSocket open timeout. |
-| `GAMEFACE_CALL_TIMEOUT_MS`    | `15000`     | Per-command reply timeout.               |
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `GAMEFACE_HOST` | `localhost` | Host of the Gameface CDP endpoint. |
+| `GAMEFACE_PORT` | `9444` | Port of the Gameface CDP endpoint. |
+| `GAMEFACE_CONNECT_TIMEOUT_MS` | `5000` | HTTP discovery / WebSocket open timeout. |
+| `GAMEFACE_CALL_TIMEOUT_MS` | `15000` | Per-command reply timeout. |
 
 ## Troubleshooting
 

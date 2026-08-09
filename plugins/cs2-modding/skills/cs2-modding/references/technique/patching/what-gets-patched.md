@@ -24,14 +24,14 @@ So the useful reading runs one way only.
 
 `custom-tools` owns the enums and contracts behind this group, and `patching` says why the game leaves no seam here.
 
-| Target                                                                                                      | Type                                                       |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `InitializeRaycast()`                                                                                       | `BulldozeToolSystem`, `NetToolSystem`, `DefaultToolSystem` |
-| `GetRaycastResult(...)`, both overload families                                                             | `ToolBaseSystem`, `BulldozeToolSystem`                     |
-| `GetActualSnap(Snap, Snap, Snap)` — the public static three-parameter form                                  | `ToolBaseSystem`                                           |
-| `GetAvailableSnapMask(...)` — the private static overload, not the public override                          | `AreaToolSystem`, `ObjectToolSystem`                       |
-| `GetAllowRotation()`                                                                                        | `ObjectToolSystem`                                         |
-| `SnapControlPoint(JobHandle)` — private, called from seven places across the cancel, apply and update paths | `ObjectToolSystem`                                         |
+| Target | Type |
+| --- | --- |
+| `InitializeRaycast()` | `BulldozeToolSystem`, `NetToolSystem`, `DefaultToolSystem` |
+| `GetRaycastResult(...)`, both overload families | `ToolBaseSystem`, `BulldozeToolSystem` |
+| `GetActualSnap(Snap, Snap, Snap)` — the public static three-parameter form | `ToolBaseSystem` |
+| `GetAvailableSnapMask(...)` — the private static overload, not the public override | `AreaToolSystem`, `ObjectToolSystem` |
+| `GetAllowRotation()` | `ObjectToolSystem` |
+| `SnapControlPoint(JobHandle)` — private, called from seven places across the cancel, apply and update paths | `ObjectToolSystem` |
 
 ## A value the game publishes to its own UI
 
@@ -39,41 +39,41 @@ Most producers here are private and reached only through a delegate the system c
 Not all of them are, so check yours before assuming a patch was the only route: two of the time producers are public, and one of the actions-section pair overrides an abstract method its base class calls, which a derived section reaches without patching.
 The other half of that pair is a private callback bound as a trigger, which nothing overrides.
 
-| Target                                                         | Type               |
-| -------------------------------------------------------------- | ------------------ |
-| `GetElevationRange()`, `AllowBrush()`, `SetBrushStrength(...)` | `ToolUISystem`     |
-| `Apply(...)`, `BindAssets(...)`                                | `ToolbarUISystem`  |
-| `GetDay(...)`, `GetTicks(...)`                                 | `TimeUISystem`     |
-| `WriteDemandFactors(...)` — private, called from six writers   | `CityInfoUISystem` |
-| `OnProcess(...)`, `OnDelete(...)`                              | `ActionsSection`   |
+| Target | Type |
+| --- | --- |
+| `GetElevationRange()`, `AllowBrush()`, `SetBrushStrength(...)` | `ToolUISystem` |
+| `Apply(...)`, `BindAssets(...)` | `ToolbarUISystem` |
+| `GetDay(...)`, `GetTicks(...)` | `TimeUISystem` |
+| `WriteDemandFactors(...)` — private, called from six writers | `CityInfoUISystem` |
+| `OnProcess(...)`, `OnDelete(...)` | `ActionsSection` |
 
 ## A value the game asks for and then acts on
 
 A value the game consumes immediately, rewritten through `ref __result`.
 Most are booleans forced the other way; `GetObjectPrefab` is not, and returns a prefab.
 
-| Target                                                               | Type                        |
-| -------------------------------------------------------------------- | --------------------------- |
-| `IsPlacedUniqueAsset(...)`                                           | `UniqueAssetTrackingSystem` |
-| `IsEditor(...)` — an extension method on an enum                     | `GameModeExtensions`        |
-| `TrySetPrefab(PrefabBase)` — returns `bool`                          | `ObjectToolSystem`          |
-| `GetObjectPrefab()` — private, returns `ObjectPrefab`, no parameters | `ObjectToolSystem`          |
+| Target | Type |
+| --- | --- |
+| `IsPlacedUniqueAsset(...)` | `UniqueAssetTrackingSystem` |
+| `IsEditor(...)` — an extension method on an enum | `GameModeExtensions` |
+| `TrySetPrefab(PrefabBase)` — returns `bool` | `ObjectToolSystem` |
+| `GetObjectPrefab()` — private, returns `ObjectPrefab`, no parameters | `ObjectToolSystem` |
 
 The outlier that belongs here is **neutralising a system from inside its own constructor**: a postfix on `UniqueAssetTrackingSystem.OnCreate` setting `Enabled = false` on it.
 The ordinary route is `World.GetOrCreateSystemManaged<T>().Enabled = false` from `OnLoad` (`mod-lifecycle-and-ordering`), and it is what to reach for.
 
 ## A simulation value, or the managed method that schedules a job
 
-| Target                                                                                                                                                            | Type                         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `OnUpdate`, both `GetYear` overloads, `get_normalizedDate`, `GetDay`, `GetCurrentDateTime`, `GetStartingDate`, `GetElapsedYears`, `GetTimeOfYear`, `GetTimeOfDay` | `TimeSystem`                 |
-| `SampleClimate(ClimatePrefab, float)` — the two-argument overload                                                                                                 | `ClimateSystem`              |
-| `CalculateUpkeep(...)` — public static                                                                                                                            | `CityServiceUpkeepSystem`    |
-| `OnUpdate`                                                                                                                                                        | `CityServiceBudgetSystem`    |
-| `SetGlobalProperties(CommandBuffer, WindVolumeComponent)` — private                                                                                               | `Game.Rendering.WindControl` |
-| `UpdatePrefabs(...)`                                                                                                                                              | `PrefabSystem`               |
-| `GetTextureReferenceCount(...)`                                                                                                                                   | `AssetImportPipeline`        |
-| `FindTargets(SetupTargetType, in SetupData)` — private                                                                                                            | `PathfindSetupSystem`        |
+| Target | Type |
+| --- | --- |
+| `OnUpdate`, both `GetYear` overloads, `get_normalizedDate`, `GetDay`, `GetCurrentDateTime`, `GetStartingDate`, `GetElapsedYears`, `GetTimeOfYear`, `GetTimeOfDay` | `TimeSystem` |
+| `SampleClimate(ClimatePrefab, float)` — the two-argument overload | `ClimateSystem` |
+| `CalculateUpkeep(...)` — public static | `CityServiceUpkeepSystem` |
+| `OnUpdate` | `CityServiceBudgetSystem` |
+| `SetGlobalProperties(CommandBuffer, WindVolumeComponent)` — private | `Game.Rendering.WindControl` |
+| `UpdatePrefabs(...)` | `PrefabSystem` |
+| `GetTextureReferenceCount(...)` | `AssetImportPipeline` |
+| `FindTargets(SetupTargetType, in SetupData)` — private | `PathfindSetupSystem` |
 
 The last one and `ObjectToolSystem.SnapControlPoint` are the two job-substitution patches: a prefix that schedules its own job and returns the handle through `ref __result`.
 `patching` states that shape in full.

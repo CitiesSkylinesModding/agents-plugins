@@ -42,16 +42,16 @@ The game branches on it inside its own serializers, writing camera state differe
 
 The serializer library walks every known type and picks one serializer per type from two interfaces and two type traits, in this order:
 
-| Declares                                      | Serializer            | Cost per entity                     |
-| --------------------------------------------- | --------------------- | ----------------------------------- |
-| `IEmptySerializable`                          | empty                 | **zero bytes** — presence only      |
-| `IEmptySerializable` + `IEnableableComponent` | enableable empty      | **one bit**, packed eight to a byte |
-| `ISerializable` on `IComponentData`           | component data        | whatever you write                  |
-| the same, plus `IEnableableComponent`         | enableable            | one bit, + your bytes when enabled  |
-| `ISerializable` on `IBufferElementData`       | buffer element data   | length prefix + elements            |
-| the same, plus `IEnableableComponent`         | enableable            | one bit, + the above when enabled   |
-| `ISerializable` on `ISharedComponentData`     | shared component data | once per distinct value             |
-| **Neither**                                   | none                  | **not saved, silently**             |
+| Declares | Serializer | Cost per entity |
+| --- | --- | --- |
+| `IEmptySerializable` | empty | **zero bytes** — presence only |
+| `IEmptySerializable` + `IEnableableComponent` | enableable empty | **one bit**, packed eight to a byte |
+| `ISerializable` on `IComponentData` | component data | whatever you write |
+| the same, plus `IEnableableComponent` | enableable | one bit, + your bytes when enabled |
+| `ISerializable` on `IBufferElementData` | buffer element data | length prefix + elements |
+| the same, plus `IEnableableComponent` | enableable | one bit, + the above when enabled |
+| `ISerializable` on `ISharedComponentData` | shared component data | once per distinct value |
+| **Neither** | none | **not saved, silently** |
 
 **The enabled bit persists for any enableable type, not only an empty one.**
 Never hand-write it into your own `Serialize`: the engine already writes it, and a second copy is a format field you must version forever.

@@ -57,14 +57,14 @@ Copy the logs before going there — the log-directory section below states the 
 The log directory is `Logs/` under the user data path, which the toolchain names in `%CSII_USERDATAPATH%` and which on Windows is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`.
 It never has to be guessed: the log manager writes the resolved path to standard output as `Logs at <path>`, and that line lands near the top of `Player.log`.
 
-| File                    | What it is                                                         | Why it is opened                                                                   |
-| ----------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `Logs/SceneFlow.log`    | the `SceneFlow` logger, which is also the system base's own logger | boot transcript, launch arguments, versions, and every system-level exception      |
-| `Logs/Modding.log`      | the `Modding` logger                                               | the mod loader's transcript: playset, per-mod load timings, load failures          |
-| `Logs/<LoggerName>.log` | one file per logger, mod loggers included                          | a mod's own stream, at whatever level it set                                       |
-| `Player.log`            | Unity's own log, at the user data root rather than in `Logs/`      | engine boot, the debug-patch signals, and every `Warn` and above from every logger |
-| `Player-prev.log`       | the previous session's `Player.log`                                | what a process that died last run printed before dying                             |
-| `FallbackSettings.coc`  | user data root, plain text                                         | every logger's persisted settings                                                  |
+| File | What it is | Why it is opened |
+| --- | --- | --- |
+| `Logs/SceneFlow.log` | the `SceneFlow` logger, which is also the system base's own logger | boot transcript, launch arguments, versions, and every system-level exception |
+| `Logs/Modding.log` | the `Modding` logger | the mod loader's transcript: playset, per-mod load timings, load failures |
+| `Logs/<LoggerName>.log` | one file per logger, mod loggers included | a mod's own stream, at whatever level it set |
+| `Player.log` | Unity's own log, at the user data root rather than in `Logs/` | engine boot, the debug-patch signals, and every `Warn` and above from every logger |
+| `Player-prev.log` | the previous session's `Player.log` | what a process that died last run printed before dying |
+| `FallbackSettings.coc` | user data root, plain text | every logger's persisted settings |
 
 Every logger except `Default` gets a file named after itself, and `Default` gets none — anything logged through it goes straight to Unity's handler.
 Files are never deleted, so the directory accumulates one file per logger that has _ever_ run rather than one per logger in the current session.
@@ -157,17 +157,17 @@ Getting a real list means calling for it from a mod's own code after load, which
 
 The loader records one state per mod asset, in this declaration order — the order matters, because the in-game failure notification fires only for states at or above `IsNotModWarning`.
 
-| State                        | What it says about the assembly                                                                                                                                                                                                                                                                                                                                                                                             |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Unknown`                    | The loader **never tried**: the asset was not required, or it was dropped before the load began. An assembly that declares no `IMod` but is referenced by a mod that does is still required, so it loads normally and ends at `Loaded` with nothing to run.                                                                                                                                                                 |
-| `Loaded`                     | `OnLoad` ran on every `IMod` implementation in the assembly and returned.                                                                                                                                                                                                                                                                                                                                                   |
-| `Disposed`                   | `OnDispose` has run, at shutdown or because the load threw. **The three rethrowing states end here**, which is what keeps them below the notification gate; the two that return do not.                                                                                                                                                                                                                                     |
-| `IsNotModWarning`            | Unreachable at this version — the guard that reaches it is the same condition that already returned.                                                                                                                                                                                                                                                                                                                        |
-| `IsNotUniqueWarning`         | Another asset with the same assembly **name** won the duplicate resolution, which orders by already-loaded, then local, then version descending, then asset id. Nothing is already loaded at boot, so there a local build beats a subscribed copy of the same name and a stale local copy shadows an updated one; on a mid-session re-initialization the copy already in the process wins whatever its locality or version. |
-| `GeneralError`               | Anything else out of the load, which in practice means **`OnLoad` threw**; the load error is the extracted stack trace.                                                                                                                                                                                                                                                                                                     |
-| `MissedDependenciesError`    | At least one assembly reference resolved to null; the load error is the newline-joined list of unresolved reference names.                                                                                                                                                                                                                                                                                                  |
-| `LoadAssemblyError`          | Loading the mod's own bytes threw: bad IL, a target framework the runtime rejects, a truncated file.                                                                                                                                                                                                                                                                                                                        |
-| `LoadAssemblyReferenceError` | Loading one of the mod's **referenced** assemblies threw.                                                                                                                                                                                                                                                                                                                                                                   |
+| State | What it says about the assembly |
+| --- | --- |
+| `Unknown` | The loader **never tried**: the asset was not required, or it was dropped before the load began. An assembly that declares no `IMod` but is referenced by a mod that does is still required, so it loads normally and ends at `Loaded` with nothing to run. |
+| `Loaded` | `OnLoad` ran on every `IMod` implementation in the assembly and returned. |
+| `Disposed` | `OnDispose` has run, at shutdown or because the load threw. **The three rethrowing states end here**, which is what keeps them below the notification gate; the two that return do not. |
+| `IsNotModWarning` | Unreachable at this version — the guard that reaches it is the same condition that already returned. |
+| `IsNotUniqueWarning` | Another asset with the same assembly **name** won the duplicate resolution, which orders by already-loaded, then local, then version descending, then asset id. Nothing is already loaded at boot, so there a local build beats a subscribed copy of the same name and a stale local copy shadows an updated one; on a mid-session re-initialization the copy already in the process wins whatever its locality or version. |
+| `GeneralError` | Anything else out of the load, which in practice means **`OnLoad` threw**; the load error is the extracted stack trace. |
+| `MissedDependenciesError` | At least one assembly reference resolved to null; the load error is the newline-joined list of unresolved reference names. |
+| `LoadAssemblyError` | Loading the mod's own bytes threw: bad IL, a target framework the runtime rejects, a truncated file. |
+| `LoadAssemblyReferenceError` | Loading one of the mod's **referenced** assemblies threw. |
 
 **The three states that rethrow do not survive to be reported, and that is the trap in this whole section.**
 `GeneralError`, `LoadAssemblyError` and `LoadAssemblyReferenceError` all rethrow, so the loader catches, runs `OnDispose` — **which overwrites the state with `Disposed`** — and only then writes `Error initializing mod …`.

@@ -65,12 +65,12 @@ Copy that shape before reaching for the cleanup-component pattern below, which i
 
 Three are the ones everybody names, and the fourth is in constant use throughout the game.
 
-| Allocator               | Lifetime                      | Freed by                              |
-| ----------------------- | ----------------------------- | ------------------------------------- |
-| `Allocator.Temp`        | The current frame, per thread | The native job system, automatically  |
-| `Allocator.TempJob`     | Four frames                   | Your `Dispose`                        |
-| `Allocator.Persistent`  | Until disposed                | Your `Dispose`                        |
-| `World.UpdateAllocator` | This frame and the next       | The world's own rewind, automatically |
+| Allocator | Lifetime | Freed by |
+| --- | --- | --- |
+| `Allocator.Temp` | The current frame, per thread | The native job system, automatically |
+| `Allocator.TempJob` | Four frames | Your `Dispose` |
+| `Allocator.Persistent` | Until disposed | Your `Dispose` |
+| `World.UpdateAllocator` | This frame and the next | The world's own rewind, automatically |
 
 `Allocator.Temp` is for a container allocated and consumed inside one job body or one main-thread block; it is freed automatically whether or not you dispose it, and the game does both.
 **Never assign a `Temp` container into a job struct you schedule.**
@@ -404,12 +404,12 @@ The rest follow, in the order to reach for them.
 
 Four rungs, and a mod's per-frame code should stay on the first two.
 
-| Rung | Call                                           | Cost                                                                                                                                                                                        |
-| ---- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `IsEmptyIgnoreFilter`                          | A length read on a cached chunk list. Effectively free.                                                                                                                                     |
-| 2    | `IsEmpty`                                      | Rung 1 when the query has no filter and no enableable component, or when the unfiltered query is already empty. Otherwise a filter sync plus a walk that stops at the first matching chunk. |
-| 3    | `CalculateEntityCount` / `CalculateChunkCount` | A filter sync plus a walk of every matching chunk.                                                                                                                                          |
-| 4    | `ToEntityArray` / `ToComponentDataArray`       | A count, a **main-thread block** on every job writing that type, and a full copy.                                                                                                           |
+| Rung | Call | Cost |
+| --- | --- | --- |
+| 1 | `IsEmptyIgnoreFilter` | A length read on a cached chunk list. Effectively free. |
+| 2 | `IsEmpty` | Rung 1 when the query has no filter and no enableable component, or when the unfiltered query is already empty. Otherwise a filter sync plus a walk that stops at the first matching chunk. |
+| 3 | `CalculateEntityCount` / `CalculateChunkCount` | A filter sync plus a walk of every matching chunk. |
+| 4 | `ToEntityArray` / `ToComponentDataArray` | A count, a **main-thread block** on every job writing that type, and a full copy. |
 
 **The async list forms are the pairing to copy.**
 `ToEntityListAsync` and `ToComponentDataListAsync` take an `out JobHandle` and _combine_ the dependency instead of completing it; the game calls those and never the async array forms.
