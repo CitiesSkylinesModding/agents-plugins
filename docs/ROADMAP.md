@@ -184,31 +184,6 @@ list by hand drifted across six files in one review gate. `check-skill-content.t
 mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
 file's marker. Types named without a path stay the reviewer's job.
 
-### The technique family's shape
-
-The grilling that reshaped the mechanics references left this family's own form alone, and the
-question reopens once one mechanics topic has been rebuilt under the new shape.
-What has already changed here is the source assumption:
-[ADR 0005](adr/0005-every-reference-is-read-beside-the-decompile.md) retired self-sufficiency for
-every reference, so a technique file may now point at the code instead of restating it, and every
-one of them now carries the decompile warning. What it has not gained is the mechanics form — no
-fixed sections, no budget.
-
-Start by measuring, not by assuming the mechanics diagnosis, whose own measurement ADR 0005 records.
-The question is live here all the same — most technique files are majority behavioural prose, and
-most entry files run several times the budget the mechanics family now works under.
-
-What transfers as candidates rather than conclusions: the trap shape, the prose-line budget and
-disclosure into siblings, all three defined in
-[the mechanics reference shape](mechanics-reference-shape.md), plus a review pass that checks
-anchors before it argues about sentences.
-
-Two sub-questions this family will hit that mechanics never did. What does a technique trap anchor
-to when its claim is about the modding API or about mod-to-mod behaviour rather than a game source
-file? And what does a technique file do with `UNVERIFIED:`, which it reaches for far more readily
-than a mechanics file will — most of its markers need a run of the game to settle, a different
-verification economy from anything a decompile read answers.
-
 ### Asset, map and editor authoring
 
 Scope is code mods, so loading assets _from code_ is covered and authoring the assets themselves is

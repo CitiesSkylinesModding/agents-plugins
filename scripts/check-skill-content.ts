@@ -67,6 +67,7 @@ checkEvidenceMarkers(shippedFiles);
 checkPointersResolve(shippedFiles);
 checkDisclosedFilesAreReachable(shippedFiles);
 checkMechanicsProseBudget(shippedFiles);
+checkTechniqueProseBudget(shippedFiles);
 
 // The mods corpus is input, never output: knowledge prose states a technique on its own authority
 // and never credits the mod it was learned from. One forgetful authoring pass is all it takes to
@@ -318,6 +319,10 @@ function isMechanicsReference(file: string): boolean {
   return isReference(file) && file.includes('/references/mechanics/');
 }
 
+function isTechniqueReference(file: string): boolean {
+  return isReference(file) && file.includes('/references/technique/');
+}
+
 // Volatile claims are found by grepping the marker, and that grep is the maintenance checklist for
 // the next game version, so a marker spelled any other way is a claim that will not be re-checked.
 // Hence the strict reading: every occurrence of the word in shipped prose must be the token. A
@@ -451,8 +456,8 @@ function checkDisclosedFilesAreReachable(files: readonly string[]): void {
     // way to write one, and it satisfies the grammar below while leaving the sibling unreachable.
     const entry = stripFencedBlocks(readShippedFile(entryFile));
 
-    // Reported here rather than left to the budget rule, which sees only the mechanics family and
-    // runs after this one. An unclosed fence drops every line below it out of the text searched, so
+    // Reported here rather than left to the budget rules, which see only their two families and
+    // run after this one. An unclosed fence drops every line below it out of the text searched, so
     // without this the next assertion tells the author to write a link they already wrote and names
     // the real defect nowhere.
     assert.ok(
@@ -470,21 +475,51 @@ function checkDisclosedFilesAreReachable(files: readonly string[]): void {
 }
 
 // A mechanics reference orients rather than explains, and the failure it is written against is
-// length: review catches a wrong sentence and never asks whether the file is too long. Prose is the
-// part that over-produces, so the budget counts prose alone -- a map table and a pseudo-code
-// listing cost nothing against it and grow as far as the topic needs.
-//
-// Warn then fail, because density is a judgement the maintainer owns: a topic genuinely worth
-// seventy lines says so in the check output, while one at the ceiling has stopped orienting.
+// length: review catches a wrong sentence and never asks whether the file is too long.
 function checkMechanicsProseBudget(files: readonly string[]): void {
-  const warnAt = 60;
-  const failAt = 100;
+  checkProseBudget(files, {
+    warnAt: 60,
+    failAt: 100,
+    isInFamily: isMechanicsReference,
+    failAdvice:
+      `A mechanics reference maps and routes: disclose a section into a sibling rather than ` +
+      `growing it.`,
+    warnQuestion:
+      `Is the topic this dense, or is a section explaining what the reader could read for ` +
+      `themselves?`
+  });
+}
+
+// The looser thresholds are ADR 0007's: technique prose is material stated nowhere else, so the
+// mechanics diagnosis of length does not transfer.
+function checkTechniqueProseBudget(files: readonly string[]): void {
+  checkProseBudget(files, {
+    warnAt: 300,
+    failAt: 400,
+    isInFamily: isTechniqueReference,
+    failAdvice:
+      `A technique file this long is carrying a self-contained account a reader consults rather ` +
+      `than reads through: disclose it into a sibling.`,
+    warnQuestion:
+      `Is the topic this dense, or is a self-contained account still sitting inline where a ` +
+      `sibling should hold it?`
+  });
+}
+
+// Prose is the part that over-produces, so a budget counts prose alone -- a map table and a
+// pseudo-code listing cost nothing against it and grow as far as the topic needs.
+//
+// Warn then fail, because density is a judgement the maintainer owns: a topic genuinely worth its
+// budget says so in the check output, while one over the ceiling has stopped doing its family's
+// job.
+function checkProseBudget(files: readonly string[], budget: ProseBudget): void {
+  const { warnAt, failAt, isInFamily, failAdvice, warnQuestion } = budget;
   const questions: string[] = [];
 
   let violation: string | undefined;
 
   for (const file of files) {
-    if (!isMechanicsReference(file)) {
+    if (!isInFamily(file)) {
       continue;
     }
 
@@ -494,15 +529,16 @@ function checkMechanicsProseBudget(files: readonly string[]): void {
       violation ??=
         `${file} leaves a code fence unclosed, so every line below it escapes this budget ` +
         `entirely. Close the fence.`;
-    } else if (prose > failAt) {
-      violation ??=
-        `${file} carries ${prose} prose lines against a ceiling of ${failAt}. A mechanics ` +
-        `reference maps and routes: disclose a section into a sibling rather than growing it.`;
+
+      continue;
+    }
+
+    const counted = `${file} carries ${prose} prose lines`;
+
+    if (prose > failAt) {
+      violation ??= `${counted} against a ceiling of ${failAt}. ${failAdvice}`;
     } else if (prose > warnAt) {
-      questions.push(
-        `${file} carries ${prose} prose lines, over the ${warnAt}-line budget. Is the topic this ` +
-          `dense, or is a section explaining what the reader could read for themselves?`
-      );
+      questions.push(`${counted}, over the ${warnAt}-line budget. ${warnQuestion}`);
     }
   }
 
@@ -513,6 +549,14 @@ function checkMechanicsProseBudget(files: readonly string[]): void {
   }
 
   assert.ok(violation == null, violation);
+}
+
+interface ProseBudget {
+  readonly warnAt: number;
+  readonly failAt: number;
+  readonly isInFamily: (file: string) => boolean;
+  readonly failAdvice: string;
+  readonly warnQuestion: string;
 }
 
 // Not blank, not a heading, not a table row, not inside a fence: what is left is the prose a reader

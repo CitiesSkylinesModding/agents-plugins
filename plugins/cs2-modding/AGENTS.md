@@ -22,7 +22,7 @@ Everything under `skills/` is a deliverable held to these rules.
 Load the `writing-for-agents` skill before writing or editing any of it, and hold the edit to that skill as well: it owns how agent-facing prose is written, and the rules below are only what this plugin adds on top.
 
 - **Every reference is read beside the decompile**, so point at the code rather than restating it — a rule spelled out at its declaration is a rule the reader can open, and one paraphrased here is one nothing can check. [ADR 0005](../../docs/adr/0005-every-reference-is-read-beside-the-decompile.md) carries the reasoning.
-  The mechanics family goes further and takes a form of its own; a technique reference keeps the shape it has.
+  Each family goes further and takes a form of its own; the Reference families section below points at both shape docs.
 - **First-party is ground truth, and the decompile is only half of it.** A claim from any other source is verified against the game itself before it ships, and where they disagree the game wins and the prose says so.
   The decompile answers for anything C# names. The user's own install answers for everything else — the compiled string tables, the packaged content, and the whole frontend, which ships as a plain JavaScript bundle. Some subjects are almost invisible from C#, so a grep of `src/` that comes back empty settles nothing on its own.
 - **One sentence per line**, as the sibling plugins' skills do.
@@ -124,8 +124,11 @@ The trunk skill's references nest in two families, one directory each, because t
 Only the trunk splits this way; every other skill keeps a flat `references/`.
 
 - **Technique** references, in `skills/cs2-modding/references/technique/`, teach mechanism reusable across subject matter.
+  **Read [the technique reference shape](../../docs/authoring/technique-reference-shape.md) before authoring or editing one.** It fixes the trap `Source:` rule, the disclosure rule and a prose-line budget the content lint enforces, so a reference written without it either fails the check or ships claims a fact-checking pass cannot open.
 - **Mechanics** references, in `skills/cs2-modding/references/mechanics/`, teach what the game models in one area, under the numbers rules above and in a fixed form of their own.
-  **Read [the mechanics reference shape](../../docs/mechanics-reference-shape.md) before authoring or editing one.** It fixes the sections, the trap format and a prose-line budget the content lint enforces, so a reference written without it either fails the check or ships the transcription the shape exists to prevent.
+  **Read [the mechanics reference shape](../../docs/authoring/mechanics-reference-shape.md) before authoring or editing one.** It fixes the sections, the trap format and a prose-line budget the content lint enforces, so a reference written without it either fails the check or ships the transcription the shape exists to prevent.
+
+A reference pass — authoring a new topic, or re-sweeping a shipped one — runs under [the reference-ticket protocol](../../docs/authoring/reference-ticket-protocol.md); a pass that never opened it fails its gate on standing criteria it never saw.
 
 The boundary is the question a fact answers: _how do I do this at all_ is technique, _what does the game model here and where does it live_ is mechanics.
 The bridge between them is the product — no other source connects "here is the ECS" to "here is how this part of the city works" with "therefore, to change X, modify Y" — so the two families cross-reference: a mechanics reference points at the techniques a change there needs, a technique reference points at the mechanics it serves.
