@@ -18,7 +18,8 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Tech stack
 
 - [mise-en-place](https://mise.jdx.dev): dev tools, env vars and tasks.
-- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`) and lefthook; the gameface `mcp/` is the only workspace package, and `bun.lock` lives at the root.
+- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` and `bench/` import; the gameface `mcp/` is the only workspace package, and `bun.lock` lives at the root.
+  The root tsconfig types against Node, since the scripts share its program with the mcp; `bench/` overrides that with its own nested tsconfig typing against Bun, which it runs on exclusively.
 - .NET 10 SDK: the unity-devtools C# projects, grouped by `agents-plugins.slnx` at the repo root.
 
 ## Repository structure
@@ -30,12 +31,13 @@ New plugins get a sibling directory and an entry in both marketplace files.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
 - `docs/authoring/`: standing authoring contracts. The ticket template any spec's tickets take, pointed at from `docs/agents/cantrips-loop.md`'s publish-tickets verb; and the `cs2-modding` reference pipeline's own — one shape doc per reference family and the reference-ticket protocol — disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches them. `check-skill-content.ts` enforces both families' prose-line budgets.
 - `docs/SOURCES.md`: every source the `cs2-modding` pipeline may read, what each settles, and how to locate it. Other files point at it; keep it pointing at as few as possible.
+- `bench/`: the skill-efficacy benchmark, measuring what the `cs2-modding` skill is worth against the same model without it. Its `README.md` holds the invocation contract and the question-file format; `core.ts` holds every decision and `run.ts` is a thin, deliberately untested shell.
 - `docs/research/`: the `cs2-modding` pipeline's cited stage, sitting outside `plugins/` so none of it ships. Its `README.md` holds the conventions a research file satisfies; nothing under `plugins/` may reference it or `SOURCES.md`, and `check-skill-content.ts` fails any shipped link resolving outside the plugin directory, since existence alone passes one that works here and dead-ends for every installed user.
 
 ## Commands
 
 - `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
-- `mise test`: the .NET test suite.
+- `mise test`: the .NET test suite. `mise bench:test` is the benchmark core's, the repository's only TypeScript tests; neither runs the other, and only the .NET one is in CI.
 - `mise build:gameface`: rebuild the shipped gameface bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).

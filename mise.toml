@@ -45,11 +45,17 @@ run = [
   "mise check:skill-content"
 ]
 
+# Three programs, three type environments: the mcp and the root scripts compile against Node, the
+# benchmark against Bun. One tsc run cannot hold them, so each project is checked on its own and a
+# new one stays unchecked until it is named here.
 [tasks."check:tsc"]
-description = "Type-checks the server with tsc (read-only)."
-dir = "{{config_root}}/plugins/coherent-gameface/mcp"
+description = "Type-checks the server, the root scripts and the benchmark with tsc (read-only)."
 raw = true
-run = "bun --bun tsc --noEmit"
+run = [
+  "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp",
+  "bun --bun tsc --noEmit -p tsconfig.json",
+  "bun --bun tsc --noEmit -p bench/tsconfig.json"
+]
 
 [tasks."check:oxfmt"]
 description = "Verifies formatting with oxfmt (read-only, `mise fix:oxfmt` writes)."
@@ -87,10 +93,13 @@ run = [
 ]
 
 [tasks."check:agents:tsc"]
-description = "Type-checks the server with tsc, output optimized for AI agents."
-dir = "{{config_root}}/plugins/coherent-gameface/mcp"
+description = "Type-checks every TypeScript project with tsc, output optimized for AI agents."
 raw = true
-run = "bun --bun tsc --noEmit --pretty false"
+run = [
+  "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp",
+  "bun --bun tsc --noEmit --pretty false -p tsconfig.json",
+  "bun --bun tsc --noEmit --pretty false -p bench/tsconfig.json"
+]
 
 [tasks."check:agents:oxlint"]
 description = "Lints with oxlint (read-only, warnings denied), output optimized for AI agents."
@@ -103,6 +112,21 @@ run = "bun --bun oxlint --deny-warnings --format agent"
 description = "Run the .NET test suite (unity-devtools evaluator: parser and operator semantics)."
 raw = true
 run = "dotnet test agents-plugins.slnx"
+
+[tasks."bench:test"]
+description = "Run the skill-efficacy benchmark's unit tests (bench/core.ts, the tool's pure core)."
+raw = true
+run = "bun test bench"
+
+[tasks."bench:validate"]
+description = "Check the benchmark's question files parse and their roots resolve. Spends nothing."
+raw = true
+run = "bun bench/run.ts --validate-only"
+
+[tasks."bench:run"]
+description = "Run the skill-efficacy benchmark. Real API spend: read bench/README.md first."
+raw = true
+run = "bun bench/run.ts"
 
 # SKILL MAINTENANCE TASKS
 # =======================
@@ -132,13 +156,24 @@ shell = "bash -c"
 # deinit clears the working trees but keeps each nested object store under our own .git/modules, so
 # a re-init is cheap; the sparse cone never checks any of them out, so they are gigabytes of dead
 # weight (external/llvm-project dwarfs the rest) that only an explicit delete reclaims.
+# What deinit does not remove is the nested directories themselves: each keeps the ".git" gitlink
+# into the store deleted above, and git then fatals walking into the submodule -- at the repository
+# root too -- until they go. .gitmodules names them and is a plain file, so it reads in exactly that
+# broken state, where "git submodule status" fatals and the guard skips a deinit that could not have
+# run anyway: the removal below is then what repairs the tree.
 run = '''
 set -e
 git config core.longpaths true
+nested=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' || true)
 if git submodule status | grep -qv '^-'; then
   git submodule deinit -f --all
 fi
 rm -rf "$(git rev-parse --absolute-git-dir)/modules"
+while IFS= read -r path; do
+  if [ -n "$path" ]; then
+    rm -rf "$path"
+  fi
+done <<< "$nested"
 git sparse-checkout set --cone mcs/class/Mono.Debugger.Soft/Mono.Debugger.Soft
 '''
 

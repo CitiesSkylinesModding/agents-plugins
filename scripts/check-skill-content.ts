@@ -11,12 +11,13 @@ import path from 'node:path';
 // why this check names that plugin instead of discovering every plugin the way
 // check-plugin-sync.ts does. Exits nonzero (via a failed assertion) on the first violation.
 //
-// The matching logic here is itself untested -- this repository has no TypeScript test suite and
-// this check does not introduce the first one. Each rule was instead verified once by hand, by
-// planting a violation in the skills tree, watching the assertion fire with the offending file
-// named, and removing the plant. Re-do that when you change a rule, and for a rule with more than
-// one failure mode plant one violation per mode: the reachability rule fails both when a sibling
-// is unlinked and when a folder has no entry file, and only the first is obvious to plant.
+// The matching logic here is itself untested: the repository's only TypeScript tests are the
+// benchmark's (bench/, run by `mise bench:test`), and this check is not wired into them. Each rule
+// was instead verified once by hand, by planting a violation in the skills tree, watching the
+// assertion fire with the offending file named, and removing the plant. Re-do that when you change
+// a rule, and for a rule with more than one failure mode plant one violation per mode: the
+// reachability rule fails both when a sibling is unlinked and when a folder has no entry file, and
+// only the first is obvious to plant.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 

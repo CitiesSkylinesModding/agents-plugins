@@ -33,6 +33,22 @@ export default defineConfig({
         // Config.ts is the designated env boundary; everything else must go through it.
         'node/no-process-env': 'off'
       }
+    },
+    {
+      files: ['bench/run.ts'],
+      rules: {
+        // The benchmark driver reads the CSII_* variables that locate the game and hands them to
+        // the core: it is that tool's env boundary, the way config.ts is the server's.
+        'node/no-process-env': 'off'
+      }
+    },
+    {
+      files: ['bench/tests/*.test.ts'],
+      rules: {
+        // A fixture's numbers are the test: naming each token count and score would say the same
+        // thing twice, and the assertion is where the reader checks the arithmetic.
+        'no-magic-numbers': 'off'
+      }
     }
   ]
 });

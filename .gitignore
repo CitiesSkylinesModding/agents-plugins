@@ -8,3 +8,7 @@ node_modules
 
 # In-flight specs and tickets: working material, not a record.
 .scratch/
+
+# Benchmark output: raw model answers and per-invocation summaries.
+# A summary worth keeping is promoted into the repository by hand.
+bench/results/

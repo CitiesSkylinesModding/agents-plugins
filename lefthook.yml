@@ -23,10 +23,10 @@ pre-commit:
         - "plugins/unity-devtools/{mcp,sdb,tests,tests-integration}/**/*.{cs,csproj}"
       run: dotnet test agents-plugins.slnx
     tsc:
-      # The only tsconfig lives in the mcp workspace; only staged files under it trigger the check.
-      root: "plugins/coherent-gameface/mcp/"
+      # Three projects hold the repository's TypeScript and each has its own type environment, so a
+      # staged file anywhere runs the task that knows all three rather than one tsc over one of them.
       glob: "*.{ts,tsx,js,json}"
-      run: mise exec bun -- bun --bun tsc --noEmit
+      run: mise check:tsc
     plugin-sync:
       # The Claude and Codex plugin manifests duplicate shared metadata; keep them in sync.
       glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
