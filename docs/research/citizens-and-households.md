@@ -7,7 +7,7 @@ Live readings come from the user's running 1.6.0f1 development build on a loaded
 
 ---
 
-**Ruled (2026-08-06, ticket 22; conflicts.md).** Two entries were ruled together, and they govern **every finding below** rather than one of them, which is why the ruling sits here instead of at a finding.
+**Ruled (2026-08-06, ticket 23; conflicts.md).** Two entries were ruled together, and they govern **every finding below** rather than one of them, which is why the ruling sits here instead of at a finding.
 
 **The decision: the reference states no prefab value.** It names the component and the field, and that is the whole of what it says about the magnitude. No wiki stat table is borrowed either — first-party or nothing, and for a prefab value "first-party" is a number the reader reads themselves.
 Ruled first as "prefab-singleton" and widened the same day to prefab values generally: per-prefab components — a school's capacity, a prison's prisoner wellbeing, a crime's probability — rot at the same rate and a mod overwrites them as easily. [ADR 0004](../adr/0004-a-mechanics-reference-names-the-component-not-the-balance-value.md) is the durable record.
@@ -599,7 +599,7 @@ One entry grew on what this pass found: entry 8 said the running game settles "l
 
 ### Evidence for the `conflicts.md` entry on the wiki's stat tables — ruled, and kept as the evidence it was ruled on
 
-**Ruled (2026-08-06, ticket 22; conflicts.md).** This finding is the evidence, not an open question. The entry it was written for is ruled and the decision is at the head of this file: no wiki stat table is borrowed, and no prefab-singleton value ships. Read what follows as why that ruling could be made, and take no instruction from it — in particular, the table below is a map of where the numbers live, which is the part the reference does owe its reader, and not a list of numbers to state.
+**Ruled (2026-08-06, ticket 23; conflicts.md).** This finding is the evidence, not an open question. The entry it was written for is ruled and the decision is at the head of this file: no wiki stat table is borrowed, and no prefab-singleton value ships. Read what follows as why that ruling could be made, and take no instruction from it — in particular, the table below is a map of where the numbers live, which is the part the reference does owe its reader, and not a list of numbers to state.
 
 The entry "A pre-launch balance page whose values are stale and whose schema is not" named `citizens-and-households` among the seven topics that borrow a wiki stat table. What it asked each topic for was which of those numbers could be re-derived first-party, and at what cost.
 

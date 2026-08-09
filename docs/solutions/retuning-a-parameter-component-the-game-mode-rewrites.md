@@ -10,7 +10,7 @@ tags: [cs2, prefabs, game-modes, balance, unsolved, over-reach, review]
 
 # Retuning a parameter component the game mode rewrites
 
-**What ships on this is one trap.** The full passage this records was written during ticket 22's
+**What ships on this is one trap.** The full passage this records was written during ticket 23's
 review gate, failed fourteen rounds, and was cut from that commit; the citizens entry file now
 carries a trap on it. Pick the general treatment up as its own ticket, from the discovery stage,
 with this file as the starting point.
@@ -54,7 +54,7 @@ Three independent unknowns, two of them outside the decompile entirely.
   sequence — `CoverageData` is assigned by one class and then multiplied by another over the same
   entities. The multipliers reach growable balance too: `ZoneServiceConsumptionGlobalMode` and
   `ZonePollutionGlobalMode` multiply per-prefab `ConsumptionData` and `PollutionData`, found in
-  ticket 23's gate after a trap had scoped the threat to parameter singletons. A write before the pass is scaled by it; a write after discards what it contributed.
+  ticket 24's gate after a trap had scoped the threat to parameter singletons. A write before the pass is scaled by it; a write after discards what it contributed.
   Six classes also snapshot the component before applying and hand that back on restore. Two of
   those fall back to the authoring object where no snapshot exists, one restores its main component
   from authoring and uses the snapshot only for a buffer row, and five have a branch that restores
