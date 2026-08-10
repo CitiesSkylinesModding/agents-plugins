@@ -196,6 +196,8 @@ Carries the game's own generated type-handle struct into each fork and refreshes
 Replacing one branch of a vanilla job-scheduling method from a prefix — a private target resolved by explicit signature, the type handles and lookups the vanilla method would have refreshed rebuilt by hand, and the substitute job's handle returned rather than completed, so the caller's temporary allocations outlive the work.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
 Retuning the game's balance without editing a prefab asset, by overwriting parameter components in place once prefab initialization has written them — some systems registered into two phases by two calls so they run inside the load and save pipelines as well, and one rewriting a per-prefab component rather than a singleton.
+Reaching a vanilla system's private per-source accumulator array through reflected field handles from a postfix on its update, paired with a postfix on the method that produced the value, because correcting the producer alone leaves the consumer's own cached copy untouched.
+Toggling a pair of vanilla simulation systems off and back on against the in-game clock rather than once at load, so they sit disabled for part of every day.
 
 ## Prefabs and assets from code
 
@@ -252,6 +254,7 @@ Modifying existing prefabs at load, adding a missing component and zeroing a cos
 Restoring the original value by reading it back off the authoring prefab object rather than off the prefab entity it overwrote, which is the corpus's only worked example of treating the authoring layer as the vanilla baseline.
 A "safely remove" system that resets custom model state on demand, because some of this state is not safe to leave in a save.
 Extending brush strength past the vanilla cap with a single targeted patch.
+Forking the game's own resource-area update pipeline — the bounds sweep and quadtree walk that decide which objects an extractor area covers — re-run with the mod's own enableable marker written per object, and the mod registered as a reader on the vanilla system it duplicates.
 
 ## UI panels, info views and injection
 
@@ -284,6 +287,8 @@ Reading simulation state cheaply: a job gated on whether the panel is visible, w
 Replacing the game's own JSON binding output by returning false from a prefix, when the vanilla writer truncates what the panel needs.
 The corpus's only source-generated per-entity job, which is the proof that the Entities source generators the official toolchain ships do work in a mod project.
 A read-only census over the citizen population, naming the component set a demographic query needs and applying the moved-in, tourist, commuter and dead exclusions by hand rather than calling the predicates the game exports.
+Reading a vanilla simulation system's published state instead of forking it: demand, tax and company-count state read through the owning systems' own getters, with the reader's job handle registered back through the add-reader calls at the two demand-data read sites — the repository's other read sites skip that registration, so copy the registered pair, never a skip.
+Taking a panel's display grouping from the game's own UI configuration prefab rather than inventing one, so a category that aggregates several enum members stays aggregated the way the game aggregates it.
 
 ### Recolor
 
