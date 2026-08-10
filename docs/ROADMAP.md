@@ -47,13 +47,24 @@ Three sharp edges found while field-testing the debugger against a live game:
   `setBreakpointByUrl` registrations were never verified to re-bind). Probe before relying on
   breakpoints surviving a reload.
 
-### Richer console output
+### Console call sites
 
-`game_console` shows console args via their RemoteObject description, so objects
-render as "Object". Use `Runtime.getProperties` / object previews to expand them.
-Entries also carry no timestamps, which makes correlating logs with actions and reloads
-guesswork; capture and print one per entry (`Runtime.consoleAPICalled` and `Log.entryAdded` carry
-a `timestamp` field in standard CDP; verify Gameface populates it).
+Every `consoleAPICalled` event carries a `stackTrace`, but its frame urls arrive empty, so naming
+the file:line a log came from needs a `scriptId → url` lookup. That means the `Debugger` domain
+enabled permanently plus a script map that is empty in the common lazy-attach case, since the engine
+does not replay `scriptParsed` — too much standing cost for the payoff, so `game_console` prints no
+call site. Revisit as opportunistic resolution: when the debugger is already attached and its
+existing script map answers, render the frame; otherwise print nothing.
+
+### Expanded values in the debugger tools
+
+`game_debug_pause_state` and `game_debug_evaluate` render an object local as its bare description
+(`Object`), the defect `game_console` no longer has: `mcp/src/console.ts` owns a page-context
+serializer, a stored value tree and a depth-aware renderer, none of it coupled to console capture.
+Lift that trio into a module both facets import, then give the debugger tools the same `depth`
+parameter. Reuse rather than a second serializer is the point: two of them drift on markers, clip
+width and the DOM-node idiom, so the same object prints differently depending on which tool showed
+it.
 
 ### Network inspection
 
