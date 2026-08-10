@@ -37,6 +37,8 @@ In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `
 
 Input calls report that events were dispatched, not that the UI reacted; confirm the effect you care about before building on it.
 The cheap confirmations: `game_wait` on a predicate or selector, `game_dom` on the region that should have changed, a screenshot clipped to that region with `game_screenshot`'s `selector`, and `game_console` for exceptions a silent failure left behind.
+Re-reading `game_console` at a higher `depth` renders the tree captured with the entry, so it never re-runs the code that logged the object.
+Its stamps are local wall-clock times, exact where the engine sends the epoch milliseconds CDP specifies and server receive times otherwise (Cohtml sends milliseconds since engine boot), so treat them as accurate to the socket hop.
 Clipping is what makes a screenshot cheap: pass the selector of the region you are verifying, and keep the full viewport for orienting, where you do not yet know what to clip to.
 `game_click` returns after dispatching the event sequence, before any async handler work; pair it with a wait on the expected outcome.
 
@@ -75,6 +77,7 @@ Attach first (any `game_debug_*` call), then get the code re-parsed by triggerin
 A pause freezes the UI thread until resume; while frozen:
 
 - `game_debug_evaluate` reads frame locals, and `game_eval` still works too (global scope, DOM reads included).
+- `game_console` keeps capturing and expanding, so a `game_eval` that logs an object reads back in full without resuming first.
 - `game_screenshot` hangs until the call timeout; never screenshot while paused.
 - Input, rendering, and timers are dead, so nothing new happens until resume.
 

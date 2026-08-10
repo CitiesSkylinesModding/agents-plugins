@@ -18,6 +18,7 @@ The plugin wears two hats, with distinct names:
 - `skills/gameface/`: the domain-knowledge skill — what the engine supports (layout, events, platform APIs), with `references/` and the `scripts/fetch-doc.mjs` docs extractor.
 - `skills/gameface-driving/`: the operational skill for driving a live UI with the `game_*` tools.
 - `mcp/src/`: the server (TypeScript). `mcp/package.json` is the publishable npm package.
+- `mcp/tests/`: the server's unit tests (`mise test:gameface`), hermetic and typed against Bun through their own tsconfig. A facet reaches them by taking an injected CDP facade, which is what makes it testable without a live application; the console pipeline is the one that does today.
 - `mcp/dist/server.mjs`: the shipped self-contained bundle. COMMITTED on purpose (zero-install); also what npm publishes and the package's `bin`.
 
 ## Conventions

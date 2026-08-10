@@ -13,12 +13,11 @@ import { oneLine } from 'common-tags';
 import { z } from 'zod';
 import { CdpClient } from './cdp';
 import { loadConfig } from './config';
+import { CAPTURE_DEPTH_CAP, ConsoleBuffer, DEFAULT_RENDER_DEPTH, gameConsole } from './console';
 import { DebuggerSession } from './debugger';
 import {
-  ConsoleBuffer,
   ReloadTracker,
   gameClick,
-  gameConsole,
   gameDom,
   gameEval,
   gameFill,
@@ -319,8 +318,13 @@ async function main(): Promise<void> {
       title: `Read the Gameface UI console`,
       description: oneLine`
         Return recent console.* calls, log entries, and uncaught exceptions captured from the
-        Gameface UI.
+        Gameface UI, each prefixed with local wall-clock time and its object arguments expanded to
+        their real values (state {a: 1, b: {c: {…}}, arr: [1, 2, 3]}).
         Capture starts when the server first connects to the application.
+        Truncation is always marked: {…} / […] for a value collapsed at the rendered depth, …N more
+        for properties or elements past the per-level cap, a trailing ellipsis inside a clipped
+        string.
+        For unbounded depth or parseable output, read the value with game_eval + JSON.stringify.
       `,
       inputSchema: {
         limit: z
@@ -331,10 +335,34 @@ async function main(): Promise<void> {
           .optional()
           .describe(`Max entries to return (default 50)`),
         level: z.string().optional().describe(`Filter by level, e.g. error / warning / log / info`),
-        clear: z.boolean().optional().describe(`Clear the buffer after reading (default false)`)
+        depth: z
+          .number()
+          .int()
+          .min(1)
+          .max(CAPTURE_DEPTH_CAP)
+          .optional()
+          .describe(
+            oneLine`
+              How many levels of an expanded object to render (default
+              ${String(DEFAULT_RENDER_DEPTH)}).
+              Entries are captured ${String(CAPTURE_DEPTH_CAP)} levels deep, so re-reading the same
+              entries deeper works up to that cap.
+            `
+          ),
+        clear: z
+          .boolean()
+          .optional()
+          .describe(
+            oneLine`
+            Empty the buffer once this read has taken its entries (default false).
+            It also drops captures still being expanded, so a line logged moments before the call
+            is discarded rather than surfacing on the next read.
+          `
+          )
       }
     },
-    ({ limit, level, clear }) => gameConsole(client, consoleBuffer, { limit, level, clear })
+    ({ limit, level, depth, clear }) =>
+      gameConsole(client, consoleBuffer, { limit, level, depth, clear })
   );
 
   server.registerTool(

@@ -138,7 +138,7 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 | `game_type` | Type text key by key (real KeyboardEvents + value sync). | `Runtime.evaluate` (see note) |
 | `game_key` | Press a named key (Escape/Enter/arrows/…) as bubbling keydown+keyup, with modifiers/repeats. | `Runtime.evaluate` (see note) |
 | `game_hover` | Hover an element (over/enter/move sequence) to trigger tooltips/hover state. | `Runtime.evaluate` (see note) |
-| `game_console` | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI. | `Log` + `Runtime.consoleAPICalled` |
+| `game_console` | Recent `console.*`, log entries, and uncaught exceptions from the Gameface UI, timestamped, with object arguments expanded to their real values and re-readable deeper. | `Log` + `Runtime.consoleAPICalled` + `Runtime.exceptionThrown` + `Runtime.callFunctionOn` |
 
 > [!IMPORTANT]
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /

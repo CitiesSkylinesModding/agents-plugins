@@ -9,13 +9,11 @@ import { oneLine } from 'common-tags';
 import type { CdpClient } from './cdp';
 import {
   type EvaluateResult,
-  type RemoteObject,
   describeRemoteObject,
   errorText,
   formatException,
   text,
-  toErrorResult,
-  valToStr
+  toErrorResult
 } from './shared';
 
 // Result shapes returned by the page functions below, reused by the server-side callers to
@@ -147,7 +145,6 @@ const DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_QUIESCENT_MS = 1000;
 
 const DEFAULT_JPEG_QUALITY = 80;
-const DEFAULT_CONSOLE_LIMIT = 50;
 const DEFAULT_QUERY_LIMIT = 20;
 
 /**
@@ -1033,142 +1030,6 @@ export class ReloadTracker {
       }
     }
   }
-}
-
-/**
- * One captured console/log/exception line.
- */
-export interface ConsoleEntry {
-  readonly ts: number;
-  readonly kind: string;
-  readonly level: string;
-  readonly text: string;
-}
-
-/**
- * Buffers console/log/exception events from the Gameface UI into a ring buffer.
- * Subscribes to CDP events and (re)enables `Runtime` and `Log` on every connection.
- * Also interleaves a synthetic entry per detected view reload, so log lines can be correlated
- * with the context reset that separates them.
- */
-export class ConsoleBuffer {
-  private readonly entries: ConsoleEntry[] = [];
-
-  private readonly max: number;
-
-  public constructor(client: CdpClient, reloads: ReloadTracker, max = 500) {
-    this.max = max;
-
-    client.onConnect(async conn => {
-      await conn.ensureDomain('Runtime');
-      await conn.ensureDomain('Log');
-    });
-
-    client.onEvent((method, params) => {
-      this.handle(method, params as Record<string, unknown>);
-    });
-
-    reloads.onReload(count => {
-      this.push({
-        ts: Date.now(),
-        kind: 'reload',
-        level: 'info',
-        text: `view reloaded (#${count})`
-      });
-    });
-  }
-
-  public read(limit: number, level?: string, clear?: boolean): ConsoleEntry[] {
-    const filtered = level ? this.entries.filter(entry => entry.level == level) : this.entries;
-
-    // Keep the newest entries when the limit truncates.
-    const out = filtered.slice(-limit);
-
-    if (clear) {
-      this.entries.length = 0;
-    }
-
-    return out;
-  }
-
-  private push(entry: ConsoleEntry): void {
-    this.entries.push(entry);
-
-    // Ring-buffer behavior: drop the oldest entries beyond the cap.
-    if (this.entries.length > this.max) {
-      this.entries.splice(0, this.entries.length - this.max);
-    }
-  }
-
-  private handle(method: string, params: Record<string, unknown>): void {
-    if (method == 'Runtime.consoleAPICalled') {
-      const args = ((params.args as RemoteObject[]) ?? []).map(arg =>
-        valToStr(describeRemoteObject(arg))
-      );
-
-      this.push({
-        ts: (params.timestamp as number) ?? 0,
-        kind: 'console',
-        level: (params.type as string) ?? 'log',
-        text: args.join(' ')
-      });
-    } else if (method == 'Log.entryAdded') {
-      const entry = (params.entry as Record<string, unknown>) ?? {};
-
-      this.push({
-        ts: (entry.timestamp as number) ?? 0,
-        kind: (entry.source as string) ?? 'log',
-        level: (entry.level as string) ?? 'info',
-        text: (entry.text as string) ?? ''
-      });
-    } else if (method == 'Runtime.exceptionThrown') {
-      this.push({
-        ts: (params.timestamp as number) ?? 0,
-        kind: 'exception',
-        level: 'error',
-        text: formatException(params.exceptionDetails as EvaluateResult['exceptionDetails'])
-      });
-    }
-  }
-}
-
-/**
- * Options for gameConsole.
- */
-export interface GameConsoleOptions {
-  readonly limit?: number | undefined;
-  readonly level?: string | undefined;
-  readonly clear?: boolean | undefined;
-}
-
-/**
- * Returns recent console/log/exception lines captured from the Gameface UI.
- */
-export async function gameConsole(
-  client: CdpClient,
-  buffer: ConsoleBuffer,
-  options: GameConsoleOptions
-): Promise<CallToolResult> {
-  const { limit = DEFAULT_CONSOLE_LIMIT, level, clear = false } = options;
-
-  try {
-    // Ensure a connection exists so Runtime/Log are enabled and capture is running.
-    await client.connection();
-  } catch (error) {
-    return toErrorResult(error);
-  }
-
-  const entries = buffer.read(limit, level, clear);
-
-  if (entries.length == 0) {
-    return text(oneLine`
-      No console entries captured yet.
-      Capture begins once the server connects to the application;
-      trigger some UI activity (or a game_eval console.log) and retry.
-    `);
-  }
-
-  return text(entries.map(entry => `[${entry.level}] (${entry.kind}) ${entry.text}`).join('\n'));
 }
 
 /**

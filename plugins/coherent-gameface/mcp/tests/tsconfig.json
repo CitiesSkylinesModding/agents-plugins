@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // The tests run under Bun and nowhere else: bun:test needs these types, and they carry the
+    // Node ones with them. The package config stays on "node" alone, since the shipped bundle
+    // must keep compiling against the Node runtime it ships for.
+    "types": ["bun"]
+  },
+  // The package config's include scopes to ../src; scope this project to the tests (which pull
+  // the sources under test in through their imports).
+  "include": ["**/*.ts"]
+}

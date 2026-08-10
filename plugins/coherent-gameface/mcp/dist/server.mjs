@@ -30319,7 +30319,7 @@ class StdioServerTransport {
 }
 
 // src/server.ts
-var import_common_tags4 = __toESM(require_lib(), 1);
+var import_common_tags5 = __toESM(require_lib(), 1);
 
 // src/cdp.ts
 var import_common_tags = __toESM(require_lib(), 1);
@@ -30602,9 +30602,8 @@ function num(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-// src/debugger.ts
+// src/console.ts
 var import_common_tags2 = __toESM(require_lib(), 1);
-import { setTimeout as sleep } from "node:timers/promises";
 
 // src/shared.ts
 function text(value) {
@@ -30647,7 +30646,475 @@ function valToStr(value) {
   }
 }
 
+// src/console.ts
+var DEFAULT_CONSOLE_LIMIT = 50;
+var DEFAULT_MAX_ENTRIES = 500;
+var MILLIS_DIGITS = 3;
+var EPOCH_MS_FLOOR = 1000000000000;
+var CAPTURE_DEPTH_CAP = 4;
+var DEFAULT_RENDER_DEPTH = 2;
+var LEVEL_WIDTH = 20;
+var STRING_CLIP = 200;
+var DEFAULT_EXPAND_TIMEOUT_MS = 2000;
+var DEFAULT_MAX_PENDING = 32;
+
+class ConsoleBuffer {
+  entries = [];
+  queue = [];
+  isDraining = false;
+  generation = 0;
+  cdp;
+  max;
+  maxPending;
+  expandTimeoutMs;
+  constructor(cdp, reloads, options = {}) {
+    this.cdp = cdp;
+    this.max = options.max ?? DEFAULT_MAX_ENTRIES;
+    this.maxPending = options.maxPending ?? DEFAULT_MAX_PENDING;
+    this.expandTimeoutMs = options.expandTimeoutMs ?? DEFAULT_EXPAND_TIMEOUT_MS;
+    cdp.onConnect(async (conn) => {
+      await conn.ensureDomain("Runtime");
+      await conn.ensureDomain("Log");
+    });
+    cdp.onEvent((method, params) => {
+      this.handle(method, params ?? {});
+    });
+    reloads?.onReload((count) => {
+      this.enqueueText("reload", "info", `view reloaded (#${count})`);
+    });
+  }
+  read(options) {
+    const { limit = DEFAULT_CONSOLE_LIMIT, level, clear = false } = options;
+    const depth = Math.min(Math.max(options.depth ?? DEFAULT_RENDER_DEPTH, 1), CAPTURE_DEPTH_CAP);
+    const filtered = level ? this.entries.filter((entry) => entry.level == level) : this.entries;
+    const taken = filtered.slice(-limit);
+    if (clear) {
+      this.clear();
+    }
+    return taken.map((entry) => renderLine(entry, depth));
+  }
+  clear() {
+    this.entries.length = 0;
+    this.queue.length = 0;
+    this.generation++;
+  }
+  handle(method, params) {
+    if (method == "Runtime.consoleAPICalled") {
+      this.enqueue({
+        at: entryTime(params.timestamp),
+        kind: "console",
+        level: params.type ?? "log",
+        args: params.args ?? [],
+        expand: this.expanding() < this.maxPending
+      });
+    } else if (method == "Log.entryAdded") {
+      const entry = params.entry ?? {};
+      this.enqueueText(entry.source ?? "log", entry.level ?? "info", entry.text ?? "", entry.timestamp);
+    } else if (method == "Runtime.exceptionThrown") {
+      this.enqueueText("exception", "error", formatException(params.exceptionDetails), params.timestamp);
+    }
+  }
+  enqueueText(kind, level, line, timestamp) {
+    this.enqueue({
+      at: entryTime(timestamp),
+      kind,
+      level,
+      args: [{ type: "string", value: line }],
+      expand: false
+    });
+  }
+  enqueue(capture) {
+    this.queue.push(capture);
+    this.drain();
+  }
+  expanding() {
+    return this.queue.filter((capture) => capture.expand).length;
+  }
+  async drain() {
+    if (this.isDraining) {
+      return;
+    }
+    this.isDraining = true;
+    try {
+      for (let next = this.queue.shift();next; next = this.queue.shift()) {
+        const { generation } = this;
+        const args = await Promise.all(next.args.map((arg) => this.resolveArg(arg, next.expand)));
+        if (generation == this.generation) {
+          this.push({ at: next.at, kind: next.kind, level: next.level, args });
+        }
+      }
+    } finally {
+      this.isDraining = false;
+    }
+  }
+  async resolveArg(arg, expand) {
+    if (arg.objectId == null) {
+      return describedValue(arg);
+    }
+    if (expand) {
+      const tree = await this.expand(arg.objectId);
+      if (tree) {
+        return tree;
+      }
+    }
+    return previewValue(arg.preview) ?? describedValue(arg);
+  }
+  async expand(objectId) {
+    try {
+      const response = await withTimeout(this.cdp.call("Runtime.callFunctionOn", {
+        objectId,
+        functionDeclaration: SERIALIZE_SOURCE,
+        arguments: [{ value: CAPTURE_DEPTH_CAP }, { value: LEVEL_WIDTH }, { value: STRING_CLIP }],
+        returnByValue: true
+      }), this.expandTimeoutMs);
+      const value = response.result?.value;
+      if (response.exceptionDetails || value == null || typeof value != "object") {
+        return;
+      }
+      return value;
+    } catch {
+      return;
+    }
+  }
+  push(entry) {
+    this.entries.push(entry);
+    if (this.entries.length > this.max) {
+      this.entries.splice(0, this.entries.length - this.max);
+    }
+  }
+}
+async function gameConsole(client, buffer, options) {
+  try {
+    await client.connection();
+  } catch (error51) {
+    return toErrorResult(error51);
+  }
+  const lines = buffer.read(options);
+  if (lines.length == 0) {
+    return text(import_common_tags2.oneLine`
+      No console entries captured yet.
+      Capture begins once the server connects to the application;
+      trigger some UI activity (or a game_eval console.log) and retry.
+    `);
+  }
+  return text(lines.join(`
+`));
+}
+function entryTime(timestamp) {
+  const isEpoch = typeof timestamp == "number" && timestamp > EPOCH_MS_FLOOR;
+  return isEpoch ? timestamp : Date.now();
+}
+function withTimeout(promise3, timeoutMs) {
+  let timer;
+  const deadline = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`console expansion timed out`)), timeoutMs);
+  });
+  return Promise.race([promise3, deadline]).finally(() => clearTimeout(timer));
+}
+function serializeConsoleArgFn(cap, width, clip) {
+  const seen = new Set;
+  return walk(this, 0);
+  function walk(value, depth) {
+    if (typeof value == "string") {
+      return value.length > clip ? { kind: "string", text: value.slice(0, clip), clipped: true } : { kind: "string", text: value };
+    }
+    if (value === null || typeof value != "object") {
+      return { kind: "raw", text: scalarText(value) };
+    }
+    const node = value;
+    if (typeof node.nodeType == "number") {
+      return { kind: "node", text: nodeText(node) };
+    }
+    if (value instanceof Date) {
+      return { kind: "raw", text: dateText(value) };
+    }
+    if (value instanceof RegExp || value instanceof Error) {
+      return { kind: "raw", text: String(value) };
+    }
+    if (seen.has(value)) {
+      return { kind: "circular" };
+    }
+    const shape = Array.isArray(value) ? "array" : value instanceof Map ? "map" : value instanceof Set ? "set" : "object";
+    if (depth >= cap) {
+      return {
+        kind: "capped",
+        of: shape,
+        ctor: shape == "object" ? ctorName(value) : undefined,
+        size: sizeOf(value, shape)
+      };
+    }
+    seen.add(value);
+    try {
+      return expand(value, shape, depth);
+    } finally {
+      seen.delete(value);
+    }
+  }
+  function expand(value, shape, depth) {
+    if (shape == "array") {
+      const all = value;
+      const items = all.slice(0, width).map((item) => walk(item, depth + 1));
+      return { kind: "array", items, more: dropped(all.length, items.length) };
+    }
+    if (shape == "map") {
+      const all = Array.from(value.entries());
+      const pairs = all.slice(0, width).map((pair) => [walk(pair[0], depth + 1), walk(pair[1], depth + 1)]);
+      return { kind: "map", size: all.length, pairs, more: dropped(all.length, pairs.length) };
+    }
+    if (shape == "set") {
+      const all = Array.from(value.values());
+      const items = all.slice(0, width).map((item) => walk(item, depth + 1));
+      return { kind: "set", size: all.length, items, more: dropped(all.length, items.length) };
+    }
+    const bag = value;
+    const keys = Object.keys(bag);
+    const entries = keys.slice(0, width).map((key) => [key, readProperty(bag, key, depth)]);
+    return {
+      kind: "object",
+      ctor: ctorName(value),
+      entries,
+      more: dropped(keys.length, entries.length)
+    };
+  }
+  function dropped(total, kept) {
+    return total > kept ? total - kept : undefined;
+  }
+  function readProperty(bag, key, depth) {
+    try {
+      return walk(bag[key], depth + 1);
+    } catch {
+      return { kind: "raw", text: "[unreadable]" };
+    }
+  }
+  function scalarText(value) {
+    if (typeof value == "function") {
+      const named = value;
+      return named.name ? `[Function: ${named.name}]` : `[Function (anonymous)]`;
+    }
+    if (typeof value == "bigint") {
+      return `${value}n`;
+    }
+    if (typeof value == "symbol") {
+      return value.toString();
+    }
+    return String(value);
+  }
+  function nodeText(node) {
+    const name = typeof node.tagName == "string" ? node.tagName : String(node.nodeName);
+    const id = typeof node.id == "string" && node.id ? `#${node.id}` : "";
+    const classes = typeof node.className == "string" ? node.className.trim() : "";
+    const suffix = classes ? `.${classes.split(/\s+/u).join(".")}` : "";
+    return `<${name.toLowerCase()}${id}${suffix}>`;
+  }
+  function dateText(value) {
+    try {
+      return value.toISOString();
+    } catch {
+      return String(value);
+    }
+  }
+  function ctorName(value) {
+    const name = value.constructor?.name;
+    return name && name != "Object" ? name : undefined;
+  }
+  function sizeOf(value, shape) {
+    return shape == "map" || shape == "set" ? value.size : undefined;
+  }
+}
+var SERIALIZE_SOURCE = serializeConsoleArgFn.toString();
+function renderLine(entry, depth) {
+  const args = entry.args.map((arg) => renderArgument(arg, depth));
+  return `${formatClock(entry.at)} [${entry.level}] (${entry.kind}) ${args.join(" ")}`;
+}
+function renderArgument(value, depth) {
+  try {
+    return renderValue(value, depth);
+  } catch {
+    return `[unrenderable]`;
+  }
+}
+function formatClock(at) {
+  const date6 = new Date(at);
+  const hours = String(date6.getHours()).padStart(2, "0");
+  const minutes = String(date6.getMinutes()).padStart(2, "0");
+  const seconds = String(date6.getSeconds()).padStart(2, "0");
+  const millis = String(date6.getMilliseconds()).padStart(MILLIS_DIGITS, "0");
+  return `${hours}:${minutes}:${seconds}.${millis}`;
+}
+function renderValue(value, depth) {
+  switch (value.kind) {
+    case "raw":
+    case "node": {
+      return value.text;
+    }
+    case "string": {
+      const held = value.text.replaceAll("\r", String.raw`\r`).replaceAll(`
+`, String.raw`\n`);
+      return `'${held}${value.clipped ? "…" : ""}'`;
+    }
+    case "circular": {
+      return `[Circular]`;
+    }
+    case "capped": {
+      return collapsed(value);
+    }
+    case "object": {
+      if (depth <= 0) {
+        return collapsed({ of: "object", ctor: value.ctor });
+      }
+      const parts = value.entries.map(([key, held]) => `${renderKey(key)}: ${renderValue(held, depth - 1)}`);
+      return `${value.ctor ? `${value.ctor} ` : ""}{${joinParts(parts, value.more)}}`;
+    }
+    case "array": {
+      if (depth <= 0) {
+        return collapsed({ of: "array" });
+      }
+      return `[${joinParts(value.items.map((item) => renderValue(item, depth - 1)), value.more)}]`;
+    }
+    case "map": {
+      if (depth <= 0) {
+        return collapsed({ of: "map", size: value.size });
+      }
+      const parts = value.pairs.map(([key, held]) => `${renderValue(key, depth - 1)} => ${renderValue(held, depth - 1)}`);
+      return `Map(${value.size}) {${joinParts(parts, value.more)}}`;
+    }
+    case "set": {
+      if (depth <= 0) {
+        return collapsed({ of: "set", size: value.size });
+      }
+      return `Set(${value.size}) {${joinParts(value.items.map((item) => renderValue(item, depth - 1)), value.more)}}`;
+    }
+    default: {
+      const unreachable = value;
+      throw new Error(`Unhandled console value ${JSON.stringify(unreachable)}`);
+    }
+  }
+}
+function collapsed(value) {
+  if (value.of == "array") {
+    return `[…]`;
+  }
+  if (value.of == "map" || value.of == "set") {
+    const label = value.of == "map" ? "Map" : "Set";
+    return `${label}(${value.size ?? "?"}) {…}`;
+  }
+  return `${value.ctor ? `${value.ctor} ` : ""}{…}`;
+}
+function joinParts(parts, more) {
+  const marked = more == null ? parts : [...parts, more === true ? `…more` : `…${more} more`];
+  return marked.join(", ");
+}
+function renderKey(key) {
+  return /^[A-Za-z_$][\w$]*$/u.test(key) ? key : `'${key}'`;
+}
+function previewValue(preview) {
+  if (!preview) {
+    return;
+  }
+  const scalar = previewScalar(preview);
+  if (scalar) {
+    return scalar;
+  }
+  if (preview.subtype == "array") {
+    const items = (preview.properties ?? []).map((property) => previewProperty(property));
+    const size2 = previewSize(preview.description) ?? items.length;
+    return { kind: "array", items, more: previewOverflow(preview, items.length, size2) };
+  }
+  if (preview.subtype == "set") {
+    const items = (preview.entries ?? []).map((entry) => previewValue(entry.value) ?? unknownValue());
+    const size2 = previewSize(preview.description) ?? items.length;
+    return { kind: "set", size: size2, items, more: previewOverflow(preview, items.length, size2) };
+  }
+  if (preview.subtype == "map") {
+    const pairs = (preview.entries ?? []).map((entry) => {
+      const key = previewValue(entry.key) ?? unknownValue();
+      return [key, previewValue(entry.value) ?? unknownValue()];
+    });
+    const size2 = previewSize(preview.description) ?? pairs.length;
+    return { kind: "map", size: size2, pairs, more: previewOverflow(preview, pairs.length, size2) };
+  }
+  if (isStringified(preview)) {
+    return { kind: "raw", text: oneLineText(preview.description ?? preview.subtype ?? "object") };
+  }
+  const label = preview.description;
+  const entries = (preview.properties ?? []).map((property) => [property.name, previewProperty(property)]);
+  const size = preview.subtype ? previewSize(preview.description) : undefined;
+  return {
+    kind: "object",
+    ctor: label && label != "Object" ? label : undefined,
+    entries,
+    more: previewOverflow(preview, entries.length, size)
+  };
+}
+function previewScalar(preview) {
+  if (preview.type && preview.type != "object") {
+    return preview.type == "string" ? clippedString(preview.description ?? "") : { kind: "raw", text: oneLineText(preview.description ?? preview.type) };
+  }
+  if (preview.subtype == "node") {
+    return { kind: "node", text: preview.description ?? "node" };
+  }
+  return;
+}
+function isStringified(preview) {
+  return Boolean(preview.subtype) && !preview.properties?.length;
+}
+function previewProperty(property) {
+  if (property.valuePreview) {
+    return previewValue(property.valuePreview) ?? unknownValue();
+  }
+  if (property.type == "string") {
+    return clippedString(property.value ?? "");
+  }
+  if (property.type == "object") {
+    return previewObjectProperty(property);
+  }
+  const described = property.value?.length ? property.value : property.type;
+  return { kind: "raw", text: oneLineText(described) };
+}
+function previewObjectProperty(property) {
+  const { subtype, value } = property;
+  if (subtype == "array" || subtype == "map" || subtype == "set") {
+    return { kind: "capped", of: subtype, size: previewSize(value) };
+  }
+  if (subtype == "node") {
+    return { kind: "node", text: value ?? "node" };
+  }
+  if (subtype) {
+    return { kind: "raw", text: oneLineText(value ?? subtype) };
+  }
+  const named = value && value != "Object";
+  return { kind: "capped", of: "object", ctor: named ? value : undefined };
+}
+function previewOverflow(preview, shown, size = shown) {
+  if (size > shown) {
+    return size - shown;
+  }
+  return preview.overflow ? true : undefined;
+}
+function previewSize(description) {
+  const size = /\((?<size>\d+)\)$/u.exec(description ?? "")?.groups?.size;
+  return size == null ? undefined : Number(size);
+}
+function clippedString(held) {
+  return held.length > STRING_CLIP ? { kind: "string", text: held.slice(0, STRING_CLIP), clipped: true } : { kind: "string", text: held };
+}
+function oneLineText(held) {
+  const flat = held.split(/\r\n|[\r\n]/u).map((line) => line.trim()).find((line) => line.length);
+  return clipText(flat ?? "");
+}
+function clipText(held) {
+  return held.length > STRING_CLIP ? `${held.slice(0, STRING_CLIP)}…` : held;
+}
+function describedValue(arg) {
+  return { kind: "raw", text: valToStr(describeRemoteObject(arg)) };
+}
+function unknownValue() {
+  return { kind: "capped", of: "object" };
+}
+
 // src/debugger.ts
+var import_common_tags3 = __toESM(require_lib(), 1);
+import { setTimeout as sleep } from "node:timers/promises";
 var SCRIPT_REPLAY_WAIT_MS = 350;
 var POLL_INTERVAL_MS = 50;
 var PAUSE_WAIT_MS = 3000;
@@ -30781,10 +31248,10 @@ class DebuggerSession {
         condition: condition ?? null,
         resolvedLocations: locations.map((loc) => this.locStr(loc)),
         pending: locations.length == 0,
-        note: locations.length == 0 ? import_common_tags2.oneLine`
+        note: locations.length == 0 ? import_common_tags3.oneLine`
                     Pending: no matching script/line loaded yet, or the line has no code.
                     It will bind when the script loads.
-                  ` : import_common_tags2.oneLine`
+                  ` : import_common_tags3.oneLine`
                     Hitting this breakpoint FREEZES the UI until you resume
                     (game_debug_step resume).
                   `
@@ -30846,7 +31313,7 @@ class DebuggerSession {
       if (this.paused) {
         const frame = this.paused.callFrames[frameIndex];
         if (!frame) {
-          return errorText(import_common_tags2.oneLine`
+          return errorText(import_common_tags3.oneLine`
             No call frame at index ${frameIndex}
             (paused stack has ${this.paused.callFrames.length}).
           `);
@@ -31003,7 +31470,7 @@ class DebuggerSession {
 }
 
 // src/tools.ts
-var import_common_tags3 = __toESM(require_lib(), 1);
+var import_common_tags4 = __toESM(require_lib(), 1);
 import { setTimeout as sleep2 } from "node:timers/promises";
 var POLL_INTERVAL_MS2 = 150;
 var MAX_WAIT_MS = 60000;
@@ -31011,7 +31478,6 @@ var DEFAULT_WAIT_TIMEOUT_MS = 8000;
 var DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30000;
 var DEFAULT_QUIESCENT_MS = 1000;
 var DEFAULT_JPEG_QUALITY = 80;
-var DEFAULT_CONSOLE_LIMIT = 50;
 var DEFAULT_QUERY_LIMIT = 20;
 async function gameStatus(client, reloads) {
   const { host, port } = client.config;
@@ -31052,7 +31518,7 @@ async function gameStatus(client, reloads) {
       reachable: false,
       endpoint: `http://${host}:${port}`,
       error: error51 instanceof Error ? error51.message : String(error51),
-      hint: import_common_tags3.oneLine`
+      hint: import_common_tags4.oneLine`
             Launch the Gameface application with its CDP debug port open, then retry.
             Override host/port via GAMEFACE_HOST / GAMEFACE_PORT.
           `
@@ -31091,7 +31557,7 @@ async function gameScreenshot(client, options = {}) {
       });
       const rect = rectRes.result.value;
       if (!rect?.found) {
-        return errorText(import_common_tags3.oneLine`
+        return errorText(import_common_tags4.oneLine`
           No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
           (matches found: ${rect?.count ?? 0}).
         `);
@@ -31100,7 +31566,7 @@ async function gameScreenshot(client, options = {}) {
         return errorText(`Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`);
       }
       params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
-      caption = import_common_tags3.oneLine`
+      caption = import_common_tags4.oneLine`
         Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
       `;
     }
@@ -31189,13 +31655,13 @@ function queryRejection(options, mode) {
     return `game_query: selector is blank; pass a real one.`;
   }
   if (mode == "equals" && needle != null && needle.trim() != needle) {
-    return import_common_tags3.oneLine`
+    return import_common_tags4.oneLine`
       game_query: equals compares against trimmed text, so trim yours; where that empties it, pass
       '' with a selector to find elements carrying no text.
     `;
   }
   if (needle == "" && mode != "equals") {
-    return import_common_tags3.oneLine`
+    return import_common_tags4.oneLine`
       game_query: empty text matches every element under ${mode}; pass match: 'equals' with a
       selector to find elements carrying no text.
     `;
@@ -31216,12 +31682,12 @@ async function gameClick(client, selector, index = 0) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags3.oneLine`
+      return errorText(import_common_tags4.oneLine`
         No element to click for selector ${JSON.stringify(selector)} at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags3.oneLine`
+    return text(import_common_tags4.oneLine`
       Clicked ${JSON.stringify(selector)} [index ${index}] at
       (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
       Dispatched: ${info.fired.join(", ")}. Matches: ${info.count}.
@@ -31268,7 +31734,7 @@ async function gameWait(client, reloads, options) {
     const baseline = sinceReloads ?? reloads.count;
     while (reloads.count <= baseline) {
       if (Date.now() >= deadline) {
-        return errorText(import_common_tags3.oneLine`
+        return errorText(import_common_tags4.oneLine`
           Timed out after ${budget}ms waiting for a view reload
           (reload count still ${reloads.count}, baseline ${baseline}).
         `);
@@ -31280,7 +31746,7 @@ async function gameWait(client, reloads, options) {
       let quietSince = Date.now();
       while (Date.now() - quietSince < quiescentMs) {
         if (Date.now() >= deadline) {
-          return errorText(import_common_tags3.oneLine`
+          return errorText(import_common_tags4.oneLine`
             Timed out after ${budget}ms: reload observed, but context swaps kept arriving within the
             ${quiescentMs}ms quiescence window.
           `);
@@ -31331,12 +31797,12 @@ async function gameFill(client, selector, value, index = 0) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags3.oneLine`
+      return errorText(import_common_tags4.oneLine`
         No element matched ${JSON.stringify(selector)} for game_fill at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags3.oneLine`
+    return text(import_common_tags4.oneLine`
       Filled ${JSON.stringify(selector)} [index ${index}] (${info.mode}).
       Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
@@ -31355,12 +31821,12 @@ async function gameType(client, selector, textToType, index = 0) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags3.oneLine`
+      return errorText(import_common_tags4.oneLine`
         No element matched ${JSON.stringify(selector)} for game_type at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags3.oneLine`
+    return text(import_common_tags4.oneLine`
       Typed ${info.typed} char(s) into ${JSON.stringify(selector)} [index ${index}].
       Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
@@ -31379,12 +31845,12 @@ async function gameHover(client, selector, index = 0) {
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags3.oneLine`
+      return errorText(import_common_tags4.oneLine`
         No element matched ${JSON.stringify(selector)} for game_hover at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags3.oneLine`
+    return text(import_common_tags4.oneLine`
       Hovered ${JSON.stringify(selector)} [index ${index}] at
       (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
       Dispatched: ${info.fired.join(", ")}. Matches: ${info.count}.
@@ -31426,14 +31892,14 @@ async function gameKey(client, options) {
       return errorText(`game_key returned no result.`);
     }
     if (!info.found) {
-      return errorText(import_common_tags3.oneLine`
+      return errorText(import_common_tags4.oneLine`
         No element matched ${JSON.stringify(selector)} for game_key at index ${index}
         (matches found: ${info.count}).
       `);
     }
     const where = info.via == "selector" ? `${JSON.stringify(selector)} [index ${index}] ${info.target}` : info.via == "activeElement" ? `the focused element ${info.target}` : `document`;
     const matchNote = info.matches == null ? "" : ` Matches: ${info.matches}.`;
-    return text(import_common_tags3.oneLine`
+    return text(import_common_tags4.oneLine`
       Pressed ${keyLabel(key, { ctrl, shift, alt, meta: meta3 })} ${info.presses}x on ${where}.${matchNote}
       Default prevented: ${info.defaultPrevented ? "yes" : "no"}.
     `);
@@ -31509,87 +31975,6 @@ class ReloadTracker {
       } catch {}
     }
   }
-}
-
-class ConsoleBuffer {
-  entries = [];
-  max;
-  constructor(client, reloads, max = 500) {
-    this.max = max;
-    client.onConnect(async (conn) => {
-      await conn.ensureDomain("Runtime");
-      await conn.ensureDomain("Log");
-    });
-    client.onEvent((method, params) => {
-      this.handle(method, params);
-    });
-    reloads.onReload((count) => {
-      this.push({
-        ts: Date.now(),
-        kind: "reload",
-        level: "info",
-        text: `view reloaded (#${count})`
-      });
-    });
-  }
-  read(limit, level, clear) {
-    const filtered = level ? this.entries.filter((entry) => entry.level == level) : this.entries;
-    const out = filtered.slice(-limit);
-    if (clear) {
-      this.entries.length = 0;
-    }
-    return out;
-  }
-  push(entry) {
-    this.entries.push(entry);
-    if (this.entries.length > this.max) {
-      this.entries.splice(0, this.entries.length - this.max);
-    }
-  }
-  handle(method, params) {
-    if (method == "Runtime.consoleAPICalled") {
-      const args = (params.args ?? []).map((arg) => valToStr(describeRemoteObject(arg)));
-      this.push({
-        ts: params.timestamp ?? 0,
-        kind: "console",
-        level: params.type ?? "log",
-        text: args.join(" ")
-      });
-    } else if (method == "Log.entryAdded") {
-      const entry = params.entry ?? {};
-      this.push({
-        ts: entry.timestamp ?? 0,
-        kind: entry.source ?? "log",
-        level: entry.level ?? "info",
-        text: entry.text ?? ""
-      });
-    } else if (method == "Runtime.exceptionThrown") {
-      this.push({
-        ts: params.timestamp ?? 0,
-        kind: "exception",
-        level: "error",
-        text: formatException(params.exceptionDetails)
-      });
-    }
-  }
-}
-async function gameConsole(client, buffer, options) {
-  const { limit = DEFAULT_CONSOLE_LIMIT, level, clear = false } = options;
-  try {
-    await client.connection();
-  } catch (error51) {
-    return toErrorResult(error51);
-  }
-  const entries = buffer.read(limit, level, clear);
-  if (entries.length == 0) {
-    return text(import_common_tags3.oneLine`
-      No console entries captured yet.
-      Capture begins once the server connects to the application;
-      trigger some UI activity (or a game_eval console.log) and retry.
-    `);
-  }
-  return text(entries.map((entry) => `[${entry.level}] (${entry.kind}) ${entry.text}`).join(`
-`));
 }
 function callPageFn(fn, ...args) {
   const serialisedArgs = args.map((arg) => JSON.stringify(arg)).join(", ");
@@ -32036,7 +32421,7 @@ async function main() {
   const server = new McpServer({ name: "gameface-devtools-mcp", version: VERSION });
   server.registerTool("game_status", {
     title: `Gameface UI status`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Check whether the Gameface UI debug endpoint is reachable and report the live page target,
         engine info, and view-reload tracking (count, last reload time, context id).
         Calling it arms reload tracking and returns the baseline count for game_wait's sinceReloads.
@@ -32045,7 +32430,7 @@ async function main() {
   }, () => gameStatus(client, reloads));
   server.registerTool("game_eval", {
     title: `Evaluate JS in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate,
         returnByValue) and return the resulting value as JSON.
         Use document.querySelector and friends to read the live DOM, inspect state, or call UI APIs.
@@ -32057,7 +32442,7 @@ async function main() {
   }, ({ expression, awaitPromise }) => gameEval(client, expression, awaitPromise));
   server.registerTool("game_screenshot", {
     title: `Screenshot the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
         as an inline image.
         Pass a selector to clip the capture to one element; use index to pick among matches.
@@ -32067,7 +32452,7 @@ async function main() {
       `,
     inputSchema: {
       format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
-      quality: exports_external.number().min(1).max(100).optional().describe(import_common_tags4.oneLine`
+      quality: exports_external.number().min(1).max(100).optional().describe(import_common_tags5.oneLine`
               JPEG quality 1-100 (only used when format is jpeg; default 80).
               Trades fidelity for transfer bytes; lowering it leaves the image's context cost
               unchanged.
@@ -32078,7 +32463,7 @@ async function main() {
   }, ({ format, quality, selector, index }) => gameScreenshot(client, { format, quality, selector, index }));
   server.registerTool("game_wait", {
     title: `Wait for a condition in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Wait until a CSS selector matches (optionally visible), a JS predicate becomes truthy,
         and/or a view reload happens. Provide at least one of reload / selector / predicate
         (selector and predicate are mutually exclusive).
@@ -32089,20 +32474,20 @@ async function main() {
     inputSchema: {
       selector: exports_external.string().optional().describe(`CSS selector to wait for`),
       predicate: exports_external.string().optional().describe(`JS expression evaluated in the page; waits until it is truthy`),
-      reload: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+      reload: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
             Wait for a view reload (context reset) before the selector/predicate phase.
             Without sinceReloads, waits for the next reload after the call starts.
           `),
-      sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+      sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
             Baseline reload count (from a prior game_status or game_wait).
             The reload phase is satisfied as soon as the count exceeds it, even if the reload
             already happened; use it to avoid racing a reload you triggered yourself.
           `),
-      quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+      quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
             After a reload is observed, hold until no further context swap for this long (default
             1000, 0 disables); absorbs engines that swap the context several times per reload.
           `),
-      timeoutMs: exports_external.number().int().min(0).optional().describe(import_common_tags4.oneLine`
+      timeoutMs: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
             Max time to wait in ms (default 8000, or 30000 when reload is set; capped at 60000)
           `),
       visible: exports_external.boolean().optional().describe(`For selector waits, also require a non-zero bounding box (default false)`)
@@ -32118,7 +32503,7 @@ async function main() {
   }));
   server.registerTool("game_fill", {
     title: `Set an input value in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
@@ -32132,7 +32517,7 @@ async function main() {
   }, ({ selector, value, index }) => gameFill(client, selector, value, index));
   server.registerTool("game_type", {
     title: `Type text into the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync.
         Use when handlers react to individual keystrokes; otherwise game_fill.
@@ -32146,7 +32531,7 @@ async function main() {
   }, ({ selector, text: text2, index }) => gameType(client, selector, text2, index));
   server.registerTool("game_hover", {
     title: `Hover an element in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
         the UI's mouseenter / pointerover JS handlers (tooltips) fire.
         The CSS :hover state is NOT set (only real game-forwarded mouse input sets it); verify a
@@ -32160,7 +32545,7 @@ async function main() {
   }, ({ selector, index }) => gameHover(client, selector, index));
   server.registerTool("game_key", {
     title: `Press a key in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Press a named key by dispatching a real bubbling keydown+keyup in the page
         (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
         ctrl/shift/alt/meta and a repeat count.
@@ -32188,20 +32573,35 @@ async function main() {
   }, ({ key, count, ctrl, shift, alt, meta: meta3, selector, index }) => gameKey(client, { key, count, ctrl, shift, alt, meta: meta3, selector, index }));
   server.registerTool("game_console", {
     title: `Read the Gameface UI console`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Return recent console.* calls, log entries, and uncaught exceptions captured from the
-        Gameface UI.
+        Gameface UI, each prefixed with local wall-clock time and its object arguments expanded to
+        their real values (state {a: 1, b: {c: {…}}, arr: [1, 2, 3]}).
         Capture starts when the server first connects to the application.
+        Truncation is always marked: {…} / […] for a value collapsed at the rendered depth, …N more
+        for properties or elements past the per-level cap, a trailing ellipsis inside a clipped
+        string.
+        For unbounded depth or parseable output, read the value with game_eval + JSON.stringify.
       `,
     inputSchema: {
       limit: exports_external.number().int().min(1).max(1000).optional().describe(`Max entries to return (default 50)`),
       level: exports_external.string().optional().describe(`Filter by level, e.g. error / warning / log / info`),
-      clear: exports_external.boolean().optional().describe(`Clear the buffer after reading (default false)`)
+      depth: exports_external.number().int().min(1).max(CAPTURE_DEPTH_CAP).optional().describe(import_common_tags5.oneLine`
+              How many levels of an expanded object to render (default
+              ${String(DEFAULT_RENDER_DEPTH)}).
+              Entries are captured ${String(CAPTURE_DEPTH_CAP)} levels deep, so re-reading the same
+              entries deeper works up to that cap.
+            `),
+      clear: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
+            Empty the buffer once this read has taken its entries (default false).
+            It also drops captures still being expanded, so a line logged moments before the call
+            is discarded rather than surfacing on the next read.
+          `)
     }
-  }, ({ limit, level, clear }) => gameConsole(client, consoleBuffer, { limit, level, clear }));
+  }, ({ limit, level, depth, clear }) => gameConsole(client, consoleBuffer, { limit, level, depth, clear }));
   server.registerTool("game_dom", {
     title: `Inspect Gameface UI DOM`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI.
         Set all=true to return every match.
@@ -32216,7 +32616,7 @@ async function main() {
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
   server.registerTool("game_query", {
     title: `Find elements in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Locate elements in the live Gameface UI by CSS selector, by trimmed textContent
         (equals/contains/regex, case-insensitive by default), or by both; one of the two is
         required, and match/caseSensitive are ignored without text.
@@ -32227,7 +32627,7 @@ async function main() {
         To read an element's markup, use game_dom.
       `,
     inputSchema: {
-      text: exports_external.string().optional().describe(import_common_tags4.oneLine`
+      text: exports_external.string().optional().describe(import_common_tags5.oneLine`
               Text to match against each element's trimmed textContent, so pass it trimmed under
               match=equals; omit it to select on the selector alone, or pass '' with match=equals
               and a selector for elements carrying no text.
@@ -32235,11 +32635,11 @@ async function main() {
       match: exports_external.enum(["equals", "contains", "regex"]).optional().describe(`How to match the text: equals / contains / regex (default: contains)`),
       caseSensitive: exports_external.boolean().optional().describe(`Match case-sensitively (default: false)`),
       selector: exports_external.string().optional().describe(`CSS selector to match, alone or scoping the text scan (with text, defaults to *)`),
-      deepest: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+      deepest: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
               Keep only the innermost match, pruning ancestors that also matched (default: true
               when non-empty text drives the match, false otherwise).
             `),
-      tag: exports_external.boolean().optional().describe(import_common_tags4.oneLine`
+      tag: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
               Stamp matches with data-gf-tag handles and return them as selectors, clearing any
               prior handles first (default: false).
             `),
@@ -32249,7 +32649,7 @@ async function main() {
   }, ({ text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }) => gameQuery(client, { text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }));
   server.registerTool("game_click", {
     title: `Click an element in the Gameface UI`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
         sequence in the page (NOT CDP Input, which Gameface ignores for the UI).
         Use index to pick among matches.
@@ -32261,7 +32661,7 @@ async function main() {
   }, ({ selector, index }) => gameClick(client, selector, index));
   server.registerTool("game_debug_status", {
     title: `JS debugger status`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
         and parsed script count.
         Pass setPauseOnExceptions to change exception pausing.
@@ -32274,7 +32674,7 @@ async function main() {
   }, ({ setPauseOnExceptions }) => debug.status(setPauseOnExceptions));
   server.registerTool("game_debug_scripts", {
     title: `List parsed UI scripts`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
         filtered by a url substring.
         Only scripts parsed after the debugger attached appear (Gameface does not replay
@@ -32287,7 +32687,7 @@ async function main() {
   }, ({ filter }) => debug.listScripts(filter));
   server.registerTool("game_debug_source", {
     title: `Get UI script source`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
         Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines).
       `,
@@ -32299,7 +32699,7 @@ async function main() {
   }, ({ scriptId, lineStart, lineEnd }) => debug.getSource(scriptId, lineStart, lineEnd));
   server.registerTool("game_debug_set_breakpoint", {
     title: `Set a breakpoint`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Set a breakpoint by url substring + line (1-based).
         Add a condition (JS expression) to only pause when it is truthy, which limits how often the
         UI freezes.
@@ -32321,7 +32721,7 @@ async function main() {
   }, ({ breakpoint }) => debug.removeBreakpoint(breakpoint));
   server.registerTool("game_debug_pause_state", {
     title: `Inspect the paused stack`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         When paused, return the call stack (frames with function + location + scope types).
         Set expandScopes to also list local/closure variables of each frame.
         Returns 'not paused' otherwise.
@@ -32332,7 +32732,7 @@ async function main() {
   }, ({ expandScopes }) => debug.pauseStateReport(expandScopes ?? false));
   server.registerTool("game_debug_evaluate", {
     title: `Evaluate while debugging`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Evaluate a JS expression.
         When paused, it runs in the selected call frame's scope (Debugger.evaluateOnCallFrame) so
         you can read locals; otherwise it runs globally.
@@ -32345,7 +32745,7 @@ async function main() {
   }, ({ expression, frameIndex }) => debug.evaluate(expression, frameIndex));
   server.registerTool("game_debug_step", {
     title: `Step / resume / pause execution`,
-    description: import_common_tags4.oneLine`
+    description: import_common_tags5.oneLine`
         Control paused execution: resume (unfreeze the UI), over/into/out (step), or pause (break at
         the next statement).
         Stepping reports the new location.
