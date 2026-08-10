@@ -98,8 +98,21 @@ Only `status` takes a process-name prefix; every acting tool resolves discovery 
 outright when several processes look SDB-shaped (an IDE, GitKraken and Steam all qualified in one
 session), and the `UNITY_MCP_PROCESS` env filter is read once at server start, so the only recovery
 mid-session is editing the MCP config and having the user reconnect the server — the workaround a
-live session actually ran. Either honor a narrowed `status` call as a sticky session filter, or
-accept the prefix on every tool.
+live session actually ran. On Codex CLI even that recovery is absent: plugin servers get no env
+block, so neither `UNITY_MCP_PROCESS` nor `UNITY_MCP_PORT` reaches the server and the only override
+is `codex mcp add` replacing it wholesale, version pin included
+(`docs/solutions/dual-harness-mcp-config.md`). Either honor a narrowed `status` call as a sticky
+session filter, accept the prefix on every tool, or drop the category by probing the candidates: the
+SDB handshake disambiguates immediately and a non-SDB listener fails version negotiation, at the
+cost of writing that handshake at unrelated local processes and needing a timeout against a silent
+one.
+
+The failure is a per-boot ephemeral-port draw rather than a rare shape: `ResolveEndpoint` hides
+every candidate whenever exactly one lands inside 56000-56999, and six unrelated processes held a
+listen port above the range on the reference machine while discovery still resolved cleanly. That
+same threshold makes the "no dev-Mono Unity game found" arm unreachable there — with the game
+closed, discovery reports several candidates instead of none, sending an agent after the env filter
+instead of after the game.
 
 ### An `ecs_query` seam in the SDB library
 
@@ -209,25 +222,3 @@ one asks for a system, a component or a patch, which is where the traps bite —
 values baked at initialisation, surviving a save, the update interval that must be a power of two —
 and where a good practice either shows up in the produced code or does not. It also breaks the
 saturation, since a run can miss one trap while getting everything else right.
-
-What the harness would need, smallest first:
-
-- Nothing in the arms. An answer already travels as text and code travels the same way, so
-  `Read,Glob,Grep` stays the right tool set: no workspace writes, no build, no new isolation
-  question.
-- Nothing in the rubric format. A rubric line is free prose with a weight, so "does not read the
-  value before the system that writes it has run" scores exactly like a fact point, and the judge
-  stays blind and tool-free.
-- A far more expensive verified answer: a reference implementation the maintainer has compiled and
-  run, not a paragraph. That authoring cost, not the harness, is what gates this facet.
-- An open question on compilation. The judge cannot build, so scoring "it compiles" means a scratch
-  mod project, a per-question skeleton the answer drops into, and a `dotnet build` per run. Worth
-  building only if judged scores turn out to disagree with the compiler — build a handful of answers
-  by hand first and find out.
-
-### Asset, map and editor authoring
-
-Scope is code mods, so loading assets _from code_ is covered and authoring the assets themselves is
-not: meshes, textures, import setup, texture sharing, map creation and the in-game editor. That is a
-GUI and DCC-tool discipline an agent cannot drive, and the mod corpus offers no evidence base for
-it — a possible later facet rather than an omission, and one that would need sources of its own.
