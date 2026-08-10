@@ -296,7 +296,7 @@ Rots: this entire table. Every count, every system name and every line number mo
 
 Two facts about that throw that a reader needs together:
 
-- **It fires at registration**, inside `Register`, i.e. inside the `UpdateAt<T>` call in the mod's `OnLoad`. It therefore propagates out of `OnLoad`, is caught by `ModManager.InitializeMods` and takes the **whole mod** down with `State.GeneralError` — not just the offending system.
+- **It fires at registration**, inside `Register`, i.e. inside the `UpdateAt<T>` call in the mod's `OnLoad`. It therefore propagates out of `OnLoad`, is caught by `ModManager.InitializeMods` and takes the **whole mod** down — not just the offending system. The state it ends in is `Disposed` rather than `State.GeneralError`, which is what keeps it below the notification gate; the finding below on `OnLoad` throwing carries that mechanism. Corrected 2026-08-10 against the earlier reading, which this file already contradicted at that finding.
 - **It applies in every phase**, whereas the interval itself is consulted in only three.
 
 Because the interval is read only by the three-argument `Update(phase, updateIndex, iterationIndex)` overload (`:224`), and that overload is called from exactly three sites — `LoadSimulation` (`SimulationSystem.cs:173`), `EditorSimulation` (`:282`) and `GameSimulation` (`:286`) — **a `GetUpdateInterval` override on a system registered in any other phase has no effect at all.** The one-argument `Update(phase)` (`:166-204`) never reads `m_Interval` or `m_Offset`.
@@ -343,7 +343,7 @@ So there are three distinct failure surfaces for a mod, and the "silent disable"
 
 | Where it throws | Outcome |
 | --- | --- |
-| Mod `OnLoad` (including any system's `OnCreate`) | whole mod fails, `State.GeneralError`, `OnDispose` still called |
+| Mod `OnLoad` (including any system's `OnCreate`) | whole mod fails, `OnDispose` still called, state ends `Disposed` |
 | A system's `OnWorldReady` / `OnGamePreload` / `OnGameLoaded` | that system disabled for the session |
 | A system's `OnGameLoadingComplete` / `OnFocusChanged` | logged, system keeps running |
 | A system's `OnUpdate` | logged every frame at `Critical`, system keeps running |

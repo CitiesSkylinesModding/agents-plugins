@@ -44,8 +44,8 @@ A section that outgrows the entry file discloses into a sibling and links it fro
 **A trap is a bolded claim, at most two lines of why, and a `Source:` line naming the game files that prove it:**
 
 ```markdown
-**A stale `m_Workplace` earns nothing, not even the unemployment fallback.**
-Being paid requires the citizen to appear in the workplace's `Employee` buffer, not merely to hold a `Worker` pointing at it.
+**A stale `m_Workplace` earns nothing, not even the unemployment fallback, while its entity still carries an `Employee` buffer.**
+The citizen must appear in that buffer and not merely hold a `Worker` pointing at it, and absence returns before the fallback arm.
 Source: `src/Game/Game.Simulation/PayWageSystem.cs`.
 ```
 
