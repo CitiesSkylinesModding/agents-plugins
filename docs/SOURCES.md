@@ -91,6 +91,9 @@ Needs the game running as a debug-patched development build, which `cs2-modding-
 A question about a mod-declared surface — a serializable component, a mod's own entities, a system a mod registers — needs a mod present that declares one, and with none loaded the question looks unanswerable when it is merely unequipped.
 So name what the game must be carrying before recording a live question as unanswerable, and ask for it: the user will install any mod on request, and one from the setup skill's catalog is a minute's work.
 
+**A prefab family is enumerable with an ordinary query.** This game's prefab entities carry `PrefabData` rather than Unity's own prefab tag, so `ecs_query` on a data component returns them directly, labelled through `PrefabSystem.GetPrefabName` — no `PrefabSystem` walk needed. The general ECS caveat that prefab state is invisible to a query does not bind here.
+**No established route builds an `EntityQuery` inside `eval`.** Array-creation expressions and the `as` operator are outside the evaluator, `params` expansion fails at overload matching (all in the tool description since 2026-08-10), and the by-ref-like query builder fails on the evaluator's own boxing; a debuggee-side `System.Array.CreateInstance` route — the one `sdb/Ecs.cs` itself uses — stays inside the grammar and untried, and one eval against a running game settles it. A bulk read is therefore `ecs_query` for the entity list plus batched `eval` reads, several entities per call in one interpolated final expression.
+
 ## 9. The running game — the UI
 
 The sibling `coherent-gameface` plugin, over a direct CDP connection to the Cohtml view.
@@ -112,6 +115,8 @@ Primary for process — toolchain, debugging, publishing, key bindings, options 
 Where the toolchain itself answers, source 7 wins: the wiki describes the build and the targets are the build, and the wiki's most load-bearing modding page is five versions stale.
 For internals it sets the agenda and is then verified against the game; it has been wrong on capability while right on convention.
 A web-fetch tool normally renders past the site's JavaScript bot challenge and returns full article content; a plain HTTP fetch is still expected to lose to it. Ask the user only when the challenge comes back instead of content.
+A DLC or content-pack product page can carry mechanism material the gameplay pages do not, stamped "timeless" rather than verified-for-a-version — a resource-processing chart and the wiki's only statement of the production-milestone unlock system sit on one.
+Several plausible titles are bare redirects into a larger page and carry nothing of their own; the wiki's own `Special:Search` endpoint resolves a moved or merged title where a web search does not.
 
 ## 11. The mod corpus
 

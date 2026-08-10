@@ -51,7 +51,7 @@ One file per topic: the title, the baseline line under it, then `## Findings`, `
   Record it even when it is unsurprising — a claim marked verified reads differently from one nobody checked.
   A verdict settles a fact, and only a fact: what no source can settle, the question whose answer changes the product, and the judgement about what ships that can remain even once the facts are in all go to `conflicts.md` instead.
 - **A ruling, wherever one came back**, opening with `**Ruled (<date>, <where it was made>; conflicts.md).**` on the finding it governs.
-  The maintainer writes it, not you: your part is the evidence they rule on.
+  The maintainer writes it, not you — unless they delegated the pass its ruling authority, in which case the orchestrating session may rule, names the delegation in the ruling line wherever that line is written, and the maintainer can overturn it like any ruling; your part either way is the evidence ruled on.
   It restates the decision and what the reference owes because of it, rather than pointing back at the entry, since the authoring agent reads this file and never `conflicts.md`.
   It sits at the finding rather than in a section of its own, so the passage it governs cannot be authored without it.
   A ruling that governs every finding in the file sits under the baseline instead, stating that reach.

@@ -124,6 +124,17 @@ label convention currently have no home in the library and no integration-test s
 into `Ecs` would give the next consumer of "list the entities matching these components" something
 to call.
 
+### Batch component reads over an entity list
+
+`eval` has no established route to construct an `EntityQuery` — entry 8 of `docs/SOURCES.md`
+records what failed and the one untried route. So the working recipe for "read one component
+off each of N entities" is
+`ecs_query` for the list, then one `eval` per batch of entities with a long interpolated final
+expression — a discovery pass read 55 prefab components in seven such calls, the batch size limited
+by statement count. The exclusions landed in the tool description, and with the recipe in the
+`unity-driving` skill, on 2026-08-10; what remains open is an `ecs_get_component` mode accepting
+several entities in one call, which would beat the recipe outright.
+
 ### Injected in-game helper (exploratory, opt-in)
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
