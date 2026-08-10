@@ -40,7 +40,7 @@ An entity is `index[:version]`, read identically by every ECS tool: a bare `inde
 Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
 `label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system, typically the game's name system (`MyGame.UI.NameSystem:GetRenderedLabelName`).
-State on a prefab or a disabled entity is invisible to `ecs_query` (the engine's own `EntityQuery` exclusion), so chase those by following a reference into the tool below rather than by querying for them.
+State on an entity carrying Unity's `Prefab` or `Disabled` tag is invisible to `ecs_query`, and so is an entity whose queried enableable component is currently disabled (the engine's own default `EntityQuery` filtering) — but a game's prefab-like entities are excluded only when they actually carry the tag, so try the query before concluding the state is unreachable, and chase what it cannot see by following a reference into the tool below.
 `ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
 Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
 Enableable components carry `enabled`: read it before concluding a system should have acted on the entity.
@@ -59,6 +59,8 @@ Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.N
 Structs build with initializer syntax (`new MyGame.Citizens.HouseholdMember { m_Household = h }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
 `out var x` declares a local the call writes; later statements can read it: `MyGame.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`.
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
+Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
+A bulk read is `ecs_query` for the entity list, then one `eval` per batch of entities closing on a single interpolated final expression.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.

@@ -29,7 +29,10 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     e.g. em.GetComponentData<MyComponent>(entity(123, 1))), indexers, `new` with initializers,
     casts, operators, ternary/`?.`/`??`, typeof(T), string interpolation, and `out var x` / `out x`
     arguments.
-    Not supported: lambdas, LINQ, loops, control flow.
+    Not supported: lambdas, LINQ, loops, control flow, array-creation expressions
+    (`new T[] { ... }`), and the `as` operator (a cast works); overload matching does no
+    `params` expansion, so a `params` method takes exactly one argument already typed as its
+    array.
     Roots: fully-qualified type names, plus builtins `em` (the world's EntityManager), `world` (the
     ECS World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's
     result; heap results may be collected once the game resumes).

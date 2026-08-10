@@ -40,7 +40,7 @@ The .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` 
 
 ## The eval contract
 
-The grammar is FROZEN: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators, assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`. Lambdas, LINQ, loops and control flow are rejected at parse time.
+The grammar is FROZEN: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators, assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`. Lambdas, LINQ, loops and control flow are rejected at parse time; array-creation expressions and the `as` operator sit outside the grammar too, and `params` expansion fails at overload matching, which wants exact arity.
 
 The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as C# would; edge semantics may diverge but must fail loudly with an actionable message, never succeed silently wrong.
 Deliberate divergences stay documented — today: numeric-to-enum convenience, in-range integral narrowing, enum/numeric operator mixing, `entity(index)` version defaulting.
