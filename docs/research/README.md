@@ -16,6 +16,7 @@ What lives here:
 
 - `conflicts.md` — every disagreement no agent may settle alone, waiting for the maintainer's ruling.
   Read the entries naming your topic before you start, ruled as well as open, append there rather than deciding, and follow the entry shape it documents.
+  Correcting the evidence inside a ruled entry is yours; what the ruling decided is not.
 - `survey-decompile-moddable-surface.md`, `survey-mods-techniques.md`, `survey-wiki-inventory.md` — one orientation survey per source, produced during the interview that became the spec.
   They predate these conventions and carry no per-claim verdicts.
   Read the ones your topic touches before you start: they exist so no topic agent begins cold.

@@ -207,6 +207,23 @@ list by hand drifted across six files in one review gate. `check-skill-content.t
 mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
 file's marker. Types named without a path stay the reviewer's job.
 
+### A source-first sweep of the shipped references
+
+Four of eight shipped claims sampled in one pass came back contradicted by the first-party source
+they describe: a mod-failure state the player is never shown, an upkeep share the game computes and
+never reads, an input option the prose said nothing reads, and a cell map glossed as the panel it
+does not feed. None was found by an audit. The benchmark ticket needed its answers verified against
+the owning source rather than against our own prose, so each agent was barred from reading
+`plugins/` and `docs/`, told to derive the answer from source before comparing it with the claim,
+and told that a disagreement was a useful result.
+
+Run the same fan-out deliberately over every shipped reference file, rather than over the claims a
+benchmark happened to touch. The plugin's `AGENTS.md` already prescribes this briefing for a review
+gate, but a gate runs at authoring time, on prose the same session wrote, aimed at one reference;
+nothing re-derives a shipped claim afterwards. What it costs is an agent per claim family and the
+maintainer's time ruling on what comes back. What it buys is the first evidence about the rest of
+the corpus, against none today.
+
 ### A second benchmark question set
 
 The first full `bench/` invocation scored 9.81 for the control arm against 10.00 for the treatment

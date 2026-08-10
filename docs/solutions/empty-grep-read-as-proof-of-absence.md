@@ -8,8 +8,9 @@ symptoms:
   - 'a claim reads "every call is an extend or an append" and the most common call is neither'
   - 'a grep of the decompiled source returns no hits for something the game plainly does'
   - 'a claim reads "written once and nothing ever writes it back" and a whole directory writes it'
+  - 'a claim reads "has no consumer" and the only consumer is elsewhere in the declaring file'
 tags: [research, decompile, grep, over-reach, verification, false-absence, corpus, census]
-updated: 2026-08-06
+updated: 2026-08-10
 ---
 
 # A grep came back empty and the pass concluded absence
@@ -39,7 +40,8 @@ produced the error, so a later sweep reproduces the same blind spot and comes ba
 
 ## Root cause
 
-Five distinct mechanisms, which is why fixing one instance taught nothing about the others.
+Each bullet below is a distinct mechanism, which is why fixing one instance taught nothing about the
+others.
 
 - **A compile-time `const` is inlined at its call sites.** A name-grep finds the declaration and
   nothing else however many consumers exist. `custom-tools` shipped "nothing in the game consumes
@@ -76,6 +78,17 @@ Five distinct mechanisms, which is why fixing one instance taught nothing about 
   that directory finds all of them. This got past the verify stage as well as the finders, because
   the verifier was handed the finder's pattern rather than the finder's question.
 
+- **Every hit landing in the declaring file, read as no hit at all.** A sweep for
+  `disallowModifiers` and `ignoreModifiers` across `src/` returned both declarations and one more
+  line, and `settings-and-input` shipped "have no C# consumer in `src/Game/`". That third line is
+  the consumer: `ProxyBinding.PathEquals` at `ProxyBinding.cs:824` reads `disallowModifiers` to pick
+  a path-only comparer, five hundred lines below the declaration at `:314` but in the same file, and
+  it decides whether two bindings on one key conflict. The grep was never empty — a hit list whose
+  every entry sits in the file that declares the symbol reads as the declaration and its neighbours,
+  so the eye stops before opening the second one. A member used only by its own type is the normal
+  case for a private helper, which is what makes this shape invisible: absence of *external*
+  consumers was measured and absence of *any* consumer was written down.
+
 ## Fix
 
 The `navigating-the-decompile` reference owns what to do about each of these, under "What an empty
@@ -95,6 +108,9 @@ instances have already survived a review gate on that basis alone: a census whos
 missed every primary-constructor struct, and a key enumeration whose character class missed the one
 key name carrying a digit. Both looked verified because an earlier pass had run the same pattern and
 got the same answer.
+
+Count where the hits landed, too, not just how many there were: a list confined to the declaring
+file is the one shape that looks like proof of absence while holding the disproof.
 
 So record the reach beside the result, and re-sweep by varying the pattern rather than repeating it.
 Where a search names a symbol the caller chooses — a receiver, an alias, an import name — it can
