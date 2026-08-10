@@ -13,9 +13,9 @@ A system's passes per day is `262144 / GetUpdateInterval(phase)`, and the passes
 
 Sources: `src/Game/Game.Simulation/LandValueSystem.cs`, `src/Game/Game.Net/LandValue.cs`, `src/Game/Game.Simulation/LandValueCell.cs`, `src/Game/Game.Prefabs/LandValueParameterData.cs`.
 
-**Land value is two values with one name, and rent reads the edge one.**
-`LandValueSystem` writes both a 128 × 128 `LandValueCell` map — the infoview layer, sampled by `LandValueSystem.GetCellIndex(float3)` — and a per-road-edge `Game.Net.LandValue { m_LandValue, m_Weight }`, which is what every rent computation reads through `Building.m_RoadEdge`.
-Source: `src/Game/Game.Simulation/LandValueSystem.cs`, `src/Game/Game.Simulation/RentAdjustSystem.cs`.
+**Land value is two values with one name — the per-road-edge one, and the cell map averaged from it — and rent reads the edge.**
+`LandValueSystem` writes both a 128 × 128 `LandValueCell` map — the rendered overlay and the hover tooltip, sampled by `LandValueSystem.GetCellIndex(float3)` — and a per-road-edge `Game.Net.LandValue { m_LandValue, m_Weight }`, which is what every rent computation reads through `Building.m_RoadEdge`, the land-value infoview panel's own headline average included.
+Source: `src/Game/Game.Simulation/LandValueSystem.cs`, `src/Game/Game.Simulation/RentAdjustSystem.cs`, `src/Game/Game.UI.InGame/LandValueInfoviewUISystem.cs`, `src/Game/Game.Rendering/OverlayInfomodeSystem.cs`, `src/Game/Game.UI.Tooltip/LandValueTooltipSystem.cs`.
 
 ```
 LandValueSystem (kTextureSize = 128, kUpdatesPerDay = 32, interval 262144 / 32),
@@ -98,13 +98,13 @@ ResourceNeeding -- Abandoned, Destroyed and ResourceNeeding freeze the condition
 Deleted and Temp are lifecycle exclusions:
   levelingCost = BuildingUtils.GetLevelingCost(...)      // the entry file's formula
   abandonCost  = BuildingUtils.GetAbandonCost(...)
-  tick upkeep  = ConsumptionData.m_Upkeep / 16, split into a materials share (/ kMaterialUpkeep, = 4)
-                 and a money share, the remainder
+  tick upkeep  = ConsumptionData.m_Upkeep / kUpdatesPerDay, minus a / kMaterialUpkeep (= 4) share
+                 that is deducted and then spent on nothing -- the charge is the remainder
   renter worth = sum over the Renter buffer: a household's money, or a company's total worth
                  including its owned vehicles
-  worth < money share -> condition -= m_BuildingConditionDecrement * pow(2, level) * max(1, renters)
+  worth < tick upkeep -> condition -= m_BuildingConditionDecrement * pow(2, level) * max(1, renters)
   else, any renters   -> condition += m_BuildingConditionIncrement[areaType] * pow(2, level) * max(1, renters)
-                         and each renter is charged an equal share of the money part
+                         and each renter is charged an equal share of the tick upkeep
   m_DebugFastLeveling -> condition written straight to levelingCost, replacing either arm's write
   condition >= levelingCost:
     BuildingFlags.Historical -> condition pinned at levelingCost, nothing further
@@ -163,4 +163,4 @@ Source: `src/Game/Game.Prefabs/BuildingInitializeSystem.cs`, `src/Game/Game.Simu
 `SignatureBuilding` writes `SpawnableBuildingData.m_Level = 5` (`kStatLevel = 5`, a `const`), but the upkeep bake substitutes level 2 for any prefab carrying `SignatureBuildingData`; the same prefabs never abandon, only `PayRentJob`'s listing gate excludes `Signature` (`AdjustRentJob`'s own listing path has no such guard).
 Source: `src/Game/Game.Prefabs/SignatureBuilding.cs`, `src/Game/Game.Prefabs/BuildingInitializeSystem.cs`, `src/Game/Game.Simulation/BuildingUpkeepSystem.cs`, `src/Game/Game.Simulation/PropertyRenterSystem.cs`, `src/Game/Game.Simulation/RentAdjustSystem.cs`.
 
-(VOLATILE: every system, job, component, field, flag and constant this file names, the two land-value shapes and the buffer indices most of all — their declarations in `Game.Simulation`, `Game.Buildings`, `Game.Prefabs`, `Game.Net`, `Game.Common`, `Game.Economy`, `Game.Companies`, `Game.Objects`, `Game.Triggers`, `Game.Vehicles` and `Game.Agents` under `src/Game/`, at the files the source lines cite.)
+(VOLATILE: every system, job, component, field, flag and constant this file names, the two land-value shapes and the buffer indices most of all — their declarations in `Game.Simulation`, `Game.Buildings`, `Game.Prefabs`, `Game.Net`, `Game.Common`, `Game.Economy`, `Game.Companies`, `Game.Objects`, `Game.Triggers`, `Game.Vehicles`, `Game.Agents`, `Game.UI.InGame`, `Game.Rendering` and `Game.UI.Tooltip` under `src/Game/`, at the files the source lines cite.)

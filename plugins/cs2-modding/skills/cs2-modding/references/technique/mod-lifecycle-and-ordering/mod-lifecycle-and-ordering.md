@@ -284,11 +284,12 @@ Both halves of the following matter, and either alone is unusable.
 
 **The power-of-two check fires at registration, in every phase, and takes the whole mod down.**
 The update system throws `System update interval not power of 2` while registering the system — that is, inside the `UpdateAt<T>` call in `OnLoad`.
-The exception propagates out of `OnLoad`, is caught by the mod manager, and fails the **entire mod** with a general-error state, not just the offending system.
+The exception propagates out of `OnLoad` and is caught by the mod manager, which fails the **entire mod** rather than the offending system.
 A returned interval of 10 is therefore not a slow system; it is a mod that does not load.
 
 **The interval itself is consulted in only three phases.**
-Only the overload that carries an update index reads the interval and offset, and that overload is called from exactly three places: `LoadSimulation`, `EditorSimulation` and `GameSimulation`.
+Only `UpdateSystem.Update(phase, updateIndex, iterationIndex)` gates on the interval and offset, and it reads them from the values cached at registration rather than by calling `GetUpdateInterval` again.
+`SimulationSystem` is that overload's only caller, at three sites — `LoadSimulation` from its loading-progress step, `EditorSimulation` and `GameSimulation` from its own update.
 A `GetUpdateInterval` override on a system registered in any other phase — `UIUpdate`, `Cleanup`, a modification phase — **has no effect at all**, and the system runs every time its phase runs.
 The game itself ships such a dead override, and this is a common mistake: a mod that "throttles" a UI system with an interval has throttled nothing.
 

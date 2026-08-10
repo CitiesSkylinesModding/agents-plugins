@@ -294,7 +294,7 @@ Whole-database saves exist as well, but the per-setting path is the one a mod wa
 
 **Key bindings persist inside the mod's own settings object, as `ProxyBinding` properties.**
 The struct serializes its map name, action name, component, name, device, control path and modifiers, and deliberately excludes the original path, the original modifiers and its link back to the composite that created it.
-So a deserialized binding carries no source and reports no rebind options, no modifier options and no usages until it is matched back against a registered action — which is what the decode hook and the key-binding registration above do.
+So a deserialized binding carries no source and reports no rebind options, no usages, and `ModifierOptions.Disallow` rather than an absence, until it is matched back against a registered action — which is what the decode hook and the key-binding registration above do.
 The game's own rebinds live elsewhere and are never mixed into a mod's file.
 
 ## Declaring an input action: two attribute layers
@@ -336,7 +336,8 @@ So a mod that never writes the class-level attribute has actions, and has no con
 Only `Allow` adds modifier parts to the composite, attaching every modifier the device supports and marking each one with a prohibition processor unless the player's binding names it.
 The supported set is shift, ctrl and alt for keyboard and mouse, and the two stick presses for gamepad.
 So under `Allow`, an action bound to a plain `E` does **not** fire while Ctrl is held; under `Disallow` or `Ignore`, no modifier parts exist and the action fires regardless.
-`Disallow` and `Ignore` differ only in what they tell the rebinding UI, and nothing in the game's own C# reads that difference.
+`Disallow` and `Ignore` are not interchangeable: `ProxyBinding.PathEquals` compares on the control path alone whenever either side is `Disallow`, so a `Disallow` binding matches another on the same key whatever modifiers either carries — and that is the comparison both conflict mechanisms below run on.
+`Ignore` is read nowhere: `ignoreModifiers` has no consumer in the game's C#, and every other test — the rebinding UI's included — asks only whether the option is `Allow`.
 
 **Registration is one pass.**
 It groups the `ProxyBinding` properties by action name, skipping any whose component implies a different action type than the group already carries — which is the mechanism that lets one action carry several bindings.
@@ -365,12 +366,12 @@ Custom strings are free-form, and a mod naming its own — one per tool, say —
 Teaching one without the other leaves a reader either debugging a dead hotkey against a mechanism that never touched it, or convinced the usage strings they wrote do nothing.
 
 **A usage narrows the conflict the player is _shown_.**
-The per-row warning triangle and the per-map notification both go through a usage-aware comparison, which requires the two bindings to share at least one usage on top of matching device and control path.
+The per-row warning triangle and the per-map notification both go through a usage-aware comparison, which requires the two bindings to share at least one usage on top of matching device and control path — modifiers included in that match, except where either side is `Disallow`.
 A usage has one further effect, in the options screen's rebinding flow: the cascade that resolves a rebind skips any competing binding sharing no usage with the set it has accumulated so far, and that set grows transitively through the linked actions it walks.
 So usages decide which _other_ bindings a player's rebind swaps onto the new key, empties, or reports unsolvable — writes, not display.
 
 **The pass that _disables_ an action ignores usages entirely.**
-It goes through a comparison called with usage checking switched off, so it pairs any two currently-enabled actions sharing a device and a control path, whatever usages either carries.
+It goes through a comparison called with usage checking switched off, so it pairs any two currently-enabled actions the same path comparison matches, whatever usages either carries.
 
 (VOLATILE: that the disabling pass compares bindings with usage checking off — the input manager's conflict test, at its single call site from conflict resolution.)
 

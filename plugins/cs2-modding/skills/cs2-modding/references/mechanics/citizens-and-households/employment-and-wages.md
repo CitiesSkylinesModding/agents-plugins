@@ -58,8 +58,8 @@ Taxable income is the amount minus `m_ResidentialMinimumEarnings / 32`, accumula
 `GetBestFor` walks down, so an educated citizen takes an uneducated slot if that is what is free — and `m_Level` on both records is the slot's level, so the wage follows the job, not the education.
 Source: `src/Game/Game.Companies/FreeWorkplaces.cs`, `src/Game/Game.Simulation/PayWageSystem.cs`.
 
-**A stale `m_Workplace` earns nothing, not even the unemployment fallback.**
-Being paid requires the citizen to appear in the workplace's `Employee` buffer, not merely to hold a `Worker` pointing at it.
+**A stale `m_Workplace` earns nothing, not even the unemployment fallback, while its entity still carries an `Employee` buffer.**
+The citizen must appear in that buffer and not merely hold a `Worker` pointing at it, and absence returns before the fallback arm; an entity carrying no `Employee` buffer at all fails the outer test instead, and its citizen takes the fallback normally.
 Source: `src/Game/Game.Simulation/PayWageSystem.cs`.
 
 **There are two unemployment counters, and happiness reads the one that is not a search counter.**
