@@ -17,6 +17,7 @@ jobs:
       - run: mise check:agents
       - run: mise build:gameface
       - run: git diff --exit-code
+      - run: mise test:gameface
       # The C# side compiles in CI to catch build errors, but the committed unity-devtools exe is
       # NOT diffed: a "dotnet publish" has not (yet?) been tested to be byte-reproducible across
       # environments.

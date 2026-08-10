@@ -53,6 +53,7 @@ description = "Type-checks the server, the root scripts and the benchmark with t
 raw = true
 run = [
   "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp",
+  "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp/tests",
   "bun --bun tsc --noEmit -p tsconfig.json",
   "bun --bun tsc --noEmit -p bench/tsconfig.json"
 ]
@@ -97,6 +98,7 @@ description = "Type-checks every TypeScript project with tsc, output optimized f
 raw = true
 run = [
   "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp",
+  "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp/tests",
   "bun --bun tsc --noEmit --pretty false -p tsconfig.json",
   "bun --bun tsc --noEmit --pretty false -p bench/tsconfig.json"
 ]
@@ -112,6 +114,11 @@ run = "bun --bun oxlint --deny-warnings --format agent"
 description = "Run the .NET test suite (unity-devtools evaluator: parser and operator semantics)."
 raw = true
 run = "dotnet test agents-plugins.slnx"
+
+[tasks."test:gameface"]
+description = "Run the gameface MCP server's unit tests (the console capture pipeline). Hermetic: no application, no socket."
+raw = true
+run = "bun test plugins/coherent-gameface/mcp"
 
 [tasks."bench:test"]
 description = "Run the skill-efficacy benchmark's unit tests (bench/core.ts, the tool's pure core)."

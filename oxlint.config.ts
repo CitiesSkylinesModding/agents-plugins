@@ -43,10 +43,13 @@ export default defineConfig({
       }
     },
     {
-      files: ['bench/tests/*.test.ts'],
+      files: ['**/tests/*.test.ts'],
       rules: {
-        // A fixture's numbers are the test: naming each token count and score would say the same
-        // thing twice, and the assertion is where the reader checks the arithmetic.
+        // A fixture is the test: its numbers, its short property names and its stub functions are
+        // what the assertion reads, and naming each one would say the same thing twice.
+        'func-name-matching': 'off',
+        'id-length': 'off',
+        'no-empty-function': 'off',
         'no-magic-numbers': 'off'
       }
     }
