@@ -5,7 +5,9 @@ symptoms:
   - 'every claim in a passage re-derives clean and the passage still cannot be followed'
   - 'a reader-perspective review returns no findings twice, then four the moment it writes code'
   - 'an instruction to cache and an instruction to invalidate that cannot both be obeyed'
-tags: [review, verification, prose, agent-facing, review-gate, composition]
+  - 'a corrected count breaks again at the next review round'
+tags: [review, verification, prose, agent-facing, review-gate, composition, census]
+updated: 2026-08-11
 ---
 
 # Every claim verified, and the instructions still did not compose
@@ -116,3 +118,9 @@ structural change announces that it needs testing and gets it: the split above d
 scrutiny in a day. Two sections of one file that contradict each other announce nothing, and the
 tasks that caught those cost no more to write than the ones that crossed the boundary — they were
 simply aimed at the file's own distances instead of its edges.
+
+**A count corrected by recounting breaks again.** One review corrected the same census three times
+(nine → sixteen → nineteen mode classes), each recount matching only the shapes the corrector
+already held — this doc's defect at the scale of a number. What held: strip the count of its
+authority — ship the set's shape with the re-check attached (the grep or query that re-derives
+membership), and have the volatility marker direct the sweep to run it.

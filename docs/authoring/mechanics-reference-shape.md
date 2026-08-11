@@ -31,6 +31,7 @@ The entry file carries these sections after its warning, in this order:
   And before a trap or a row treats a parameter component as written once, read [retuning a parameter component the game mode rewrites](../solutions/retuning-a-parameter-component-the-game-mode-rewrites.md): whether the loaded game mode rebuilds it on load is authored asset data, invisible to any code read.
   A prefab class's own field initializer is a Unity-serialized default the shipped asset overrides, not a C# constant: it ships as the field, never as the figure (ruled in `docs/research/conflicts.md`; the test is what consumes the value).
   The access-shape cell carries the read, never a writer roster.
+  A compact validity qualifier (stale, unclamped, sentinel) may ride beside the read; the full rule lives in a trap or the owning sibling.
   A row whose value another topic owns carries "belongs to `<topic>`" in that cell, in place of the read or beside it where only part of the row routes — that fixed phrase is the only routing the column admits, so a lint or reader can tell the two apart.
 - **`## Traps`** — what a reader gets wrong by opening the file the map sends them to.
 - **`## Formulas`** — the expressions, transcribed from the C#. A topic whose expressions all live in siblings omits the section rather than duplicating one.
@@ -73,3 +74,4 @@ A formula two listings both model is transcribed in both: a listing models its m
 Every name in a mechanics file rots at the same rate and closes on the same sweep, so a marker per section restates one fact until it reads as wallpaper.
 A sibling carries its own, and `UNVERIFIED:` stays per claim.
 An edit that names a type from a new namespace is a marker edit: re-close the marker's location list against everything the file now names, in every file the pass touched.
+The kind list re-closes the same way: a marker missing the properties, methods or quoted strings its file names hides them from the sweep.
