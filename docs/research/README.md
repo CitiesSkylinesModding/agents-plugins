@@ -36,6 +36,7 @@ Taking attribution off is the authoring stage's job, and the only place it happe
 ## What a research file carries
 
 One file per topic: the title, the baseline line under it, then `## Findings`, `## Bridge` and `## Dead ends` in that order.
+Drafting history fits none of the categories below: the corrected claim with its citation is the whole record, so no "an earlier draft said" survives — a road walked in error is a dead end, and a claim still unsettled is `Unconfirmed:`.
 
 - **A citation on every claim.** `src/<assembly>/<namespace>/<Type>.cs:<line>` for decompiled source, `<checkout>/<path>:<line>` for anything else inside a decompile checkout, `<repo>/<path>:<line>` for a mod, an install-relative path for a file in the installed game, `<package>/<path>:<line>` for a file in an installed toolchain package, a path from this repository's root for a file in it, `<file>:<line>` for a sibling file here, the full URL for a wiki page.
   Cite a range as `:<first>-<last>` and scattered lines as `:<a>/<b>/<c>`; a claim about a whole file cites the path alone.

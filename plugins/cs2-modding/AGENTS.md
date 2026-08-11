@@ -90,6 +90,7 @@ Where the prose prescribes a search, hand the finder the search and ask what it 
 **`/simplify` runs before the gate.**
 Simplifying afterwards re-opens reviewed prose, which earns another gate: simplify-then-gate converges, gate-then-simplify loops.
 Aim it at what authoring overproduces — how a conclusion was reached, a rule restated in the file that does not own it, a count or a date standing where an invariant belongs.
+A sentence beside a transcribed listing is cut only against the cited source: what reads as restating the listing can be the only carrier of a guard the listing elides.
 
 **A green `mise check:skill-content` says nothing about whether a reference is right.**
 It checks the shapes a script can see, which `scripts/check-skill-content.ts` enumerates.
