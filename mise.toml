@@ -116,7 +116,7 @@ raw = true
 run = "dotnet test agents-plugins.slnx"
 
 [tasks."test:gameface"]
-description = "Run the gameface MCP server's unit tests (the console capture pipeline). Hermetic: no application, no socket."
+description = "Run the gameface MCP server's unit tests. Hermetic: no application, no socket."
 raw = true
 run = "bun test plugins/coherent-gameface/mcp"
 

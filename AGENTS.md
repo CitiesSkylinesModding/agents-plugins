@@ -37,7 +37,7 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Commands
 
 - `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
-- `mise test`: the .NET test suite. `mise test:gameface` is the gameface console pipeline's and `mise bench:test` the benchmark core's, the two TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
+- `mise test`: the .NET test suite. `mise test:gameface` is the gameface MCP server's and `mise bench:test` the benchmark core's, the two TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
 - `mise build:gameface`: rebuild the shipped gameface bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).

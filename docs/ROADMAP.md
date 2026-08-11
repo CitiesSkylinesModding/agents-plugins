@@ -27,25 +27,13 @@ the engine would have accepted — the unsupported set is verified against one C
 screen either gates on the version `game_status` already reports or warns while letting the call
 through.
 
-### Debugger ergonomics
+### Removing a breakpoint the UI is paused at
 
-Three sharp edges found while field-testing the debugger against a live game:
-
-- `game_screenshot` hangs for the full call timeout while the UI is paused (`Page.captureScreenshot`
-  needs the frozen frame loop); the server knows the pause state and should fail fast with "paused;
-  resume first". Only gate frame-dependent commands: `Runtime.evaluate` keeps working while paused
-  (verified), so `game_eval`, `game_dom`, and `game_wait` must stay usable.
-- The debugger only sees scripts parsed after it attaches (Gameface does not replay
-  `scriptParsed`), so a late attach lists nothing; `game_debug_scripts` should say so and suggest
-  triggering a UI reload.
-- On minified one-line bundles, a line breakpoint resolves to column 0 (module evaluation) and
-  never hits during normal interaction. `game_debug_set_breakpoint` should report the resolved
-  column and warn on single-line scripts; a `game_debug_search_source` (find string, return
-  line:column candidates) would make column targeting practical.
-- Open question: whether CDP breakpoints re-resolve across a same-connection view reload (scripts
-  re-parse under fresh scriptIds; the server prunes its script map, but the engine-side
-  `setBreakpointByUrl` registrations were never verified to re-bind). Probe before relying on
-  breakpoints surviving a reload.
+`game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
+pause still standing at that very breakpoint, which leaves the UI frozen with the thing that froze
+it gone. The pause accessor the screenshot gate reads answers this at no cost: name the pause in the
+result, and route to `game_debug_step`. Worth weighing whether removal should offer to resume, which
+the rest of the debugger surface refuses to do on the agent's behalf.
 
 ### Console call sites
 
