@@ -157,7 +157,8 @@ debugger.
 | `game_debug_status` | Debugger state: paused?/where, pause-on-exceptions, breakpoints, script count. Also sets pause-on-exceptions. |
 | `game_debug_scripts` | List parsed UI scripts (scriptId + url), filterable by url substring. |
 | `game_debug_source` | Get a script's source (by scriptId) with line numbers, optionally a line range. |
-| `game_debug_set_breakpoint` | Break at url-substring + line (1-based), with an optional JS condition. |
+| `game_debug_search_source` | Find a literal string across the parsed sources; returns url + line + column (1-based) and a snippet per hit. |
+| `game_debug_set_breakpoint` | Break at url-substring + line, optionally column (both 1-based), with an optional JS condition. Reports where the engine bound it. |
 | `game_debug_remove_breakpoint` | Remove a breakpoint by id, or `all`. |
 | `game_debug_pause_state` | When paused: the call stack, optionally with each frame's local/closure variables. |
 | `game_debug_evaluate` | Evaluate in the paused frame's scope (read locals), or globally when running. |
@@ -167,6 +168,11 @@ debugger.
 > with `resume`). Prefer conditional breakpoints to limit freezes, and while paused inspect with
 > `game_debug_evaluate` rather than `game_eval`. Safety net: if the server's connection drops while
 > paused, the engine auto-resumes.
+
+> **The debugger only sees scripts parsed since it attached**: Gameface does not replay
+> `scriptParsed`, so a late attach lists nothing until a view reload re-parses everything.
+> Breakpoints, on the other hand, survive a reload: the engine re-binds its own registrations to the
+> re-parsed script.
 
 ## Configuration
 

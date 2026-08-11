@@ -14,7 +14,7 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { oneLine } from 'common-tags';
-import type { CdpClient, CdpConnectListener, CdpEventListener } from './cdp';
+import type { CdpCall, CdpClient, CdpConnectListener, CdpEventListener } from './cdp';
 import {
   type EvaluateResult,
   type RemoteObject,
@@ -67,12 +67,13 @@ const DEFAULT_MAX_PENDING = 32;
 
 /**
  * The slice of the CDP client the console pipeline needs.
- * Narrow on purpose: this is the one part of the server exercised without a live application.
+ * Narrow on purpose: it is what lets the pipeline run against synthetic events, with no socket and
+ * no application.
  */
 export interface ConsoleCdp {
   readonly onConnect: (listener: CdpConnectListener) => void;
   readonly onEvent: (listener: CdpEventListener) => void;
-  readonly call: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
+  readonly call: CdpCall;
 }
 
 /**

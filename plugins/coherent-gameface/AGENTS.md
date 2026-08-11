@@ -18,7 +18,7 @@ The plugin wears two hats, with distinct names:
 - `skills/gameface/`: the domain-knowledge skill — what the engine supports (layout, events, platform APIs), with `references/` and the `scripts/fetch-doc.mjs` docs extractor.
 - `skills/gameface-driving/`: the operational skill for driving a live UI with the `game_*` tools.
 - `mcp/src/`: the server (TypeScript). `mcp/package.json` is the publishable npm package.
-- `mcp/tests/`: the server's unit tests (`mise test:gameface`), hermetic and typed against Bun through their own tsconfig. A facet reaches them by taking an injected CDP facade, which is what makes it testable without a live application; the console pipeline is the one that does today.
+- `mcp/tests/`: the server's unit tests (`mise test:gameface`), hermetic and typed against Bun through their own tsconfig. A facet reaches them by taking an injected CDP facade, which is what makes it testable without a live application; the console pipeline and the debugger session are the ones that do today.
 - `mcp/dist/server.mjs`: the shipped self-contained bundle. COMMITTED on purpose (zero-install); also what npm publishes and the package's `bin`.
 
 ## Conventions
@@ -26,6 +26,7 @@ The plugin wears two hats, with distinct names:
 - **One tier per fact.** Traps every caller needs go in the tool descriptions (always in context once the tools load, and all a standalone MCP client gets); interpretation and procedure go in the skill.
 - **Skills and docs stay generic.** State what holds for any Gameface UI. The engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain; a particular game's use of it is not. Where a CS2 specific genuinely aids understanding, demote it to a labelled example ("verified on CS2: …") instead of letting it frame the section — and prefer none at all in general procedure.
 - **One sentence per line** in `skills/**` markdown, never wrapped at 100 chars: fewer tokens in context, line-granular diffs.
+- **Report the size that predicts the cost.** A tool returning text takes a character budget with a default (`game_dom`'s `maxHtml`, `game_debug_source`'s `maxChars`) and marks what it clipped; a line or element count lets a caller walk into a megabyte.
 
 ## Build and shipping
 

@@ -31115,12 +31115,44 @@ function unknownValue() {
 // src/debugger.ts
 var import_common_tags3 = __toESM(require_lib(), 1);
 import { setTimeout as sleep } from "node:timers/promises";
-var SCRIPT_REPLAY_WAIT_MS = 350;
 var POLL_INTERVAL_MS = 50;
 var PAUSE_WAIT_MS = 3000;
 var RESUME_WAIT_MS = 2000;
 var STEP_WAIT_MS = 2000;
 var MAX_SCOPE_VARIABLES = 50;
+var MAX_SEARCH_MATCHES = 10;
+var SEARCH_SNIPPET_MARGIN = 40;
+var DEFAULT_SOURCE_MAX_CHARS = 4000;
+var EMPTY_SCRIPT_MAP_NOTE = import_common_tags3.oneLine`
+  No scripts are parsed on this connection: a view reload re-parses every one of them.
+  Take the reload count from game_status, game_eval of location.reload(), then game_wait with
+  reload true and that count as sinceReloads, then call this again.
+`;
+var NO_MATCH_NOTE = import_common_tags3.oneLine`
+  Nothing matched. The search is case-sensitive and literal (no regex), and it only reaches scripts
+  parsed on this connection: game_debug_scripts lists them.
+`;
+var FILTER_MISS_NOTE = import_common_tags3.oneLine`
+  No parsed script's url contains that urlContains, so the query never ran against anything.
+  game_debug_scripts lists the urls; the url filter is case-insensitive, so case is not the cause.
+`;
+var UNREADABLE_NOTE = import_common_tags3.oneLine`
+  The engine has no source for any of the scripts matched, so the query never ran: their ids are
+  stale, which a view reload clears by re-parsing everything under fresh ones.
+`;
+var SEARCH_HINT = import_common_tags3.oneLine`
+  Pass a match's line and column to game_debug_set_breakpoint to break there; both are 1-based, as
+  everywhere in these tools, and its urlContains takes the match's url as printed.
+`;
+var SINGLE_LINE_HINT = import_common_tags3.oneLine`
+  That script is one line, as a minified bundle is, so the whole module sits on the line the
+  resolved location names and the breakpoint bound to the first breakable position at or after the
+  one you asked for: read the column above to see where it landed.
+  At the module's own first column that is evaluation code, which runs on load and never again
+  during interaction.
+  To break inside a function, find its column with game_debug_search_source and pass that column
+  here.
+`;
 function escapeRegex2(value) {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 }
@@ -31143,6 +31175,12 @@ class DebuggerSession {
       this.scripts.clear();
     });
   }
+  get pause() {
+    if (!this.paused) {
+      return;
+    }
+    return { reason: this.paused.reason, location: this.topLocation() };
+  }
   async status(setPause) {
     try {
       await this.ensureReady();
@@ -31154,8 +31192,9 @@ class DebuggerSession {
         id: bp.id,
         urlContains: bp.urlContains,
         line: bp.lineNumber + 1,
+        column: bp.columnNumber == null ? undefined : bp.columnNumber + 1,
         condition: bp.condition,
-        resolved: bp.locations.length
+        resolvedLocations: bp.resolved
       }));
       return text(JSON.stringify({
         enabled: true,
@@ -31176,49 +31215,87 @@ class DebuggerSession {
   async listScripts(filter) {
     try {
       await this.ensureReady();
-      const needle = filter?.toLowerCase();
-      let scripts = [...this.scripts.values()];
-      if (needle) {
-        scripts = scripts.filter((script) => script.url.toLowerCase().includes(needle));
-      }
-      scripts.sort((a, b) => a.url.localeCompare(b.url));
+      const scripts = this.filteredScripts(filter);
       const cap = 120;
       const shown = scripts.slice(0, cap).map((script) => ({
         scriptId: script.scriptId,
         url: script.url || "(anonymous)",
-        lines: script.endLine || undefined
+        lines: script.endLine - script.startLine + 1,
+        firstLine: script.startLine == 0 ? undefined : script.startLine + 1
       }));
       return text(JSON.stringify({
         total: scripts.length,
         shown: shown.length,
         truncated: scripts.length > cap,
-        scripts: shown
+        scripts: shown,
+        note: this.scripts.size == 0 ? EMPTY_SCRIPT_MAP_NOTE : undefined
       }, null, 2));
     } catch (error51) {
       return toErrorResult(error51);
     }
   }
-  async getSource(scriptId, lineStart, lineEnd) {
+  async searchSource(query, urlContains) {
     try {
       await this.ensureReady();
-      const res = await this.client.call("Debugger.getScriptSource", {
-        scriptId
-      });
-      const source = res?.scriptSource;
+      const scripts = this.filteredScripts(urlContains);
+      const { matches, total, unreadable } = await this.collectMatches(scripts, query);
+      const missNote = this.missNote(scripts.length, unreadable);
+      return text(JSON.stringify({
+        query,
+        urlContains,
+        scriptsSearched: urlContains == null ? undefined : scripts.length,
+        total,
+        returned: matches.length,
+        truncated: total > matches.length,
+        matches,
+        note: total == 0 ? missNote : undefined,
+        hint: total == 0 ? undefined : SEARCH_HINT
+      }, null, 2));
+    } catch (error51) {
+      return toErrorResult(error51);
+    }
+  }
+  async getSource(scriptId, lineStart, lineEnd, maxChars) {
+    try {
+      await this.ensureReady();
+      const source = await this.scriptSource(scriptId);
       if (source == null) {
         return errorText(`No source for scriptId ${scriptId}.`);
       }
       const lines = source.split(`
 `);
-      const from = lineStart && lineStart > 0 ? lineStart : 1;
+      const offset = this.scripts.get(scriptId)?.startLine ?? 0;
+      const first = offset + 1;
+      const last = offset + lines.length;
       const cap = 400;
-      const to = lineEnd && lineEnd >= from ? Math.min(lineEnd, from + cap - 1) : Math.min(lines.length, from + cap - 1);
+      const from = lineStart && lineStart > first ? lineStart : first;
+      if (from > last) {
+        return errorText(import_common_tags3.oneLine`
+          Script ${scriptId} spans lines ${first}-${last}, so there is nothing at line ${from}.
+        `);
+      }
+      const to = Math.min(lineEnd && lineEnd >= from ? lineEnd : last, last, from + cap - 1);
       const padWidth = 5;
-      const slice = lines.slice(from - 1, to).map((line, index) => `${String(from + index).padStart(padWidth)}  ${line}`).join(`
+      const rendered = lines.slice(from - first, to - offset).map((line, index) => `${String(from + index).padStart(padWidth)}  ${line}`).join(`
 `);
-      const note = to < lines.length || from > 1 ? `
-... showing lines ${from}-${to} of ${lines.length}.` : "";
-      return text(slice + note);
+      const budget = maxChars ?? DEFAULT_SOURCE_MAX_CHARS;
+      const clipped = rendered.length > budget;
+      const body = clipped ? rendered.slice(0, budget) : rendered;
+      const shownTo = from + body.replace(/\n$/u, "").split(`
+`).length - 1;
+      const notes = [];
+      if (shownTo < last || from > first) {
+        notes.push(`showing lines ${from}-${shownTo} of ${last}`);
+      }
+      if (clipped) {
+        notes.push(import_common_tags3.oneLine`
+          clipped to ${budget} of ${rendered.length} characters: raise maxChars for more, or reach
+          a position inside a minified line with game_debug_search_source
+        `);
+      }
+      const note = notes.length > 0 ? `
+... ${notes.join(". ")}.` : "";
+      return text(body + note);
     } catch (error51) {
       return toErrorResult(error51);
     }
@@ -31227,26 +31304,33 @@ class DebuggerSession {
     try {
       await this.ensureReady();
       const lineNumber = Math.max(0, line - 1);
+      const columnNumber = column == null ? undefined : Math.max(0, column - 1);
       const urlRegex = escapeRegex2(urlContains);
-      const res = await this.client.call("Debugger.setBreakpointByUrl", { urlRegex, lineNumber, columnNumber: column, condition });
+      const res = await this.client.call("Debugger.setBreakpointByUrl", { urlRegex, lineNumber, columnNumber, condition });
       const id = this.nextBpId++;
       const locations = res.locations ?? [];
+      const resolved = locations.map((loc) => this.locStr(loc));
       this.breakpoints.set(id, {
         id,
         urlContains,
         urlRegex,
         lineNumber,
-        columnNumber: column,
+        columnNumber,
         condition,
         cdpId: res.breakpointId,
-        locations
+        resolved
+      });
+      const singleLine = locations.some((loc) => {
+        const script = this.scripts.get(loc.scriptId);
+        return script != null && script.endLine == script.startLine;
       });
       return text(JSON.stringify({
         id,
         urlContains,
         line,
-        condition: condition ?? null,
-        resolvedLocations: locations.map((loc) => this.locStr(loc)),
+        column,
+        condition,
+        resolvedLocations: resolved,
         pending: locations.length == 0,
         note: locations.length == 0 ? import_common_tags3.oneLine`
                     Pending: no matching script/line loaded yet, or the line has no code.
@@ -31254,7 +31338,8 @@ class DebuggerSession {
                   ` : import_common_tags3.oneLine`
                     Hitting this breakpoint FREEZES the UI until you resume
                     (game_debug_step resume).
-                  `
+                  `,
+        hint: singleLine ? SINGLE_LINE_HINT : undefined
       }, null, 2));
     } catch (error51) {
       return toErrorResult(error51);
@@ -31360,9 +31445,15 @@ class DebuggerSession {
       }
       if (action == "resume") {
         await this.client.call("Debugger.resume");
-        const deadline = Date.now() + RESUME_WAIT_MS;
-        while (Date.now() < deadline && this.paused) {
-          await sleep(POLL_INTERVAL_MS);
+        await this.waitUntil(() => !this.paused, RESUME_WAIT_MS);
+        if (this.paused) {
+          return errorText(import_common_tags3.oneLine`
+            Resume sent, but the UI is paused again at ${this.topLocation()}
+            (reason: ${this.paused.reason}), so it is still frozen.
+            Whatever armed that pause sits on the resumed path, so clear it before resuming again:
+            game_debug_remove_breakpoint for a breakpoint, or game_debug_status
+            setPauseOnExceptions none when the reason above is an exception.
+          `);
         }
         return text(`Resumed (UI unfrozen).`);
       }
@@ -31389,7 +31480,7 @@ class DebuggerSession {
           condition: bp.condition
         });
         bp.cdpId = res.breakpointId;
-        bp.locations = res.locations ?? [];
+        bp.resolved = (res.locations ?? []).map((loc) => this.locStr(loc));
       } catch {}
     }
   }
@@ -31399,6 +31490,7 @@ class DebuggerSession {
         scriptId: params.scriptId,
         url: params.url || "",
         startLine: params.startLine ?? 0,
+        startColumn: params.startColumn ?? 0,
         endLine: params.endLine ?? 0,
         length: params.length
       });
@@ -31411,13 +31503,73 @@ class DebuggerSession {
       this.pausedSeq++;
     } else if (method == "Debugger.resumed") {
       this.paused = undefined;
+    } else if (method == "Debugger.breakpointResolved") {
+      this.recordResolved(params);
+    }
+  }
+  recordResolved(params) {
+    const location = params.location;
+    const bp = [...this.breakpoints.values()].find((entry) => entry.cdpId == params.breakpointId);
+    if (location == null || bp == null) {
+      return;
+    }
+    const at = this.locStr(location);
+    if (!bp.resolved.includes(at)) {
+      bp.resolved.push(at);
     }
   }
   async ensureReady() {
     await this.client.connection();
+  }
+  filteredScripts(contains) {
+    return [...this.scripts.values()].filter((script) => matchesUrl(script.url, contains)).toSorted((a, b) => a.url.localeCompare(b.url));
+  }
+  missNote(scriptsSearched, unreadable) {
     if (this.scripts.size == 0) {
-      await sleep(SCRIPT_REPLAY_WAIT_MS);
+      return EMPTY_SCRIPT_MAP_NOTE;
     }
+    if (scriptsSearched == 0) {
+      return FILTER_MISS_NOTE;
+    }
+    return unreadable == scriptsSearched ? UNREADABLE_NOTE : NO_MATCH_NOTE;
+  }
+  async collectMatches(scripts, query) {
+    const matches = [];
+    let total = 0;
+    let unreadable = 0;
+    for (const script of scripts) {
+      let source;
+      try {
+        source = await this.scriptSource(script.scriptId);
+      } catch {
+        unreadable++;
+        continue;
+      }
+      if (source == null) {
+        unreadable++;
+        continue;
+      }
+      let at = source.indexOf(query);
+      while (at >= 0) {
+        total++;
+        if (matches.length < MAX_SEARCH_MATCHES) {
+          matches.push({
+            url: script.url || "(anonymous)",
+            scriptId: script.scriptId,
+            ...resourcePosition(script, positionAt(source, at)),
+            snippet: snippetAt(source, at, query.length)
+          });
+        }
+        at = source.indexOf(query, at + query.length);
+      }
+    }
+    return { matches, total, unreadable };
+  }
+  async scriptSource(scriptId) {
+    const res = await this.client.call("Debugger.getScriptSource", {
+      scriptId
+    });
+    return res?.scriptSource;
   }
   async removeCdpBreakpoint(bp) {
     if (bp.cdpId == null) {
@@ -31445,10 +31597,13 @@ class DebuggerSession {
     }
     return variables;
   }
-  async waitForNewPause(beforeSeq, timeoutMs) {
+  waitForNewPause(beforeSeq, timeoutMs) {
+    return this.waitUntil(() => this.pausedSeq > beforeSeq, timeoutMs);
+  }
+  async waitUntil(done, timeoutMs) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-      if (this.pausedSeq > beforeSeq) {
+      if (done()) {
         return true;
       }
       await sleep(POLL_INTERVAL_MS);
@@ -31457,8 +31612,8 @@ class DebuggerSession {
   }
   locStr(loc) {
     const url2 = this.scripts.get(loc.scriptId)?.url ?? "";
-    const label = url2.length > 0 ? url2 : loc.scriptId;
-    return `${label}:${loc.lineNumber + 1}`;
+    const label = url2.length > 0 ? url2 : `(unknown script ${loc.scriptId})`;
+    return `${label}:${loc.lineNumber + 1}:${(loc.columnNumber ?? 0) + 1}`;
   }
   topLocation() {
     const frame = this.paused?.callFrames[0];
@@ -31467,6 +31622,36 @@ class DebuggerSession {
     }
     return `${frame.functionName || "(anonymous)"} at ${this.locStr(frame.location)}`;
   }
+}
+function matchesUrl(url2, contains) {
+  if (contains == null) {
+    return true;
+  }
+  return url2.toLowerCase().includes(contains.toLowerCase());
+}
+function resourcePosition(script, position) {
+  return {
+    line: position.line + script.startLine,
+    column: position.line == 1 ? position.column + script.startColumn : position.column
+  };
+}
+function positionAt(source, index) {
+  let line = 1;
+  let lineStart = 0;
+  for (let at = source.indexOf(`
+`);at >= 0 && at < index; at = source.indexOf(`
+`, at + 1)) {
+    line++;
+    lineStart = at + 1;
+  }
+  return { line, column: index - lineStart + 1 };
+}
+function snippetAt(source, index, length) {
+  const from = Math.max(0, index - SEARCH_SNIPPET_MARGIN);
+  const to = Math.min(source.length, index + length + SEARCH_SNIPPET_MARGIN);
+  const head = from > 0 ? "…" : "";
+  const tail = to < source.length ? "…" : "";
+  return `${head}${source.slice(from, to)}${tail}`;
 }
 
 // src/tools.ts
@@ -31541,9 +31726,22 @@ async function gameEval(client, expression, awaitPromise = false) {
     return toErrorResult(error51);
   }
 }
-async function gameScreenshot(client, options = {}) {
+async function gameScreenshot(client, debug, options = {}) {
   const { format = "png", quality, selector, index = 0 } = options;
   try {
+    await client.connection();
+    const { pause } = debug;
+    if (pause) {
+      return errorText(import_common_tags4.oneLine`
+        game_screenshot cannot capture while the JS debugger holds the UI paused
+        (${pause.reason}, at ${pause.location}): the capture needs the frame loop the pause has
+        frozen, so it would hang until the call times out.
+        Resume with game_debug_step action=resume, then capture.
+        Resuming abandons this stopped frame, so read what you still need from it first, with
+        game_debug_pause_state and game_debug_evaluate; both work while paused, as do game_eval,
+        game_dom, game_query and the input tools.
+      `);
+    }
     await client.ensureDomain("Page");
     const params = { format };
     if (format == "jpeg") {
@@ -31671,6 +31869,17 @@ function queryRejection(options, mode) {
   }
   return;
 }
+function pausedNote(debug) {
+  const { pause } = debug;
+  if (!pause) {
+    return "";
+  }
+  return import_common_tags4.oneLine`
+    The UI is paused in the JS debugger (${pause.reason}, at ${pause.location}): nothing in it can
+    change until you resume with game_debug_step action=resume, so resume and retry rather than
+    reading this as an unreachable condition.
+  `;
+}
 async function gameClick(client, selector, index = 0) {
   try {
     const res = await client.call("Runtime.evaluate", {
@@ -31696,7 +31905,7 @@ async function gameClick(client, selector, index = 0) {
     return toErrorResult(error51);
   }
 }
-async function gameWait(client, reloads, options) {
+async function gameWait(client, reloads, debug, options) {
   const {
     selector,
     predicate,
@@ -31729,12 +31938,16 @@ async function gameWait(client, reloads, options) {
   } catch (error51) {
     return toErrorResult(error51);
   }
+  function timedOut(reason) {
+    const paused = pausedNote(debug);
+    return errorText(paused.length > 0 ? `${reason} ${paused}` : reason);
+  }
   async function waitForReload() {
     await client.connection();
     const baseline = sinceReloads ?? reloads.count;
     while (reloads.count <= baseline) {
       if (Date.now() >= deadline) {
-        return errorText(import_common_tags4.oneLine`
+        return timedOut(import_common_tags4.oneLine`
           Timed out after ${budget}ms waiting for a view reload
           (reload count still ${reloads.count}, baseline ${baseline}).
         `);
@@ -31746,9 +31959,9 @@ async function gameWait(client, reloads, options) {
       let quietSince = Date.now();
       while (Date.now() - quietSince < quiescentMs) {
         if (Date.now() >= deadline) {
-          return errorText(import_common_tags4.oneLine`
-            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within the
-            ${quiescentMs}ms quiescence window.
+          return timedOut(import_common_tags4.oneLine`
+            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within
+            the ${quiescentMs}ms quiescence window.
           `);
         }
         await sleep2(POLL_INTERVAL_MS2);
@@ -31780,7 +31993,7 @@ async function gameWait(client, reloads, options) {
       if (Date.now() >= deadline) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
         const errorNote = lastError ? ` Last predicate error: ${lastError}` : "";
-        return errorText(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
+        return timedOut(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
       }
       await sleep2(POLL_INTERVAL_MS2);
     }
@@ -32448,7 +32661,8 @@ async function main() {
         Pass a selector to clip the capture to one element; use index to pick among matches.
         Clipping is the only lever on what the image costs you in context: that cost tracks the
         pixel area captured, never the encoded file size.
-        Hangs while the JS debugger is paused; resume (game_debug_step) before capturing.
+        Refuses while the JS debugger holds the UI paused: the capture needs the frame loop a
+        pause freezes.
       `,
     inputSchema: {
       format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
@@ -32460,7 +32674,7 @@ async function main() {
       selector: exports_external.string().optional().describe(`If set, clip the screenshot to this element's bounding box`),
       index: exports_external.number().int().min(0).optional().describe(`Which match to clip to when several exist (default: 0)`)
     }
-  }, ({ format, quality, selector, index }) => gameScreenshot(client, { format, quality, selector, index }));
+  }, ({ format, quality, selector, index }) => gameScreenshot(client, debug, { format, quality, selector, index }));
   server.registerTool("game_wait", {
     title: `Wait for a condition in the Gameface UI`,
     description: import_common_tags5.oneLine`
@@ -32470,6 +32684,7 @@ async function main() {
         With reload, the phases compose: reload first, then a quiescence window, then the
         selector/predicate poll in the fresh context.
         Returns when met or times out.
+        It stays usable while the JS debugger is paused, and a timeout says so when it was.
       `,
     inputSchema: {
       selector: exports_external.string().optional().describe(`CSS selector to wait for`),
@@ -32492,7 +32707,7 @@ async function main() {
           `),
       visible: exports_external.boolean().optional().describe(`For selector waits, also require a non-zero bounding box (default false)`)
     }
-  }, ({ selector, predicate, reload, sinceReloads, quiescentMs, timeoutMs, visible }) => gameWait(client, reloads, {
+  }, ({ selector, predicate, reload, sinceReloads, quiescentMs, timeoutMs, visible }) => gameWait(client, reloads, debug, {
     selector,
     predicate,
     reload,
@@ -32677,9 +32892,11 @@ async function main() {
     description: import_common_tags5.oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
         filtered by a url substring.
-        Only scripts parsed after the debugger attached appear (Gameface does not replay
-        scriptParsed); an empty list means attach first, then trigger a view reload to repopulate.
-        Use the scriptId with game_debug_source.
+        Only scripts parsed since the debugger attached appear, since Gameface does not replay
+        scriptParsed; an empty list is what a late attach looks like, and the result says how to
+        fill it.
+        Use the scriptId with game_debug_source, and game_debug_search_source to find a position
+        inside one.
       `,
     inputSchema: {
       filter: exports_external.string().optional().describe(`Only scripts whose url contains this substring`)
@@ -32689,26 +32906,58 @@ async function main() {
     title: `Get UI script source`,
     description: import_common_tags5.oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
-        Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines).
+        Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines) and maxChars
+        to change how much source comes back at all.
+        It renders whole lines, so a low line count is no promise of a small answer: one minified
+        line can be the whole module, which is why the character cap exists and why reaching a
+        position inside such a line is game_debug_search_source's job.
       `,
     inputSchema: {
       scriptId: exports_external.string().describe(`Script id from game_debug_scripts`),
-      lineStart: exports_external.number().int().min(1).optional().describe(`First line (1-based)`),
-      lineEnd: exports_external.number().int().min(1).optional().describe(`Last line (1-based)`)
+      lineStart: exports_external.number().int().min(1).optional().describe(import_common_tags5.oneLine`
+            First line, 1-based and numbered as the whole file or document is, so a script embedded
+            in a page starts at its firstLine from game_debug_scripts rather than at 1.
+          `),
+      lineEnd: exports_external.number().int().min(1).optional().describe(`Last line, numbered as lineStart is`),
+      maxChars: exports_external.number().int().min(1).optional().describe(import_common_tags5.oneLine`
+              Characters of source to return before clipping (default
+              ${String(DEFAULT_SOURCE_MAX_CHARS)}); the result says when it clipped and at what.
+            `)
     }
-  }, ({ scriptId, lineStart, lineEnd }) => debug.getSource(scriptId, lineStart, lineEnd));
+  }, ({ scriptId, lineStart, lineEnd, maxChars }) => debug.getSource(scriptId, lineStart, lineEnd, maxChars));
+  server.registerTool("game_debug_search_source", {
+    title: `Search UI script sources`,
+    description: import_common_tags5.oneLine`
+        Find a literal string across the parsed script sources and return each hit as
+        url + line + column (1-based) with a snippet of surrounding source.
+        The query is case-sensitive and literal, no regex; narrow with urlContains, and read the
+        total/truncated fields for what the ${MAX_SEARCH_MATCHES}-match cap hid.
+        This is how you target a column in a minified one-line bundle, where a line breakpoint binds
+        to module-evaluation code that never runs during interaction: search for the code you mean,
+        then pass its line and column to game_debug_set_breakpoint.
+      `,
+    inputSchema: {
+      query: exports_external.string().min(1).describe(`Literal string to find (case-sensitive, not a regex)`),
+      urlContains: exports_external.string().optional().describe(`Only search scripts whose url contains this substring (case-insensitive)`)
+    }
+  }, ({ query, urlContains }) => debug.searchSource(query, urlContains));
   server.registerTool("game_debug_set_breakpoint", {
     title: `Set a breakpoint`,
     description: import_common_tags5.oneLine`
-        Set a breakpoint by url substring + line (1-based).
+        Set a breakpoint by url substring + line, and optionally column; both are 1-based.
         Add a condition (JS expression) to only pause when it is truthy, which limits how often the
         UI freezes.
+        A line alone can bind somewhere that never runs again, so check the resolved location the
+        result reports back.
         Hitting it FREEZES the UI until you resume with game_debug_step.
       `,
     inputSchema: {
-      urlContains: exports_external.string().describe(`Substring of the script url to break in`),
+      urlContains: exports_external.string().describe(import_common_tags5.oneLine`
+            Substring of the script url to break in, matched case-sensitively; copy it from the url
+            game_debug_scripts or game_debug_search_source printed, whose own filters are not.
+          `),
       line: exports_external.number().int().min(1).describe(`Line number (1-based)`),
-      column: exports_external.number().int().min(0).optional().describe(`Column (0-based), optional`),
+      column: exports_external.number().int().min(1).optional().describe(`Column (1-based), optional; take one from game_debug_search_source`),
       condition: exports_external.string().optional().describe(`Optional JS condition; pause only when it evaluates truthy`)
     }
   }, ({ urlContains, line, column, condition }) => debug.setBreakpoint(urlContains, line, column, condition));
@@ -32748,7 +32997,8 @@ async function main() {
     description: import_common_tags5.oneLine`
         Control paused execution: resume (unfreeze the UI), over/into/out (step), or pause (break at
         the next statement).
-        Stepping reports the new location.
+        Stepping reports the new location, and resume fails rather than claiming success when the
+        UI is paused again the moment it continues (a breakpoint on the resumed path).
       `,
     inputSchema: {
       action: exports_external.enum(["resume", "over", "into", "out", "pause"]).describe(`resume | over | into | out | pause`)

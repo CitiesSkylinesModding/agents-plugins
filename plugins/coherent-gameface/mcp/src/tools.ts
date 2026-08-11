@@ -6,7 +6,8 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { oneLine } from 'common-tags';
-import type { CdpClient } from './cdp';
+import type { CdpCall, CdpClient } from './cdp';
+import type { PauseSnapshot } from './debugger';
 import {
   type EvaluateResult,
   describeRemoteObject,
@@ -118,6 +119,37 @@ interface QueryArgs {
   tag: boolean;
   attributes: boolean;
   limit: number;
+}
+
+/**
+ * The slice of the CDP client the pause-aware tools (game_screenshot, game_wait) need.
+ * The union of what those two reach for, which is what lets them run against scripted answers,
+ * with no socket and no application.
+ */
+export interface ToolCdp {
+  readonly call: CdpCall;
+  readonly ensureDomain: (domain: string) => Promise<void>;
+
+  /**
+   * Awaited for its side effect alone: reload tracking only advances while connected.
+   */
+  readonly connection: () => Promise<unknown>;
+}
+
+/**
+ * The slice of the reload tracker game_wait needs.
+ */
+export interface WaitReloads {
+  readonly count: number;
+}
+
+/**
+ * Read-only pause state, so a tool can account for a frozen UI without owning debugger state.
+ * An accessor rather than a plain snapshot parameter because game_wait polls for up to a minute
+ * and reads the pause at timeout: a breakpoint can hit long after the call began.
+ */
+export interface PauseSource {
+  readonly pause: PauseSnapshot | undefined;
 }
 
 /**
@@ -272,9 +304,12 @@ export interface GameScreenshotOptions {
 /**
  * Captures a screenshot of the Gameface UI and returns it as an inline image.
  * When a selector is given, the capture is clipped to the `index`-th match's bounding box.
+ * Refuses while the debugger holds the UI paused: `Page.captureScreenshot` is the server's only
+ * frame-loop-dependent call, so it would hang for the full call timeout instead of failing.
  */
 export async function gameScreenshot(
-  client: CdpClient,
+  client: ToolCdp,
+  debug: PauseSource,
   options: GameScreenshotOptions = {}
 ): Promise<CallToolResult> {
   // PNG by default: the capture is the UI layer alone (flat fills and small text, no 3D scene),
@@ -282,6 +317,25 @@ export async function gameScreenshot(
   const { format = 'png', quality, selector, index = 0 } = options;
 
   try {
+    // Connect first, so the pause read is current: a dropped socket auto-resumes the engine, and
+    // the session only learns that on reconnect, so the pre-connection view would refuse a UI that
+    // is running again. Gate before enabling Page, since that domain is the frozen one.
+    await client.connection();
+
+    const { pause } = debug;
+
+    if (pause) {
+      return errorText(oneLine`
+        game_screenshot cannot capture while the JS debugger holds the UI paused
+        (${pause.reason}, at ${pause.location}): the capture needs the frame loop the pause has
+        frozen, so it would hang until the call times out.
+        Resume with game_debug_step action=resume, then capture.
+        Resuming abandons this stopped frame, so read what you still need from it first, with
+        game_debug_pause_state and game_debug_evaluate; both work while paused, as do game_eval,
+        game_dom, game_query and the input tools.
+      `);
+    }
+
     await client.ensureDomain('Page');
 
     const params: Record<string, unknown> = { format };
@@ -497,6 +551,25 @@ function queryRejection(
 }
 
 /**
+ * The sentence a game_wait timeout adds while the debugger holds the UI paused, empty otherwise.
+ * A wait that expires against a frozen UI looks exactly like an unreachable condition, and the two
+ * call for opposite next moves.
+ */
+function pausedNote(debug: PauseSource): string {
+  const { pause } = debug;
+
+  if (!pause) {
+    return '';
+  }
+
+  return oneLine`
+    The UI is paused in the JS debugger (${pause.reason}, at ${pause.location}): nothing in it can
+    change until you resume with game_debug_step action=resume, so resume and retry rather than
+    reading this as an unreachable condition.
+  `;
+}
+
+/**
  * Clicks the element matching `selector` (the `index`-th match) by dispatching a realistic bubbling
  * pointer/mouse/click sequence in the page.
  * We do NOT use CDP Input.dispatchMouseEvent: Gameface accepts it but never delivers it.
@@ -557,8 +630,9 @@ export interface GameWaitOptions {
  * in the fresh context.
  */
 export async function gameWait(
-  client: CdpClient,
-  reloads: ReloadTracker,
+  client: ToolCdp,
+  reloads: WaitReloads,
+  debug: PauseSource,
   options: GameWaitOptions
 ): Promise<CallToolResult> {
   const {
@@ -606,6 +680,15 @@ export async function gameWait(
   }
 
   /**
+   * The single exit for every timeout, so no phase can report one without accounting for a pause.
+   */
+  function timedOut(reason: string): CallToolResult {
+    const paused = pausedNote(debug);
+
+    return errorText(paused.length > 0 ? `${reason} ${paused}` : reason);
+  }
+
+  /**
    * Reload phase + quiescence phase. Returns an error result on timeout, undefined on success.
    */
   async function waitForReload(): Promise<CallToolResult | undefined> {
@@ -619,7 +702,7 @@ export async function gameWait(
 
     while (reloads.count <= baseline) {
       if (Date.now() >= deadline) {
-        return errorText(oneLine`
+        return timedOut(oneLine`
           Timed out after ${budget}ms waiting for a view reload
           (reload count still ${reloads.count}, baseline ${baseline}).
         `);
@@ -636,9 +719,9 @@ export async function gameWait(
 
       while (Date.now() - quietSince < quiescentMs) {
         if (Date.now() >= deadline) {
-          return errorText(oneLine`
-            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within the
-            ${quiescentMs}ms quiescence window.
+          return timedOut(oneLine`
+            Timed out after ${budget}ms: reload observed, but context swaps kept arriving within
+            the ${quiescentMs}ms quiescence window.
           `);
         }
 
@@ -690,7 +773,7 @@ export async function gameWait(
         const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
         const errorNote = lastError ? ` Last predicate error: ${lastError}` : '';
 
-        return errorText(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
+        return timedOut(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
       }
 
       await sleep(POLL_INTERVAL_MS);

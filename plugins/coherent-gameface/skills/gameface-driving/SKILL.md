@@ -72,16 +72,18 @@ Reloads can still queue or coalesce outside your control; when exactness matters
 
 ## Debugging without freezing the session away
 
-The debugger only sees scripts parsed after it attaches; Gameface does not replay `scriptParsed` for already-loaded code (Chrome does), so a fresh session lists no game scripts at all.
+The debugger only sees scripts parsed since it attached; Gameface does not replay `scriptParsed` for already-loaded code (Chrome does), so a fresh session lists no game scripts at all.
 Attach first (any `game_debug_*` call), then get the code re-parsed by triggering a UI reload (see the dev loop above); every bundle then appears under its real `coui://` or `assetdb://` URL.
 A pause freezes the UI thread until resume; while frozen:
 
 - `game_debug_evaluate` reads frame locals, and `game_eval` still works too (global scope, DOM reads included).
 - `game_console` keeps capturing and expanding, so a `game_eval` that logs an object reads back in full without resuming first.
-- `game_screenshot` hangs until the call timeout; never screenshot while paused.
+- `game_screenshot` is the one tool that refuses, since the capture needs the frame loop the pause has frozen.
+- `game_wait` stays usable, and its timeout names the pause, so a frozen UI never reads as an unreachable condition.
 - Input, rendering, and timers are dead, so nothing new happens until resume.
 
-Minified bundles are one giant line: a line breakpoint resolves to the first breakable location on it (column 0), which is module-evaluation code that only runs during a reload.
-To break inside a real function, take the exact column from a stack trace (`game_console` shows them) or from a pause location, or pause and step from there.
+Minified bundles are one giant line: a line breakpoint binds to the first breakable location on it, which is module-evaluation code that runs on load and never again during interaction.
+Read the `url:line:column` the breakpoint resolved to and you can see that happen; to break inside a real function instead, find its position with `game_debug_search_source` and pass that column, or take one from a `game_console` stack trace or a pause location.
+Breakpoints survive a view reload, the engine re-binding its own registrations to the re-parsed script, so a reload does not disarm your session — and one sitting on module-evaluation code re-hits on every reload.
 The safe cycle: set a conditional breakpoint, trigger it with an input tool, inspect with `game_debug_pause_state` and `game_debug_evaluate`, resume promptly, and remove all breakpoints before moving on.
 The safety net: if the server's connection drops while paused, the engine auto-resumes, so a wedged pause cannot brick the game.

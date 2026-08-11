@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { CdpClient } from './cdp';
 import { loadConfig } from './config';
 import { CAPTURE_DEPTH_CAP, ConsoleBuffer, DEFAULT_RENDER_DEPTH, gameConsole } from './console';
-import { DebuggerSession } from './debugger';
+import { DEFAULT_SOURCE_MAX_CHARS, DebuggerSession, MAX_SEARCH_MATCHES } from './debugger';
 import {
   ReloadTracker,
   gameClick,
@@ -97,7 +97,8 @@ async function main(): Promise<void> {
         Pass a selector to clip the capture to one element; use index to pick among matches.
         Clipping is the only lever on what the image costs you in context: that cost tracks the
         pixel area captured, never the encoded file size.
-        Hangs while the JS debugger is paused; resume (game_debug_step) before capturing.
+        Refuses while the JS debugger holds the UI paused: the capture needs the frame loop a
+        pause freezes.
       `,
       inputSchema: {
         format: z.enum(['png', 'jpeg']).optional().describe(`Image format (default: png)`),
@@ -126,7 +127,7 @@ async function main(): Promise<void> {
       }
     },
     ({ format, quality, selector, index }) =>
-      gameScreenshot(client, { format, quality, selector, index })
+      gameScreenshot(client, debug, { format, quality, selector, index })
   );
 
   server.registerTool(
@@ -140,6 +141,7 @@ async function main(): Promise<void> {
         With reload, the phases compose: reload first, then a quiescence window, then the
         selector/predicate poll in the fresh context.
         Returns when met or times out.
+        It stays usable while the JS debugger is paused, and a timeout says so when it was.
       `,
       inputSchema: {
         selector: z.string().optional().describe(`CSS selector to wait for`),
@@ -170,7 +172,7 @@ async function main(): Promise<void> {
       }
     },
     ({ selector, predicate, reload, sinceReloads, quiescentMs, timeoutMs, visible }) =>
-      gameWait(client, reloads, {
+      gameWait(client, reloads, debug, {
         selector,
         predicate,
         reload,
@@ -515,9 +517,11 @@ async function main(): Promise<void> {
       description: oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
         filtered by a url substring.
-        Only scripts parsed after the debugger attached appear (Gameface does not replay
-        scriptParsed); an empty list means attach first, then trigger a view reload to repopulate.
-        Use the scriptId with game_debug_source.
+        Only scripts parsed since the debugger attached appear, since Gameface does not replay
+        scriptParsed; an empty list is what a late attach looks like, and the result says how to
+        fill it.
+        Use the scriptId with game_debug_source, and game_debug_search_source to find a position
+        inside one.
       `,
       inputSchema: {
         filter: z.string().optional().describe(`Only scripts whose url contains this substring`)
@@ -532,15 +536,58 @@ async function main(): Promise<void> {
       title: `Get UI script source`,
       description: oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
-        Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines).
+        Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines) and maxChars
+        to change how much source comes back at all.
+        It renders whole lines, so a low line count is no promise of a small answer: one minified
+        line can be the whole module, which is why the character cap exists and why reaching a
+        position inside such a line is game_debug_search_source's job.
       `,
       inputSchema: {
         scriptId: z.string().describe(`Script id from game_debug_scripts`),
-        lineStart: z.number().int().min(1).optional().describe(`First line (1-based)`),
-        lineEnd: z.number().int().min(1).optional().describe(`Last line (1-based)`)
+        lineStart: z.number().int().min(1).optional().describe(oneLine`
+            First line, 1-based and numbered as the whole file or document is, so a script embedded
+            in a page starts at its firstLine from game_debug_scripts rather than at 1.
+          `),
+        lineEnd: z.number().int().min(1).optional().describe(`Last line, numbered as lineStart is`),
+        maxChars: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe(
+            oneLine`
+              Characters of source to return before clipping (default
+              ${String(DEFAULT_SOURCE_MAX_CHARS)}); the result says when it clipped and at what.
+            `
+          )
       }
     },
-    ({ scriptId, lineStart, lineEnd }) => debug.getSource(scriptId, lineStart, lineEnd)
+    ({ scriptId, lineStart, lineEnd, maxChars }) =>
+      debug.getSource(scriptId, lineStart, lineEnd, maxChars)
+  );
+
+  server.registerTool(
+    'game_debug_search_source',
+    {
+      title: `Search UI script sources`,
+      description: oneLine`
+        Find a literal string across the parsed script sources and return each hit as
+        url + line + column (1-based) with a snippet of surrounding source.
+        The query is case-sensitive and literal, no regex; narrow with urlContains, and read the
+        total/truncated fields for what the ${MAX_SEARCH_MATCHES}-match cap hid.
+        This is how you target a column in a minified one-line bundle, where a line breakpoint binds
+        to module-evaluation code that never runs during interaction: search for the code you mean,
+        then pass its line and column to game_debug_set_breakpoint.
+      `,
+      inputSchema: {
+        query: z.string().min(1).describe(`Literal string to find (case-sensitive, not a regex)`),
+        urlContains: z
+          .string()
+          .optional()
+          .describe(`Only search scripts whose url contains this substring (case-insensitive)`)
+      }
+    },
+    ({ query, urlContains }) => debug.searchSource(query, urlContains)
   );
 
   server.registerTool(
@@ -548,15 +595,25 @@ async function main(): Promise<void> {
     {
       title: `Set a breakpoint`,
       description: oneLine`
-        Set a breakpoint by url substring + line (1-based).
+        Set a breakpoint by url substring + line, and optionally column; both are 1-based.
         Add a condition (JS expression) to only pause when it is truthy, which limits how often the
         UI freezes.
+        A line alone can bind somewhere that never runs again, so check the resolved location the
+        result reports back.
         Hitting it FREEZES the UI until you resume with game_debug_step.
       `,
       inputSchema: {
-        urlContains: z.string().describe(`Substring of the script url to break in`),
+        urlContains: z.string().describe(oneLine`
+            Substring of the script url to break in, matched case-sensitively; copy it from the url
+            game_debug_scripts or game_debug_search_source printed, whose own filters are not.
+          `),
         line: z.number().int().min(1).describe(`Line number (1-based)`),
-        column: z.number().int().min(0).optional().describe(`Column (0-based), optional`),
+        column: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe(`Column (1-based), optional; take one from game_debug_search_source`),
         condition: z
           .string()
           .optional()
@@ -628,7 +685,8 @@ async function main(): Promise<void> {
       description: oneLine`
         Control paused execution: resume (unfreeze the UI), over/into/out (step), or pause (break at
         the next statement).
-        Stepping reports the new location.
+        Stepping reports the new location, and resume fails rather than claiming success when the
+        UI is paused again the moment it continues (a breakpoint on the resumed path).
       `,
       inputSchema: {
         action: z

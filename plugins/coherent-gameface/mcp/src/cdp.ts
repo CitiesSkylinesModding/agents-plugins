@@ -62,11 +62,17 @@ export class CdpError extends Error {
 export type CdpEventListener = (method: string, params: unknown) => void;
 
 /**
+ * Sends one CDP command and resolves with its reply.
+ * Named here so the per-facet client slices state the member once rather than retyping it.
+ */
+export type CdpCall = <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
+
+/**
  * Minimal connection surface handed to onConnect listeners (e.g., to enable domains).
  */
 export interface CdpConnectionHandle {
   readonly ensureDomain: (domain: string) => Promise<void>;
-  readonly call: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
+  readonly call: CdpCall;
   readonly target: PageTarget;
 }
 
