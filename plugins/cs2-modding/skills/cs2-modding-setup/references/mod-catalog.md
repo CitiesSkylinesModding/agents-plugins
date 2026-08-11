@@ -198,6 +198,7 @@ Runtime detection of sibling mods by name, including keeping a dead system regis
 Retuning the game's balance without editing a prefab asset, by overwriting parameter components in place once prefab initialization has written them — some systems registered into two phases by two calls so they run inside the load and save pipelines as well, and one rewriting a per-prefab component rather than a singleton.
 Reaching a vanilla system's private per-source accumulator array through reflected field handles from a postfix on its update, paired with a postfix on the method that produced the value, because correcting the producer alone leaves the consumer's own cached copy untouched.
 Toggling a pair of vanilla simulation systems off and back on against the in-game clock rather than once at load, so they sit disabled for part of every day.
+Toggling a shared prefab component for the duration of an in-game event by scaling one field and inferring the applied state from the field's own magnitude rather than a stored flag — the failure mode to recognise rather than a pattern to copy, since the prefab is shared by every instance and anything else moving the field past the threshold breaks the toggle.
 
 ## Prefabs and assets from code
 
