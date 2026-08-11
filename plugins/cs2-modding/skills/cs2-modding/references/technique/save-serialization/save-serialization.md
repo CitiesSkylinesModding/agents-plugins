@@ -396,7 +396,7 @@ The mechanics references whose components a mod would persist against:
 - `zoning-buildings-and-land-value` — building-level tags are the archetypal empty-serializable case.
 - `citizens-and-households` — per-citizen persisted state, and three of the twelve shipped migrations repair household and citizen data on load.
 - `environment-and-pollution` — the cell maps are the stride-serialized types, and the ground-pollution cell carries the version-aware stride.
-- `utilities-and-flow-networks` — four of its node and edge types are save-query anchors, and their graphs are rebuilt on load rather than saved.
+- `utilities-and-flow-networks` — four of its node and edge types are save-query anchors; the flow edges serialize their capacities and flows, then on load the electricity ones are re-applied from prefab data while the adjacency buffers rebuild.
 - `city-state-and-progression` — the city, statistic, budget and time components are anchors, and the city configuration system is the system-level save section carrying name, theme, required content, options and the used-mods list.
 - `city-services-and-coverage` — service requests are an anchor, and coverage is rebuilt on load.
 - `transportation-and-vehicles` — route and vehicle membership is deliberately _not_ saved and is rebuilt in the deserialize middle band.

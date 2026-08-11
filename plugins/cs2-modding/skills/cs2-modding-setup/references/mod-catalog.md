@@ -91,7 +91,7 @@ Resolving an edge raycast hit down to the nearest node.
 One output-mode switch that decides whether a job writes preview definitions or mutates the network directly on apply.
 Interactive 3D handles as their own drawable, cullable entities.
 A source generator that emits the TypeScript binding declarations from the C# side, which is the only answer in this corpus to C#-and-frontend drift.
-A watchdog that re-runs the game's own deserialize-time graph verification at runtime, so an edit cannot quietly bake a corrupt graph into a save.
+A read-only structural verifier for the vanilla electricity flow graph — the mod's own mirror of the game's deserialize-time check — shared between a deserialize-phase checker and a runtime watchdog that debounces across two scans because the graph rebuilds asynchronously after every network edit; both ship commented out of registration, a harness for catching corruption during play before a save carries it.
 Consuming five vanilla data providers in one job, four of them taken with their own handle and combined into a single schedule, with one of the five never registered back.
 
 ### Node Controller
@@ -216,6 +216,7 @@ Registering roughly fifteen systems across specific phases, which is a readable 
 Regenerating a live prefab in place, which replaces the prefab entity outright, so the mod tags the outgoing one, throttles the rebuild, and clears the stale entity out of a vanilla system's private dictionary that the engine's own reference sweep cannot reach.
 A null-checking wrapper around the generic prefab lookup, which otherwise reports success while handing back null whenever the requested type does not match.
 A dictionary source registered under every supported locale whose entries are generated on each read, so names for roads the player builds at runtime localize without re-registering anything.
+Authoring a road's utility carriage as part of the prefab: the electricity and water-pipe connection components added in code, with the composition requirement that gates electricity on a lighting upgrade read back off a vanilla road when importing one.
 
 ### Extra Assets Importer
 

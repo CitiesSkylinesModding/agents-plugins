@@ -56,3 +56,4 @@ A `VOLATILE:` marker labels a claim that moves between game versions and names w
 - [Citizens and households](references/mechanics/citizens-and-households/citizens-and-households.md) — citizens as the components they carry, and the households that own the money, the home and the members.
 - [Zoning, buildings and land value](references/mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — zone cells and blocks, demand, the spawner, the level-up loop, and the land value behind rent.
 - [Economy and companies](references/mechanics/economy-and-companies/economy-and-companies.md) — companies and their recipes, the production graph, taxes, fees, trade, loans, extraction economics and tourism.
+- [Utilities and flow networks](references/mechanics/utilities-and-flow-networks/utilities-and-flow-networks.md) — electricity, water and sewage as solved max-flow graphs: what carries each utility, the solve cadence, consumption, production and trade.
