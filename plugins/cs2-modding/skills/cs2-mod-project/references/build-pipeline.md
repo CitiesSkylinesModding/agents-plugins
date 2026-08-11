@@ -46,8 +46,38 @@ That is the shape of "it built, and the game does not list it".
 The output folder is deleted outright, so nothing from a previous build can survive into this one.
 
 **3. Compilation.**
-Ordinary C# compilation to `net48` at C# 9, with one addition: the Entities source generators from the Unity mod project's package cache are registered as analyzers.
+Ordinary C# compilation to `net48`, with one addition: the Entities source generators from the Unity mod project's package cache are registered as analyzers.
 Errors about generated job or system code come from those generators and belong to this stage, not to the post-processor.
+They ship as source in that same cache, under `Unity.Entities/SourceGenerators/Source~/` in the Entities package, so what one does with a construct is readable rather than inferable.
+
+`Mod.props` pins C# 9, and a `<LangVersion>` in a property group after the two imports raises it as far as the installed .NET SDK's compiler reaches.
+What the raise costs is the runtime types `net48` never shipped — `IsExternalInit` for `init` and records, `System.Index` for list patterns, `CompilerFeatureRequiredAttribute` for user-defined compound assignment — each a compile error naming the type it wants, closed by the PolySharp package the parent skill names, or by declaring the type yourself.
+A hand-declared one is bound by full name and by shape, not by the name alone: it goes in the type's own namespace and carries the members the compiler calls, which the next error names when they are missing.
+`IsExternalInit` is an empty static class in `System.Runtime.CompilerServices`; `CompilerFeatureRequiredAttribute` sits beside it, derives from `Attribute` and takes a `string`, since one that does not derive is rejected as not an attribute class; `System.Index` carries a `(int value, bool fromEnd = false)` constructor, an implicit conversion from `int`, and `GetOffset(int)`.
+`internal` is accessible enough for all three.
+Get a namespace or a shape wrong and the original error persists unchanged, which is the trap the package exists to skip.
+Where the answer is not a type at all, no package helps either: a list pattern that slices reaches for `RuntimeHelpers.GetSubArray`, a member missing from a class `net48` already ships, so nothing can add it and the pattern has to be written another way.
+A feature the runtime itself has to support — `static abstract` interface members, `ref` fields — is the other kind, and no declared type closes it, so the fix there is to write the construct another way.
+Burst is unaffected either way: it consumes the IL, which carries no language version.
+
+**A file the generators emit a partial for takes a block namespace, and this has no version to wait for.**
+Declaring an `IJobEntity` or an aspect is enough on its own, with nothing scheduling it; a system needs a `SystemAPI` call or a schedule site, so a system file with neither survives under a file-scoped namespace until someone adds the first one.
+The generators walk the syntax ancestors of the declaration and test each for `SyntaxKind.NamespaceDeclaration`, and C# 10 gave a file-scoped declaration its own kind, `FileScopedNamespaceDeclaration`, whose syntax type is a sibling of `NamespaceDeclarationSyntax` rather than that type.
+So the ancestor is right there and the test rejects it, the walk ends before it begins, and the partial is emitted into the global namespace.
+It is then a different type from the one you declared, and the errors land inside generated code, naming members you never wrote: a system reports `no suitable method found to override` on `OnCreateForCompiler`, while a job reports whatever its generated plumbing reaches for first, which varies with what else in the project uses it.
+The `using` directives survive, which is what makes the generated file look almost right.
+
+An `.editorconfig` rule catches the namespace while the file still compiles, which is early enough for an editor to flag it as it is typed:
+
+```ini
+[*.cs]
+csharp_style_namespace_declarations = block_scoped
+dotnet_diagnostic.IDE0160.severity = error
+```
+
+Add `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>`, off by default, to fail the build on it as well; an editor needs nothing beyond the rule itself.
+Reach for `EnableNETAnalyzers` only if you want the CA rules too: it gates those and not this, and turning it on lights up a rule set the project has never seen.
+Either way it is a guard rather than a diagnostic, so it does nothing for a build already broken — once the generator has failed, that build reports only the generator's own error.
 
 **4. Post-processing.**
 The post-processor runs over the compiled assembly for three platforms, and does two things in order.

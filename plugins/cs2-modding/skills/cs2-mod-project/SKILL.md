@@ -77,9 +77,24 @@ That shared fate is why the version is agreed rather than chosen per project.
 
 Patching is a last resort in this game rather than the default technique, so a project that never needs this reference is the better outcome.
 
-**The framework and language version come from the toolchain.**
-`Mod.props` fixes `net48` and C# 9 to match the game's runtime, and a project does not override them.
-C# 10 syntax an agent writes by habit — file-scoped namespaces, global usings — fails to compile here; `Mod.props` is where to check when a modern construct is rejected.
+**The framework comes from the toolchain; the language version is a choice.**
+`Mod.props` fixes `net48` to match the game's runtime — leave that one alone, since it is the framework the game's own assemblies were built against — and pins C# 9, which a project raises by setting `<LangVersion>` **after** the two imports; set before them, the import overwrites it and the project silently stays on 9.
+Newer syntax then needs the runtime types `net48` never shipped: `init` and records want `IsExternalInit`, list patterns want `System.Index`, user-defined compound assignment wants `CompilerFeatureRequiredAttribute`.
+Each missing one is a compile error naming the type, so they surface at once, and declaring them in the mod closes them — in the type's own namespace and with the members the compiler calls, which [build-pipeline.md](references/build-pipeline.md) spells out.
+A feature needing runtime support rather than a type — `static abstract` interface members, `ref` fields — closes no such way, and the fix is to write the construct differently.
+
+```xml
+<PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" IncludeAssets="runtime;build;native;contentfiles;analyzers;buildtransitive" />
+```
+
+PolySharp generates the whole family from the language version and target framework instead, and the mod folder gains nothing to ship, because the package carries source and no assembly to copy.
+`PrivateAssets="all"` is the separate habit of a build-time-only reference: it stops the dependency flowing on to anything referencing this project.
+Burst is indifferent to all of it, because it compiles the IL that the language version has already been erased from.
+
+**A file declaring a system, an `IJobEntity` or an aspect takes a block namespace.**
+The Entities source generators drop a file-scoped namespace and emit their partial into the global namespace, making it a different type from yours, so the build fails inside generated code on members you never wrote — for a system, `no suitable method found to override` on `OnCreateForCompiler`.
+Declaring a job or an aspect is enough to trigger it with nothing scheduling them; a system file survives until someone adds a `SystemAPI` call or a schedule site to it.
+[build-pipeline.md](references/build-pipeline.md) carries the cause, and an `.editorconfig` rule that catches the namespace while the file still compiles.
 
 ## Testing locally
 

@@ -178,6 +178,10 @@ private partial struct AgeCitizensJob : IJobEntity
 **Both the job struct and the system that schedules it must be `partial`**, because the generator emits the `Execute` plumbing and the schedule extension into the other half.
 That is the first thing an agent hits, and its absence is a compile error rather than a runtime one, which is the good case.
 
+**That same generator mishandles a file-scoped namespace, so both files take a block namespace.**
+It emits its half into the global namespace instead, making the generated type a different type from yours, and the build fails inside generated code on members you never wrote — `cs2-mod-project` carries the cause and a lint that catches it while the file still compiles.
+Declaring the job is enough to trigger it; the system half waits until something schedules or a `SystemAPI` call appears.
+
 **Hold the discrepancy in mind before you open vanilla source.**
 The game contains not one `IJobEntity`: every jobified system in it — several hundred — is `IJobChunk`.
 That is a fact about the codebase's age rather than about what works, so it is not a reason to follow it; what it decides is what you read and what you fork.
