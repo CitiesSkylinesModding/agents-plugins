@@ -18,7 +18,7 @@ Three rules keep them straight:
 
 1. **The docs describe the latest Gameface only.** Support tables carry no "since version" annotations.
    A YES in today's docs is an upper bound, not a fact about your game.
-2. **Version-gate every feature claim.** A game embeds a Cohtml version frozen at ship time (CS2: 1.64.0.7, while the docs describe 3.0.x).
+2. **Version-gate every feature claim.** A game embeds a Cohtml version frozen at ship time (CS2: 1.64.0.7, while the docs describe a 3.x release).
    A feature exists in the game iff the changelog introduced it at or below the game's version.
    [references/version-gating.md](references/version-gating.md) has the lookup procedure, a baked version-to-feature timeline, and the list of features that never existed at all.
 3. **Probe the territory.** Two games on the same Cohtml version can still differ: per-game compatibility flags and embedder choices gate complex-selector styling, WebSockets, localization, text-transform, and more.

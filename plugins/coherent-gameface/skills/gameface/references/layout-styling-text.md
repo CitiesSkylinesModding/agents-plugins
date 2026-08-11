@@ -38,7 +38,7 @@ Notable property limits (the current tables have the full lists):
 - `border-style`: only `solid`/`none`/`hidden`.
   `position`: no `sticky`.
   `overflow` clips absolutely-positioned children of overflowing containers (unlike browsers).
-- `justify-content` has no `space-evenly`; `align-items`/`align-content` support only `stretch`/`flex-start`/`flex-end`/`center`; `order` and `flex-flow` are unsupported.
+- `space-evenly` for `justify-content`/`align-content` exists only from 3.1.1; `align-items`/`align-content` otherwise support only `stretch`/`flex-start`/`flex-end`/`center`; `order` and `flex-flow` are unsupported.
 - `flex-basis: content` is unsupported, and `flex-basis: auto` next to a sibling with a percentage basis may resolve as `content`: give siblings all-percentage bases, or avoid mixing `%` with `auto`.
 - `font-size` units are limited to `px`/`em`/`rem`/`vw`/`vh`; `white-space` supports only `normal`/`nowrap`/`pre`/`pre-wrap`; `word-break`, `word-wrap`, `writing-mode`, `direction`, and `tab-size` are unsupported; `max-width`/`max-height` reject `none`; `visibility: collapse` is unsupported; named colors are a limited palette (prefer hex or rgb).
 - The `skew(x, y)` two-argument form is unsupported (`skewX`/`skewY` work); `transform-origin` has no z-offset; `mask-image` takes a single PNG with alpha; `clip-path` takes basic shapes only.

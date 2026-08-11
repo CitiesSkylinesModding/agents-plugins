@@ -3,9 +3,9 @@
 The docs describe the latest Gameface only; a game's embedded Cohtml is frozen at ship time.
 Gate every feature claim through this file, then probe the running game when one is connected.
 
-<!-- timeline-ceiling: 3.0.3 -->
+<!-- timeline-ceiling: 3.1.2 -->
 
-The timeline below is immutable history, current through **Gameface 3.0.3 (July 2026)**.
+The timeline below is immutable history, current through **Gameface 3.1.2 (August 2026)**.
 For claims about anything newer, fetch the live changelog (procedure below).
 Repo-side, `mise skills:check-changelog` diffs this ceiling against the live changelog.
 
@@ -116,6 +116,7 @@ Dates are release dates.
 - **2.2.0** (Dec 2025): **`aspect-ratio` CSS property**, new flex algorithm with real `gap`, `@starting-style` and discrete-property transitions (`display` animates), `vertical-align: baseline`, whitespace nodes join the DOM (BREAKING for `childNodes` counts), `<img>` keeps its natural aspect ratio by default (layout-changing), `color(srgb ...)` replaces `coh-scrgb`, Svelte 5 support.
 - **3.0.0** (Apr 2026): **`box-sizing: content-box`** (before 3.0 everything is effectively border-box), auto margins in flex, web-standard flex mode, dynamic SDF text, compatibility-flags system.
 - **3.0.2** (Jun 2026): numeric comparisons in custom media features.
+- **3.1.1** (Jul 2026): `space-evenly` for `justify-content` and `align-content`, full `pointer-events` support, `elementFromPoint`/`elementsFromPoint` also return SVG nodes, shape-based hit testing for SVG, linear rendering pipeline deprecated (gamma with sRGB is now the default, so a game still authored for linear needs migrating).
 
 ## Never existed (as of the ceiling above)
 
@@ -124,7 +125,7 @@ Present since before 1.0 and safe at any version: `MutationObserver`, `XMLHttpRe
 
 ## V8 (the JS language ceiling)
 
-V8 9.4 since Cohtml 1.26 (Apr 2022); the changelog records no later bump through 3.0.3.
+V8 9.4 since Cohtml 1.26 (Apr 2022); the changelog records no later bump through 3.1.2.
 V8 9.4 is roughly ES2021: optional chaining, nullish coalescing, `WeakRef`, `Promise.any`, logical assignment, `String.replaceAll`, and `Array.at` all work.
 Newer than 9.4 and therefore missing: `Array.findLast`, `structuredClone`, `Object.groupBy`, `Array.fromAsync`.
 Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
@@ -144,4 +145,4 @@ Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
 
 CS2 embeds **Cohtml 1.64.0.7** (confirm with `game_status`).
 Everything at or below 1.64 applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50).
-Absent, so design around them: inline `<script type="module">` bodies (1.65), WebP (1.67), `::part`/`exportparts` (1.67), flex `gap` (2.0/2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), whitespace nodes in `childNodes` (2.2), `box-sizing: content-box` (3.0), and flex auto margins (3.0).
+Absent, so design around them: inline `<script type="module">` bodies (1.65), WebP (1.67), `::part`/`exportparts` (1.67), flex `gap` (2.0/2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), whitespace nodes in `childNodes` (2.2), `box-sizing: content-box` (3.0), flex auto margins (3.0), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
