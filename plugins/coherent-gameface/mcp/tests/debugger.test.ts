@@ -740,6 +740,28 @@ describe(`listing the parsed scripts`, () => {
     expect(result.note).toBeUndefined();
   });
 
+  // An empty listing has two causes needing opposite moves, and the total alone tells them apart
+  // for neither.
+  test(`blames the filter when it is what emptied the listing`, async () => {
+    const { cdp, debug } = session();
+
+    cdp.parse(MINIFIED);
+
+    const result = resultJson(await debug.listScripts('no-such-bundle'));
+
+    expect(result.total).toBe(0);
+    expect(String(result.note)).toContain(`filter`);
+    expect(String(result.note)).not.toContain(`location.reload()`);
+  });
+
+  test(`says nothing about the filter when it selected something`, async () => {
+    const { cdp, debug } = session();
+
+    cdp.parse(MINIFIED);
+
+    expect(resultJson(await debug.listScripts('bundle')).note).toBeUndefined();
+  });
+
   // A count alone would have a caller aim at the top of the document rather than at the script.
   test(`gives an embedded script the line its numbering starts from`, async () => {
     const { cdp, debug } = session();

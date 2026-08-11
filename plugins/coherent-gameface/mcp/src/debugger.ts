@@ -99,6 +99,14 @@ const FILTER_MISS_NOTE = oneLine`
 `;
 
 /**
+ * What an empty listing means when the filter, not the script map, is what emptied it.
+ */
+const FILTER_MISS_LIST_NOTE = oneLine`
+  No parsed script's url contains that filter, though others are parsed: call this without one to
+  see every url. Matching is case-insensitive, so case is not the cause.
+`;
+
+/**
  * What a zero-match search means when the engine would not hand over any of the sources.
  * The scripts were selected but none could be read, which is a stale script map rather than a miss.
  */
@@ -354,7 +362,7 @@ export class DebuggerSession {
             shown: shown.length,
             truncated: scripts.length > cap,
             scripts: shown,
-            note: this.scripts.size == 0 ? EMPTY_SCRIPT_MAP_NOTE : undefined
+            note: this.listNote(scripts.length)
           },
           null,
           2
@@ -827,6 +835,20 @@ export class DebuggerSession {
     return [...this.scripts.values()]
       .filter(script => matchesUrl(script.url, contains))
       .toSorted((a, b) => a.url.localeCompare(b.url));
+  }
+
+  /**
+   * Why the listing came back empty, which the total alone does not distinguish: nothing parsed on
+   * this connection, or a filter matching none of what is.
+   */
+  private listNote(selected: number): string | undefined {
+    if (this.scripts.size == 0) {
+      return EMPTY_SCRIPT_MAP_NOTE;
+    }
+
+    // Nothing selected out of a non-empty map is the filter's doing: without one, every parsed
+    // script is selected.
+    return selected == 0 ? FILTER_MISS_LIST_NOTE : undefined;
   }
 
   /**

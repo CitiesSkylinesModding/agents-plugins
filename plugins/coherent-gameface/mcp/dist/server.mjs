@@ -31136,6 +31136,10 @@ var FILTER_MISS_NOTE = import_common_tags3.oneLine`
   No parsed script's url contains that urlContains, so the query never ran against anything.
   game_debug_scripts lists the urls; the url filter is case-insensitive, so case is not the cause.
 `;
+var FILTER_MISS_LIST_NOTE = import_common_tags3.oneLine`
+  No parsed script's url contains that filter, though others are parsed: call this without one to
+  see every url. Matching is case-insensitive, so case is not the cause.
+`;
 var UNREADABLE_NOTE = import_common_tags3.oneLine`
   The engine has no source for any of the scripts matched, so the query never ran: their ids are
   stale, which a view reload clears by re-parsing everything under fresh ones.
@@ -31228,7 +31232,7 @@ class DebuggerSession {
         shown: shown.length,
         truncated: scripts.length > cap,
         scripts: shown,
-        note: this.scripts.size == 0 ? EMPTY_SCRIPT_MAP_NOTE : undefined
+        note: this.listNote(scripts.length)
       }, null, 2));
     } catch (error51) {
       return toErrorResult(error51);
@@ -31523,6 +31527,12 @@ class DebuggerSession {
   }
   filteredScripts(contains) {
     return [...this.scripts.values()].filter((script) => matchesUrl(script.url, contains)).toSorted((a, b) => a.url.localeCompare(b.url));
+  }
+  listNote(selected) {
+    if (this.scripts.size == 0) {
+      return EMPTY_SCRIPT_MAP_NOTE;
+    }
+    return selected == 0 ? FILTER_MISS_LIST_NOTE : undefined;
   }
   missNote(scriptsSearched, unreadable) {
     if (this.scripts.size == 0) {
