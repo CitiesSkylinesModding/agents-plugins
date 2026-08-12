@@ -134,6 +134,21 @@ by statement count. The exclusions landed in the tool description, and with the 
 `unity-driving` skill, on 2026-08-10; what remains open is an `ecs_get_component` mode accepting
 several entities in one call, which would beat the recipe outright.
 
+### What a failed `eval` reports
+
+On failure `eval` reports the failing statement, the in-game exception, and every local evaluated so
+far, verbatim and uncapped. That dump is the tool's best diagnostic and also the one place a result
+can be arbitrarily large: reading a screenshot back off the game machine bound a 3.7 MB base64 string
+to a local, and one failed statement returned the whole of it. Clip each local to a budget and name
+what was elided, the way `ecs_query` and `find_types` already report what their limits cut.
+
+The same failure named the wrong cause — `a previous result was garbage-collected after the game
+resumed; re-evaluate it instead of using _`, on a call that used no `_`. The local it choked on was a
+`Stopwatch` read successfully two statements earlier, so the likely mechanism is the large allocation
+triggering a collection that invalidated the mirror. If that holds, the message should name the
+collected local and the constraint behind it — an allocation mid-sequence can invalidate object
+mirrors held across it — rather than a slot the caller never used.
+
 ### Injected in-game helper (exploratory, opt-in)
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
