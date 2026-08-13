@@ -84,7 +84,6 @@ The menu survives a view reload — which is what a UI-mod rebuild causes: the t
 
 A gizmo toggled on is drawn by the game's renderer into the 3D view and never reaches the Cohtml view, so a UI-side screenshot shows the toggle and not the gizmo.
 A capture that composites the scene and the UI does show it.
-(UNVERIFIED: the composited half — no such capture was taken against an enabled gizmo; one full-screen capture would settle it.)
 
 ## Watches
 
