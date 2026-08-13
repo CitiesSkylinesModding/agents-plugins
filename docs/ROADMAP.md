@@ -197,6 +197,39 @@ encoder quality setting is not one.
 The current surface is ECS + expression evaluation; add tools for the classic Unity object model
 (scene hierarchy, GameObject/MonoBehaviour inspection and mutation).
 
+### Unity on CoreCLR
+
+Unity 6.7 LTS is the last release built on Mono and ships an experimental CoreCLR desktop player;
+6.8 removes Mono. CoreCLR is desktop-only, IL2CPP stays for consoles, mobile and web, and an IL2CPP
+player speaks the soft debugger protocol, so SDB keeps a target set after Mono dies. Nothing here is
+urgent: an LTS project ships for years, and a released game does not change runtime.
+
+The gating unknown is what a CoreCLR player exposes. Unity's manual asserts only that CoreCLR
+supports managed-code debugging, its March 2026 scripting status update does not mention debugging
+at all, and the two possibilities are far apart: an SDB-compatible agent over CoreCLR, which Unity
+built once already for IL2CPP and which would make the port small, or CoreCLR's own ICorDebug, which
+makes it a rewrite. One cheap experiment settles it — a 6.7 CoreCLR desktop player built with script
+debugging, then watch whether it still multicasts the PlayerConnection beacon with `[Debug] 1` and
+whether anything listens in 56000-56999. `BeaconListener` is the tool for that.
+
+On the ICorDebug branch there is no wire protocol to speak: attach is by PID through `dbgshim`, with
+`mscordbi` version-matched to the target runtime, on the same machine — so remote attach dies unless
+a proxy runs beside the game. The parser, AST, operator semantics, tool surface, skill and beacon
+discovery survive; every mirror-typed layer is rewritten against a different value currency
+(`EvalInterpreter`, `DebugController`, `Ecs`, `Invoker`, `TypeCatalog`, and the `mcp/` tools that
+handle mirrors directly). Three mismatches are design work rather than API translation: counted
+suspend windows against a stop/go model where a func-eval only runs once the process continues;
+func-eval requiring its thread at a GC-safe point in managed code, which a main thread inside native
+engine code is not; and the loss of cross-machine attach. Two things get better — direct
+process-memory reads would take ECS chunk reads off the invoke budget entirely, and the debuggee
+being real .NET retires both the Mono-fork answer quirks and the Mono test fixture.
+
+Do not pre-abstract a backend seam ahead of that experiment: it would be an interface with one
+implementation, guessed against a shape different enough to get it wrong. The live alternative to
+writing an ICorDebug client is the injected-helper tier above — an in-process agent speaking its own
+protocol restores remote attach, cheap batching and main-thread scheduling for less work, at the
+cost of the injection-free default this plugin is built on.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
