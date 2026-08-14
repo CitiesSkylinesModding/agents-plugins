@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v0.3.0...coherent-gameface-v1.0.0) (2026-08-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **gameface:** game_find is removed in favour of game_query, and the handles it stamps are data-gf-tag rather than data-gf-find.
+
+### Features
+
+* **coherent-gameface:** read console objects and correlate entries by time ([dfefe82](https://github.com/CitiesSkylinesModding/agents-plugins/commit/dfefe8288b22fa5a0c1a4a37d8aab61d411a6c43))
+* **coherent-gameface:** search parsed sources and close the debugger's silent dead ends ([58d1dc0](https://github.com/CitiesSkylinesModding/agents-plugins/commit/58d1dc0a375e3eea4ad296be9d7cc5c7c5471cd0))
+* **gameface:** locate elements with no text by selector alone ([2ef05b5](https://github.com/CitiesSkylinesModding/agents-plugins/commit/2ef05b54f9507d337990cc3876f6be0e1b7d2df7))
+
+
+### Bug Fixes
+
+* **coherent-gameface:** carry the version timeline through 3.1.2 ([31ff292](https://github.com/CitiesSkylinesModding/agents-plugins/commit/31ff29265506787b9fd4172ea38d4a5968f1eeb8))
+* **coherent-gameface:** stop teaching jpeg quality as the screenshot's cost knob ([9e357db](https://github.com/CitiesSkylinesModding/agents-plugins/commit/9e357db260d47ceacf291f8ae0a550a44708e3f7))
+
 ## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v0.2.0...coherent-gameface-v0.3.0) (2026-07-20)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "agents-plugins",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Workspace root: lint/format tooling and git hooks for the CS Modding agent plugins marketplace",
   "license": "MIT",
