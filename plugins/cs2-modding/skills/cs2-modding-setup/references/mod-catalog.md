@@ -63,6 +63,8 @@ The push direction of the same arrangement: invoking a static on another mod's b
 Emitting the game's own placement definitions by hand for every selected entity and each of its sub-nets and sub-areas, switching one flag field between relocate, delete, hidden and recreate, rather than using the definition helper its base class offers.
 Command buffers the mod allocates itself and plays back on the spot inside a system, rather than handing the work to a barrier.
 A custom quadtree iterator walking three vanilla search trees with mod-defined selection, serving its marquee, bounds, point and ray searches.
+The vanilla node and edge generation systems ignore a change to a node's elevation, so the mod ships a system spliced ahead of composition selection whose only job is to set the modify flag the pipeline needs.
+Bezier control points modelled as mod-created entities of a three-component archetype — prefab reference, culling info, and its own control-point component — so handles are hoverable and selectable through the same paths as real entities.
 
 ### Area Bucket
 
@@ -93,6 +95,9 @@ Interactive 3D handles as their own drawable, cullable entities.
 A source generator that emits the TypeScript binding declarations from the C# side, which is the only answer in this corpus to C#-and-frontend drift.
 A read-only structural verifier for the vanilla electricity flow graph — the mod's own mirror of the game's deserialize-time check — shared between a deserialize-phase checker and a runtime watchdog that debounces across two scans because the graph rebuilds asynchronously after every network edit; both ship commented out of registration, a harness for catching corruption during play before a save carries it.
 Consuming five vanilla data providers in one job, four of them taken with their own handle and combined into a single schedule, with one of the five never registered back.
+Vanilla systems disabled per tool rather than per session, each tool declaring which ones it cannot coexist with, and every one restored from both the stop hook and the destroy hook so a tool killed mid-run cannot leave the game's validation off.
+Splitting an edge without touching it: a zero-length course at the hit point whose course positions carry the curve parameter as their split position, leaving the game's own course-split pass to perform the split.
+A port of the game's own network snap job — three spatial trees, terrain and water beside them, and component lookups by the dozen — reproducing layer compatibility, height-range intersection, strict-node priority, composition half-widths, buildable net areas and the rule that an owned edge may only be snapped at its endpoints.
 
 ### Node Controller
 
@@ -105,6 +110,9 @@ Per-node settings as a versioned serializable component, so the edits survive a 
 A tool built as a state machine of interaction modes, one class per gesture.
 Its own spatial search rather than the tool raycast, picking segment ends by mouse ray and camera field of view.
 Registering scroll-wheel input actions the input API does not expose, by reflecting into the input manager.
+Cloning a shared composition entity to give one segment end its own lane cross-section, with the clone stripped of its creation and update markers so the systems that own compositions do not adopt it, and the original held for restore.
+Marking a network edit for rebuild through the road aggregate as well as the node, the edge and the edge's far node.
+The forked geometry system differs from the original by a single line, which is the honest measure of what substitution costs when the game exposes no hook.
 
 ### Extra Detailing Tools
 
@@ -138,6 +146,7 @@ Hiding the developer menu's own UI system from test setup, so a scenario runs ag
 A build-time export of its English string table into the repository, locating the destination from the compiler's caller-file-path rather than a hard-coded developer directory.
 A mod-owned spatial index following the vanilla search systems closely: outstanding handles completed before disposal, and the tree cleared from the pre-deserialize hook and refilled on the next update through a first-load flag.
 Building and owning zone blocks outside the road network — creating cell buffers, running a fork of the vanilla cell-check pipeline after it, and managing a block's `Owner` by hand, which the vanilla spawner requires of any block it will spawn on.
+A second fork beside the cell-check one: the vanilla road-connection pass re-run for the mod's own entity kind, consuming the game's network quadtree through its reader-registration protocol.
 
 ### Traffic
 
@@ -163,6 +172,11 @@ An empty prefab class with no content, registered in the pre-deserialize hook, w
 Its own language dropdown independent of the game's, registering the chosen translation under whatever locale the game is currently set to and re-applying the swap whenever the player changes language.
 Two mod-owned quadtrees published behind the game's own reader/writer handle protocol, and every Burst attribute gated behind a symbol only its Release configuration defines.
 A gizmo debug system on the game's own debug base class that renders its own developer-menu panel rather than joining the vanilla gizmos tab — a port of the game's option-rendering method into a mod-created panel, with the whole registration behind a build symbol so a release build carries neither the panel nor the system.
+A near-verbatim fork of the disabled lane system, thousands of lines of it, with mod-authored changes flagged by `NON-STOCK` markers — a fork you can diff against its original by eye.
+The forked system re-registering itself on both sides of the vanilla plumbing its original served — as a terrain height reader, as a writer on the downstream system's queue, and as a producer on its barrier — which is what makes substitution invisible to everything downstream.
+A working implementation of the rival approach — narrowing the vanilla system's private query by reflection so it skips the mod's entities — shipped but never registered, the substitution having been chosen over it.
+A mod-owned mirror of the engine's temporary-entity component, because the real one on a mod entity is claimed by the systems that own the placement pipeline.
+Writing a lane's yield, stop and right-of-way rules as flags on the generated lane component during lane creation, which is why the feature requires owning lane generation rather than editing anything after it.
 
 ## Replacing a vanilla system instead of patching it
 
@@ -199,6 +213,7 @@ Retuning the game's balance without editing a prefab asset, by overwriting param
 Reaching a vanilla system's private per-source accumulator array through reflected field handles from a postfix on its update, paired with a postfix on the method that produced the value, because correcting the producer alone leaves the consumer's own cached copy untouched.
 Toggling a pair of vanilla simulation systems off and back on against the in-game clock rather than once at load, so they sit disabled for part of every day.
 Toggling a shared prefab component for the duration of an in-game event by scaling one field and inferring the applied state from the field's own magnitude rather than a stored flag — the failure mode to recognise rather than a pattern to copy, since the prefab is shared by every instance and anything else moving the field past the threshold breaks the toggle.
+Building pathfinding requests by hand: the component pair added to the traveller, the path-method set composed per leg, a parked vehicle addressed as a lane entity plus a position along its curve, and a repath forced by removing the result components rather than by any update marker.
 
 ## Prefabs and assets from code
 
@@ -218,6 +233,8 @@ Regenerating a live prefab in place, which replaces the prefab entity outright, 
 A null-checking wrapper around the generic prefab lookup, which otherwise reports success while handing back null whenever the requested type does not match.
 A dictionary source registered under every supported locale whose entries are generated on each read, so names for roads the player builds at runtime localize without re-registering anything.
 Authoring a road's utility carriage as part of the prefab: the electricity and water-pipe connection components added in code, with the composition requirement that gates electricity on a lighting upgrade read back off a vanilla road when importing one.
+Propagating a prefab change to every placed instance by walking from the changed prefab to its edges, their neighbours across each shared node, and then each edge's compositions, nodes, sub-lanes and sub-objects — a walk the engine's own prefab-replacement pass does not perform for road edges.
+Manufacturing the network pieces a composition needs rather than authoring them — cloning one wide vanilla piece per width and rewriting its width, geometry, surfaces and lane list — driven by a four-phase state machine advancing one phase per update, because each phase's prefabs must be registered before the next reads them.
 
 ### Extra Assets Importer
 
@@ -364,6 +381,8 @@ Remembering the previously active tool by subscribing to the tool system's tool-
 Mimicking a vanilla binding declaratively, so a mod action sits on a button the game reserves and follows the player's rebinds, including the two-property form that mimics an axis.
 Suppressing a placement error by setting a disable flag on the error's own prefab rather than by patching the validation system, paired with a restore system in a later phase that runs once and switches itself off.
 The corpus's largest definition rewriter, walking a whole run of net-course definitions in order and writing each course's end elevation into the next course's start to force a constant slope.
+A change applied inside a modification phase deferred to the next frame through the mod's own tag, because the update marker does not survive being added in the phase that made the change.
+Suppressing clearance detection by collapsing the derived prefab field the collision pass reads — the composition height range — rather than patching validation, with the original recorded on the composition entity and a companion system restoring it.
 
 ### Better Bulldozer
 
@@ -376,6 +395,7 @@ A secondary tool that masquerades as the bulldozer by delegating its prefab meth
 Serializable records that make a destructive edit reversible.
 The reason "permanent" removal needs records at all: the game's own systems keep recreating sub-elements from the asset definition, so the mod re-detects and re-deletes them rather than deleting once.
 Reinserting its two tools at the front of the tool list once loading has completed, which is later than the tool's own creation and therefore wins any race with a mod that reorders at `OnCreate`.
+Detecting another mod's per-entity state by reflected component type — on the entity itself or on its edge's endpoint nodes — and re-marking the hits for update a frame later.
 
 ## Inspection and debugging tooling
 
