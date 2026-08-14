@@ -59,9 +59,9 @@ async function main(): Promise<void> {
       title: `Gameface UI status`,
       description: oneLine`
         Check whether the Gameface UI debug endpoint is reachable and report the live page target,
-        engine info, and view-reload tracking (count, last reload time, context id).
-        Calling it arms reload tracking and returns the baseline count for game_wait's sinceReloads.
+        engine info, and view-reload tracking.
         Run this first when other game_* tools fail.
+        Calling it arms reload tracking and returns the baseline count for game_wait's sinceReloads.
       `
     },
     () => gameStatus(client, reloads)
@@ -74,7 +74,6 @@ async function main(): Promise<void> {
       description: oneLine`
         Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate,
         returnByValue) and return the resulting value as JSON.
-        Use document.querySelector and friends to read the live DOM, inspect state, or call UI APIs.
       `,
       inputSchema: {
         expression: z.string().describe(`JavaScript expression to evaluate in the page context`),
@@ -92,9 +91,8 @@ async function main(): Promise<void> {
     {
       title: `Screenshot the Gameface UI`,
       description: oneLine`
-        Capture a screenshot of the Gameface viewport (CDP Page.captureScreenshot) and return it
-        as an inline image.
-        Pass a selector to clip the capture to one element; use index to pick among matches.
+        Capture a screenshot of the Gameface viewport and return it as an inline image; a selector
+        clips the capture to one element.
         Clipping is the only lever on what the image costs you in context: that cost tracks the
         pixel area captured, never the encoded file size.
         Refuses while the JS debugger holds the UI paused: the capture needs the frame loop a
@@ -110,8 +108,7 @@ async function main(): Promise<void> {
           .describe(
             oneLine`
               JPEG quality 1-100 (only used when format is jpeg; default 80).
-              Trades fidelity for transfer bytes; lowering it leaves the image's context cost
-              unchanged.
+              Trades fidelity for transfer bytes, leaving the image's context cost unchanged.
             `
           ),
         selector: z
@@ -140,7 +137,6 @@ async function main(): Promise<void> {
         (selector and predicate are mutually exclusive).
         With reload, the phases compose: reload first, then a quiescence window, then the
         selector/predicate poll in the fresh context.
-        Returns when met or times out.
         It stays usable while the JS debugger is paused, and a timeout says so when it was.
       `,
       inputSchema: {
@@ -191,7 +187,6 @@ async function main(): Promise<void> {
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
-        Use index to pick among matches.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the field to fill`),
@@ -215,7 +210,6 @@ async function main(): Promise<void> {
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync.
         Use when handlers react to individual keystrokes; otherwise game_fill.
-        Use index to pick among matches.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the field to type into`),
@@ -240,7 +234,6 @@ async function main(): Promise<void> {
         the UI's mouseenter / pointerover JS handlers (tooltips) fire.
         The CSS :hover state is NOT set (only real game-forwarded mouse input sets it); verify a
         hover by its DOM effect, never by styling.
-        Use index to pick among matches.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the element to hover`),
@@ -260,14 +253,11 @@ async function main(): Promise<void> {
     {
       title: `Press a key in the Gameface UI`,
       description: oneLine`
-        Press a named key by dispatching a real bubbling keydown+keyup in the page
+        Press a named key by dispatching a real bubbling keydown+keyup (no keypress) in the page
         (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
         ctrl/shift/alt/meta and a repeat count.
-        With a selector it focuses that element and dispatches on it (index picks among matches);
-        without one it dispatches on the focused element, else document.
-        It fires ONLY keydown and keyup (no keypress) and performs NO default action: no character
-        insertion, no Backspace delete, no Tab focus move, no scrolling; use game_type to enter
-        text.
+        It performs NO default action: no character insertion, no Backspace delete, no Tab focus
+        move, no scrolling; use game_type to enter text.
         It reaches the UI's JS keydown handlers, but keys the game routes through its own native
         input layer do NOT respond (e.g. an Escape-to-close handled by the engine rather than the
         DOM).
@@ -301,7 +291,9 @@ async function main(): Promise<void> {
         selector: z
           .string()
           .optional()
-          .describe(`If set, focus this element and dispatch on it; else the focused element`),
+          .describe(
+            `If set, focus this element and dispatch on it; else the focused element, else document`
+          ),
         index: z
           .number()
           .int()
@@ -323,9 +315,8 @@ async function main(): Promise<void> {
         Gameface UI, each prefixed with local wall-clock time and its object arguments expanded to
         their real values (state {a: 1, b: {c: {…}}, arr: [1, 2, 3]}).
         Capture starts when the server first connects to the application.
-        Truncation is always marked: {…} / […] for a value collapsed at the rendered depth, …N more
-        for properties or elements past the per-level cap, a trailing ellipsis inside a clipped
-        string.
+        Truncation is always marked: {…} / […] at the rendered depth, …N more past the per-level
+        cap, a trailing ellipsis inside a clipped string.
         For unbounded depth or parseable output, read the value with game_eval + JSON.stringify.
       `,
       inputSchema: {
@@ -374,7 +365,6 @@ async function main(): Promise<void> {
       description: oneLine`
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI.
-        Set all=true to return every match.
         outerHTML dominates the response: to locate elements, get a targetable handle, or read
         attributes across many matches, use game_query.
       `,
@@ -402,7 +392,6 @@ async function main(): Promise<void> {
         Locate elements in the live Gameface UI by CSS selector, by trimmed textContent
         (equals/contains/regex, case-insensitive by default), or by both; one of the two is
         required, and match/caseSensitive are ignored without text.
-        A selector alone selects, reaching elements no text can match.
         Returns tag, id, classes and bounding rect per match, attributes on request, with the
         counts before and after deepest pruning and the limit, so both truncations are visible.
         Set tag=true for data-gf-tag handles feeding game_click / game_hover / game_screenshot.
@@ -474,7 +463,6 @@ async function main(): Promise<void> {
       description: oneLine`
         Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
         sequence in the page (NOT CDP Input, which Gameface ignores for the UI).
-        Use index to pick among matches.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the element to click`),
@@ -496,9 +484,7 @@ async function main(): Promise<void> {
       description: oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
         and parsed script count.
-        Pass setPauseOnExceptions to change exception pausing.
         Enables the debugger on first use.
-        Hitting a breakpoint FREEZES the UI until resumed.
       `,
       inputSchema: {
         setPauseOnExceptions: z
@@ -515,13 +501,12 @@ async function main(): Promise<void> {
     {
       title: `List parsed UI scripts`,
       description: oneLine`
-        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count), optionally
-        filtered by a url substring.
+        List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count).
         Only scripts parsed since the debugger attached appear, since Gameface does not replay
         scriptParsed; an empty list is what a late attach looks like, and the result says how to
         fill it.
-        Use the scriptId with game_debug_source, and game_debug_search_source to find a position
-        inside one.
+        Feed the scriptId to game_debug_source; game_debug_search_source finds a position inside
+        one.
       `,
       inputSchema: {
         filter: z.string().optional().describe(`Only scripts whose url contains this substring`)
@@ -536,11 +521,10 @@ async function main(): Promise<void> {
       title: `Get UI script source`,
       description: oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
-        Pass lineStart/lineEnd to get a range (large scripts are capped at 400 lines) and maxChars
-        to change how much source comes back at all.
+        The window is capped at 400 lines, range or not; the result says which lines it showed.
         It renders whole lines, so a low line count is no promise of a small answer: one minified
-        line can be the whole module, which is why the character cap exists and why reaching a
-        position inside such a line is game_debug_search_source's job.
+        line can be the whole module, and reaching a position inside such a line is
+        game_debug_search_source's job.
       `,
       inputSchema: {
         scriptId: z.string().describe(`Script id from game_debug_scripts`),
@@ -573,8 +557,8 @@ async function main(): Promise<void> {
       description: oneLine`
         Find a literal string across the parsed script sources and return each hit as
         url + line + column (1-based) with a snippet of surrounding source.
-        The query is case-sensitive and literal, no regex; narrow with urlContains, and read the
-        total/truncated fields for what the ${MAX_SEARCH_MATCHES}-match cap hid.
+        The query is case-sensitive and literal, no regex; read the total/truncated fields for what
+        the ${MAX_SEARCH_MATCHES}-match cap hid.
         This is how you target a column in a minified one-line bundle, where a line breakpoint binds
         to module-evaluation code that never runs during interaction: search for the code you mean,
         then pass its line and column to game_debug_set_breakpoint.
@@ -596,10 +580,8 @@ async function main(): Promise<void> {
       title: `Set a breakpoint`,
       description: oneLine`
         Set a breakpoint by url substring + line, and optionally column; both are 1-based.
-        Add a condition (JS expression) to only pause when it is truthy, which limits how often the
-        UI freezes.
-        A line alone can bind somewhere that never runs again, so check the resolved location the
-        result reports back.
+        A condition limits how often the UI freezes; a line alone can bind somewhere that never
+        runs again, so check the resolved location the result reports back.
         Hitting it FREEZES the UI until you resume with game_debug_step.
       `,
       inputSchema: {
@@ -641,9 +623,8 @@ async function main(): Promise<void> {
     {
       title: `Inspect the paused stack`,
       description: oneLine`
-        When paused, return the call stack (frames with function + location + scope types).
-        Set expandScopes to also list local/closure variables of each frame.
-        Returns 'not paused' otherwise.
+        When paused, return the call stack (frames with function + location + scope types);
+        'not paused' otherwise.
       `,
       inputSchema: {
         expandScopes: z
@@ -661,8 +642,8 @@ async function main(): Promise<void> {
       title: `Evaluate while debugging`,
       description: oneLine`
         Evaluate a JS expression.
-        When paused, it runs in the selected call frame's scope (Debugger.evaluateOnCallFrame) so
-        you can read locals; otherwise it runs globally.
+        When paused, it runs in the selected call frame's scope so you can read locals; otherwise
+        it runs globally.
         Prefer this over game_eval while paused.
       `,
       inputSchema: {
