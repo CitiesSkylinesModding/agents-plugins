@@ -6,6 +6,7 @@ symptoms:
   - 'invokes hang against the parked main thread'
   - 'every debug test reports AbsentInformation'
   - 'the whole suite hangs after one debug test'
+  - 'the attach dies with "sent no Mono debugger greeting"'
 tags: [integration-tests, mono, sdb, xunit]
 ---
 
@@ -14,8 +15,8 @@ tags: [integration-tests, mono, sdb, xunit]
 ## Problem
 
 The evaluator's integration suite launches a net472 fixture under a Mono runtime with the SDB agent
-(`suspend=y`, free port picked test-side) and evaluates raw C# through the production scope chain. Four
-distinct ways the debuggee looks broken when the fixture is at fault.
+(`suspend=y`, free port picked test-side) and evaluates raw C# through the production scope chain.
+Distinct ways the debuggee looks broken when the fixture is at fault.
 
 ## Root cause and fix
 
@@ -27,6 +28,11 @@ distinct ways the debuggee looks broken when the fixture is at fault.
   must be launched with `--debug`; miss either and everything reports `AbsentInformation`.
 - **Armed state leaks across tests.** Every debug test releases what it armed (`fx.ReleaseDebugger()` in
   a `finally`), or the frozen debuggee hangs every later test.
+- **Picking a free port reserves nothing.** Only the agent's own bind does, and xUnit runs collections
+  in parallel: two suites picking at the same moment were handed the same number, so the losing agent
+  never bound while the winner's -- already holding its ONE client -- accepted the second connection and
+  never greeted it. `MonoDebuggee.PickFreePort` hands each caller a distinct port, taken from outside
+  the range the OS itself allocates from.
 - **A fixture type's constructor takes no optional parameter.** xUnit builds a class or collection
   fixture by satisfying every parameter, and a defaulted one it cannot supply fails the whole class at
   run time with `had one or more unresolved constructor arguments`. Sharing a type whose constructor

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace UnityDevtools.Sdb.IntegrationTests;
 
@@ -13,6 +14,14 @@ namespace UnityDevtools.Sdb.IntegrationTests;
 /// by the suite's collection fixture and by the tests that need a debuggee of their own.
 /// </summary>
 internal static class MonoDebuggee {
+  private const int FirstPort = 20_000;
+
+  private const int LastPort = 26_999;
+
+  private static readonly Lock PortLock = new();
+
+  private static readonly HashSet<int> HandedOutPorts = [];
+
   /// <summary>
   /// The Mono runtime to launch, or null when none resolves (tests skip).
   /// </summary>
@@ -68,16 +77,52 @@ internal static class MonoDebuggee {
     }
   }
 
+  /// <summary>
+  /// A loopback port for a debuggee's agent: free right now, and handed out once per process.
+  /// It comes from outside the OS ephemeral range (Linux allocates from 32768, Windows from
+  /// 49152), so the machine's own churn is never handed the same number between this pick and the
+  /// agent's bind, and no two callers here share one: xUnit runs collections in parallel, and a
+  /// shared port leaves the losing agent unbound while the winner already holds its ONE client --
+  /// which accepts the second connection and then never greets it.
+  /// The probe is a filter rather than a guarantee: only the agent's own bind reserves the port.
+  /// </summary>
   internal static int PickFreePort() {
-    var listener = new TcpListener(IPAddress.Loopback, 0);
+    lock (MonoDebuggee.PortLock) {
+      for (var attempt = 0; attempt < 100; attempt++) {
+        var port = Random.Shared.Next(MonoDebuggee.FirstPort, MonoDebuggee.LastPort + 1);
 
-    listener.Start();
+        if (MonoDebuggee.HandedOutPorts.Contains(port) || !MonoDebuggee.IsBindable(port)) {
+          continue;
+        }
 
-    var port = ((IPEndPoint) listener.LocalEndpoint).Port;
+        _ = MonoDebuggee.HandedOutPorts.Add(port);
 
-    listener.Stop();
+        return port;
+      }
 
-    return port;
+      throw new InvalidOperationException(
+        $"no free port in {MonoDebuggee.FirstPort}-{MonoDebuggee.LastPort} after 100 tries"
+      );
+    }
+  }
+
+  /// <summary>
+  /// Whether a listen socket can take the port right now, which rules out both a port something
+  /// already holds and one this machine reserves for itself.
+  /// </summary>
+  private static bool IsBindable(int port) {
+    var probe = new TcpListener(IPAddress.Loopback, port);
+
+    try {
+      probe.Start();
+    }
+    catch (SocketException) {
+      return false;
+    }
+
+    probe.Stop();
+
+    return true;
   }
 
   /// <summary>
