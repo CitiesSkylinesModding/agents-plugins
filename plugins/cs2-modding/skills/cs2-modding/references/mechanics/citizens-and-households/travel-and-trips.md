@@ -40,7 +40,8 @@ CitizenUtils.GetPathfindWeights(citizen, household, householdCitizens):
   time      = 5 * (4 - 3.75 * m_LeisureCounter / 255)
   behaviour = 2
   money     = 2500 * max(1, householdSize) / max(250, household.m_ConsumptionPerDay)
-              * 0.1 for a resident household not yet MovedIn
+              * 0.1 when the household is not MovedIn and the citizen is not
+              MovingAwayReachOC / Tourist / Commuter
   comfort   = 1 + 2 * GetPseudoRandom(TrafficComfort).NextFloat()
 ```
 

@@ -27,7 +27,7 @@ Where each phase sits in the frame, and what that position costs, is the phase t
 - **`Modification2`** — edge, route and building initialisation; damage and destruction.
 - **`Modification2B`** — cross-references and area geometry.
 - **`Modification3`** — sub-object references, owner lookup, attachment, and network composition selection. The phase to anchor into for composition work.
-- **`Modification4`** — modifiers, sub-net references, network geometry and lanes. A change to road geometry or to lanes usually has to fork the vanilla system that owns it, and both of those live here; see `roads-and-traffic`.
+- **`Modification4`** — modifiers, sub-net references, network geometry and lanes. Both are derived layers: change what they derive from and let the pipeline here regenerate them, forking the owning system only where the behaviour has no data seam; see `roads-and-traffic`.
 - **`Modification4B`** — object emergence, lane references, secondary lanes, building state efficiency.
 - **`Modification5`** — removal, the update-collection systems, the search trees and graph systems.
 - **`ModificationEnd`** — instance counts, lane data, zone checking, validation, prefab application, notification triggers. The last chance to touch an entity before the frame's tool and render work.
