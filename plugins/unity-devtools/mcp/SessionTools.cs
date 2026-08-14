@@ -63,7 +63,7 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
     straight away.
     Reach for it when status reports no beacon while the game is running (multicast filtered by a
     firewall or a VPN interface, or a beaconFault), or when an external loader started the debug
-    server on a port of its own. With no port, attach to what the beacon advertises.
+    server on a port of its own.
     The port applies to this attach alone: a later reattach, the one after a dropped connection
     included, goes back to the beacon, so give the port again if the beacon still cannot see the
     game.
@@ -100,7 +100,8 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
   [Description(
     """
     Hold the game fully frozen (simulation AND rendering) across subsequent tool calls, opening a
-    consistency window for multi-step reads/writes.
+    consistency window for multi-step reads/writes. Without a hold, each operation opens and closes
+    a brief window of its own, so the game runs on between calls.
     Suspensions are counted; call resume once per suspend.
     Detaching or a dropped connection always resumes the game.
     """

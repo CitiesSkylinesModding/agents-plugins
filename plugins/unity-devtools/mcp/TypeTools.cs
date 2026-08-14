@@ -35,8 +35,6 @@ public sealed class TypeTools(UnitySession session) {
     """
     Find types in the running game and report where they live: fullName resolves one exact name,
     search matches a regular expression against every type name loaded in the process.
-    With members=true, also list fields, properties, and method signatures.
-    Attaches lazily; the game is only briefly suspended.
     """
   )]
   [UsedImplicitly]
@@ -44,8 +42,8 @@ public sealed class TypeTools(UnitySession session) {
     [Description(
       """
       Exact fully-qualified name, case-insensitive (e.g. MyGame.Citizens.Citizen): one cheap lookup,
-      and the parameter for a name you already hold rather than one you are composing.
-      A name a search returned is already in this form and can be pasted straight in.
+      for a name you already hold rather than one you are composing.
+      A name a search returned is already in this form and pastes straight in.
       """
     )]
     string? fullName = null,
@@ -54,15 +52,13 @@ public sealed class TypeTools(UnitySession session) {
       .NET regular expression matched unanchored and case-insensitively against every loaded type's
       full name, so a plain fragment behaves as a substring search: how you find a type you can only
       describe (a concept like "pathfinding"), rather than name.
-      Types named after your fragment rank above the ones that merely share a namespace with it.
       Write the pattern yourself; a name you are pasting belongs in fullName, because type names
       carry metacharacters of their own (a nested type renders as Outer+Inner, and '+' means
       something else in a regex).
       Matching runs against the same full names the results report, so an anchored pattern lands
       where you expect: a generic definition is MyGame.Caching.Cache`1, arity and no more.
       The first search of a session harvests every loaded assembly and freezes the game for a second
-      or two. Later searches match a cached list, but still freeze the game briefly, and any
-      assembly the game has loaded since is harvested then.
+      or two; later ones match a cached list and freeze it only briefly.
       """
     )]
     string? search = null,

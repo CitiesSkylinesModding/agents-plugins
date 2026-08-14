@@ -32,14 +32,10 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     Burst caveat: Burst-compiled jobs are native code, invisible to the Mono debugger; no breakpoint
     can hit them (debuggable code = non-Burst mods, or the game run with Burst disabled).
     Managed code hits fine on ANY thread, including job workers.
-    Every matching overload gets its own breakpoint id (all returned with signatures); narrow with
-    the signature substring.
+    Every matching overload gets its own breakpoint id, all returned with signatures.
     Without line/ilOffset the breakpoint sits at method entry, the only mode that works without
-    debug info; a line resolves through the method's sequence points (see debug_locations for the
-    valid lines).
-    condition is a C# expression (eval grammar) evaluated in the hit frame's scope on each hit;
-    false auto-resumes the game, so hot-path breakpoints stay cheap.
-    hitCount N skips until the Nth hit (agent-side, free).
+    debug info; a line resolves through the method's sequence points (debug_locations lists the
+    valid ones).
     The game keeps running; catch hits with debug_wait.
     Breakpoints die with the connection (game restart), listed by debug_status.
     """
@@ -56,11 +52,11 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     [Description("Case-insensitive substring to narrow overloads by full signature.")]
     string? signature = null,
     [Description(
-      "C# condition evaluated in the hit frame (locals, parameters, this, typed roots); " +
-      "false auto-resumes."
+      "C# condition (eval grammar) evaluated in the hit frame on each hit (locals, parameters, " +
+      "this, typed roots); false auto-resumes, so hot-path breakpoints stay cheap."
     )]
     string? condition = null,
-    [Description("Break from the Nth hit onward; 0 = every hit.")]
+    [Description("Break from the Nth hit onward; 0 = every hit. Skipping is agent-side and free.")]
     int hitCount = 0
   ) {
     return ToolGuard.Run(() => {
@@ -97,7 +93,7 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     everything in its own loop, so an "uncaught only" mode would never fire).
     Omit exceptionType to break on every exception; expect noise, Unity code throws routinely.
     Shares the breakpoint ID space: listed by debug_status, removed by debug_remove_breakpoint.
-    Catch hits with debug_wait; the pause reports the exception type, message, and throw site.
+    Catch hits with debug_wait.
     """
   )]
   [UsedImplicitly]
@@ -186,17 +182,18 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [Description(
     """
     Inspect the current pause: the paused thread's call stack (capped) plus fully formatted locals,
-    parameters, and `this` for one frame (top by default; frameIndex selects).
+    parameters, and `this` for one frame.
     Works for any pause: a breakpoint/step/exception hit uses the event thread, a plain held suspend
     (suspend tool) uses the main thread.
-    allThreads appends every thread's name/state and a names-only stack (the ECS job-worker view);
     Burst-compiled job code shows no managed frames.
     """
   )]
   [UsedImplicitly]
   public PauseDetails PauseState(
     [Description("Which frame's variables to list; 0 = top.")] int frameIndex = 0,
-    [Description("Append every thread's name/state and names-only stack.")]
+    [Description(
+      "Append every thread's name/state and names-only stack: the ECS job-worker view."
+    )]
     bool allThreads = false
   ) {
     return ToolGuard.Run(() => session.Run(ctx => {
@@ -224,7 +221,6 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     parameters, and `this` as roots, readable AND assignable.
     Requires an active pause (breakpoint/step/exception hit, or a held suspend, which evaluates
     on the main thread); errors otherwise: use eval for frameless evaluation.
-    frameIndex picks the frame (0 = top).
     Frame slots are direct reads/writes; method and property calls run on the game's main thread
     like eval (ECS thread-safety), even when the paused frame belongs to a worker thread.
     Shares the `_` last-result slot with eval.
@@ -421,12 +417,9 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [Description(
     """
     Release the held debugger suspension (suspend tool) for N seconds of real time, then re-take
-    it: the "let the simulation react, then verify" primitive.
-    Requires a held suspension.
-    A game's OWN pause (e.g. a simulation-speed setting) is game logic no SDB operation can lift:
-    pass before/after eval snippets to flip it (the per-game recipe belongs to the caller, e.g.
-    before unpauses the simulation, after re-pauses it). Snippets use the eval grammar and the
-    `_` slot.
+    it: the "let the simulation react, then verify" primitive. Requires a held suspension.
+    A game's OWN pause (e.g. a simulation-speed setting) is game logic no SDB operation can lift;
+    pass before/after eval snippets to flip it. Snippets use the eval grammar and the `_` slot.
     Other tools block for the whole window by design.
     If a breakpoint hits during the window, the pause holds after advance returns
     (pausedDuringAdvance=true); inspect it before resuming.

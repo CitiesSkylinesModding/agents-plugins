@@ -33,14 +33,11 @@ public sealed class EcsTools(UnitySession session) {
   [McpServerTool(Name = "ecs_query")]
   [Description(
     """
-    Count and list the entities having ALL the given component types. With label, each listed
-    entity is annotated via a one-Entity-arg method on a managed system (e.g. a name system),
-    format "<systemTypeFullName>:<method>".
+    Count and list the entities having ALL the given component types.
     Entities tagged Disabled or Prefab are excluded from the match, and so is an entity whose
     queried enableable component is currently disabled, so a count of 0 means "none the query
     can see" rather than "none exist"; reach one of those by index with ecs_list_components,
     which ignores the exclusion.
-    Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
   [UsedImplicitly]
@@ -51,7 +48,10 @@ public sealed class EcsTools(UnitySession session) {
     int limit = 10,
     [Description("ECS world name; omit for the default world.")]
     string? world = null,
-    [Description("Optional \"<systemTypeFullName>:<method>\" annotation call per entity.")]
+    [Description(
+      "Annotate each listed entity through a one-Entity-arg method on a managed system (e.g. a " +
+      "name system), as \"<systemTypeFullName>:<method>\"."
+    )]
     string? label = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
@@ -126,11 +126,6 @@ public sealed class EcsTools(UnitySession session) {
     debugger.
     Enableable components also report whether they are currently ENABLED: a disabled component is
     still carried and still passes a presence check, while the simulation ignores it.
-    With values, each "component" entry also inlines its field values; every other kind reports
-    its kind where a value would go.
-    With follow, the entity a named component REFERENCES is listed alongside this one: how you
-    reach state that lives on a prefab or an owner rather than on the entity you hold.
-    Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
   [UsedImplicitly]
@@ -145,6 +140,7 @@ public sealed class EcsTools(UnitySession session) {
       Chase an Entity-typed field to the entity it names and list it too, under the same values
       setting, as "<componentTypeFullName>[:<field>]"; the field is optional when the component
       carries exactly one Entity field.
+      How you reach state that lives on a prefab or an owner rather than on the entity you hold.
       Exactly one level is followed: a longer chain is one call per hop.
       """
     )]
@@ -196,7 +192,6 @@ public sealed class EcsTools(UnitySession session) {
   [Description(
     """
     Read one entity's component and report its field values.
-    Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
   [UsedImplicitly]
@@ -229,8 +224,7 @@ public sealed class EcsTools(UnitySession session) {
     """
     Write one field of one entity's component (read-modify-write of the whole component), then
     read it back. Mutates live game state.
-    Field values: primitives and enums as text, Entity fields as "index:version".
-    Attaches lazily; hold a suspend window across several writes when consistency matters.
+    Hold a suspend window (suspend tool) across several writes when consistency matters.
     """
   )]
   [UsedImplicitly]
@@ -273,7 +267,6 @@ public sealed class EcsTools(UnitySession session) {
   [Description(
     """
     Read one entity's DynamicBuffer and report its elements.
-    Attaches lazily; the game is only briefly suspended unless a suspend hold is active.
     """
   )]
   [UsedImplicitly]
@@ -314,14 +307,13 @@ public sealed class EcsTools(UnitySession session) {
     """
     Edit one entity's DynamicBuffer in place; mutates live game state.
     op "add" appends an element cloned from element 0 with one field overridden via set (the buffer
-    must be non-empty);
-    op "remove_at" removes the element at index.
-    Hold a suspend window across several edits when consistency matters.
+    must be non-empty); op "remove_at" removes the element at index.
+    Hold a suspend window (suspend tool) across several edits when consistency matters.
     """
   )]
   [UsedImplicitly]
   public EcsBufferEditResult BufferEdit(
-    [Description("\"add\" (append, cloned from element 0 + set) or \"remove_at\".")] string op,
+    [Description("\"add\" or \"remove_at\".")] string op,
     [Description("Fully-qualified buffer element type name (IBufferElementData).")]
     string elementType,
     [Description(EcsTools.EntityParam)] string entity,
