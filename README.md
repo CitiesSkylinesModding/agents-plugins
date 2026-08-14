@@ -24,9 +24,11 @@ Generic tooling, developed and verified against Cities: Skylines II.
 | --- | --- | --- | --- |
 | 🔬 **[unity-devtools](plugins/unity-devtools/README.md)** | A live line into a **Unity Mono dev build** over the Mono Soft Debugger: reflect types, evaluate C# expressions, read & write ECS state. No code injection. Plus a driving skill. | .NET 10 SDK (Windows) | [README](plugins/unity-devtools/README.md) · [Tools reference](plugins/unity-devtools/README.md#tools) · [NuGet](https://www.nuget.org/packages/UnityDevtools.Mcp) |
 | 🖼️ **[coherent-gameface](plugins/coherent-gameface/README.md)** | Eyes and hands in any **Coherent Gameface** (Cohtml) game UI over CDP: evaluate JS, screenshot, drive the DOM, console, JS breakpoints. Plus an engine skill and a driving skill. | Node 22.4+ | [README](plugins/coherent-gameface/README.md) · [Tools reference](plugins/coherent-gameface/mcp/README.md) · [npm](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp) |
+| 📚 **[cs2-modding](plugins/cs2-modding)** — *work in progress* | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim verified against the decompiled game. Knowledge only — skills and references, no MCP server. | Nothing | [Sources](plugins/cs2-modding) |
 
-Both plugins are **generic**: they target any game or application embedding the technology, with
-Cities: Skylines II as the reference target where everything is field-verified.
+The two toolkit plugins are **generic**: they target any game or application embedding the
+technology, with Cities: Skylines II as the reference target where everything is field-verified.
+`cs2-modding` is the deliberate exception, and is about that game throughout.
 
 > [!TIP]
 > **Not using Claude Code or Codex CLI?** The Gameface MCP server is also published on npm as
@@ -35,8 +37,9 @@ Cities: Skylines II as the reference target where everything is field-verified.
 
 ## Install
 
-Add the marketplace once, then install the plugin(s) you want. Each plugin autoloads its MCP
-server from a committed artifact: no installation step, works offline, version-locked to the plugin.
+Add the marketplace once, then install the plugin(s) you want. Each plugin that carries an MCP
+server autoloads it from a committed artifact: no installation step, works offline, version-locked
+to the plugin. `cs2-modding` carries none and is skills only.
 
 ### Claude Code
 
@@ -44,6 +47,7 @@ server from a committed artifact: no installation step, works offline, version-l
 /plugin marketplace add CitiesSkylinesModding/agents-plugins
 /plugin install coherent-gameface@csmodding
 /plugin install unity-devtools@csmodding
+/plugin install cs2-modding@csmodding
 ```
 
 Or from your terminal, `claude plugin marketplace add …` / `claude plugin install …` with the same
@@ -55,10 +59,16 @@ arguments.
 codex plugin marketplace add CitiesSkylinesModding/agents-plugins
 codex plugin add coherent-gameface@csmodding
 codex plugin add unity-devtools@csmodding
+codex plugin add cs2-modding@csmodding
 ```
 
 Then run `/mcp` to confirm the servers connected. Each plugin's README covers its requirements,
 configuration and troubleshooting.
+
+> [!NOTE]
+> `cs2-modding` is still being written: not all of its references are published yet, some will be
+> partly rewritten, and it ships no README so far. What is there is safe to use and already
+> useful — install it if you want it now, and expect it to grow.
 
 ## Development
 
