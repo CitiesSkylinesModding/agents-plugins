@@ -106,31 +106,44 @@ whichever the OS chose. The symptom is total and permanent: every `status` repor
 every attach fails against a game running normally, curable only by restarting the server, which
 nothing tells the user to do.
 
-Re-enumerating costs a timed receive in place of the blocking one, so the loop wakes periodically
-and rejoins whatever is new. Retry ladders against filtered multicast were ruled out deliberately,
-and this is a narrower thing: the membership set going stale, not a fallback for a network that
-refuses the group.
+Re-enumerating costs a timed receive in place of the blocking one, so each of the per-port loops
+wakes periodically and rejoins whatever is new. Retry ladders against filtered multicast were ruled
+out deliberately, and this is a narrower thing: the membership set going stale, not a fallback for a
+network that refuses the group.
+
+A second silence rides on the same loop. `ReceiveLoop` treats every `SocketException` as the
+transient WSAECONNRESET an ICMP unreachable produces, and backs off 200 ms; one that keeps coming
+back instead — the interface carrying the membership torn away — spins the thread for the process's
+life without ever ending that port's listen, so the port names itself in no `Fault` entry and
+`Listening` still counts it among those that can deliver. Bounding it needs a run of failures told
+apart from a lone hiccup, and the ports carrying no traffic never complete a receive to reset a
+counter on, so the bound has to be the elapsed time a socket has spent failing without a gap. The
+timed receive above supplies exactly that clock, which is why the two belong in one change.
 
 ### Finding a Unity Editor
 
-A Unity Editor runs the same soft-debugger agent as a player and drives identically once attached,
-but it never appears on the PlayerConnection beacon, so no-port discovery cannot see it at all. The
-workaround a live session ran: enumerate the Editor process, read its listening ports off the OS by
-hand, and pass the one in the SDB range to `attach`. Every step of that is mechanical, which is what
-makes it a gap rather than a limitation.
+A Unity Editor runs the same soft-debugger agent as a player and drives identically once attached.
+Whether it appears on the PlayerConnection beacon is unsettled: nothing recorded says it does not,
+and an Editor's own log prints its host string — `[Debug] 1` included — against 54997 and 34997,
+without saying whether it is announcing itself or only joining to receive. Settling it costs
+nothing: next time an Editor is open, look at whether `status` reports it.
 
-Settle the cheap question first. `BeaconListener` records that Unity documents three further
-multicast ports — 34997, 57997, 58997 — and that players use 54997; whether an Editor advertises on
-one of the others is untested. If it does, Editor support is three more binds on a listener that
-already joins every interface. Run an Editor and listen on all four for a minute.
+Where it does not, build what a live session ran by hand: enumerate the Editor process by name,
+confirm a listener in the SDB range, and pass that port to `attach`. Every step of that is
+mechanical, which is what makes it a gap rather than a limitation. An Editor's port looked like
+`56000 + (pid % 1000)` on a single sample, so treat that as a hint worth checking first rather than
+as the answer.
 
-Failing that, anchor on the process rather than the port: enumerate by name, derive the port, and
-confirm something listens there. An Editor's looked like `56000 + (pid % 1000)` on a single sample,
-so that formula needs more before anything relies on it.
+Where it does turn up, the listener needs a way to tell it from a player before reporting an
+endpoint. `SdbPort` falls back to `56000 + (guid % 1000)`, evidenced only against recorded player
+runs, and the pid formula above suggests an Editor derives its port differently — so a beacon
+carrying no `:port` suffix would be given a confidently wrong endpoint, and with a game also
+running the two sightings would alternate. Settle what an Editor actually advertises before
+anything reads its beacon as a player's.
 
 Whatever finds it must also reattach to it: a domain reload — a script compile, entering or leaving
-play mode — drops the connection, and the reattach resolves from the beacon, which by construction
-does not describe the Editor.
+play mode — drops the connection, and the reattach resolves from the beacon, which may not describe
+the Editor. A process-anchored find therefore has to be re-runnable rather than one-shot.
 
 ### An `ecs_query` seam in the SDB library
 
@@ -230,6 +243,12 @@ built once already for IL2CPP and which would make the port small, or CoreCLR's 
 makes it a rewrite. One cheap experiment settles it — a 6.7 CoreCLR desktop player built with script
 debugging, then watch whether it still multicasts the PlayerConnection beacon with `[Debug] 1` and
 whether anything listens in 56000-56999. `BeaconListener` is the tool for that.
+
+Two things to recognise it by, both read off JetBrains' Unity player listener rather than any Unity
+source. A CoreCLR beacon inserts a `[ProcessId]` field after `[Port]`, which `PlayerConnectionBeacon`
+would parse and ignore as it stands, and `[Flags]` gains a bit at `1 << 7` for CoreCLR that Unity's
+published `MulticastFlags` enum does not carry — this plugin reads no flags at all today, so that bit
+is the cheapest place to start.
 
 On the ICorDebug branch there is no wire protocol to speak: attach is by PID through `dbgshim`, with
 `mscordbi` version-matched to the target runtime, on the same machine — so remote attach dies unless
