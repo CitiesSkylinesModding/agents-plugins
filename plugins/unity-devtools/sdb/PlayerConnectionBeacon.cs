@@ -10,15 +10,15 @@ namespace UnityDevtools.Sdb;
 /// Debugger endpoint it implies.
 /// The payload is a flat list of <c>[Key] value</c> pairs, and the same text appears verbatim in
 /// the player's log, so a logged line parses exactly like a received packet.
-/// The debugger port is NOT advertised: <c>[Port]</c> is the PlayerConnection/profiler port, and
-/// <c>[Id]</c> carries no <c>:port</c> suffix on a player. It is derived from <c>[Guid]</c>
-/// instead, through the formula Unity's IDE integration uses.
+/// The debugger port is never <c>[Port]</c>, which is the PlayerConnection/profiler one.
+/// It is the <c>:port</c> suffix <c>[Id]</c> carries when the player publishes it, and otherwise
+/// derives from <c>[Guid]</c> through the formula Unity's IDE integration uses.
 /// </summary>
 public sealed class PlayerConnectionBeacon {
   /// <summary>
   /// The base of the debugger-port formula; the connection GUID picks the offset.
   /// </summary>
-  public const int SdbPortBase = 56000;
+  private const int SdbPortBase = 56000;
 
   private const int SdbPortSpan = 1000;
 
@@ -69,9 +69,11 @@ public sealed class PlayerConnectionBeacon {
   public string Host => string.IsNullOrEmpty(this.Ip) ? "127.0.0.1" : this.Ip;
 
   /// <summary>
-  /// The SDB port the player's agent binds, derived from the connection GUID.
+  /// The SDB port the player's agent binds. A player that names a port is taken at its word even
+  /// where the formula would name another, the published contract putting the derivation second.
   /// </summary>
   public int SdbPort =>
+    PlayerConnectionBeacon.PortSuffix(this.Id) ??
     PlayerConnectionBeacon.SdbPortBase +
     (int) (this.ConnectionGuid % PlayerConnectionBeacon.SdbPortSpan);
 
@@ -102,9 +104,9 @@ public sealed class PlayerConnectionBeacon {
         match.Groups["value"].Value.Trim(PlayerConnectionBeacon.Padding);
     }
 
-    // [Guid] is what makes a line a beacon here: it is the only field the debugger endpoint can be
-    // derived from, so a line missing it is rejected whole rather than half-parsed into a target
-    // with no port.
+    // [Guid] is what makes a line a beacon here: every player publishes it, and it is what the
+    // debugger port falls back to, so a line missing it is rejected whole rather than half-parsed
+    // into a target whose port rests on an [Id] suffix alone.
     var guid = PlayerConnectionBeacon.Number(fields, "Guid");
 
     // Read as a long so both ends of the uint range are rejected rather than wrapped: a signed
@@ -116,7 +118,7 @@ public sealed class PlayerConnectionBeacon {
 
     return new PlayerConnectionBeacon {
       Ip = PlayerConnectionBeacon.Text(fields, "IP"),
-      PlayerConnectionPort = (int?) PlayerConnectionBeacon.Number(fields, "Port"),
+      PlayerConnectionPort = PlayerConnectionBeacon.Port(fields, "Port"),
       ConnectionGuid = (uint) guid.Value,
       Id = PlayerConnectionBeacon.Text(fields, "Id"),
       DebuggerEnabled = PlayerConnectionBeacon.Text(fields, "Debug") is "1",
@@ -125,8 +127,43 @@ public sealed class PlayerConnectionBeacon {
     };
   }
 
+  /// <summary>
+  /// The port an <c>[Id]</c> can end with, or null when it carries none or one no peer could be
+  /// listening on. A malformed suffix is not grounds to reject the beacon, the GUID still yielding
+  /// a port, so such a line is unhelpful rather than unusable.
+  /// </summary>
+  private static int? PortSuffix(string id) {
+    var colon = id?.LastIndexOf(':') ?? -1;
+
+    if (colon < 0) {
+      return null;
+    }
+
+    // NumberStyles.None so a sign or surrounding space disqualifies the suffix instead of being
+    // read through, and ushort so the range check comes with the parse.
+    return ushort.TryParse(
+      id.AsSpan(colon + 1),
+      NumberStyles.None,
+      CultureInfo.InvariantCulture,
+      out var port
+    ) && port > 0
+      ? port
+      : null;
+  }
+
+  /// <summary>
+  /// A field read as a port, or null where it is absent or outside the range one can occupy.
+  /// Range-checked rather than cast: the group is one any process can send to, and a cast would
+  /// wrap an out-of-range value into a plausible port and report it as a fact about the player.
+  /// </summary>
+  private static int? Port(Dictionary<string, string> fields, string key) {
+    var value = PlayerConnectionBeacon.Number(fields, key);
+
+    return value is > 0 and <= ushort.MaxValue ? (int) value.Value : null;
+  }
+
   private static string Text(Dictionary<string, string> fields, string key) =>
-    fields.TryGetValue(key, out var value) ? value : null;
+    fields.GetValueOrDefault(key);
 
   private static long? Number(Dictionary<string, string> fields, string key) {
     var raw = PlayerConnectionBeacon.Text(fields, key);

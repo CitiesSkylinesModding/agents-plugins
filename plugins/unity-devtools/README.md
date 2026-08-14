@@ -179,8 +179,10 @@ beacon, so pass it again for as long as it is still needed.
 
 - **"no Unity game is advertising itself"**: the game is not running, is not a development Mono
   build (no SDB agent), or its multicast is not reaching the server. Run `status`: with the game
-  visibly running, it is the third — a firewall or a VPN interface — and `attach` with the game's
-  debugger port is the recovery.
+  visibly running it is the third, and `attach` with the game's debugger port is the recovery.
+  `beaconFault` says which part of the beacon listen was lost and why, and
+  `beaconListening: false` says none of them are left; either way a firewall or a VPN interface
+  filtering multicast is the other candidate, and both point at the same recovery.
 - **`status` reports no beacon while it also reports a held suspension**: none of the above. A
   suspended game stops broadcasting, so a window held past ten seconds expires its own beacon.
   `resume` and ask again.

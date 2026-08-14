@@ -46,8 +46,11 @@ public sealed class UnitySessionAttachTests : IDisposable {
     // would be attached to instead: an effect on someone's running game rather than a test. A
     // listener that never came up fails the same assertion on its own wording, and the multicast
     // suite is what reports that host anyway.
+    // On Listening rather than on Fault, which a lost idle port sets on a listener that still
+    // discovers games perfectly well: skipping on that would park this case for good, and a skip
+    // reads exactly like a pass.
     Skip.If(
-      this.beacons.Unavailable is not null || this.beacons.Wait() is not null,
+      !this.beacons.Listening || this.beacons.Wait() is not null,
       "this machine advertises a Unity game, or receives no beacon at all"
     );
 

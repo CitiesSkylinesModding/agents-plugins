@@ -15,12 +15,12 @@ The first tool that needs the VM attaches on its own, the session persists, and 
 The game is found by the PlayerConnection beacon it multicasts, which carries the debugger endpoint: there is nothing to configure, and every attach resolves that endpoint afresh, so a game restart costs nothing.
 `status` is the read-only orient step: what the beacon advertises, the endpoint an attach would use, and session state (attached, held suspensions).
 Everything it reports describes the present, so act on it as read.
-A game running while `status` reports no beacon means the multicast is not reaching the server (a firewall, a VPN interface): call `attach` with the game's debugger port. That port governs that one attach, so give it again after any reattach for as long as the beacon still cannot see the game.
+A game running while `status` reports no beacon means the beacon is not getting through: multicast blocked by a firewall or a VPN interface, or `beaconFault`/`beaconListening` reporting the listen itself impaired. Either way, call `attach` with the game's debugger port. That port governs that one attach, so give it again after any reattach for as long as the beacon still cannot see the game.
 Rule that out first when `status` also shows a held suspension: a suspended game stops broadcasting, so a window held past ten seconds makes its own beacon expire. Resume and ask again before diagnosing the network.
 A beacon whose `debuggerEnabled` is false is a game running without `player-connection-debug=1`: only a relaunch with that option makes it attachable.
 The debugger slot is exclusive: while attached, an IDE debugger (Rider/dnSpy/VS) cannot attach to the game, and vice versa; `detach` frees the slot, and the next unity call reattaches on its own.
 An attach failure while an IDE holds the slot looks like a connection refusal, not "slot taken".
-A Unity Editor is attachable on the same protocol but does not turn up on the beacon, so nothing finds it for you: read its debugger port off the OS listener table for the Editor process and pass that port to `attach`. Expect a domain reload — a script compile, entering or leaving play mode — to drop the connection.
+A Unity Editor is attachable on the same protocol, but no Editor has been confirmed on the beacon: try `status` first, and where it reports none, find the Editor yourself by reading its debugger port off the OS listener table for that process and passing the port to `attach`. Expect a domain reload — a script compile, entering or leaving play mode — to drop the connection.
 
 ## Suspend windows
 

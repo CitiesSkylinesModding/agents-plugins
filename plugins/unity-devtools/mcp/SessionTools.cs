@@ -22,8 +22,7 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
     it is safe while an IDE holds the debugger slot.
     A beacon with debuggerEnabled false means the game IS running but was launched without
     'player-connection-debug=1'; no beacon at all means no game is advertising itself, unless
-    beaconUnavailable is set, which means this machine has stopped receiving beacons entirely and
-    only the attach tool's explicit port can reach a game.
+    beaconFault or beaconListening says the listen itself is impaired.
     No beacon while session.heldSuspends is above zero means neither: a suspended game stops
     broadcasting, so this session froze the very thing it is reporting on. Resume and ask again.
     Other tools attach lazily on first use, so a session needs no explicit attach step.
@@ -50,7 +49,8 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
             ProjectName = beacon.ProjectName
           },
         Endpoint = beacon?.Endpoint is {} endpoint ? $"{endpoint.Host}:{endpoint.Port}" : null,
-        BeaconUnavailable = beacons.Unavailable,
+        BeaconListening = beacons.Listening,
+        BeaconFault = beacons.Fault,
         Session = SessionTools.Describe(session.Snapshot())
       };
     }
@@ -61,9 +61,9 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
     """
     Attach to a Mono Soft Debugger port on this machine, replacing any live session and connecting
     straight away.
-    Reach for it when status reports no beacon while the game is running (a firewall or a VPN
-    interface filtering multicast), or when an external loader started the debug server on a port of
-    its own. With no port, attach to what the beacon advertises.
+    Reach for it when status reports no beacon while the game is running (multicast filtered by a
+    firewall or a VPN interface, or a beaconFault), or when an external loader started the debug
+    server on a port of its own. With no port, attach to what the beacon advertises.
     The port applies to this attach alone: a later reattach, the one after a dropped connection
     included, goes back to the beacon, so give the port again if the beacon still cannot see the
     game.
@@ -150,11 +150,17 @@ public sealed record StatusResult {
   public required string? Endpoint { [UsedImplicitly] get; init; }
 
   /// <summary>
-  /// Why this machine can receive no further beacon, or null when it can. Set, it means the listen
-  /// has ended for good, so nothing new will be discovered here whatever is running and the attach
-  /// tool's explicit port is the only way in.
+  /// Which part of the beacon listen was lost and why, or null while all of it is up. Set, a
+  /// running game can go undiscovered however it was launched, so read a missing beacon as
+  /// inconclusive rather than as "no game", and reach for the attach tool's explicit port.
   /// </summary>
-  public required string? BeaconUnavailable { [UsedImplicitly] get; init; }
+  public required string? BeaconFault { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// Whether any part of the listen is still up. False and a missing beacon says nothing at all
+  /// about whether a game is running: only an explicit port reaches one from here.
+  /// </summary>
+  public required bool BeaconListening { [UsedImplicitly] get; init; }
 
   public required SessionInfo Session { [UsedImplicitly] get; init; }
 }
@@ -163,7 +169,7 @@ public sealed record StatusResult {
 public sealed record BeaconInfo {
   public required string Host { [UsedImplicitly] get; init; }
 
-  /// <summary>The debugger port derived from the advertised connection GUID.</summary>
+  /// <summary>The debugger port this player is reachable on.</summary>
   public required int SdbPort { [UsedImplicitly] get; init; }
 
   /// <summary>

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -25,10 +27,14 @@ public sealed class BeaconListener : IDisposable {
   public const string MulticastGroup = "225.0.0.222";
 
   /// <summary>
-  /// The port that group is served on.
-  /// Unity also documents 34997, 57997 and 58997; players use this one.
+  /// The ports that group is served on. Unity's own IDE integration binds every one of them, with
+  /// nothing in it distinguishing a port by the kind of target that uses it.
+  /// Only 54997 is attested by observed player traffic; 34997 is the one Unity's native side calls
+  /// the alternative port, and the last two are attested nowhere. All are bound regardless, because
+  /// a player on an unbound port is never discovered at all, and that looks exactly like filtered
+  /// multicast: the reader is sent after a firewall they do not have.
   /// </summary>
-  public const int MulticastPort = 54997;
+  public static readonly IReadOnlyList<int> MulticastPorts = [54997, 34997, 57997, 58997];
 
   /// <summary>
   /// How long <see cref="Wait"/> gives a first beacon before concluding no game is advertising
@@ -53,9 +59,14 @@ public sealed class BeaconListener : IDisposable {
 
   private static readonly TimeSpan ReceiveErrorBackoff = TimeSpan.FromMilliseconds(200);
 
-  private readonly Socket socket;
+  private readonly (Socket Socket, int Port)[] sockets;
 
-  private readonly ManualResetEventSlim arrived = new();
+  /// <summary>
+  /// Guards the wait: producers pulse it after publishing, waiters sleep on it.
+  /// A monitor rather than an event because every waiter must see every pulse, and resetting a
+  /// shared event per waiter lets one clear a signal another was about to read.
+  /// </summary>
+  private readonly object signal = new();
 
   /// <summary>
   /// The sighting is replaced wholesale rather than field by field, so a reader always sees a
@@ -65,7 +76,11 @@ public sealed class BeaconListener : IDisposable {
 
   private volatile bool closed;
 
-  private volatile string unavailable;
+  /// <summary>
+  /// What went wrong on each port that is not being listened on, keyed by port. The ports fail
+  /// independently, so each names itself: a reader acts on which one is gone.
+  /// </summary>
+  private readonly ConcurrentDictionary<int, string> faults = new();
 
   private readonly TimeSpan freshness;
 
@@ -76,40 +91,90 @@ public sealed class BeaconListener : IDisposable {
   public BeaconListener(TimeSpan? freshness = null) {
     this.freshness = freshness ?? BeaconListener.Freshness;
 
-    try {
-      this.socket = BeaconListener.Listen();
-    }
-    catch (Exception ex) when (ex is
-      SocketException or
-      NetworkInformationException or
-      PlatformNotSupportedException or
-      InvalidOperationException) {
-      // A host that cannot receive the beacon must still get a working server: discovery then
-      // answers "nothing is advertised" and the explicit attach endpoint stays reachable, which is
-      // the documented recovery for exactly this host. Every way the network stack can refuse is
-      // caught, since one that escaped here would take the server down at startup.
-      this.unavailable = ex.Message;
+    // Enumerated once and shared, so every socket joins the same set: an interface flapping
+    // mid-loop would otherwise leave the sockets with memberships that disagree.
+    var (indexes, enumerationFailure) = BeaconListener.MulticastInterfaceIndexes();
 
-      return;
+    // A machine that will not describe its interfaces refuses every port for that one cause, and
+    // the API's own message is the only thing naming it: the generic wording below would send the
+    // reader auditing adapters that are fine.
+    var noRoute = enumerationFailure is null
+      ? "no network interface on this machine would join the group"
+      : $"this machine would not list its network interfaces: {enumerationFailure}";
+
+    var listening = new List<(Socket Socket, int Port)>();
+
+    foreach (var port in BeaconListener.MulticastPorts) {
+      var socket = BeaconListener.TryListen(port, indexes, noRoute, out var reason);
+
+      if (socket is null) {
+        this.faults[port] = $"could not be listened on: {reason}";
+      }
+      else {
+        listening.Add((socket, port));
+      }
     }
 
-    new Thread(this.ReceiveLoop) {
-      Name = "PlayerConnection beacon",
-      IsBackground = true
-    }.Start();
+    this.sockets = [.. listening];
+
+    foreach (var (socket, port) in this.sockets) {
+      try {
+        new Thread(() => this.ReceiveLoop(socket, port)) {
+          Name = $"PlayerConnection beacon {port}",
+          IsBackground = true
+        }.Start();
+      }
+      catch (Exception ex) {
+        // Nothing escapes this constructor, for the reason TryListen gives. The socket is released
+        // here rather than left bound and joined with nobody receiving on it, the loop that would
+        // otherwise have owned it never having started.
+        this.faults[port] = $"could not be listened on: {ex.Message}";
+
+        socket.Dispose();
+      }
+    }
   }
 
   /// <summary>
-  /// Why nothing more can be received, or null while the listener is up. Discovery reports it
-  /// rather than failing over it, so a machine whose network refuses the group still answers the
-  /// question and still takes an explicit port.
-  /// Set once and never cleared: every path that reaches it has ended the listen for good, and
-  /// silence with no reason attached would send the reader after the game's launch options when
-  /// the fault is here.
-  /// Volatile because the receive thread is one of the two writers and every reader is a tool
-  /// thread, which would otherwise be free to go on seeing the null.
+  /// Every port of the group whose listen was lost and why, or null while none has been.
+  /// A disposal is not a loss and adds nothing here.
+  /// Discovery reports it rather than failing over it, so a machine whose network refuses the group
+  /// still answers the question and still takes an explicit port.
+  /// A fault is not the end of the listen, which is what <see cref="Listening"/> answers: a game
+  /// can still be discovered while this is set, and equally the port lost can have been the only
+  /// one that ever mattered, a player advertising on exactly one.
+  /// An entry is never cleared, no path that records one recovering the port it names.
   /// </summary>
-  public string Unavailable => this.unavailable;
+  public string Fault {
+    get {
+      if (this.faults.IsEmpty) {
+        return null;
+      }
+
+      // Walked in the group's own order, which the dictionary does not keep, and ports sharing a
+      // reason are named together: the common failure is one the whole machine has, so listing it
+      // per port would say the same thing as many times as there are ports.
+      var lost = BeaconListener.MulticastPorts
+        .Where(this.faults.ContainsKey)
+        .GroupBy(port => this.faults[port])
+        .Select(ports =>
+          $"port{(ports.Count() > 1 ? "s" : "")} {string.Join(", ", ports)} {ports.Key}"
+        );
+
+      return string.Join("; ", lost);
+    }
+  }
+
+  /// <summary>
+  /// Whether any port can still deliver a beacon. False means a missing beacon says nothing
+  /// whatever about whether a game is running, and it is what ends a <see cref="Wait"/>; a
+  /// construction that bound nothing, and a disposal, both start there.
+  /// Derived from the faults rather than counted alongside them, so the two cannot disagree and
+  /// no caller has to read them in a particular order: every port that loses its listen records
+  /// why before this turns false. A disposal is the exception, ending the listen without a fault.
+  /// </summary>
+  public bool Listening =>
+    !this.closed && this.faults.Count < BeaconListener.MulticastPorts.Count;
 
   /// <summary>
   /// The most recent beacon received, attachable or not, or null when none has arrived within
@@ -141,33 +206,34 @@ public sealed class BeaconListener : IDisposable {
     var clock = Stopwatch.StartNew();
     var limit = timeout ?? BeaconListener.DiscoveryWait;
 
-    while (true) {
-      // Reset BEFORE reading, so a beacon stored between the read and the wait re-signals rather
-      // than being slept through.
-      this.arrived.Reset();
+    // Held across the whole wait, which Monitor.Wait releases while it sleeps: a producer that
+    // publishes between the read and the sleep therefore blocks until the sleep begins, so its
+    // pulse can never land in the gap.
+    lock (this.signal) {
+      while (true) {
+        // Through Latest rather than the field, so every caller inherits one definition of what is
+        // currently advertised.
+        var beacon = this.Latest;
 
-      // Through Latest rather than the field, so every caller inherits one definition of what is
-      // currently advertised.
-      var beacon = this.Latest;
+        if (beacon is not null) {
+          return beacon;
+        }
 
-      if (beacon is not null) {
-        return beacon;
+        // Read AFTER the sighting: a listen that ended part-way through the process leaves what it
+        // already heard readable for the rest of its freshness, and that beacon is still the
+        // answer. Past it there is nothing left to wait for, since no thread will pulse again.
+        if (!this.Listening) {
+          return null;
+        }
+
+        var remaining = limit - clock.Elapsed;
+
+        if (remaining <= TimeSpan.Zero) {
+          return null;
+        }
+
+        Monitor.Wait(this.signal, remaining);
       }
-
-      // Read AFTER the sighting: a listen that ended part-way through the process leaves what it
-      // already heard readable for the rest of its freshness, and that beacon is still the answer.
-      // Past it there is nothing left to wait for, since no thread will ever signal again.
-      if (this.Unavailable is not null) {
-        return null;
-      }
-
-      var remaining = limit - clock.Elapsed;
-
-      if (remaining <= TimeSpan.Zero) {
-        return null;
-      }
-
-      this.arrived.Wait(remaining);
     }
   }
 
@@ -176,20 +242,27 @@ public sealed class BeaconListener : IDisposable {
     // socket is what wakes it out of its blocking receive.
     this.closed = true;
 
-    // The signal is deliberately left undisposed: nothing here ever touches its WaitHandle, so it
-    // holds no unmanaged resource, and disposing it under a receive thread still between a datagram
-    // and its Set would throw on a thread that must never throw.
-    this.socket?.Dispose();
+    // `closed` above is what makes Listening false, so a waiter is released here rather than left
+    // to sleep out its whole budget against a listener that is gone.
+    this.Pulse();
+
+    foreach (var (socket, _) in this.sockets) {
+      socket.Dispose();
+    }
   }
 
-  private void ReceiveLoop() {
+  private void ReceiveLoop(Socket socket, int port) {
     var buffer = new byte[4096];
+
+    // Released whichever way this loop ends, or a port reported as lost would go on holding its
+    // binding and its group memberships with nobody receiving on it.
+    using var owned = socket;
 
     while (!this.closed) {
       int length;
 
       try {
-        length = this.socket.Receive(buffer);
+        length = owned.Receive(buffer);
       }
       catch (Exception ex) {
         if (this.closed) {
@@ -198,10 +271,12 @@ public sealed class BeaconListener : IDisposable {
 
         // This thread must never throw: an unhandled exception on it would take the server down
         // over a UDP hiccup. Windows reports WSAECONNRESET on a datagram socket after an ICMP
-        // unreachable, which the next receive recovers from; anything else ends the listen, leaving
-        // the last beacon readable rather than spinning on a socket that will not answer.
+        // unreachable, which the next receive recovers from; anything else ends this port's listen,
+        // leaving the last beacon readable rather than spinning on a socket that will not answer.
+        // A SocketException that keeps coming back rather than clearing is the case this does not
+        // cover, and docs/ROADMAP.md carries it.
         if (ex is not SocketException) {
-          this.unavailable = ex.Message;
+          this.EndLoop(port, ex.Message);
 
           return;
         }
@@ -219,27 +294,56 @@ public sealed class BeaconListener : IDisposable {
 
       this.latest = new Sighting(beacon, Stopwatch.GetTimestamp());
 
-      this.arrived.Set();
+      this.Pulse();
+    }
+  }
+
+  private void EndLoop(int port, string reason) {
+    // Recorded before the pulse, so a waiter this releases reads a Listening and a Fault that
+    // already agree.
+    this.faults[port] = $"stopped receiving: {reason}";
+
+    this.Pulse();
+  }
+
+  /// <summary>Releases every waiter to re-read what the caller has just published.</summary>
+  private void Pulse() {
+    lock (this.signal) {
+      Monitor.PulseAll(this.signal);
     }
   }
 
   /// <summary>
-  /// Binds the group's port and joins the group on every multicast-capable interface, or throws
-  /// when nothing on this machine will carry a beacon.
+  /// Binds one of the group's ports and joins the group on the given interfaces, or returns null
+  /// and the reason nothing on this machine will carry a beacon on that port.
+  /// Null rather than a throw because a refused port is an expected outcome here, not a fault: a
+  /// host that cannot receive at all must still get a working server, discovery then answering
+  /// "nothing is advertised" while the explicit attach endpoint stays reachable, which is the
+  /// documented recovery for exactly that host.
+  /// Hence the reach of the catch: the constructor calling this has no net of its own, so anything
+  /// escaping would take that recovery down with the discovery it exists to bypass.
   /// </summary>
-  private static Socket Listen() {
-    var group = IPAddress.Parse(BeaconListener.MulticastGroup);
-    var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+  private static Socket TryListen(
+    int port,
+    IReadOnlyCollection<int> indexes,
+    string noRoute,
+    out string reason
+  ) {
+    Socket socket = null;
 
     try {
+      var group = IPAddress.Parse(BeaconListener.MulticastGroup);
+
+      socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
       // A beacon is a broadcast, so several listeners on one machine (a second server process, an
       // IDE's Unity integration) is the normal case rather than a conflict.
       socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-      socket.Bind(new IPEndPoint(IPAddress.Any, BeaconListener.MulticastPort));
+      socket.Bind(new IPEndPoint(IPAddress.Any, port));
 
       var joined = 0;
 
-      foreach (var index in BeaconListener.MulticastInterfaceIndexes()) {
+      foreach (var index in indexes) {
         try {
           socket.SetSocketOption(
             SocketOptionLevel.IP,
@@ -251,43 +355,65 @@ public sealed class BeaconListener : IDisposable {
         }
         catch (SocketException) {
           // An interface can refuse the join (it went down since the enumeration, or it has no IPv4
-          // route); one that does simply carries no beacon.
+          // route); one that does simply carries no beacon. Anything else falls to the boundary
+          // below, whose message names the real fault rather than blaming the interfaces.
         }
       }
 
-      return joined > 0
-        ? socket
-        : throw new InvalidOperationException(
-          "no network interface on this machine would join the PlayerConnection beacon group " +
-          $"{BeaconListener.MulticastGroup}, so no Unity game can be discovered"
-        );
-    }
-    catch {
-      socket.Dispose();
+      if (joined > 0) {
+        reason = null;
 
-      throw;
+        return socket;
+      }
+
+      reason = noRoute;
     }
+    catch (Exception ex) {
+      reason = ex.Message;
+    }
+
+    socket?.Dispose();
+
+    return null;
   }
 
-  private static IEnumerable<int> MulticastInterfaceIndexes() {
-    foreach (var nic in NetworkInterface.GetAllNetworkInterfaces()) {
-      if (nic.OperationalStatus is not OperationalStatus.Up || !nic.SupportsMulticast) {
-        continue;
-      }
+  /// <summary>
+  /// The interfaces worth joining the group on, or an empty set and what the machine said when
+  /// asked to list them.
+  /// Materialised rather than lazy: every socket walks it, and the enumeration is the expensive
+  /// half of coming up.
+  /// Nothing escapes here either, for the reason <see cref="TryListen"/> gives.
+  /// </summary>
+  private static (IReadOnlyCollection<int> Indexes, string Failure) MulticastInterfaceIndexes() {
+    var indexes = new List<int>();
 
-      IPv4InterfaceProperties ipv4;
+    NetworkInterface[] nics;
 
+    try {
+      nics = NetworkInterface.GetAllNetworkInterfaces();
+    }
+    catch (Exception ex) {
+      return (indexes, ex.Message);
+    }
+
+    foreach (var nic in nics) {
       try {
-        ipv4 = nic.GetIPProperties().GetIPv4Properties();
-      }
-      catch (NetworkInformationException) {
-        continue;
-      }
+        if (nic.OperationalStatus is not OperationalStatus.Up || !nic.SupportsMulticast) {
+          continue;
+        }
 
-      if (ipv4 is not null) {
-        yield return ipv4.Index;
+        var ipv4 = nic.GetIPProperties().GetIPv4Properties();
+
+        if (ipv4 is not null) {
+          indexes.Add(ipv4.Index);
+        }
+      }
+      catch (Exception) {
+        // One adapter that will not describe itself carries no beacon; the rest still can.
       }
     }
+
+    return (indexes, null);
   }
 
   /// <param name="ArrivedAt">

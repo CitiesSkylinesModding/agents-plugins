@@ -370,21 +370,41 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
       return endpoint;
     }
 
-    var group = $"{BeaconListener.MulticastGroup}:{BeaconListener.MulticastPort}";
+    // The group alone: the listener binds every port it is served on, so naming one would send the
+    // reader checking a port no more answerable than the rest.
+    const string group = BeaconListener.MulticastGroup;
+
+    var listening = beacons.Listening;
+    var fault = beacons.Fault;
+    var why = fault is null ? "" : $" ({fault})";
+
+    string reason;
 
     // Three failures the caller acts on differently: a beacon without [Debug] 1 means the game IS
-    // running and only the launch option is missing; a listener that never came up means nothing
-    // about any game is knowable here, so blaming launch options would send the caller nowhere.
-    // The order is what keeps them apart, an unavailable listener never yielding a beacon.
-    var reason = beacon is not null
-      ? $"the Unity game advertising itself on {group} ({beacon.Id}) reports no managed " +
-      "debugger; relaunch it with 'player-connection-debug=1'"
-      : beacons.Unavailable is not null
-        ? $"this machine cannot receive the PlayerConnection beacon ({beacons.Unavailable}), so " +
-        "no game can be discovered; give the game's debugger port to the attach tool"
-        : $"no Unity game is advertising itself on the PlayerConnection beacon ({group}); is the " +
-        "game running as a development Mono build launched with 'player-connection-debug=1'? " +
-        "If you know its debugger port, give it to the attach tool";
+    // running and only the launch option is missing; nothing left listening means nothing about
+    // any game is knowable here, so blaming launch options would send the caller nowhere; and a
+    // listen still up with no beacon on it is the launch question.
+    if (beacon is not null) {
+      reason = $"the Unity game advertising itself on {group} ({beacon.Id}) reports no managed " +
+        "debugger; relaunch it with 'player-connection-debug=1'";
+    }
+    else if (!listening) {
+      reason = "nothing on this machine is listening for the PlayerConnection beacon" +
+        $"{why}, so no game can be discovered; give the game's debugger port to the attach tool";
+    }
+    else {
+      // A listener that lost only part of itself can still discover a game, so its fault annotates
+      // the launch question rather than replacing it: that question is the answer in the common
+      // case, and gating on the fault would let one dead idle port bury it for the process's life.
+      var lost = fault is null
+        ? ""
+        : $" Part of the listen is lost{why}, so a running game can also go undiscovered.";
+
+      reason = $"no Unity game is advertising itself on the PlayerConnection beacon ({group}); " +
+        "is the game running as a development Mono build launched with " +
+        $"'player-connection-debug=1'?{lost} If you know its debugger port, give it to the " +
+        "attach tool";
+    }
 
     throw new InvalidOperationException(reason);
   }

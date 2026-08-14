@@ -4,10 +4,13 @@ namespace UnityDevtools.Sdb.Tests;
 
 /// <summary>
 /// Parsing the PlayerConnection beacon and deriving the SDB endpoint from it.
-/// The two known-answer cases are recorded runs of the reference game: each pairs the beacon its
-/// player logged with the port its agent then reported binding, which is the only evidence the
-/// <c>56000 + (guid % 1000)</c> formula has. A change to the derivation must fail here rather than
-/// in a live session.
+/// The known-answer cases rest on two kinds of evidence. Two are recorded runs of the reference
+/// game, each pairing the beacon its player logged with the port its agent then reported binding,
+/// which is the only evidence the <c>56000 + (guid % 1000)</c> derivation has, so failing one means
+/// the derivation no longer matches an observed player. One is the example Unity's own manual
+/// publishes, of a player that advertises its port outright and would be sent elsewhere by the
+/// derivation, so failing it means the published contract is no longer honoured.
+/// A change to either must fail here rather than in a live session.
 /// </summary>
 public sealed class PlayerConnectionBeaconTests {
   private const string RecordedPayload =
@@ -29,6 +32,36 @@ public sealed class PlayerConnectionBeaconTests {
 
     Assert.NotNull(beacon);
     Assert.Equal(56252, beacon.SdbPort);
+  }
+
+  [Fact]
+  public void PrefersThePortAPlayerAdvertisesOverTheDerivedOne() {
+    var beacon = PlayerConnectionBeacon.Parse(
+      "[IP] 10.0.1.152 [Port] 55000 [Flags] 3 [Guid] 2575380029 [EditorId] 4264788666 " +
+      "[Version] 1048832 [Id] iPhonePlayer(Example-iPhone):56000 [Debug] 1 " +
+      "[PackageName] iPhonePlayer"
+    );
+
+    Assert.NotNull(beacon);
+
+    // The derivation would name 56029 for this GUID, so the port asserted here is reachable only
+    // by taking the advertisement.
+    Assert.Equal(56000, beacon.SdbPort);
+  }
+
+  [Theory]
+  [InlineData("[Guid] 2314420099 [Debug] 1 [Id] Player")]
+  [InlineData("[Guid] 2314420099 [Debug] 1 [Id] Player:not-a-port")]
+  [InlineData("[Guid] 2314420099 [Debug] 1 [Id] Player:0")]
+  [InlineData("[Guid] 2314420099 [Debug] 1 [Id] Player:70000")]
+  [InlineData("[Guid] 2314420099 [Debug] 1 [Id] Player:")]
+  public void DerivesThePortWhenNoUsableOneIsAdvertised(string line) {
+    var beacon = PlayerConnectionBeacon.Parse(line);
+
+    // A suffix nothing could be listening on is not a reason to reject the player: the GUID still
+    // derives a port, which is the answer for every player that publishes no port at all.
+    Assert.NotNull(beacon);
+    Assert.Equal(56099, beacon.SdbPort);
   }
 
   [Fact]
