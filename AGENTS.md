@@ -109,6 +109,7 @@ Agent-facing prose is a deliverable here, not documentation of one: a plugin's `
 Load the `writing-for-agents` skill and hold the edit to it before writing any of them.
 In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Citizen`) rather than the reference target's own, and claim verification against no named game: an example teaches a shape, while a real name invites an agent to try it on a game that never had it.
 Cite a checklist item by quoting its phrase, never its ordinal — an insertion silently renumbers every positional cite.
+A tool description may shed a trap onto another tier, never a trigger: a trap reaches the caller already using that tool, while a fact deciding whether to reach for it at all goes unread on the tool nobody reached — that one stays, as a pointer, on the tools whose callers need it.
 
 ## Preferred agent behavior
 
