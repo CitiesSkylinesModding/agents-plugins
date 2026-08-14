@@ -5,6 +5,7 @@ symptoms:
   - 'a fix works and the write-up credits the wrong half of it'
   - 'a reviewer refutes a claim using output the author had already collected'
   - 'a corrected passage is wrong again next round, on a neighbouring gap'
+  - 'a test skips for the ambient reason that fits, not the one that holds'
 tags: [experiment-design, verification, over-reach, confounding, correction]
 ---
 
@@ -24,6 +25,12 @@ separating it from the alternatives.
 `EnableNETAnalyzers` was added *and* a blocking error was removed in the same step. The write-up
 credited the property. `EnforceCodeStyleInBuild` alone does it, and the shipped version would have
 switched on the whole CA rule set.
+
+**A cause that fitted was never separated from the one that held.** A test skipped on "a game is
+advertising itself" while the user's game was running, so that was reported as the reason — twice.
+The real cause was a sibling test class broadcasting to the same multicast group in parallel.
+Running the class on its own took eleven seconds and settled it, and was available from the first
+skip.
 
 **Disconfirming evidence sat unread in output already collected.** PolySharp printed
 `System.Range.g.cs` in a file listing that had been read hours before the prose claimed list

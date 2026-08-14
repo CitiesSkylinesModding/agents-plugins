@@ -87,31 +87,50 @@ lazy-attach session.
 
 ### Cross-platform support
 
-Discovery is netstat-based and Windows-only. Port discovery to Linux/macOS (parse `/proc` or
-`lsof`); the server itself now ships as a platform-agnostic NuGet dotnet tool, so distribution
-needs no per-RID artifacts.
+Discovery no longer stands in the way: `BeaconListener` joins the multicast group through
+`NetworkInterface`, and the server ships as a platform-agnostic NuGet dotnet tool, so distribution
+needs no per-RID artifacts. What remains is the pair of server-lifetime watchdogs, both Windows-only
+— `ParentWatchdog` reads the parent pid through a Win32 call and `StdinWatchdog` watches the pipe
+with `PeekNamedPipe`. Elsewhere the stdio transport's own shutdown is the only lifetime tie, so an
+MCP reconnect can strand the previous server still holding the exclusive SDB slot
+(`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`). Port those two, then verify a live
+attach on Linux and macOS: nothing here has ever run on either.
 
-### Session-level discovery narrowing
+### A network interface that appears after the server did
 
-Only `status` takes a process-name prefix; every acting tool resolves discovery itself and fails
-outright when several processes look SDB-shaped (an IDE, GitKraken and Steam all qualified in one
-session), and the `UNITY_MCP_PROCESS` env filter is read once at server start, so the only recovery
-mid-session is editing the MCP config and having the user reconnect the server — the workaround a
-live session actually ran. On Codex CLI even that recovery is absent: plugin servers get no env
-block, so neither `UNITY_MCP_PROCESS` nor `UNITY_MCP_PORT` reaches the server and the only override
-is `codex mcp add` replacing it wholesale, version pin included
-(`docs/solutions/dual-harness-mcp-config.md`). Either honor a narrowed `status` call as a sticky
-session filter, accept the prefix on every tool, or drop the category by probing the candidates: the
-SDB handshake disambiguates immediately and a non-SDB listener fails version negotiation, at the
-cost of writing that handshake at unrelated local processes and needing a timeout against a silent
-one.
+`BeaconListener` enumerates interfaces once, in its constructor, and holds those multicast
+memberships for the process's life. A server started before the VPN connects, before WSL or a
+hypervisor switch comes up, or across a Wi-Fi adapter bouncing, is never a member of the group on
+that interface — and the group is joined on every interface precisely because the packets arrive on
+whichever the OS chose. The symptom is total and permanent: every `status` reports no beacon and
+every attach fails against a game running normally, curable only by restarting the server, which
+nothing tells the user to do.
 
-The failure is a per-boot ephemeral-port draw rather than a rare shape: `ResolveEndpoint` hides
-every candidate whenever exactly one lands inside 56000-56999, and six unrelated processes held a
-listen port above the range on the reference machine while discovery still resolved cleanly. That
-same threshold makes the "no dev-Mono Unity game found" arm unreachable there — with the game
-closed, discovery reports several candidates instead of none, sending an agent after the env filter
-instead of after the game.
+Re-enumerating costs a timed receive in place of the blocking one, so the loop wakes periodically
+and rejoins whatever is new. Retry ladders against filtered multicast were ruled out deliberately,
+and this is a narrower thing: the membership set going stale, not a fallback for a network that
+refuses the group.
+
+### Finding a Unity Editor
+
+A Unity Editor runs the same soft-debugger agent as a player and drives identically once attached,
+but it never appears on the PlayerConnection beacon, so no-port discovery cannot see it at all. The
+workaround a live session ran: enumerate the Editor process, read its listening ports off the OS by
+hand, and pass the one in the SDB range to `attach`. Every step of that is mechanical, which is what
+makes it a gap rather than a limitation.
+
+Settle the cheap question first. `BeaconListener` records that Unity documents three further
+multicast ports — 34997, 57997, 58997 — and that players use 54997; whether an Editor advertises on
+one of the others is untested. If it does, Editor support is three more binds on a listener that
+already joins every interface. Run an Editor and listen on all four for a minute.
+
+Failing that, anchor on the process rather than the port: enumerate by name, derive the port, and
+confirm something listens there. An Editor's looked like `56000 + (pid % 1000)` on a single sample,
+so that formula needs more before anything relies on it.
+
+Whatever finds it must also reattach to it: a domain reload — a script compile, entering or leaving
+play mode — drops the connection, and the reattach resolves from the beacon, which by construction
+does not describe the Editor.
 
 ### An `ecs_query` seam in the SDB library
 

@@ -27,6 +27,11 @@ distinct ways the debuggee looks broken when the fixture is at fault.
   must be launched with `--debug`; miss either and everything reports `AbsentInformation`.
 - **Armed state leaks across tests.** Every debug test releases what it armed (`fx.ReleaseDebugger()` in
   a `finally`), or the frozen debuggee hangs every later test.
+- **A fixture type's constructor takes no optional parameter.** xUnit builds a class or collection
+  fixture by satisfying every parameter, and a defaulted one it cannot supply fails the whole class at
+  run time with `had one or more unresolved constructor arguments`. Sharing a type whose constructor
+  carries a test-only default therefore costs a wrapper, which is usually dearer than constructing it
+  per test.
 
 The debug-toolset tests ride the same loop: `Main` calls `Ticker.Tick(n)` each iteration (armed
 breakpoints hit within milliseconds) and periodically throws-and-catches a `FormatException` for
@@ -37,8 +42,9 @@ exception-break coverage.
 ONE debuggee per suite run (xUnit collection fixture): tests own what they mutate by creating per-test
 instances inside the evaluated expressions; shared static roots stay read-only.
 
-Mono resolves via `UNITY_DEVTOOLS_MONO` (test-infra config, deliberately not `UNITY_MCP_*`) → `mono` on
-PATH → well-known Windows Unity Editor locations. Tests SKIP (`Xunit.SkippableFact`) rather than fail
+Mono resolves via `UNITY_DEVTOOLS_MONO` (test infrastructure only; the server itself reads no
+environment) → `mono` on PATH → well-known Windows Unity Editor locations. Tests SKIP
+(`Xunit.SkippableFact`) rather than fail
 when none resolves. CI installs `mono-devel`; `mono-runtime` alone lacks the net4x facade assemblies.
 
 Upstream Mono's agent is not byte-for-byte Unity's fork, so a green suite is not the last word: a live
