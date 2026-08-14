@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     SDB client library: the vendored Mono Soft Debugger client (Unity's mono fork, MIT) plus shims,
-    the build-time Connection patch, and our SdbSession/Invoker/SdbDiscovery plumbing. Consumers
+    the build-time Connection patch, and our SdbSession/Invoker/BeaconListener plumbing. Consumers
     reference this instead of the vendored tree. Isolated so the nullable-oblivious vendored sources
     stay Nullable=disable while consumers run nullable-clean.
   -->
@@ -38,9 +38,9 @@
 
   <ItemGroup>
     <!--
-      Connection.cs is compiled from a build-time patched copy (see PatchVendoredConnection):
-      its BeginInvoke reply dispatch throws on modern .NET. Patching into obj/ keeps the
-      vendored tree pristine.
+      Connection.cs is compiled from a build-time patched copy (see PatchVendoredConnection);
+      patch-connection.ps1 states what each patch is for. Patching into obj/ keeps the vendored
+      tree pristine.
     -->
     <Compile
       Include="$(VendorSdbDir)*.cs"
@@ -61,7 +61,7 @@
   <Target
     Name="PatchVendoredConnection"
     BeforeTargets="BeforeCompile"
-    Inputs="$(VendorSdbDir)Connection.cs"
+    Inputs="$(VendorSdbDir)Connection.cs;$(MSBuildProjectDirectory)/patch-connection.ps1"
     Outputs="$(PatchedConnection)">
     <!--
       The patch logic lives in patch-connection.ps1, not inline here: MSBuild runs Exec commands

@@ -6,7 +6,7 @@
 reflect types, evaluate C# expressions, and read & write ECS state, with no code injection.**
 
 Generic tooling: works with **any** dev-Mono Unity game exposing the Mono Soft Debugger (SDB)
-agent, not just Cities: Skylines II.
+agent.
 
 [![nuget](https://img.shields.io/nuget/v/UnityDevtools.Mcp?label=nuget)](https://www.nuget.org/packages/UnityDevtools.Mcp)
 [![dotnet](https://img.shields.io/badge/.NET-10-blueviolet)](#requirements)
@@ -31,10 +31,10 @@ procedures for the session lifecycle, suspend windows, entity identity, and the 
 schemas cannot tell.
 
 > [!NOTE]
-> **Generic, but developed against Cities: Skylines II.** The server makes no assumptions about a
-> specific game: it discovers any dev-Mono Unity process by its SDB port signature. It is
-> developed and verified against Cities: Skylines II (development Mono build), the reference
-> target.
+> **Generic, developed against one reference game.** The server makes no assumptions about a
+> specific game: it listens for the PlayerConnection beacon any Unity player multicasts and reads
+> the debugger endpoint straight off it. It is developed and verified against one development Mono
+> build as the reference target.
 
 > [!WARNING]
 > **Writes are live.** Component and buffer writes, and method invokes, mutate the running
@@ -93,7 +93,8 @@ Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 
 | Tool | What it does |
 | --- | --- |
-| `status` | Find dev-Mono game processes and their SDB port (no attach) + session state. |
+| `status` | What the game advertises on the beacon, the endpoint an attach would use, session state (no attach). |
+| `attach` | Attach to a debugger port on this machine, for a game the beacon does not describe. |
 | `suspend` / `resume` | Hold the game frozen across calls: a consistency window for multi-step edits. |
 | `detach` | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic. |
 | `find_types` | Resolve a type live by name, or search every loaded type by regex; optionally list its members. |
@@ -102,11 +103,15 @@ Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 | `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component. |
 | `ecs_get_buffer` / `ecs_buffer_edit` | Read, append to, or remove from a `DynamicBuffer`. |
 
-There is no "attach" tool: the first tool that needs the VM attaches lazily, the session persists,
-and a dropped connection (or game restart) re-discovers and reattaches on the next call.
+No attach step is needed: the first tool that needs the VM attaches on its own, the session
+persists, and a dropped connection (or game restart) resolves the endpoint from the beacon again on
+the next call. The `attach` tool is there for the cases the beacon cannot cover.
 
 ## How it works
 
+- **Beacon discovery**: a Unity player multicasts a PlayerConnection target-info beacon, and the
+  server derives the debugger endpoint from what it advertises. Nothing to configure, no port to
+  guess, and a game restart just moves the beacon.
 - **Mono Soft Debugger protocol**, the wire protocol behind "Attach to Unity" in your IDE. The
   server embeds Unity's own `Mono.Debugger.Soft` client and talks to the game's SDB agent
   directly.
@@ -123,9 +128,10 @@ and a dropped connection (or game restart) re-discovers and reattaches on the ne
 
 ## Requirements
 
-- **A Unity game running as a development Mono build** with the SDB agent live (for
-  Cities: Skylines II: a dev build; a retail build exposes no SDB port and cannot be driven).
-- **Windows** (process/port discovery is netstat-based for now).
+- **A Unity game running as a development Mono build**, launched with `player-connection-debug=1`
+  so its SDB agent is live; a retail build exposes no SDB port and cannot be driven.
+- **Windows.** Discovery itself is platform-agnostic, but the plugin is verified on Windows only
+  and its server-lifetime watchdogs are Windows-only.
 - **The .NET 10 SDK** to launch the server. No build step: the plugin launches the
   [`UnityDevtools.Mcp`](https://www.nuget.org/packages/UnityDevtools.Mcp)
   NuGet dotnet tool through `dotnet dnx`, version-pinned to the plugin (downloaded on first
@@ -161,25 +167,28 @@ MCP is working properly (with the game running).
 
 ## Configuration
 
-All are optional; with nothing set, the server auto-discovers any running dev-Mono Unity game by its
-SDB port signature.
+There is none: no environment variables, no settings file, and the same behaviour on Claude Code and
+Codex CLI. The server finds the game by listening for its PlayerConnection beacon.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `UNITY_MCP_PROCESS` | _(unset)_ | Process-name prefix narrowing discovery. |
-| `UNITY_MCP_PORT` | _(discovery)_ | Pin the SDB port instead of discovering it. |
-| `UNITY_MCP_HOST` | `127.0.0.1` | Debugger host. |
-
-**On Claude Code**, the plugin's [`.mcp.json`](.mcp.json) forwards them from your environment.
-**On Codex CLI**, plugin servers get no environment block, so the server always starts with the
-defaults above (auto-discovery).
+For a game the beacon cannot describe — multicast filtered by a firewall or a VPN interface, or a
+debug server started by an external loader on a port of its own — the `attach` tool takes a debugger
+port on this machine. That port applies to that attach alone; a later reattach goes back to the
+beacon, so pass it again for as long as it is still needed.
 
 ## Troubleshooting
 
-- **"no dev-Mono Unity game found"**: the game is not running, or is not a development Mono build
-  (no SDB agent). Run `status` to see what discovery finds.
-- **"several dev-Mono Unity candidates found"**: other processes listen in the SDB port range;
-  narrow discovery with `UNITY_MCP_PROCESS` or pin `UNITY_MCP_PORT`.
+- **"no Unity game is advertising itself"**: the game is not running, is not a development Mono
+  build (no SDB agent), or its multicast is not reaching the server. Run `status`: with the game
+  visibly running, it is the third — a firewall or a VPN interface — and `attach` with the game's
+  debugger port is the recovery.
+- **`status` reports no beacon while it also reports a held suspension**: none of the above. A
+  suspended game stops broadcasting, so a window held past ten seconds expires its own beacon.
+  `resume` and ask again.
+- **A beacon with `debuggerEnabled: false`**: the game is running, but was launched without
+  `player-connection-debug=1`. Relaunch it with that option.
+- **"sent no Mono debugger greeting"**: something is listening on that port and it is not a Mono
+  debugger agent, so the port is wrong. A refused connection is the other half of that pair:
+  nothing accepted you there at all.
 - **Attach fails while your IDE debugger is connected**: the SDB slot is exclusive. Detach the IDE
   (or call `detach` before attaching the IDE); it looks like a connection refusal, not a "slot
   is taken" message.

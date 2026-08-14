@@ -11,12 +11,16 @@ A retail build exposes no SDB port; only a development Mono build is drivable.
 
 ## Session lifecycle
 
-There is no attach tool: the first tool that needs the VM attaches lazily, the session persists, and a dropped connection reattaches on the next call, so just call the tool you need.
-`status` is the read-only orient step: candidate processes with their SDB port, plus session state (attached, held suspensions).
-The SDB port drifts between game runs; discovery re-resolves it on every (re)attach, so a game restart costs nothing.
-Discovery that finds several candidates fails with the list; narrow with the process-name prefix or the `UNITY_MCP_PROCESS` / `UNITY_MCP_PORT` env config.
+The first tool that needs the VM attaches on its own, the session persists, and a dropped connection reattaches on the next call, so just call the tool you need.
+The game is found by the PlayerConnection beacon it multicasts, which carries the debugger endpoint: there is nothing to configure, and every attach resolves that endpoint afresh, so a game restart costs nothing.
+`status` is the read-only orient step: what the beacon advertises, the endpoint an attach would use, and session state (attached, held suspensions).
+Everything it reports describes the present, so act on it as read.
+A game running while `status` reports no beacon means the multicast is not reaching the server (a firewall, a VPN interface): call `attach` with the game's debugger port. That port governs that one attach, so give it again after any reattach for as long as the beacon still cannot see the game.
+Rule that out first when `status` also shows a held suspension: a suspended game stops broadcasting, so a window held past ten seconds makes its own beacon expire. Resume and ask again before diagnosing the network.
+A beacon whose `debuggerEnabled` is false is a game running without `player-connection-debug=1`: only a relaunch with that option makes it attachable.
 The debugger slot is exclusive: while attached, an IDE debugger (Rider/dnSpy/VS) cannot attach to the game, and vice versa; `detach` frees the slot, and the next unity call reattaches on its own.
 An attach failure while an IDE holds the slot looks like a connection refusal, not "slot taken".
+A Unity Editor is attachable on the same protocol but does not turn up on the beacon, so nothing finds it for you: read its debugger port off the OS listener table for the Editor process and pass that port to `attach`. Expect a domain reload — a script compile, entering or leaving play mode — to drop the connection.
 
 ## Suspend windows
 
@@ -31,7 +35,7 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 Every type parameter wants a fully qualified name (`MyGame.Citizens.Citizen`, not `Citizen`).
 `find_types` answers naming from either end: `search` turns a concept you can only describe (a mechanic, a system's job) into names harvested from the running process, and `fullName` resolves one you already hold.
 Start broad and narrow on `count`: only the first search pays the harvest, which is the longest single freeze these tools cause, so iterating on a pattern afterwards costs only your reading.
-The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools, the process-name prefix).
+The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools).
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
 
 ## Entities and ECS
@@ -101,5 +105,8 @@ Assume a throwaway save, and read state back after each mutation rather than cha
 ## When a call fails
 
 Error messages come from the server verbatim and usually name the fix (unknown type, missing field with the field list, entity not found).
-"No dev-Mono Unity game found" means the game is not running, or is not a development Mono build; `status` settles which.
-A mid-call connection drop retries once against fresh discovery, so transient drops self-heal; repeated connection failures mean the game is gone, so report it and wait for a relaunch.
+"No Unity game is advertising itself" means no beacon arrived at all: the game is not running, is not a development Mono build, or its multicast is not reaching the server — `status` and the `attach` recovery above settle which.
+A refused connection means nothing accepted you there: the port is wrong, the game's agent never bound it (a relaunch fixes that), or an IDE debugger already holds the exclusive slot.
+"Sent no Mono debugger greeting" means something IS listening there and does not speak this protocol, so the port is wrong: find the right one and `attach` again.
+"Did not answer" means the address never replied at all: `status` reported an endpoint the beacon advertised on an interface this machine cannot route to, so `attach` with that same port, which dials loopback.
+A mid-call connection drop retries once, resolving the endpoint from the beacon again, so transient drops self-heal; repeated connection failures mean the game is gone, so report it and wait for a relaunch.

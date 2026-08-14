@@ -82,8 +82,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
         }
         catch (EvalParseException ex) {
           throw new McpException(
-            $"condition parse error at offset {ex.Position.ToString(CultureInfo.InvariantCulture)}: " +
-            ex.Message
+            "condition parse error at offset " +
+            $"{ex.Position.ToString(CultureInfo.InvariantCulture)}: {ex.Message}"
           );
         }
       }
@@ -443,12 +443,11 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     string? world = null
   ) {
     return ToolGuard.Run(() => {
-        if (session.HeldSuspendCount is 0) {
-          throw new McpException(
-            "advance releases a held suspension and none is held; open the window with the " +
-            "suspend tool first"
-          );
-        }
+        // Before the before snippet, because that snippet attaches and mutates the game: a call
+        // that can never advance anything must not leave a state change behind on its way to
+        // failing. The session owns the diagnosis, a window lost with the connection reading from
+        // outside exactly like one never opened.
+        session.RequireHold();
 
         var duration = TimeSpan.FromSeconds(Math.Clamp(seconds, 0.1, 60));
 
@@ -459,7 +458,7 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
         try {
           pausedDuring = session.AdvanceHold(duration);
         }
-        catch (Exception ex) when (before is not null || after is not null) {
+        catch (Exception ex) when (before is not null) {
           // The before snippet may have flipped game state (e.g., unpaused the simulation); a
           // failed window must not strand that flip, so the compensating after snippet still
           // runs whenever the connection survived.

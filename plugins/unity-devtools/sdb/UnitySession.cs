@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using Mono.Debugger.Soft;
@@ -9,14 +8,14 @@ namespace UnityDevtools.Sdb;
 
 /// <summary>
 /// A persistent debugger session against one running dev-Mono Unity game: lazily attaches on the
-/// first operation that needs the VM (discovering the endpoint via <see cref="SdbDiscovery"/> when
-/// no port is configured), transparently reattaches once when the connection drops, and keeps the
-/// game running between operations by opening a counted suspend window around each one.
+/// first operation that needs the VM, resolving the endpoint from the PlayerConnection beacon,
+/// transparently reattaches once when the connection drops, and keeps the game running between
+/// operations by opening a counted suspend window around each one.
 /// <see cref="SuspendHold"/>/<see cref="ResumeHold"/> hold an extra suspension across operations
 /// when consistency between several reads/writes matters (the game is fully frozen meanwhile).
 /// Thread-safe; the debugger slot is exclusive, so <see cref="Detach"/> frees it for other tools.
 /// </summary>
-public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
+public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   private readonly Lock gate = new();
 
   /// <summary>
@@ -47,8 +46,6 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   private string attachedProtocol;
 
   private int heldSuspends;
-
-  public UnitySessionConfig Config { get; } = config ?? new UnitySessionConfig();
 
   /// <summary>
   /// Runs one operation inside a suspend window, attaching or reattaching as needed.
@@ -125,29 +122,48 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     );
   }
 
-  /// <summary>Releases one held suspension; returns the count still held.</summary>
+  /// <summary>
+  /// Throws unless a suspend window is open AND still real, telling the two failures apart: no
+  /// window was ever opened, or the connection took the one that was.
+  /// A caller checks this before anything a later failure would strand, since the second case reads
+  /// as the first from outside -- a dead session reports no held suspension whatever it was
+  /// holding.
+  /// </summary>
+  public void RequireHold() {
+    lock (this.gate) {
+      this.RequireHoldHeld();
+    }
+  }
+
+  /// <summary>
+  /// <see cref="RequireHold"/>, for a caller already holding <see cref="gate"/>.
+  /// </summary>
+  private void RequireHoldHeld() {
+    if (this.heldSuspends is 0) {
+      throw new InvalidOperationException(
+        "no suspension is held; a window is opened with the suspend tool"
+      );
+    }
+
+    // The hold is on record but the connection is not. LoseConnection says so, where carrying on
+    // would leave the caller to guess that its consistency window went with the connection.
+    if (!this.IsLive) {
+      this.LoseConnection();
+    }
+  }
+
+  /// <summary>
+  /// Releases one held suspension; returns the count still held.
+  /// </summary>
   public int ResumeHold() {
     lock (this.gate) {
-      if (this.heldSuspends is 0) {
-        throw new InvalidOperationException("no suspension is held (nothing to resume)");
-      }
-
-      if (this.session is null) {
-        // The connection has died since the hold; the closed socket already resumed the VM.
-        lock (this.stateGate) {
-          this.heldSuspends = 0;
-        }
-
-        return 0;
-      }
+      this.RequireHoldHeld();
 
       try {
         this.session.Vm.Resume();
       }
       catch (Exception e) when (UnitySession.IsDisconnect(e)) {
-        this.Discard();
-
-        return 0;
+        this.LoseConnection();
       }
 
       lock (this.stateGate) {
@@ -157,8 +173,45 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   }
 
   /// <summary>
+  /// Attaches to a local debugger port of the caller's choosing, dropping any live attach first;
+  /// with no port given, attaches to what the beacon advertises. Returns what it attached to.
+  /// The port is stored nowhere, so every later attach resolves from the beacon again: one that
+  /// outlived the game it named would point at a dead endpoint the moment a restart moved the
+  /// beacon.
+  /// </summary>
+  public UnitySessionSnapshot Attach(int? port) {
+    (string Host, int Port)? chosen = null;
+
+    if (port is {} given) {
+      chosen = given is >= 1 and <= 65535
+        ? ("127.0.0.1", given)
+        : throw new InvalidOperationException($"{given} is not a TCP port (1-65535)");
+    }
+
+    lock (this.gate) {
+      this.Discard();
+
+      try {
+        this.EnsureAttached(chosen);
+      }
+      catch (Exception ex) when (chosen is {} endpoint) {
+        // Restates the failure as what it is: the caller chose that port, so the fix is a different
+        // port rather than a look at the game or its beacon.
+        throw new InvalidOperationException(
+          $"could not attach to port {endpoint.Port}, the port given to the attach tool " +
+          $"(attach with no port to use the beacon): {ex.Message}",
+          ex
+        );
+      }
+
+      return this.Snapshot();
+    }
+  }
+
+  /// <summary>
   /// Resumes everything and detaches, freeing the exclusive debugger slot (e.g., for an IDE).
-  /// Returns false when there was no live attach.
+  /// Returns false when there was no live attach; a session whose peer already died is cleared the
+  /// same way and reported as the nothing it was.
   /// </summary>
   public bool Detach() {
     lock (this.gate) {
@@ -166,9 +219,11 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
         return false;
       }
 
+      var wasAlive = this.session.IsAlive;
+
       this.Discard();
 
-      return true;
+      return wasAlive;
     }
   }
 
@@ -180,7 +235,7 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   public DebugController DebugOrNull {
     get {
       lock (this.stateGate) {
-        return this.debug;
+        return this.IsLive ? this.debug : null;
       }
     }
   }
@@ -191,33 +246,39 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   public int HeldSuspendCount {
     get {
       lock (this.stateGate) {
-        return this.heldSuspends;
+        return this.IsLive ? this.heldSuspends : 0;
       }
     }
   }
+
+  /// <summary>
+  /// Whether the attach on record is still connected: the effective attached state every reporting
+  /// surface answers from.
+  /// A peer that dies while idle leaves its session in the field until the next operation clears
+  /// it, because that cleanup talks to the wire and belongs under <see cref="gate"/>; reading the
+  /// field alone would report a dead attach as a live one for as long as nobody drove the game.
+  /// Call under either lock: the reporting surfaces read it under <see cref="stateGate"/>, and the
+  /// operations that act on the answer already hold <see cref="gate"/>.
+  /// </summary>
+  private bool IsLive => this.session is not null && this.session.IsAlive;
 
   /// <summary>
   /// Releases EVERY held suspension for the given duration, then re-takes them all: the
   /// deterministic "let the simulation react" window (a single resume would leave the VM frozen
   /// whenever more than one hold is stacked). A breakpoint hit during the window pauses the game
   /// normally (the re-taken holds then stack on top of the event pause).
-  /// VM operations block for the whole window by design (a suspend window opened mid-advance
-  /// would freeze the very frames the caller is trying to let run); status reads stay live
-  /// through <see cref="stateGate"/>.
+  /// VM operations block for the whole window by design (a suspend window opened mid-advance would
+  /// freeze the very frames the caller is trying to let run); status reads stay live through
+  /// <see cref="stateGate"/>.
   /// Returns whether an event-caused suspension is active (or imminent) after the window.
   /// </summary>
   public bool AdvanceHold(TimeSpan duration) {
     lock (this.gate) {
-      if (this.heldSuspends is 0) {
-        throw new InvalidOperationException(
-          "no suspension is held; advance releases a held suspend window (use the suspend tool " +
-          "first)"
-        );
-      }
+      this.RequireHoldHeld();
 
       // An event-caused suspension (active pause, or a suspending event set the pump is still
-      // classifying) would keep the VM frozen through the whole window, silently advancing
-      // nothing (surfaced live: a hot breakpoint re-hit right after resume).
+      // classifying) would keep the VM frozen through the whole window, silently advancing nothing
+      // (surfaced live: a hot breakpoint re-hit right after resume).
       if (this.debug?.HoldsSuspension is true) {
         throw new InvalidOperationException(
           "a breakpoint/step/exception pause is holding the game, so the window could not " +
@@ -252,25 +313,38 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
 
   public UnitySessionSnapshot Snapshot() {
     lock (this.stateGate) {
+      var alive = this.IsLive;
+
       return new UnitySessionSnapshot {
-        Attached = this.session is not null,
-        Host = this.attachedHost,
-        Port = this.session is not null ? this.attachedPort : null,
-        VmVersion = this.attachedVmVersion,
-        Protocol = this.attachedProtocol,
-        HeldSuspends = this.heldSuspends
+        Attached = alive,
+        Host = alive ? this.attachedHost : null,
+        Port = alive ? this.attachedPort : null,
+        VmVersion = alive ? this.attachedVmVersion : null,
+        Protocol = alive ? this.attachedProtocol : null,
+
+        // A dropped connection resumed the game, so a hold reported against a dead attach would be
+        // a second falsehood on top of the first.
+        HeldSuspends = alive ? this.heldSuspends : 0
       };
     }
   }
 
   public void Dispose() => this.Detach();
 
-  private VirtualMachine EnsureAttached() {
+  private VirtualMachine EnsureAttached((string Host, int Port)? endpoint = null) {
     if (this.session is not null) {
-      return this.session.Vm;
+      if (this.session.IsAlive) {
+        return this.session.Vm;
+      }
+
+      // The peer died while nothing was driving it, so no operation has taken the disconnect path
+      // yet. Clearing it here spares the caller a doomed wire call, and LoseConnection still fails
+      // loudly when a suspension was held: the closed socket resumed the game, so that consistency
+      // window is gone whether the reattach below succeeds.
+      this.LoseConnection();
     }
 
-    var (host, port) = this.ResolveEndpoint();
+    var (host, port) = endpoint ?? this.ResolveEndpoint();
 
     var connected = SdbSession.Connect(host, port);
 
@@ -290,54 +364,29 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
   }
 
   private (string Host, int Port) ResolveEndpoint() {
-    var host = this.Config.Host ?? "127.0.0.1";
+    var beacon = beacons.Wait();
 
-    if (this.Config.Port is {} configured) {
-      return (host, configured);
+    if (beacon?.Endpoint is {} endpoint) {
+      return endpoint;
     }
 
-    var prefix = this.Config.ProcessNamePrefix;
+    var group = $"{BeaconListener.MulticastGroup}:{BeaconListener.MulticastPort}";
 
-    var candidates = SdbDiscovery.Locate(prefix).Where(p => p.SdbPort is not null).ToList();
+    // Three failures the caller acts on differently: a beacon without [Debug] 1 means the game IS
+    // running and only the launch option is missing; a listener that never came up means nothing
+    // about any game is knowable here, so blaming launch options would send the caller nowhere.
+    // The order is what keeps them apart, an unavailable listener never yielding a beacon.
+    var reason = beacon is not null
+      ? $"the Unity game advertising itself on {group} ({beacon.Id}) reports no managed " +
+      "debugger; relaunch it with 'player-connection-debug=1'"
+      : beacons.Unavailable is not null
+        ? $"this machine cannot receive the PlayerConnection beacon ({beacons.Unavailable}), so " +
+        "no game can be discovered; give the game's debugger port to the attach tool"
+        : $"no Unity game is advertising itself on the PlayerConnection beacon ({group}); is the " +
+        "game running as a development Mono build launched with 'player-connection-debug=1'? " +
+        "If you know its debugger port, give it to the attach tool";
 
-    // The above-range fallback exists for agent drift, but arbitrary apps also happen to listen
-    // on ephemeral ports at or above the range start; a SINGLE strict in-range candidate outranks
-    // them as the game (verified live: only noise sat above the range).
-    // Tradeoff: if the game's agent ever drifts above the range while a noise process sits
-    // in-range, this picks the noise port; an explicit port (UNITY_MCP_PORT) is the escape hatch.
-    // Ambiguity errors list every candidate, above-range ones included, so nothing is silently
-    // dropped.
-    var inRange = candidates.Where(p =>
-        p.SdbPort is >= SdbDiscovery.PortRangeStart and <= SdbDiscovery.PortRangeEnd
-      )
-      .ToList();
-
-    if (inRange.Count is 1) {
-      // ReSharper disable once PossibleInvalidOperationException
-      return (host, inRange[0].SdbPort.Value);
-    }
-
-    var scope = string.IsNullOrEmpty(prefix) ? "process" : $"process matching '{prefix}*'";
-
-    return candidates.Count switch {
-      // ReSharper disable once PossibleInvalidOperationException
-      1 => (host, candidates[0].SdbPort.Value),
-      0 => throw new InvalidOperationException(
-        $"no dev-Mono Unity game found (no {scope} exposes an SDB port); " +
-        "is the game running as a development Mono build?"
-      ),
-      _ => throw new InvalidOperationException(
-        "several dev-Mono Unity candidates found: " +
-        string.Join(
-          ", ",
-          candidates.Select(c =>
-            $"{c.Name} (pid {c.Pid}, sdb port {c.SdbPort}" +
-            $"{(inRange.Contains(c) ? "" : ", above range")})"
-          )
-        ) +
-        "; restrict discovery with a process-name prefix or an explicit port"
-      )
-    };
+    throw new InvalidOperationException(reason);
   }
 
   /// <summary>
@@ -406,21 +455,9 @@ public sealed class UnitySession(UnitySessionConfig config) : IDisposable {
     (e.InnerException is not null && UnitySession.IsDisconnect(e.InnerException));
 }
 
-/// <summary>How a <see cref="UnitySession"/> finds its game; every field is optional.</summary>
-public sealed class UnitySessionConfig {
-  /// <summary>Debugger host; defaults to 127.0.0.1 (discovery is local-only anyway).</summary>
-  public string Host { get; init; }
-
-  /// <summary>Explicit SDB port; when null, the port is discovered on each (re)attach.</summary>
-  public int? Port { get; init; }
-
-  /// <summary>
-  /// Process-name prefix narrowing discovery; null auto-discovers by port signature.
-  /// </summary>
-  public string ProcessNamePrefix { get; init; }
-}
-
-/// <summary>What a <see cref="UnitySession"/> currently holds, for status reporting.</summary>
+/// <summary>
+/// What a <see cref="UnitySession"/> currently holds, for status reporting.
+/// </summary>
 public sealed class UnitySessionSnapshot {
   public bool Attached { get; init; }
 
@@ -451,13 +488,19 @@ public sealed class SdbContext(
 
   public Invoker Invoker { get; } = invoker;
 
-  /// <summary>The attach's breakpoint/pause surface (idle until its first request).</summary>
+  /// <summary>
+  /// The attach's breakpoint/pause surface (idle until its first request).
+  /// </summary>
   public DebugController Debug { get; } = debug;
 
-  /// <summary>The attach's type catalog (idle until its first search).</summary>
+  /// <summary>
+  /// The attach's type catalog (idle until its first search).
+  /// </summary>
   public TypeCatalog Types { get; } = types;
 
-  /// <summary>The attach's ECS catalog (idle until an ECS operation asks it something).</summary>
+  /// <summary>
+  /// The attach's ECS catalog (idle until an ECS operation asks it something).
+  /// </summary>
   public EcsCatalog EcsCatalog { get; } = ecs;
 
   /// <summary>

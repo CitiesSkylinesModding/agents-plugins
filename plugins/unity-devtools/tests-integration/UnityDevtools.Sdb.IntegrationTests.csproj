@@ -3,8 +3,8 @@
     Evaluator integration suite: launches the net472 fixture program under a Mono runtime with the
     SDB agent, attaches through the real SdbSession/Invoker, evaluates raw C# strings, and asserts
     EvalOutcome results (the same Formatted/TypeName contract EvalTools serves to agents).
-    Tests SKIP (not fail) when no Mono runtime resolves; live CS2 stays the final fidelity gate for
-    Unity-fork-specific behavior.
+    Tests SKIP (not fail) when no Mono runtime resolves; a live game stays the final fidelity gate
+    for Unity-fork-specific behavior.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

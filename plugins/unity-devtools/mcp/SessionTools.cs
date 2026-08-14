@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using JetBrains.Annotations;
 using ModelContextProtocol.Server;
 using UnityDevtools.Sdb;
@@ -9,62 +7,77 @@ namespace UnityDevtools.Mcp;
 
 /// <summary>
 /// Session lifecycle tools over the shared <see cref="UnitySession"/>: discovery/state reporting,
-/// held suspend windows, and freeing the exclusive debugger slot.
-/// Attach itself is lazy: any tool that needs the VM attaches (and reattaches) on demand.
+/// attaching to a port the beacon does not give, held suspend windows, and freeing the exclusive
+/// debugger slot.
+/// Attaching is otherwise lazy: any tool that needs the VM attaches (and reattaches) on demand.
 /// </summary>
 [McpServerToolType]
 [UsedImplicitly]
-public sealed class SessionTools(UnitySession session) {
+public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
   [McpServerTool(Name = "status")]
   [Description(
     """
-    Find running dev-Mono Unity game processes and their Mono Soft Debugger (SDB) port, without
-    attaching, and report the current session state.
-    With no processName, auto-discovers every process exposing an SDB port.
-    Other tools attach lazily on first use, so no explicit attach step exists.
+    Report what the running Unity game advertises on the PlayerConnection beacon, the Mono Soft
+    Debugger endpoint that would be attached to, and the current session state. Never attaches, so
+    it is safe while an IDE holds the debugger slot.
+    A beacon with debuggerEnabled false means the game IS running but was launched without
+    'player-connection-debug=1'; no beacon at all means no game is advertising itself, unless
+    beaconUnavailable is set, which means this machine has stopped receiving beacons entirely and
+    only the attach tool's explicit port can reach a game.
+    No beacon while session.heldSuspends is above zero means neither: a suspended game stops
+    broadcasting, so this session froze the very thing it is reporting on. Resume and ask again.
+    Other tools attach lazily on first use, so a session needs no explicit attach step.
     """
   )]
   [UsedImplicitly]
-  public StatusResult Status(
-    [Description(
-      """
-      Optional process name prefix to match, case-insensitive.
-      Omit to use the UNITY_MCP_PROCESS env filter if set, else auto-discover every running dev-Mono
-      Unity game by its SDB port signature.
-      """
-    )]
-    string? processName = null
-  ) {
+  public StatusResult Status() {
     return ToolGuard.Run(Operation);
 
     StatusResult Operation() {
-      var query = processName ?? session.Config.ProcessNamePrefix;
-
-      var processes = SdbDiscovery.Locate(query)
-        .Select(process => new GameProcessInfo {
-            Name = process.Name,
-            Pid = process.Pid,
-            ListeningPorts = process.ListeningPorts,
-            SdbPort = process.SdbPort
-          }
-        )
-        .ToArray();
-
-      var snapshot = session.Snapshot();
+      var beacon = beacons.Wait();
 
       return new StatusResult {
-        ProcessQuery = query,
-        Processes = processes,
-        Session = new SessionInfo {
-          Attached = snapshot.Attached,
-          Host = snapshot.Host,
-          Port = snapshot.Port,
-          VmVersion = snapshot.VmVersion,
-          Protocol = snapshot.Protocol,
-          HeldSuspends = snapshot.HeldSuspends
-        }
+        Beacon = beacon is null
+          ? null
+          : new BeaconInfo {
+            Host = beacon.Host,
+            SdbPort = beacon.SdbPort,
+            DebuggerEnabled = beacon.DebuggerEnabled,
+            ConnectionGuid = beacon.ConnectionGuid,
+            PlayerConnectionPort = beacon.PlayerConnectionPort,
+            Id = beacon.Id,
+            PackageName = beacon.PackageName,
+            ProjectName = beacon.ProjectName
+          },
+        Endpoint = beacon?.Endpoint is {} endpoint ? $"{endpoint.Host}:{endpoint.Port}" : null,
+        BeaconUnavailable = beacons.Unavailable,
+        Session = SessionTools.Describe(session.Snapshot())
       };
     }
+  }
+
+  [McpServerTool(Name = "attach")]
+  [Description(
+    """
+    Attach to a Mono Soft Debugger port on this machine, replacing any live session and connecting
+    straight away.
+    Reach for it when status reports no beacon while the game is running (a firewall or a VPN
+    interface filtering multicast), or when an external loader started the debug server on a port of
+    its own. With no port, attach to what the beacon advertises.
+    The port applies to this attach alone: a later reattach, the one after a dropped connection
+    included, goes back to the beacon, so give the port again if the beacon still cannot see the
+    game.
+    """
+  )]
+  [UsedImplicitly]
+  public SessionInfo Attach(
+    [Description(
+      "The game's Mono Soft Debugger port on this machine; omit it to attach to what the beacon " +
+      "advertises."
+    )]
+    int? port = null
+  ) {
+    return ToolGuard.Run(() => SessionTools.Describe(session.Attach(port)));
   }
 
   [McpServerTool(Name = "detach")]
@@ -109,32 +122,74 @@ public sealed class SessionTools(UnitySession session) {
       }
     );
   }
+
+  private static SessionInfo Describe(UnitySessionSnapshot snapshot) =>
+    new() {
+      Attached = snapshot.Attached,
+      Host = snapshot.Host,
+      Port = snapshot.Port,
+      VmVersion = snapshot.VmVersion,
+      Protocol = snapshot.Protocol,
+      HeldSuspends = snapshot.HeldSuspends
+    };
 }
 
-/// <summary>Result of the <c>status</c> tool: discovery matches plus the session state.</summary>
+/// <summary>Result of the <c>status</c> tool: what was discovered plus the session state.</summary>
 public sealed record StatusResult {
-  /// <summary>The name-prefix filter applied, or null when discovery ran unfiltered.</summary>
-  public required string? ProcessQuery { [UsedImplicitly] get; init; }
+  /// <summary>
+  /// What is being advertised right now, or null when nothing is. A game broadcasts about once a
+  /// second and cannot announce that it stopped, so its beacon expires shortly after it exits
+  /// rather than lingering as a description of a game that is gone.
+  /// </summary>
+  public required BeaconInfo? Beacon { [UsedImplicitly] get; init; }
 
-  public required IReadOnlyList<GameProcessInfo> Processes { [UsedImplicitly] get; init; }
+  /// <summary>
+  /// The <c>host:port</c> the beacon points at, or null when nothing attachable is advertising
+  /// itself.
+  /// </summary>
+  public required string? Endpoint { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// Why this machine can receive no further beacon, or null when it can. Set, it means the listen
+  /// has ended for good, so nothing new will be discovered here whatever is running and the attach
+  /// tool's explicit port is the only way in.
+  /// </summary>
+  public required string? BeaconUnavailable { [UsedImplicitly] get; init; }
 
   public required SessionInfo Session { [UsedImplicitly] get; init; }
 }
 
-/// <summary>One located game process, its listen ports, and its SDB port when in range.</summary>
-public sealed record GameProcessInfo {
-  public required string Name { [UsedImplicitly] get; init; }
+/// <summary>What a Unity player advertised about itself on the PlayerConnection beacon.</summary>
+public sealed record BeaconInfo {
+  public required string Host { [UsedImplicitly] get; init; }
 
-  public required int Pid { [UsedImplicitly] get; init; }
+  /// <summary>The debugger port derived from the advertised connection GUID.</summary>
+  public required int SdbPort { [UsedImplicitly] get; init; }
 
-  public required IReadOnlyList<int> ListeningPorts { [UsedImplicitly] get; init; }
+  /// <summary>
+  /// Whether the player reports the managed debugger as enabled; false means the game runs without
+  /// 'player-connection-debug=1' and cannot be attached to.
+  /// </summary>
+  public required bool DebuggerEnabled { [UsedImplicitly] get; init; }
 
-  /// <summary>The SDB port to attach to, or null when none is in the dev-Mono range.</summary>
-  public int? SdbPort { [UsedImplicitly] get; init; }
+  public required uint ConnectionGuid { [UsedImplicitly] get; init; }
+
+  /// <summary>The PlayerConnection/profiler port, which is NOT the debugger port.</summary>
+  public required int? PlayerConnectionPort { [UsedImplicitly] get; init; }
+
+  public required string? Id { [UsedImplicitly] get; init; }
+
+  public required string? PackageName { [UsedImplicitly] get; init; }
+
+  public required string? ProjectName { [UsedImplicitly] get; init; }
 }
 
 /// <summary>The persistent session's current state.</summary>
 public sealed record SessionInfo {
+  /// <summary>
+  /// Whether the debugger connection is up, read from the connection rather than remembered from
+  /// the attach: a game that exited while idle reports false here.
+  /// </summary>
   public required bool Attached { [UsedImplicitly] get; init; }
 
   public required string? Host { [UsedImplicitly] get; init; }

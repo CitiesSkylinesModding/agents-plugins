@@ -17,12 +17,7 @@
         "--project",
         "plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj",
         "--property:BaseOutputPath=bin/mcp-run/"
-      ],
-      "env": {
-        "UNITY_MCP_HOST": "${UNITY_MCP_HOST:-}",
-        "UNITY_MCP_PORT": "${UNITY_MCP_PORT:-}",
-        "UNITY_MCP_PROCESS": "${UNITY_MCP_PROCESS:-Cities2}"
-      }
+      ]
     }
   }
 }

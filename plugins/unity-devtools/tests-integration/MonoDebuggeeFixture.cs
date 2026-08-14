@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -32,34 +28,15 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   private DebugController? debug;
 
   public MonoDebuggeeFixture() {
-    var mono = MonoDebuggeeFixture.ResolveMono();
+    this.SkipReason = MonoDebuggee.SkipReason;
 
-    if (mono is null) {
-      this.SkipReason =
-        "no Mono runtime found (set UNITY_DEVTOOLS_MONO, put mono on PATH, or install a " +
-        "Windows Unity Editor)";
-
+    if (this.SkipReason is not null) {
       return;
     }
 
-    var port = MonoDebuggeeFixture.PickFreePort();
+    var port = MonoDebuggee.PickFreePort();
 
-    this.debuggee = Process.Start(
-        new ProcessStartInfo {
-          FileName = mono,
-
-          // --debug loads the fixture's portable PDB (line tables and local names); without it,
-          // the agent reports AbsentInformation for everything.
-          Arguments =
-            "--debug " +
-            $"--debugger-agent=transport=dt_socket,address=127.0.0.1:{port},server=y,suspend=y " +
-            $"\"{MonoDebuggeeFixture.DebuggeeOutput("fixture", "UnityDevtools.TestFixture.exe")}\"",
-          UseShellExecute = false,
-          RedirectStandardOutput = true,
-          RedirectStandardError = true
-        }
-      ) ??
-      throw new InvalidOperationException($"failed to start '{mono}'");
+    this.debuggee = MonoDebuggee.Start(port, suspend: true);
 
     // READY (printed by the fixture's Main after warming up the shared static roots) gates the
     // first eval: mirror reads never trigger class constructors, so evaluating before Main ran
@@ -213,8 +190,8 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   public void LoadPartlyLoadableAssembly() {
     // Forward slashes: the path is spliced into a C# literal the debuggee evaluates, where a
     // Windows separator would read as an escape.
-    var path = MonoDebuggeeFixture
-      .DebuggeeOutput("broken", $"{MonoDebuggeeFixture.PartlyLoadableAssembly}.dll")
+    var path = MonoDebuggee
+      .Output("broken", $"{MonoDebuggeeFixture.PartlyLoadableAssembly}.dll")
       .Replace('\\', '/');
 
     _ = this.Eval($"System.Reflection.Assembly.LoadFrom(\"{path}\")");
@@ -305,85 +282,9 @@ public sealed class MonoDebuggeeFixture : IDisposable {
       return;
     }
 
-    try {
-      this.debuggee.Kill(true);
-    }
-    catch {
-      // Already gone.
-    }
+    MonoDebuggee.Kill(this.debuggee);
 
     this.debuggee.Dispose();
-  }
-
-  /// <summary>
-  /// Resolution order: UNITY_DEVTOOLS_MONO (path to a mono executable) → mono on PATH → well-known
-  /// Windows Unity Editor locations.
-  /// Null when nothing resolves (tests skip).
-  /// </summary>
-  private static string? ResolveMono() {
-    var configured = Environment.GetEnvironmentVariable("UNITY_DEVTOOLS_MONO");
-
-    if (!string.IsNullOrEmpty(configured)) {
-      return configured;
-    }
-
-    var exeName = OperatingSystem.IsWindows() ? "mono.exe" : "mono";
-
-    var onPath = (Environment.GetEnvironmentVariable("PATH") ?? "")
-      .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-      .Select(dir => Path.Combine(dir.Trim(), exeName))
-      .FirstOrDefault(File.Exists);
-
-    if (onPath is not null || !OperatingSystem.IsWindows()) {
-      return onPath;
-    }
-
-    var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-    var suffix = Path.Combine("Editor", "Data", "MonoBleedingEdge", "bin", "mono.exe");
-
-    // Direct installs (C:\Program Files\Unity <version>\...) and Unity Hub installs.
-    IEnumerable<string> editorRoots = [
-      .. MonoDebuggeeFixture.Subdirectories(programFiles, "Unity*"),
-      .. MonoDebuggeeFixture.Subdirectories(Path.Combine(programFiles, "Unity", "Hub", "Editor"))
-    ];
-
-    return editorRoots.Select(root => Path.Combine(root, suffix)).FirstOrDefault(File.Exists);
-  }
-
-  private static IEnumerable<string> Subdirectories(string parent, string pattern = "*") =>
-    Directory.Exists(parent) ? Directory.EnumerateDirectories(parent, pattern) : [];
-
-  private static int PickFreePort() {
-    var listener = new TcpListener(IPAddress.Loopback, 0);
-
-    listener.Start();
-
-    var port = ((IPEndPoint) listener.LocalEndpoint).Port;
-
-    listener.Stop();
-
-    return port;
-  }
-
-  /// <summary>
-  /// A file in a sibling debuggee project's output: own output is
-  /// tests-integration/bin/&lt;Config&gt;/net10.0/, and every net472 project beside it (all built
-  /// for any test run by the ReferenceOutputAssembly=false project references) builds under its
-  /// own bin/ with the same configuration.
-  /// </summary>
-  private static string DebuggeeOutput(string project, string file) {
-    var output = new DirectoryInfo(
-      AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-    );
-
-    var configuration = output.Parent!.Name;
-    var projectDir = output.Parent!.Parent!.Parent!.FullName;
-
-    var path = Path.Combine(projectDir, project, "bin", configuration, "net472", file);
-
-    return File.Exists(path)
-      ? path
-      : throw new FileNotFoundException($"'{file}' not found at '{path}'; build the solution");
   }
 }
 

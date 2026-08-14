@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Offline test suite for the C# expression evaluator in sdb/Eval: parser/AST coverage and
-    client-side primitive operator semantics.
-    Anything touching a live VM (the interpreter's mirror walking) is out of scope here and is
-    covered by the tests-integration suite against a headless Mono debuggee instead.
+    Offline test suite: the C# expression evaluator in sdb/Eval (parser/AST coverage and client-side
+    primitive operator semantics), and the other pure functions worth pinning, such as the
+    PlayerConnection beacon parser.
+    Anything touching a live VM or a socket is out of scope here and is covered by the
+    tests-integration suite instead.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
