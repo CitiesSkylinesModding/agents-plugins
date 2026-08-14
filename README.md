@@ -8,6 +8,8 @@ Give your coding agent **eyes and hands inside a running game**: its HTML UI, an
 internals.
 Generic tooling, developed and verified against Cities: Skylines II.
 
+Encourage my work by putting a star ⭐ if it has been useful to you!
+
 [![CI](https://github.com/CitiesSkylinesModding/agents-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/CitiesSkylinesModding/agents-plugins/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40csmodding%2Fgameface-devtools-mcp?label=npm)](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
