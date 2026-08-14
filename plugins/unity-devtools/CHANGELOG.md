@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v0.4.0...unity-devtools-v1.0.0) (2026-08-14)
+
+
+### Features
+
+* **unity-devtools:** discover the debuggee from the PlayerConnection beacon ([9f9bbba](https://github.com/CitiesSkylinesModding/agents-plugins/commit/9f9bbba4dd1d58de2311478478439500834ec312))
+* **unity-devtools:** name every member a flags value carries, instead of printing a number ([15c7e4e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/15c7e4ed77ddf3e72dc6e9bc1cd8dde90beccbe0))
+* **unity-devtools:** teach the eval that captures the game's own frame ([7238c67](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7238c67536b3844315c77af1cea7ec843aa4e966))
+
+
+### Bug Fixes
+
+* **unity-devtools:** correct the query-visibility and eval-limit teachings ([6e16092](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6e16092ca8b51a70530ed9a52753b261fcde5d01))
+* **unity-devtools:** discover players on every port the beacon group is served on ([ec8a2bd](https://github.com/CitiesSkylinesModding/agents-plugins/commit/ec8a2bd0b15b6e4f1677d063e1b72b94e283dd27))
+* **unity-devtools:** write the Burst disable flag with its mandatory double dash ([a21c78d](https://github.com/CitiesSkylinesModding/agents-plugins/commit/a21c78d635f716438e9a3e99547f8a513711fdf4))
+
+
+### Performance Improvements
+
+* **unity-devtools:** read an enum constant off its field instead of waking the game ([485b8dc](https://github.com/CitiesSkylinesModding/agents-plugins/commit/485b8dc67f32bd4a596c953dbae37a895663ccd4))
+* **unity-devtools:** stop re-asking the game what this attach already answered ([6516ec9](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6516ec99ba9f6d7f8e741c4ab9cd235eb48169ef))
+
 ## [0.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v0.3.0...unity-devtools-v0.4.0) (2026-07-30)
 
 
