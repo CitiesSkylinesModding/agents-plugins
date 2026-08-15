@@ -1,7 +1,7 @@
 {
   "plugins/coherent-gameface": "1.0.0",
   "plugins/coherent-gameface/mcp": "1.0.0",
-  "plugins/unity-devtools": "1.0.0",
-  "plugins/unity-devtools/mcp": "1.0.0",
+  "plugins/unity-devtools": "1.0.1",
+  "plugins/unity-devtools/mcp": "1.0.1",
   "plugins/cs2-modding": "0.1.0"
 }
