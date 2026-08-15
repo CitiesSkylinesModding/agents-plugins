@@ -3,8 +3,7 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     // The benchmark runs under Bun and nowhere else: bun:test and Bun.spawn need these types, and
-    // they carry the Node ones with them. The root config stays on "node" alone for the scripts,
-    // which share a program with the mcp package and must keep compiling against Node.
+    // they carry the Node ones with them, which is why the node: builtins here still resolve.
     "types": ["bun"]
   },
   // The root config's include resolves relative to the root; scope this project to the benchmark.

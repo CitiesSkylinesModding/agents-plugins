@@ -27,7 +27,7 @@ Two semantics span the whole toolset and no single schema owns them:
 
 ## Project layout
 
-The .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` at the repo root (`dotnet build agents-plugins.slnx`; the repo has no other .NET code).
+The .NET projects plus the vendored SDB client, grouped by `agents-plugins.slnx` at the repo root (`dotnet build agents-plugins.slnx`; the repo has no other .NET code).
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
 - `.claude-plugin/plugin.json` + `.mcp.json`, `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: the two harness manifest sets, both launching `dotnet dnx UnityDevtools.Mcp --version <pin> --yes`. The command is `dotnet`, never the bare `dnx` shim — that is a `.cmd` script MCP hosts cannot spawn on Windows. The version pin is a standalone args element so release-please can update it (`$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
@@ -37,7 +37,7 @@ The .NET projects plus the vendored submodule, grouped by `agents-plugins.slnx` 
 - `tests-integration/`: the evaluator and debug toolset against a real net472 debuggee under Mono — traps in [`docs/solutions/mono-fixture-traps.md`](../../docs/solutions/mono-fixture-traps.md).
   A test touching the PlayerConnection beacon joins `BeaconGroupCollection`, whose docblock says why.
 - `mcp/` (`UnityDevtools.Mcp`): the stdio MCP server on the official `ModelContextProtocol` C# SDK — generic-host builder, attribute-based tool classes taking the shared `UnitySession` via DI, `ToolGuard` wrapping bodies in `McpException` so messages reach the client verbatim. All logs go to stderr so they never corrupt the stdio stream.
-- `vendor/unity-mono/`: Unity's mono fork as a sparse, shallow, blob-filtered submodule. `mise vendor:unity:reset` restores the lean checkout.
+- `vendor/mono-debugger-soft/`: the SDB client sources from Unity's mono fork, committed verbatim rather than submoduled. Its `VENDOR.md` states the pin, why the copy, and the rules around updating it (`mise vendor:unity:update`); never hand-edit a file there.
 
 ## The eval contract
 

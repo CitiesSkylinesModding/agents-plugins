@@ -2,9 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": ["@toverux/blanc-hopital/tsconfig/strict", "@toverux/blanc-hopital/tsconfig/bun"],
   "compilerOptions": {
-    // The root project (config files + scripts/) runs under bun/node; @types/node is hoisted
-    // from the mcp workspace package.
-    "types": ["node"]
+    "types": ["bun"]
   },
   "include": ["*.config.ts", "scripts/*.ts"]
 }

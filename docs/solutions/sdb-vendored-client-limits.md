@@ -81,8 +81,8 @@ drains it, and the poller then finds nothing available and calls a healthy conne
 
 That receiver also reports a failed receive with `Console.WriteLine`, i.e. on **stdout**, which is
 the MCP transport: an abruptly dying debuggee would write a stack trace into the JSON-RPC stream.
-`patch-connection.ps1` redirects it to stderr. A vendor update reinstates it, and the patch fails
-loudly on a missing anchor rather than silently.
+A local patch, applied by `mise vendor:unity:update` as the sources are fetched, redirects it to
+stderr; the update fails loudly on a missing anchor rather than writing an unpatched tree.
 
 Before the receiver exists at all, **the handshake read is fixed-length and untimed** (upstream marks
 the gap with a FIXME), so a peer that accepts and says nothing blocks the caller forever. A poll for
@@ -105,15 +105,10 @@ it must.
 
 Only `sdb/` touches vendored code; it is the public surface every other project consumes.
 
-The submodule is a sparse, shallow, blob-filtered clone of `mcs/class/Mono.Debugger.Soft/` (~75 files,
-MIT), pinned to `unity-6000.6-mbe`. The branch is provenance only — that tree hash is identical across
-`unity-2022.3-mbe`, `unity-6000.6-mbe` and `unity-main`; Unity only evolves the **agent** side, and the
-wire protocol is version-negotiated at attach, so one client serves every Mono-era Unity agent.
+`mcs/class/Mono.Debugger.Soft/` is committed under `plugins/unity-devtools/vendor/mono-debugger-soft/`
+(~75 files, MIT), copied from `unity-6000.6-mbe`. The branch is provenance only — that tree hash is
+identical across `unity-2022.3-mbe`, `unity-6000.6-mbe` and `unity-main`; Unity only evolves the
+**agent** side, and the wire protocol is version-negotiated at attach, so one client serves every
+Mono-era Unity agent.
 
-`mise vendor:unity:reset` restores the lean checkout in place (`git sparse-checkout set --cone` with
-`core.longpaths`, preserving the submodule gitlink a re-clone would break). Run it after a submodule
-init, or to recover from a plain `git submodule update` that materialized the FULL tree — that state
-breaks `mise check`, because oxlint then scans the vendored JS/TS.
-
-A recursive init also costs gigabytes that no `deinit` reclaims: mono's own submodules keep their
-object stores under `.git/modules` even once their working trees are gone. The reset deletes them.
+`mise vendor:unity:update` refetches it; that directory's `VENDOR.md` is the contract around it.
