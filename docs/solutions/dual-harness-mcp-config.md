@@ -5,7 +5,9 @@ symptoms:
   - '`${CLAUDE_PLUGIN_ROOT}` reaches the MCP child verbatim on Codex CLI'
   - 'Error loading config.toml: invalid transport'
   - 'plugin server starts in the wrong working directory on Claude Code'
+  - 'Failed to reconnect to plugin:<plugin>:<server>: -32000'
 tags: [mcp, plugin-manifest, codex-cli, claude-code]
+updated: 2026-08-15
 ---
 
 # One MCP config cannot serve both harnesses
@@ -21,6 +23,12 @@ the plugin's own artifacts.
 - **`${CLAUDE_PLUGIN_ROOT}` everywhere.** Codex does not interpolate `${VAR}` in MCP `command`/`args`
   (openai/codex#19582) and injects almost no env into the MCP child; `PLUGIN_ROOT` /
   `CLAUDE_PLUGIN_ROOT` exist for **hooks only**.
+- **A `:-` default on `${CLAUDE_PLUGIN_ROOT}`.** Claude Code replaces the exact token in a pass that
+  runs before `${VAR:-default}` interpolation and has no `:-` grammar, so the `:-` form skips it and
+  reaches the env pass, which reads the harness's own environment and takes the default. The variable
+  is real, but only in the spawned server's environment, set after `command`/`args` were expanded.
+  Nothing fails at config load: the server dies on MODULE_NOT_FOUND against a path resolved from the
+  project cwd, and the harness reports `-32000 Connection closed`. Keep `:-` for real env vars only.
 - **Relative `cwd` everywhere.** Claude Code ignores `cwd` in `.mcp.json` (anthropics/claude-code#17565).
 - **Overriding a plugin server from `~/.codex/config.toml`.** Codex refuses to load the config at all:
   `Error loading config.toml: invalid transport`. The only override path on Codex is `codex mcp add`,
