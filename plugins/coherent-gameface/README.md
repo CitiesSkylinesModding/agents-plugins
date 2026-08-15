@@ -183,8 +183,11 @@ plugin's copy under the same name (see [`mcp/README.md`](mcp/README.md)).
 - **Read the MCP server logs**: Claude Code records each server's connection attempts and captured
   stderr to per-project `.jsonl` files, the fastest way to see why a launch failed (e.g., a
   `-32000 Connection closed` from a bad command/path before any `game_*` tool runs). They live under
-  the Claude CLI cache, in an `mcp-logs-gameface/` folder keyed by the project path (separators
+  the Claude CLI cache, in a folder keyed by the project path and the server name (separators
   replaced with `-`); newest `.jsonl` first, and each `Server stderr: ...` line is what the server
   printed:
-  - Windows: `%LocalAppData%\claude-cli-nodejs\Cache\<project-path>\mcp-logs-gameface\`
-  - macOS / Linux: `~/.cache/claude-cli-nodejs/Cache/<project-path>/mcp-logs-gameface/`
+  - Windows: `%LocalAppData%\claude-cli-nodejs\Cache\<project-path>\mcp-logs-<server>\`
+  - macOS / Linux: `~/.cache/claude-cli-nodejs/Cache/<project-path>/mcp-logs-<server>/`
+
+  Installed as a plugin, `<server>` is `plugin-coherent-gameface-gameface`; registered by hand from
+  npm, it is whatever name you gave the server.
