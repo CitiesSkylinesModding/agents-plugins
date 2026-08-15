@@ -6,7 +6,7 @@
         "dnx",
         "UnityDevtools.Mcp",
         "--version",
-        "1.0.0",
+        "1.0.1",
         "--yes"
       ],
       "cwd": "."

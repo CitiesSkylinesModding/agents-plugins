@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.0.0...unity-devtools-v1.0.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **unity-devtools:** stop the vendored submodule from breaking every marketplace install ([e7f364d](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e7f364d413b118d47346118874089a626cab4ed6))
+
 ## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v0.4.0...unity-devtools-v1.0.0) (2026-08-14)
 
 
