@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.0.0...coherent-gameface-v1.0.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** launch the plugin server from the plugin root on Claude Code ([3af955a](https://github.com/CitiesSkylinesModding/agents-plugins/commit/3af955a6e2f7774ef91ae669b0d673a9e2833a48))
+
 ## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v0.3.0...coherent-gameface-v1.0.0) (2026-08-14)
 
 
