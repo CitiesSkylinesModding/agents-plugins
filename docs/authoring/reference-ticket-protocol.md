@@ -131,7 +131,7 @@ Where the disagreement is a judgement rather than a fact, it goes to `docs/resea
 
 **Check every bridge slug against the approved topic set before resolving** — the reference folders on disk, plus the structure document the run's tickets are scoped by for topics not yet authored. A discovery agent asked for a `## Bridge` section will name a topic that reads right and does not exist — the placement-definitions pass asserted `terrain-and-water`, whose material belongs to `environment-and-pollution`, and the same phantom had been sitting in the custom-tools research file undetected. Nothing catches this on its own: the lint asserts that markdown _links_ resolve, and a bridge is deliberately a backticked slug until the trunk-coherence pass converts it, so an invented slug passes every check until that conversion fails on it. Grep the finished reference for its slugs and diff them against the approved set; it costs one command.
 
-## Two corrections worth their own heading
+## Corrections worth their own heading
 
 **Phrase headline material as the question the topic must answer, not as the answer.**
 The tracer ticket's own criterion stated "a lifecycle hook which throws silently disables the system" as a fact. Discovery found four wrapped hooks with three different behaviours.
@@ -141,3 +141,8 @@ Each ticket's questions are written that way. Keep them that way when you pass t
 **Coverage is the ticket's job, not the conventions'.**
 `docs/research/README.md` binds a research file claim by claim and says nothing about how much ground it covers, so a thin file satisfies every written rule and the gap surfaces only when the shipped reference reads thin.
 The ticket's question list is what closes that, which is why a question the sources could not answer is recorded in the research file rather than dropped.
+
+**A registration block is not a unit of ownership.**
+Two mechanics topics reading the same contiguous block in `SystemOrder.cs` do not split it where the systems are registered: ownership follows the role of the thing each system drives, and the seam the approved decomposition already drew is what settles it.
+Where a mechanism then runs across the seam, the topic owning the object keeps the object and bridges to the topic owning the loop rather than drawing a boundary through the middle of a method.
+Ruled in `docs/research/conflicts.md` over the vehicle `*AISystem`s.

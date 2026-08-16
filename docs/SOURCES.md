@@ -118,6 +118,7 @@ For internals it sets the agenda and is then verified against the game; it has b
 A web-fetch tool normally renders past the site's JavaScript bot challenge and returns full article content; a plain HTTP fetch is still expected to lose to it. Ask the user only when the challenge comes back instead of content.
 A DLC or content-pack product page can carry mechanism material the gameplay pages do not, stamped "timeless" rather than verified-for-a-version — a resource-processing chart and the wiki's only statement of the production-milestone unlock system sit on one.
 Several plausible titles are bare redirects into a larger page and carry nothing of their own; the wiki's own `Special:Search` endpoint resolves a moved or merged title where a web search does not.
+The MediaWiki API is the exact instrument under both problems: `api.php?action=query&titles=<Title>&format=json` reports `missing` for a title that does not exist and a page ID for one that does (titles are case-sensitive after the first character), `index.php?title=<Title>&action=raw` returns the article's wikitext verbatim — which reproduces a table cell for cell and distinguishes "the page says nothing" from "the fetch did not render it" — and `action=query&list=allpages&aplimit=500` enumerates the whole main namespace (roughly 350 pages) in one batch.
 
 ## 11. The mod corpus
 
