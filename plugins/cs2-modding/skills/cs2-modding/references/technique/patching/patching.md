@@ -207,6 +207,7 @@ So a patch on that `Execute` never runs while Burst is enabled: it rewrites the 
 
 **So the rule is: replace the job, not its body.**
 Patch the managed method that _schedules_ the job — the last managed instruction before the schedule — and schedule your own job instead.
+A `public static` helper whose every call site is inside such a job is the same case: Burst compiles the job's whole reachable call graph, so a prefix on the helper applies cleanly and never runs, and the schedule is still the seam.
 The worked shape, from the two mods that do it:
 
 - Resolve the private target by explicit signature, through `TargetMethod()` when an attribute cannot express it.

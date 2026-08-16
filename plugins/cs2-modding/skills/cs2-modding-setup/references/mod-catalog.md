@@ -126,6 +126,7 @@ A batched custom raycast where several callers share one pass per frame, keyed b
 Runtime bridging to another mod through a dedicated bridge class, whose methods are each resolved once by explicit parameter-type array rather than by name, cached, and invoked through helpers that return a neutral value on a missing member or a thrown call — so every entry point degrades to a no-op when the other mod is absent.
 Declaring its own input usage string beside the built-in ones, so its transform-tool actions are not reported as conflicting with vanilla bindings they share keys with.
 A port of the game's own selection-definition builder that branches on what the selected entity is and emits the matching definition kind for each — network course, object, area nodes, route waypoints, notification icon, aggregate elements — which is the widest coverage of that mechanism outside the game itself.
+Reading a game-owned buffer of child entities and re-emitting them as the placement pipeline's definition buffer, filling each definition's original, position and connection from three separate components on the child.
 
 ### Platter
 
@@ -235,6 +236,7 @@ A dictionary source registered under every supported locale whose entries are ge
 Authoring a road's utility carriage as part of the prefab: the electricity and water-pipe connection components added in code, with the composition requirement that gates electricity on a lighting upgrade read back off a vanilla road when importing one.
 Propagating a prefab change to every placed instance by walking from the changed prefab to its edges, their neighbours across each shared node, and then each edge's compositions, nodes, sub-lanes and sub-objects — a walk the engine's own prefab-replacement pass does not perform for road edges.
 Manufacturing the network pieces a composition needs rather than authoring them — cloning one wide vanilla piece per width and rewriting its width, geometry, surfaces and lane list — driven by a four-phase state machine advancing one phase per update, because each phase's prefabs must be registered before the next reads them.
+Cloning vanilla prefabs selected by literal name out of a data-component query, stripping a name prefix, and re-attaching the service and UI components a clone needs to appear in the toolbar — with the literal-name coupling as the fragile half of the technique.
 
 ### Extra Assets Importer
 
@@ -290,6 +292,7 @@ Prefab indexing split into one processor class per category, discovered by refle
 Full rebuild on load versus incremental updates driven by created and updated queries.
 An extension hook that lets any other mod contribute a search predicate, found by reflection with no shared assembly.
 Deriving hundreds of new prefabs from the loaded asset database by cherry-picking a few components off each original instead of cloning it, sharing the mesh reference, and declaring obsolete identifiers so a rename migrates saves.
+Classifying prefabs by which payload data component they carry rather than by prefab class.
 Naming prefabs it generates at runtime by copying the original's localized name out of the active dictionary and writing a fallback straight back into it, which is the fast path and is lost the moment the player changes language.
 
 ### Info Loom
@@ -323,6 +326,8 @@ Burst jobs for "apply within a radius" against both transforms and curves.
 One of its own components shadows a vanilla component of the same name that arrived later, and the source has both in use side by side, which is the readable case for namespace-qualifying every component a mod shares a name with.
 Three tools that decline every prefab — `TrySetPrefab` returns false and `GetPrefab` returns null — so they are reachable only from the mod's own UI and cost the toolbar nothing wherever they sit in the tool list.
 Emitting a selection definition against an existing entity so the game hands back a temporary copy the mod can edit, which is how it applies a colour through the placement pipeline instead of writing the live entity.
+Writing a game-owned component and then adding the game's own change-event component so the vanilla propagation runs, instead of forking the system that would have propagated it, with the mod's own persistent buffer parked on the same entity.
+Catching entities that join a relationship after the edit, through a second system whose query pairs the vanilla link component with the game's created and updated markers.
 Player-authored translations: the player names and translates their own palettes in-game, each locale written to a JSON file beside the palette and registered as an in-memory source, guarded by a check that the game supports that locale at all.
 
 ### Write Everywhere
@@ -341,6 +346,7 @@ A version int read into a local that bails when the save was written by a newer 
 The same classes serve as both the mod's XML file format and its save payload, which works because the reader's overload for a reference type deserializes into an instance the caller has already allocated.
 The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
+Reading a chain of game-owned link components for display, and the limit that comes with it: some of its tests are disabled because the game's buffer types cannot be JIT-compiled outside the running game.
 A transpiler that repairs the developer menu's tool enumeration for every mod in the session, not just its own, and stands down when the patched loop's opcodes show another mod already fixed it.
 (UNVERIFIED: the transpiler's own source — it lives in the submodule a plain clone leaves empty, and its shape is read from the repository's change record.)
 
@@ -396,6 +402,7 @@ Serializable records that make a destructive edit reversible.
 The reason "permanent" removal needs records at all: the game's own systems keep recreating sub-elements from the asset definition, so the mod re-detects and re-deletes them rather than deleting once.
 Reinserting its two tools at the front of the tool list once loading has completed, which is later than the tool's own creation and therefore wins any race with a mod that reorders at `OnCreate`.
 Detecting another mod's per-entity state by reflected component type — on the entity itself or on its edge's endpoint nodes — and re-marking the hits for update a frame later.
+A removal tool splitting one target set — any of the vehicle, animal and human tags, minus deleted and temporary entities — into moving and parked query halves by the presence of the interpolated transform, so one tool covers both without a per-entity branch.
 
 ## Inspection and debugging tooling
 
@@ -415,5 +422,6 @@ Distinguishing a structural change from a value change on every refresh — comp
 A logging facade whose three category methods each carry a conditional-compilation attribute, so a build without the symbol drops the call and the message it would have built, behind a static constructor that suppresses the logger's UI errors as it creates it.
 Registering an editor tool by growing the editor's own tool array.
 Snapshotting entities into memory by transitively following entity-typed fields, holding the two prefab references back so the walk does not drag the whole prefab graph in with them, and rendering live and frozen data through one code path.
+Walking a game-owned index-and-buffer chain to render it as gizmos — a segment buffer stepped between two index components, wrapping at the end, recursing into each segment's own path buffer.
 No patching anywhere in the codebase.
 Its helper and service classes are where all of the above is legible; its two thousand-line tool and highlight systems carry near-duplicate dispatch ladders and repay reading only for the specific mechanism you came for.
