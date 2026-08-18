@@ -12,21 +12,6 @@ planned. When these land they become standard plugin components: `commands/`, `a
 `skills/` directories auto-discovered by the plugin manifest (`skills/` already ships the
 `gameface` and `gameface-driving` skills).
 
-### Selector pre-flight
-
-Cohtml throws a bare "Invalid CSS selector" on `:not()`, `:has()` and `:first-of-type`, and each of
-the nine selector-taking tools surfaces that as an opaque failure an agent tends to retry unchanged.
-The fact lives in the skills — `gameface-driving` and the `gameface` scripting reference — which a
-standalone MCP client never loads, so the tool tier carries none of it, and restating it in nine
-descriptions is the wrong shape for one engine constraint.
-
-Screen the selector server-side instead, before the CDP round trip, and name the unsupported
-construct and a rewrite. A heuristic scan suffices: no CSS parser, and missing an exotic case costs
-nothing beyond the opaque error the caller already gets. What it must not do is refuse a selector
-the engine would have accepted — the unsupported set is verified against one Cohtml version, so the
-screen either gates on the version `game_status` already reports or warns while letting the call
-through.
-
 ### Removing a breakpoint the UI is paused at
 
 `game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
