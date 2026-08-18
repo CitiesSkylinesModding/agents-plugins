@@ -18,7 +18,7 @@ The plugin wears two hats, with distinct names:
 - `skills/gameface/`: the domain-knowledge skill — what the engine supports (layout, events, platform APIs), with `references/` and the `scripts/fetch-doc.mjs` docs extractor.
 - `skills/gameface-driving/`: the operational skill for driving a live UI with the `game_*` tools.
 - `mcp/src/`: the server (TypeScript). `mcp/package.json` is the publishable npm package.
-- `mcp/tests/`: the server's unit tests (`mise test:gameface`), hermetic and typed against Bun through their own tsconfig. A facet reaches them by taking an injected CDP facade, which is what makes it testable without a live application; the console pipeline and the debugger session are the ones that do today.
+- `mcp/tests/`: the server's unit tests (`mise test:gameface`), hermetic and typed against Bun through their own tsconfig. A facet reaches them either by taking an injected CDP facade, which is what makes it testable without a live application (the console pipeline and the debugger session), or by being pure to begin with (the selector diagnosis).
 - `mcp/dist/server.mjs`: the shipped self-contained bundle. COMMITTED on purpose (zero-install); also what npm publishes and the package's `bin`.
 
 ## Conventions
@@ -41,6 +41,8 @@ Harness wiring: Claude Code's `.mcp.json` launches the bundle through `${GAMEFAC
 ## Gameface CDP behavior
 
 The verified matrix — CDP domain support, in-page DOM API availability, input dispatch, the JS debugger, view-reload detection — lives in `skills/gameface/` and `skills/gameface-driving/`, which are the canonical source and teach it to agents at runtime.
+The selector whitelist is the one fact the server also holds, in `mcp/src/selectors.ts`, because the diagnosis has to answer a standalone MCP client that loads no skill.
+Re-probing it for a new engine version updates that module and, in each of the two skills, both the whitelist sentence and the `:nth-child()` argument sentence beside it: a test binds the module's two copies to each other, and nothing binds the skills.
 Server-side consequences are commented where they are implemented (`cdp.ts` for discovery, `tools.ts` for page-context functions).
 Verification context: Cohtml 1.64.0.7, V8 9.4, CDP 1.3.
 

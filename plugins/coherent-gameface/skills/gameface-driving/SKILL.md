@@ -31,7 +31,10 @@ When a selector is non-unique but the match order is known, the input tools' `in
 Narrow with `game_query`, then read the one element you settled on with `game_dom`.
 For a predicate no selector can express here (computed state, or picking a parent by what its children are, since `:has()` throws), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
-In the JS query APIs, combinators, `:nth-child`, and `[attr*=]` all match, but `:not()`, `:has()` and `:first-of-type` throw "Invalid CSS selector" (verified on CS2); a selector-taking tool erroring that way needs a rewritten selector, not a retry.
+The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on CS2, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; treat anything in neither list as untested rather than as supported.
+`:nth-child()` itself takes an integer, `even`, `odd`, or a bare `an` step; an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+Every selector-taking tool names the construct it suspects and a rewrite when it hits the rejection, `game_eval` and `game_debug_evaluate` included, falling back to the supported set when it can pin no construct: act on what it names rather than retrying the selector.
+`game_console` is the exception, streaming page exceptions as the engine wrote them, so a rejection surfacing there arrives bare.
 
 ## Act, then verify
 

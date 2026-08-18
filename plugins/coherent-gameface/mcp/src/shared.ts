@@ -5,6 +5,7 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { GameUnreachableError } from './cdp';
+import { diagnoseSelectorError } from './selectors';
 
 /**
  * A partial CDP RemoteObject (Runtime/Debugger).
@@ -75,12 +76,33 @@ export function describeRemoteObject(obj: RemoteObject | undefined): unknown {
 /**
  * Formats CDP exceptionDetails into one message line, preferring the thrown error's own
  * description over CDP's generic text.
+ * This is the raw formatter.
+ * A tool reporting a failure back to its caller wants `explainException` below, which adds the
+ * selector diagnosis.
+ * Two callers want the text raw and keep this one: the console pipeline, which streams captured
+ * page exceptions into a log, and `game_wait`, which holds the text across poll iterations and
+ * decides on it before choosing which of its two exits diagnoses it.
  */
 export function formatException(details: EvaluateResult['exceptionDetails']): string {
   const exception = details?.exception;
   const desc = exception?.description ?? exception?.value ?? details?.text ?? `unknown error`;
 
   return typeof desc == 'string' ? desc : JSON.stringify(desc);
+}
+
+/**
+ * Formats CDP exceptionDetails for a tool that reports a failure back to its caller, adding the
+ * selector diagnosis when the engine rejected one.
+ * A tool added later inherits the diagnosis by reaching for this rather than for `formatException`,
+ * whose docblock names the two callers that legitimately still want the text raw.
+ * Pass the selector where the tool holds one, which beats the engine's echo of it; a tool running
+ * caller-supplied JS holds none, and the echo is all there is.
+ */
+export function explainException(
+  details: EvaluateResult['exceptionDetails'],
+  selector?: string
+): string {
+  return diagnoseSelectorError(formatException(details), selector);
 }
 
 /**

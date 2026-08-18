@@ -30319,7 +30319,7 @@ class StdioServerTransport {
 }
 
 // src/server.ts
-var import_common_tags5 = __toESM(require_lib(), 1);
+var import_common_tags6 = __toESM(require_lib(), 1);
 
 // src/cdp.ts
 var import_common_tags = __toESM(require_lib(), 1);
@@ -30603,7 +30603,143 @@ function num(value, fallback) {
 }
 
 // src/console.ts
+var import_common_tags3 = __toESM(require_lib(), 1);
+
+// src/selectors.ts
 var import_common_tags2 = __toESM(require_lib(), 1);
+var INVALID_SELECTOR_MARKER = "Invalid CSS selector";
+var SELECTOR_PREFIX = `${INVALID_SELECTOR_MARKER} (`;
+var SELECTOR_TAIL = /\) in \w+!/gu;
+var SUPPORTED_PSEUDOS = new Set([
+  ":first-child",
+  ":last-child",
+  ":only-child",
+  ":nth-child",
+  ":root",
+  ":hover",
+  ":focus",
+  ":active",
+  ":before",
+  ":after",
+  "::before",
+  "::after"
+]);
+var SUPPORTED_SUMMARY = import_common_tags2.oneLine`
+  type, class, id and attribute selectors, combinators, \`:first-child\`, \`:last-child\`,
+  \`:only-child\`, \`:nth-child()\`, \`:root\`, \`:hover\`, \`:focus\`, \`:active\`, \`::before\`
+  and \`::after\`
+`;
+var NTH_CHILD_ARGUMENT = /^\s*(?:[+-]?\d+|even|odd|[+-]?\d*n)\s*$/iu;
+var PSEUDO_TOKEN = /(?<colons>::?)(?<name>[a-z][a-z-]*)(?:\((?<argument>[^()]*)\))?/giu;
+var LITERAL_SPANS = [/\\./gu, /"[^"]*"|'[^']*'/gu, /\[[^\])]*\]?/gu];
+var MASK_FILLER = "#";
+var SCAN_PATTERN = scanPattern();
+var BRANCH_PER_QUERY = `run one query per branch of the list and merge the results.`;
+var DISABLED_HINT = `${scanPattern("`el.disabled`")}.`;
+var HINTS = new Map([
+  [":not", `${SCAN_PATTERN}.`],
+  [":has", `${scanPattern("what the element contains")}.`],
+  [":is", BRANCH_PER_QUERY],
+  [":where", BRANCH_PER_QUERY],
+  [":first-of-type", ofTypeHint(":first-child")],
+  [":last-of-type", ofTypeHint(":last-child")],
+  [":only-of-type", ofTypeHint(":only-child")],
+  [":nth-of-type", ofTypeHint(":nth-child()")],
+  [
+    ":nth-child",
+    import_common_tags2.oneLine`
+      the engine takes an integer, \`even\`, \`odd\`, or a bare \`an\` step here, and throws on an
+      \`an+b\` offset.
+    `
+  ],
+  [
+    ":nth-last-child",
+    `\`:nth-child()\` counts from the start only, so ${scanPattern("a position from the end")}.`
+  ],
+  [":empty", `${scanPattern("`el.children.length` and `el.textContent`")}.`],
+  [":checked", `${scanPattern("`el.checked`")}.`],
+  [":disabled", DISABLED_HINT],
+  [":enabled", DISABLED_HINT]
+]);
+var GENERIC_HINT = import_common_tags2.oneLine`
+  express the condition in JS (${SCAN_PATTERN}) or drop it from the selector.
+`;
+var DIAGNOSIS_LEAD = `Cohtml's JS query APIs rejected this selector.`;
+var SYNTAX_SLIP = `a syntax slip, an unclosed bracket or quote`;
+var SYNTAX_SLIP_EXIT = `If that is not the fault, check the selector for ${SYNTAX_SLIP}.`;
+var GENERIC_DIAGNOSIS = import_common_tags2.oneLine`
+  ${DIAGNOSIS_LEAD} It names no construct known to be unsupported, so check it for ${SYNTAX_SLIP}.
+  Verified to work here: ${SUPPORTED_SUMMARY}; a pseudo-class outside that set may still throw.
+`;
+function isInvalidSelectorError(engineError) {
+  return engineError.includes(INVALID_SELECTOR_MARKER);
+}
+function diagnoseSelectorError(engineError, selector) {
+  if (!isInvalidSelectorError(engineError)) {
+    return engineError;
+  }
+  const suspects = findSuspects(selector ?? selectorFromError(engineError));
+  if (suspects.length == 0) {
+    return `${engineError}
+
+${GENERIC_DIAGNOSIS}`;
+  }
+  const sentences = suspects.map(({ token, hint }) => `\`${token}\` falls outside the set this engine answers: ${hint}`);
+  return `${engineError}
+
+${DIAGNOSIS_LEAD} ${sentences.join(" ")} ${SYNTAX_SLIP_EXIT}`;
+}
+function selectorFromError(engineError) {
+  const start = engineError.indexOf(SELECTOR_PREFIX);
+  if (start == -1) {
+    return "";
+  }
+  const afterPrefix = engineError.slice(start + SELECTOR_PREFIX.length);
+  const tails = [...afterPrefix.matchAll(SELECTOR_TAIL)];
+  return tails.length == 1 ? afterPrefix.slice(0, tails[0]?.index) : "";
+}
+function findSuspects(selector) {
+  const suspects = [];
+  const seen = new Set;
+  const scanner = new RegExp(PSEUDO_TOKEN.source, PSEUDO_TOKEN.flags);
+  const scannable = maskLiterals(selector);
+  let match = scanner.exec(scannable);
+  while (match != null) {
+    const { colons = "", name = "", argument } = match.groups ?? {};
+    const key = `${colons}${name}`.toLowerCase();
+    if (!seen.has(key) && !isSupported(key, argument)) {
+      seen.add(key);
+      suspects.push({
+        token: selector.slice(match.index, match.index + match[0].length),
+        hint: HINTS.get(key) ?? GENERIC_HINT
+      });
+    }
+    scanner.lastIndex = match.index + colons.length + name.length;
+    match = scanner.exec(scannable);
+  }
+  return suspects;
+}
+function maskLiterals(selector) {
+  return LITERAL_SPANS.reduce((masked, span) => masked.replace(span, (literal3) => MASK_FILLER.repeat(literal3.length)), selector);
+}
+function isSupported(key, argument) {
+  if (!SUPPORTED_PSEUDOS.has(key)) {
+    return false;
+  }
+  return key != ":nth-child" || argument == null || NTH_CHILD_ARGUMENT.test(argument);
+}
+function scanPattern(condition) {
+  return import_common_tags2.oneLine`
+    filter \`querySelectorAll\` results in \`game_eval\`${condition ? ` on ${condition}` : ""},
+    tag the element you want with a data attribute, then query that attribute
+  `;
+}
+function ofTypeHint(equivalent) {
+  return import_common_tags2.oneLine`
+    use \`${equivalent}\` where the parent holds only that element type,
+    otherwise ${SCAN_PATTERN}.
+  `;
+}
 
 // src/shared.ts
 function text(value) {
@@ -30634,6 +30770,9 @@ function formatException(details) {
   const exception = details?.exception;
   const desc = exception?.description ?? exception?.value ?? details?.text ?? `unknown error`;
   return typeof desc == "string" ? desc : JSON.stringify(desc);
+}
+function explainException(details, selector) {
+  return diagnoseSelectorError(formatException(details), selector);
 }
 function valToStr(value) {
   if (typeof value == "string") {
@@ -30791,7 +30930,7 @@ async function gameConsole(client, buffer, options) {
   }
   const lines = buffer.read(options);
   if (lines.length == 0) {
-    return text(import_common_tags2.oneLine`
+    return text(import_common_tags3.oneLine`
       No console entries captured yet.
       Capture begins once the server connects to the application;
       trigger some UI activity (or a game_eval console.log) and retry.
@@ -31113,7 +31252,7 @@ function unknownValue() {
 }
 
 // src/debugger.ts
-var import_common_tags3 = __toESM(require_lib(), 1);
+var import_common_tags4 = __toESM(require_lib(), 1);
 import { setTimeout as sleep } from "node:timers/promises";
 var POLL_INTERVAL_MS = 50;
 var PAUSE_WAIT_MS = 3000;
@@ -31123,32 +31262,32 @@ var MAX_SCOPE_VARIABLES = 50;
 var MAX_SEARCH_MATCHES = 10;
 var SEARCH_SNIPPET_MARGIN = 40;
 var DEFAULT_SOURCE_MAX_CHARS = 4000;
-var EMPTY_SCRIPT_MAP_NOTE = import_common_tags3.oneLine`
+var EMPTY_SCRIPT_MAP_NOTE = import_common_tags4.oneLine`
   No scripts are parsed on this connection: a view reload re-parses every one of them.
   Take the reload count from game_status, game_eval of location.reload(), then game_wait with
   reload true and that count as sinceReloads, then call this again.
 `;
-var NO_MATCH_NOTE = import_common_tags3.oneLine`
+var NO_MATCH_NOTE = import_common_tags4.oneLine`
   Nothing matched. The search is case-sensitive and literal (no regex), and it only reaches scripts
   parsed on this connection: game_debug_scripts lists them.
 `;
-var FILTER_MISS_NOTE = import_common_tags3.oneLine`
+var FILTER_MISS_NOTE = import_common_tags4.oneLine`
   No parsed script's url contains that urlContains, so the query never ran against anything.
   game_debug_scripts lists the urls; the url filter is case-insensitive, so case is not the cause.
 `;
-var FILTER_MISS_LIST_NOTE = import_common_tags3.oneLine`
+var FILTER_MISS_LIST_NOTE = import_common_tags4.oneLine`
   No parsed script's url contains that filter, though others are parsed: call this without one to
   see every url. Matching is case-insensitive, so case is not the cause.
 `;
-var UNREADABLE_NOTE = import_common_tags3.oneLine`
+var UNREADABLE_NOTE = import_common_tags4.oneLine`
   The engine has no source for any of the scripts matched, so the query never ran: their ids are
   stale, which a view reload clears by re-parsing everything under fresh ones.
 `;
-var SEARCH_HINT = import_common_tags3.oneLine`
+var SEARCH_HINT = import_common_tags4.oneLine`
   Pass a match's line and column to game_debug_set_breakpoint to break there; both are 1-based, as
   everywhere in these tools, and its urlContains takes the match's url as printed.
 `;
-var SINGLE_LINE_HINT = import_common_tags3.oneLine`
+var SINGLE_LINE_HINT = import_common_tags4.oneLine`
   That script is one line, as a minified bundle is, so the whole module sits on the line the
   resolved location names and the breakpoint bound to the first breakable position at or after the
   one you asked for: read the column above to see where it landed.
@@ -31274,7 +31413,7 @@ class DebuggerSession {
       const cap = 400;
       const from = lineStart && lineStart > first ? lineStart : first;
       if (from > last) {
-        return errorText(import_common_tags3.oneLine`
+        return errorText(import_common_tags4.oneLine`
           Script ${scriptId} spans lines ${first}-${last}, so there is nothing at line ${from}.
         `);
       }
@@ -31292,7 +31431,7 @@ class DebuggerSession {
         notes.push(`showing lines ${from}-${shownTo} of ${last}`);
       }
       if (clipped) {
-        notes.push(import_common_tags3.oneLine`
+        notes.push(import_common_tags4.oneLine`
           clipped to ${budget} of ${rendered.length} characters: raise maxChars for more, or reach
           a position inside a minified line with game_debug_search_source
         `);
@@ -31336,10 +31475,10 @@ class DebuggerSession {
         condition,
         resolvedLocations: resolved,
         pending: locations.length == 0,
-        note: locations.length == 0 ? import_common_tags3.oneLine`
+        note: locations.length == 0 ? import_common_tags4.oneLine`
                     Pending: no matching script/line loaded yet, or the line has no code.
                     It will bind when the script loads.
-                  ` : import_common_tags3.oneLine`
+                  ` : import_common_tags4.oneLine`
                     Hitting this breakpoint FREEZES the UI until you resume
                     (game_debug_step resume).
                   `,
@@ -31402,7 +31541,7 @@ class DebuggerSession {
       if (this.paused) {
         const frame = this.paused.callFrames[frameIndex];
         if (!frame) {
-          return errorText(import_common_tags3.oneLine`
+          return errorText(import_common_tags4.oneLine`
             No call frame at index ${frameIndex}
             (paused stack has ${this.paused.callFrames.length}).
           `);
@@ -31414,7 +31553,7 @@ class DebuggerSession {
           silent: true
         });
         if (res2.exceptionDetails) {
-          return errorText(`Eval threw: ${formatException(res2.exceptionDetails)}`);
+          return errorText(`Eval threw: ${explainException(res2.exceptionDetails)}`);
         }
         const value2 = describeRemoteObject(res2.result);
         return text(typeof value2 == "string" ? value2 : valToStr(value2));
@@ -31424,7 +31563,7 @@ class DebuggerSession {
         returnByValue: true
       });
       if (res.exceptionDetails) {
-        return errorText(`Eval threw: ${formatException(res.exceptionDetails)}`);
+        return errorText(`Eval threw: ${explainException(res.exceptionDetails)}`);
       }
       const value = describeRemoteObject(res.result);
       return text(typeof value == "string" ? value : valToStr(value));
@@ -31451,7 +31590,7 @@ class DebuggerSession {
         await this.client.call("Debugger.resume");
         await this.waitUntil(() => !this.paused, RESUME_WAIT_MS);
         if (this.paused) {
-          return errorText(import_common_tags3.oneLine`
+          return errorText(import_common_tags4.oneLine`
             Resume sent, but the UI is paused again at ${this.topLocation()}
             (reason: ${this.paused.reason}), so it is still frozen.
             Whatever armed that pause sits on the resumed path, so clear it before resuming again:
@@ -31665,7 +31804,7 @@ function snippetAt(source, index, length) {
 }
 
 // src/tools.ts
-var import_common_tags4 = __toESM(require_lib(), 1);
+var import_common_tags5 = __toESM(require_lib(), 1);
 import { setTimeout as sleep2 } from "node:timers/promises";
 var POLL_INTERVAL_MS2 = 150;
 var MAX_WAIT_MS = 60000;
@@ -31713,7 +31852,7 @@ async function gameStatus(client, reloads) {
       reachable: false,
       endpoint: `http://${host}:${port}`,
       error: error51 instanceof Error ? error51.message : String(error51),
-      hint: import_common_tags4.oneLine`
+      hint: import_common_tags5.oneLine`
             Launch the Gameface application with its CDP debug port open, then retry.
             Override host/port via GAMEFACE_HOST / GAMEFACE_PORT.
           `
@@ -31728,7 +31867,7 @@ async function gameEval(client, expression, awaitPromise = false) {
       awaitPromise
     });
     if (res.exceptionDetails) {
-      return errorText(`Evaluation threw: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Evaluation threw: ${explainException(res.exceptionDetails)}`);
     }
     const value = describeRemoteObject(res.result);
     return text(typeof value == "string" ? value : JSON.stringify(value, null, 2));
@@ -31742,7 +31881,7 @@ async function gameScreenshot(client, debug, options = {}) {
     await client.connection();
     const { pause } = debug;
     if (pause) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         game_screenshot cannot capture while the JS debugger holds the UI paused
         (${pause.reason}, at ${pause.location}): the capture needs the frame loop the pause has
         frozen, so it would hang until the call times out.
@@ -31757,26 +31896,14 @@ async function gameScreenshot(client, debug, options = {}) {
     if (format == "jpeg") {
       params.quality = quality ?? DEFAULT_JPEG_QUALITY;
     }
-    let caption;
+    let clipCaption;
     if (selector) {
-      const rectRes = await client.call("Runtime.evaluate", {
-        expression: callPageFn(rectFn, selector, index),
-        returnByValue: true
-      });
-      const rect = rectRes.result.value;
-      if (!rect?.found) {
-        return errorText(import_common_tags4.oneLine`
-          No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
-          (matches found: ${rect?.count ?? 0}).
-        `);
+      const clip = await resolveClip(client, selector, index);
+      if (!clip.ok) {
+        return errorText(clip.error);
       }
-      if (!(rect.width > 0 && rect.height > 0)) {
-        return errorText(`Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`);
-      }
-      params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
-      caption = import_common_tags4.oneLine`
-        Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
-      `;
+      params.clip = clip.rect;
+      clipCaption = clip.caption;
     }
     const res = await client.call("Page.captureScreenshot", params);
     if (!res?.data) {
@@ -31787,10 +31914,45 @@ async function gameScreenshot(client, debug, options = {}) {
       data: res.data,
       mimeType: format == "jpeg" ? "image/jpeg" : "image/png"
     };
-    return { content: caption ? [{ type: "text", text: caption }, image] : [image] };
+    return { content: clipCaption ? [{ type: "text", text: clipCaption }, image] : [image] };
   } catch (error51) {
     return toErrorResult(error51);
   }
+}
+async function resolveClip(client, selector, index) {
+  const rectRes = await client.call("Runtime.evaluate", {
+    expression: callPageFn(rectFn, selector, index),
+    returnByValue: true
+  });
+  if (rectRes.exceptionDetails) {
+    return {
+      ok: false,
+      error: `Screenshot clip failed: ${explainException(rectRes.exceptionDetails, selector)}`
+    };
+  }
+  const rect = rectRes.result.value;
+  if (!rect?.found) {
+    return {
+      ok: false,
+      error: import_common_tags5.oneLine`
+        No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
+        (matches found: ${rect?.count ?? 0}).
+      `
+    };
+  }
+  if (!(rect.width > 0 && rect.height > 0)) {
+    return {
+      ok: false,
+      error: `Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`
+    };
+  }
+  return {
+    ok: true,
+    rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 },
+    caption: import_common_tags5.oneLine`
+      Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
+    `
+  };
 }
 async function gameDom(client, selector, all = false, maxHtml = 4000) {
   try {
@@ -31799,7 +31961,7 @@ async function gameDom(client, selector, all = false, maxHtml = 4000) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`DOM query failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`DOM query failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const value = res.result.value;
     if (!value || value.count == 0) {
@@ -31834,7 +31996,7 @@ async function gameQuery(client, options) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Query failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Query failed: ${explainException(res.exceptionDetails, args.sel)}`);
     }
     const value = res.result.value;
     if (!value) {
@@ -31863,13 +32025,13 @@ function queryRejection(options, mode) {
     return `game_query: selector is blank; pass a real one.`;
   }
   if (mode == "equals" && needle != null && needle.trim() != needle) {
-    return import_common_tags4.oneLine`
+    return import_common_tags5.oneLine`
       game_query: equals compares against trimmed text, so trim yours; where that empties it, pass
       '' with a selector to find elements carrying no text.
     `;
   }
   if (needle == "" && mode != "equals") {
-    return import_common_tags4.oneLine`
+    return import_common_tags5.oneLine`
       game_query: empty text matches every element under ${mode}; pass match: 'equals' with a
       selector to find elements carrying no text.
     `;
@@ -31884,7 +32046,7 @@ function pausedNote(debug) {
   if (!pause) {
     return "";
   }
-  return import_common_tags4.oneLine`
+  return import_common_tags5.oneLine`
     The UI is paused in the JS debugger (${pause.reason}, at ${pause.location}): nothing in it can
     change until you resume with game_debug_step action=resume, so resume and retry rather than
     reading this as an unreachable condition.
@@ -31897,16 +32059,16 @@ async function gameClick(client, selector, index = 0) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Click failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Click failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         No element to click for selector ${JSON.stringify(selector)} at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags4.oneLine`
+    return text(import_common_tags5.oneLine`
       Clicked ${JSON.stringify(selector)} [index ${index}] at
       (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
       Dispatched: ${info.fired.join(", ")}. Matches: ${info.count}.
@@ -31957,7 +32119,7 @@ async function gameWait(client, reloads, debug, options) {
     const baseline = sinceReloads ?? reloads.count;
     while (reloads.count <= baseline) {
       if (Date.now() >= deadline) {
-        return timedOut(import_common_tags4.oneLine`
+        return timedOut(import_common_tags5.oneLine`
           Timed out after ${budget}ms waiting for a view reload
           (reload count still ${reloads.count}, baseline ${baseline}).
         `);
@@ -31969,7 +32131,7 @@ async function gameWait(client, reloads, debug, options) {
       let quietSince = Date.now();
       while (Date.now() - quietSince < quiescentMs) {
         if (Date.now() >= deadline) {
-          return timedOut(import_common_tags4.oneLine`
+          return timedOut(import_common_tags5.oneLine`
             Timed out after ${budget}ms: reload observed, but context swaps kept arriving within
             the ${quiescentMs}ms quiescence window.
           `);
@@ -31993,6 +32155,13 @@ async function gameWait(client, reloads, debug, options) {
       });
       if (res.exceptionDetails) {
         lastError = formatException(res.exceptionDetails);
+        if (selector && isInvalidSelectorError(lastError)) {
+          const preamble = import_common_tags5.oneLine`
+            game_wait stopped after ${Date.now() - start}ms without waiting out the ${budget}ms
+            budget:
+          `;
+          return errorText(`${preamble} ${diagnoseSelectorError(lastError, selector)}`);
+        }
       } else if (res.result.value) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
         const reloadNote = reload ? ` Reload count: ${reloads.count}.` : "";
@@ -32002,7 +32171,8 @@ async function gameWait(client, reloads, debug, options) {
       }
       if (Date.now() >= deadline) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : "predicate";
-        const errorNote = lastError ? ` Last predicate error: ${lastError}` : "";
+        const lastNote = lastError && diagnoseSelectorError(lastError);
+        const errorNote = lastNote ? ` Last predicate error: ${lastNote}` : "";
         return timedOut(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
       }
       await sleep2(POLL_INTERVAL_MS2);
@@ -32016,16 +32186,16 @@ async function gameFill(client, selector, value, index = 0) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Fill failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Fill failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         No element matched ${JSON.stringify(selector)} for game_fill at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags4.oneLine`
+    return text(import_common_tags5.oneLine`
       Filled ${JSON.stringify(selector)} [index ${index}] (${info.mode}).
       Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
@@ -32040,16 +32210,16 @@ async function gameType(client, selector, textToType, index = 0) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Type failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Type failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         No element matched ${JSON.stringify(selector)} for game_type at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags4.oneLine`
+    return text(import_common_tags5.oneLine`
       Typed ${info.typed} char(s) into ${JSON.stringify(selector)} [index ${index}].
       Value is now ${JSON.stringify(info.value)}. Matches: ${info.count}.
     `);
@@ -32064,16 +32234,16 @@ async function gameHover(client, selector, index = 0) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Hover failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Hover failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const info = res.result.value;
     if (!info?.found) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         No element matched ${JSON.stringify(selector)} for game_hover at index ${index}
         (matches found: ${info?.count ?? 0}).
       `);
     }
-    return text(import_common_tags4.oneLine`
+    return text(import_common_tags5.oneLine`
       Hovered ${JSON.stringify(selector)} [index ${index}] at
       (${info.x.toFixed(0)}, ${info.y.toFixed(0)}).
       Dispatched: ${info.fired.join(", ")}. Matches: ${info.count}.
@@ -32108,21 +32278,21 @@ async function gameKey(client, options) {
       returnByValue: true
     });
     if (res.exceptionDetails) {
-      return errorText(`Key press failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Key press failed: ${explainException(res.exceptionDetails, selector)}`);
     }
     const info = res.result.value;
     if (!info) {
       return errorText(`game_key returned no result.`);
     }
     if (!info.found) {
-      return errorText(import_common_tags4.oneLine`
+      return errorText(import_common_tags5.oneLine`
         No element matched ${JSON.stringify(selector)} for game_key at index ${index}
         (matches found: ${info.count}).
       `);
     }
     const where = info.via == "selector" ? `${JSON.stringify(selector)} [index ${index}] ${info.target}` : info.via == "activeElement" ? `the focused element ${info.target}` : `document`;
     const matchNote = info.matches == null ? "" : ` Matches: ${info.matches}.`;
-    return text(import_common_tags4.oneLine`
+    return text(import_common_tags5.oneLine`
       Pressed ${keyLabel(key, { ctrl, shift, alt, meta: meta3 })} ${info.presses}x on ${where}.${matchNote}
       Default prevented: ${info.defaultPrevented ? "yes" : "no"}.
     `);
@@ -32644,7 +32814,7 @@ async function main() {
   const server = new McpServer({ name: "gameface-devtools-mcp", version: VERSION });
   server.registerTool("game_status", {
     title: `Gameface UI status`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Check whether the Gameface UI debug endpoint is reachable and report the live page target,
         engine info, and view-reload tracking.
         Run this first when other game_* tools fail.
@@ -32653,7 +32823,7 @@ async function main() {
   }, () => gameStatus(client, reloads));
   server.registerTool("game_eval", {
     title: `Evaluate JS in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Evaluate a JavaScript expression in the running Gameface UI (CDP Runtime.evaluate,
         returnByValue) and return the resulting value as JSON.
       `,
@@ -32664,7 +32834,7 @@ async function main() {
   }, ({ expression, awaitPromise }) => gameEval(client, expression, awaitPromise));
   server.registerTool("game_screenshot", {
     title: `Screenshot the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Capture a screenshot of the Gameface viewport and return it as an inline image; a selector
         clips the capture to one element.
         Clipping is the only lever on what the image costs you in context: that cost tracks the
@@ -32674,7 +32844,7 @@ async function main() {
       `,
     inputSchema: {
       format: exports_external.enum(["png", "jpeg"]).optional().describe(`Image format (default: png)`),
-      quality: exports_external.number().min(1).max(100).optional().describe(import_common_tags5.oneLine`
+      quality: exports_external.number().min(1).max(100).optional().describe(import_common_tags6.oneLine`
               JPEG quality 1-100 (only used when format is jpeg; default 80).
               Trades fidelity for transfer bytes, leaving the image's context cost unchanged.
             `),
@@ -32684,7 +32854,7 @@ async function main() {
   }, ({ format, quality, selector, index }) => gameScreenshot(client, debug, { format, quality, selector, index }));
   server.registerTool("game_wait", {
     title: `Wait for a condition in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Wait until a CSS selector matches (optionally visible), a JS predicate becomes truthy,
         and/or a view reload happens. Provide at least one of reload / selector / predicate
         (selector and predicate are mutually exclusive).
@@ -32695,20 +32865,20 @@ async function main() {
     inputSchema: {
       selector: exports_external.string().optional().describe(`CSS selector to wait for`),
       predicate: exports_external.string().optional().describe(`JS expression evaluated in the page; waits until it is truthy`),
-      reload: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
+      reload: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
             Wait for a view reload (context reset) before the selector/predicate phase.
             Without sinceReloads, waits for the next reload after the call starts.
           `),
-      sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
+      sinceReloads: exports_external.number().int().min(0).optional().describe(import_common_tags6.oneLine`
             Baseline reload count (from a prior game_status or game_wait).
             The reload phase is satisfied as soon as the count exceeds it, even if the reload
             already happened; use it to avoid racing a reload you triggered yourself.
           `),
-      quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
+      quiescentMs: exports_external.number().int().min(0).optional().describe(import_common_tags6.oneLine`
             After a reload is observed, hold until no further context swap for this long (default
             1000, 0 disables); absorbs engines that swap the context several times per reload.
           `),
-      timeoutMs: exports_external.number().int().min(0).optional().describe(import_common_tags5.oneLine`
+      timeoutMs: exports_external.number().int().min(0).optional().describe(import_common_tags6.oneLine`
             Max time to wait in ms (default 8000, or 30000 when reload is set; capped at 60000)
           `),
       visible: exports_external.boolean().optional().describe(`For selector waits, also require a non-zero bounding box (default false)`)
@@ -32724,7 +32894,7 @@ async function main() {
   }));
   server.registerTool("game_fill", {
     title: `Set an input value in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
@@ -32737,7 +32907,7 @@ async function main() {
   }, ({ selector, value, index }) => gameFill(client, selector, value, index));
   server.registerTool("game_type", {
     title: `Type text into the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync.
         Use when handlers react to individual keystrokes; otherwise game_fill.
@@ -32750,7 +32920,7 @@ async function main() {
   }, ({ selector, text: text2, index }) => gameType(client, selector, text2, index));
   server.registerTool("game_hover", {
     title: `Hover an element in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Hover an element by dispatching the pointer/mouse over/enter/move sequence in the page, so
         the UI's mouseenter / pointerover JS handlers (tooltips) fire.
         The CSS :hover state is NOT set (only real game-forwarded mouse input sets it); verify a
@@ -32763,7 +32933,7 @@ async function main() {
   }, ({ selector, index }) => gameHover(client, selector, index));
   server.registerTool("game_key", {
     title: `Press a key in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Press a named key by dispatching a real bubbling keydown+keyup (no keypress) in the page
         (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
         ctrl/shift/alt/meta and a repeat count.
@@ -32788,7 +32958,7 @@ async function main() {
   }, ({ key, count, ctrl, shift, alt, meta: meta3, selector, index }) => gameKey(client, { key, count, ctrl, shift, alt, meta: meta3, selector, index }));
   server.registerTool("game_console", {
     title: `Read the Gameface UI console`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Return recent console.* calls, log entries, and uncaught exceptions captured from the
         Gameface UI, each prefixed with local wall-clock time and its object arguments expanded to
         their real values (state {a: 1, b: {c: {…}}, arr: [1, 2, 3]}).
@@ -32800,13 +32970,13 @@ async function main() {
     inputSchema: {
       limit: exports_external.number().int().min(1).max(1000).optional().describe(`Max entries to return (default 50)`),
       level: exports_external.string().optional().describe(`Filter by level, e.g. error / warning / log / info`),
-      depth: exports_external.number().int().min(1).max(CAPTURE_DEPTH_CAP).optional().describe(import_common_tags5.oneLine`
+      depth: exports_external.number().int().min(1).max(CAPTURE_DEPTH_CAP).optional().describe(import_common_tags6.oneLine`
               How many levels of an expanded object to render (default
               ${String(DEFAULT_RENDER_DEPTH)}).
               Entries are captured ${String(CAPTURE_DEPTH_CAP)} levels deep, so re-reading the same
               entries deeper works up to that cap.
             `),
-      clear: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
+      clear: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
             Empty the buffer once this read has taken its entries (default false).
             It also drops captures still being expanded, so a line logged moments before the call
             is discarded rather than surfacing on the next read.
@@ -32815,7 +32985,7 @@ async function main() {
   }, ({ limit, level, depth, clear }) => gameConsole(client, consoleBuffer, { limit, level, depth, clear }));
   server.registerTool("game_dom", {
     title: `Inspect Gameface UI DOM`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Return DOM details (tag, id, classes, attributes, bounding rect, outerHTML) for elements
         matching a CSS selector in the live Gameface UI.
         outerHTML dominates the response: to locate elements, get a targetable handle, or read
@@ -32829,7 +32999,7 @@ async function main() {
   }, ({ selector, all, maxHtml }) => gameDom(client, selector, all, maxHtml));
   server.registerTool("game_query", {
     title: `Find elements in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Locate elements in the live Gameface UI by CSS selector, by trimmed textContent
         (equals/contains/regex, case-insensitive by default), or by both; one of the two is
         required, and match/caseSensitive are ignored without text.
@@ -32839,7 +33009,7 @@ async function main() {
         To read an element's markup, use game_dom.
       `,
     inputSchema: {
-      text: exports_external.string().optional().describe(import_common_tags5.oneLine`
+      text: exports_external.string().optional().describe(import_common_tags6.oneLine`
               Text to match against each element's trimmed textContent, so pass it trimmed under
               match=equals; omit it to select on the selector alone, or pass '' with match=equals
               and a selector for elements carrying no text.
@@ -32847,11 +33017,11 @@ async function main() {
       match: exports_external.enum(["equals", "contains", "regex"]).optional().describe(`How to match the text: equals / contains / regex (default: contains)`),
       caseSensitive: exports_external.boolean().optional().describe(`Match case-sensitively (default: false)`),
       selector: exports_external.string().optional().describe(`CSS selector to match, alone or scoping the text scan (with text, defaults to *)`),
-      deepest: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
+      deepest: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
               Keep only the innermost match, pruning ancestors that also matched (default: true
               when non-empty text drives the match, false otherwise).
             `),
-      tag: exports_external.boolean().optional().describe(import_common_tags5.oneLine`
+      tag: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
               Stamp matches with data-gf-tag handles and return them as selectors, clearing any
               prior handles first (default: false).
             `),
@@ -32861,7 +33031,7 @@ async function main() {
   }, ({ text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }) => gameQuery(client, { text: text2, match, caseSensitive, selector, deepest, tag, attributes, limit }));
   server.registerTool("game_click", {
     title: `Click an element in the Gameface UI`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Click the element matching a CSS selector by dispatching a real bubbling pointer/mouse/click
         sequence in the page (NOT CDP Input, which Gameface ignores for the UI).
       `,
@@ -32872,7 +33042,7 @@ async function main() {
   }, ({ selector, index }) => gameClick(client, selector, index));
   server.registerTool("game_debug_status", {
     title: `JS debugger status`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Report debugger state: whether paused (and where), pause-on-exceptions mode, breakpoints,
         and parsed script count.
         Enables the debugger on first use.
@@ -32883,7 +33053,7 @@ async function main() {
   }, ({ setPauseOnExceptions }) => debug.status(setPauseOnExceptions));
   server.registerTool("game_debug_scripts", {
     title: `List parsed UI scripts`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         List JavaScript scripts parsed in the Gameface UI (scriptId + url + line count).
         Only scripts parsed since the debugger attached appear, since Gameface does not replay
         scriptParsed; an empty list is what a late attach looks like, and the result says how to
@@ -32897,7 +33067,7 @@ async function main() {
   }, ({ filter }) => debug.listScripts(filter));
   server.registerTool("game_debug_source", {
     title: `Get UI script source`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Return the source of a script (by scriptId from game_debug_scripts), with line numbers.
         The window is capped at 400 lines, range or not; the result says which lines it showed.
         It renders whole lines, so a low line count is no promise of a small answer: one minified
@@ -32906,12 +33076,12 @@ async function main() {
       `,
     inputSchema: {
       scriptId: exports_external.string().describe(`Script id from game_debug_scripts`),
-      lineStart: exports_external.number().int().min(1).optional().describe(import_common_tags5.oneLine`
+      lineStart: exports_external.number().int().min(1).optional().describe(import_common_tags6.oneLine`
             First line, 1-based and numbered as the whole file or document is, so a script embedded
             in a page starts at its firstLine from game_debug_scripts rather than at 1.
           `),
       lineEnd: exports_external.number().int().min(1).optional().describe(`Last line, numbered as lineStart is`),
-      maxChars: exports_external.number().int().min(1).optional().describe(import_common_tags5.oneLine`
+      maxChars: exports_external.number().int().min(1).optional().describe(import_common_tags6.oneLine`
               Characters of source to return before clipping (default
               ${String(DEFAULT_SOURCE_MAX_CHARS)}); the result says when it clipped and at what.
             `)
@@ -32919,7 +33089,7 @@ async function main() {
   }, ({ scriptId, lineStart, lineEnd, maxChars }) => debug.getSource(scriptId, lineStart, lineEnd, maxChars));
   server.registerTool("game_debug_search_source", {
     title: `Search UI script sources`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Find a literal string across the parsed script sources and return each hit as
         url + line + column (1-based) with a snippet of surrounding source.
         The query is case-sensitive and literal, no regex; read the total/truncated fields for what
@@ -32935,14 +33105,14 @@ async function main() {
   }, ({ query, urlContains }) => debug.searchSource(query, urlContains));
   server.registerTool("game_debug_set_breakpoint", {
     title: `Set a breakpoint`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Set a breakpoint by url substring + line, and optionally column; both are 1-based.
         A condition limits how often the UI freezes; a line alone can bind somewhere that never
         runs again, so check the resolved location the result reports back.
         Hitting it FREEZES the UI until you resume with game_debug_step.
       `,
     inputSchema: {
-      urlContains: exports_external.string().describe(import_common_tags5.oneLine`
+      urlContains: exports_external.string().describe(import_common_tags6.oneLine`
             Substring of the script url to break in, matched case-sensitively; copy it from the url
             game_debug_scripts or game_debug_search_source printed, whose own filters are not.
           `),
@@ -32960,7 +33130,7 @@ async function main() {
   }, ({ breakpoint }) => debug.removeBreakpoint(breakpoint));
   server.registerTool("game_debug_pause_state", {
     title: `Inspect the paused stack`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         When paused, return the call stack (frames with function + location + scope types);
         'not paused' otherwise.
       `,
@@ -32970,7 +33140,7 @@ async function main() {
   }, ({ expandScopes }) => debug.pauseStateReport(expandScopes ?? false));
   server.registerTool("game_debug_evaluate", {
     title: `Evaluate while debugging`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Evaluate a JS expression.
         When paused, it runs in the selected call frame's scope so you can read locals; otherwise
         it runs globally.
@@ -32983,7 +33153,7 @@ async function main() {
   }, ({ expression, frameIndex }) => debug.evaluate(expression, frameIndex));
   server.registerTool("game_debug_step", {
     title: `Step / resume / pause execution`,
-    description: import_common_tags5.oneLine`
+    description: import_common_tags6.oneLine`
         Control paused execution: resume (unfreeze the UI), over/into/out (step), or pause (break at
         the next statement).
         Stepping reports the new location, and resume fails rather than claiming success when the

@@ -17,7 +17,7 @@ import {
   type RemoteObject,
   describeRemoteObject,
   errorText,
-  formatException,
+  explainException,
   text,
   toErrorResult,
   valToStr
@@ -655,7 +655,7 @@ export class DebuggerSession {
         });
 
         if (res.exceptionDetails) {
-          return errorText(`Eval threw: ${formatException(res.exceptionDetails)}`);
+          return errorText(`Eval threw: ${explainException(res.exceptionDetails)}`);
         }
 
         const value = describeRemoteObject(res.result);
@@ -669,7 +669,7 @@ export class DebuggerSession {
       });
 
       if (res.exceptionDetails) {
-        return errorText(`Eval threw: ${formatException(res.exceptionDetails)}`);
+        return errorText(`Eval threw: ${explainException(res.exceptionDetails)}`);
       }
 
       const value = describeRemoteObject(res.result);

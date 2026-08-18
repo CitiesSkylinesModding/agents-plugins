@@ -8,10 +8,12 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { oneLine } from 'common-tags';
 import type { CdpCall, CdpClient } from './cdp';
 import type { PauseSnapshot } from './debugger';
+import { diagnoseSelectorError, isInvalidSelectorError } from './selectors';
 import {
   type EvaluateResult,
   describeRemoteObject,
   errorText,
+  explainException,
   formatException,
   text,
   toErrorResult
@@ -280,7 +282,7 @@ export async function gameEval(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Evaluation threw: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Evaluation threw: ${explainException(res.exceptionDetails)}`);
     }
 
     const value = describeRemoteObject(res.result);
@@ -344,34 +346,17 @@ export async function gameScreenshot(
       params.quality = quality ?? DEFAULT_JPEG_QUALITY;
     }
 
-    let caption: string | undefined;
+    let clipCaption: string | undefined;
 
     if (selector) {
-      const rectRes = await client.call<EvaluateResult>('Runtime.evaluate', {
-        expression: callPageFn(rectFn, selector, index),
-        returnByValue: true
-      });
+      const clip = await resolveClip(client, selector, index);
 
-      const rect = rectRes.result.value as RectResult | undefined;
-
-      if (!rect?.found) {
-        return errorText(oneLine`
-          No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
-          (matches found: ${rect?.count ?? 0}).
-        `);
+      if (!clip.ok) {
+        return errorText(clip.error);
       }
 
-      if (!(rect.width > 0 && rect.height > 0)) {
-        return errorText(
-          `Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`
-        );
-      }
-
-      params.clip = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 };
-
-      caption = oneLine`
-        Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
-      `;
+      params.clip = clip.rect;
+      clipCaption = clip.caption;
     }
 
     const res = await client.call<{ data?: string }>('Page.captureScreenshot', params);
@@ -388,10 +373,78 @@ export async function gameScreenshot(
 
     // A clipped capture prefixes a text block naming the match and index; a full-viewport capture
     // (no selector) has no match concept and stays image-only.
-    return { content: caption ? [{ type: 'text', text: caption }, image] : [image] };
+    return { content: clipCaption ? [{ type: 'text', text: clipCaption }, image] : [image] };
   } catch (error) {
     return toErrorResult(error);
   }
+}
+
+/**
+ * A `Page.captureScreenshot` clip: the viewport region a capture is cropped to.
+ */
+interface ScreenshotClip {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly scale: number;
+}
+
+/**
+ * The clip a selector resolved to, or the message explaining why it did not.
+ */
+type ClipResolution =
+  | { readonly ok: true; readonly rect: ScreenshotClip; readonly caption: string }
+  | { readonly ok: false; readonly error: string };
+
+/**
+ * Turns the `index`-th match's bounding box into a `Page.captureScreenshot` clip.
+ */
+async function resolveClip(
+  client: ToolCdp,
+  selector: string,
+  index: number
+): Promise<ClipResolution> {
+  const rectRes = await client.call<EvaluateResult>('Runtime.evaluate', {
+    expression: callPageFn(rectFn, selector, index),
+    returnByValue: true
+  });
+
+  // The rect query throws on a selector the engine rejects, and an unchecked exception would read
+  // below as a zero-match report, sending the caller away from an element that is there.
+  if (rectRes.exceptionDetails) {
+    return {
+      ok: false,
+      error: `Screenshot clip failed: ${explainException(rectRes.exceptionDetails, selector)}`
+    };
+  }
+
+  const rect = rectRes.result.value as RectResult | undefined;
+
+  if (!rect?.found) {
+    return {
+      ok: false,
+      error: oneLine`
+        No element matched ${JSON.stringify(selector)} for game_screenshot at index ${index}
+        (matches found: ${rect?.count ?? 0}).
+      `
+    };
+  }
+
+  if (!(rect.width > 0 && rect.height > 0)) {
+    return {
+      ok: false,
+      error: `Element ${JSON.stringify(selector)} has a zero-size box; nothing to capture.`
+    };
+  }
+
+  return {
+    ok: true,
+    rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, scale: 1 },
+    caption: oneLine`
+      Clipped to ${JSON.stringify(selector)} [index ${index}]. Matches: ${rect.count}.
+    `
+  };
 }
 
 /**
@@ -410,7 +463,7 @@ export async function gameDom(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`DOM query failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`DOM query failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const value = res.result.value as CollectDomResult | undefined;
@@ -480,7 +533,7 @@ export async function gameQuery(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Query failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Query failed: ${explainException(res.exceptionDetails, args.sel)}`);
     }
 
     const value = res.result.value as QueryResult | { error: string } | undefined;
@@ -586,7 +639,7 @@ export async function gameClick(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Click failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Click failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const info = res.result.value as ClickResult | undefined;
@@ -757,6 +810,22 @@ export async function gameWait(
 
       if (res.exceptionDetails) {
         lastError = formatException(res.exceptionDetails);
+
+        // A rejected `selector` is a fixed string that throws identically on every poll, unlike a
+        // condition that has simply not come true yet, so waiting out the budget can only delay the
+        // same answer.
+        // A predicate is excluded: it may build its selector from live DOM state and throw only
+        // until that state settles, which is the case `lastError` exists to keep polling through.
+        if (selector && isInvalidSelectorError(lastError)) {
+          // The diagnosis is appended rather than interpolated, since `oneLine` would collapse the
+          // newlines of the stack the engine text carries.
+          const preamble = oneLine`
+            game_wait stopped after ${Date.now() - start}ms without waiting out the ${budget}ms
+            budget:
+          `;
+
+          return errorText(`${preamble} ${diagnoseSelectorError(lastError, selector)}`);
+        }
       } else if (res.result.value) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
 
@@ -771,7 +840,10 @@ export async function gameWait(
 
       if (Date.now() >= deadline) {
         const what = selector ? `selector ${JSON.stringify(selector)}` : 'predicate';
-        const errorNote = lastError ? ` Last predicate error: ${lastError}` : '';
+        // Diagnosed here too: a predicate is exempt from the fail-fast above, so a selector the
+        // engine rejected reaches this path and would otherwise surface as the bare text.
+        const lastNote = lastError && diagnoseSelectorError(lastError);
+        const errorNote = lastNote ? ` Last predicate error: ${lastNote}` : '';
 
         return timedOut(`Timed out after ${budget}ms waiting for ${what}.${errorNote}`);
       }
@@ -797,7 +869,7 @@ export async function gameFill(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Fill failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Fill failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const info = res.result.value as FillResult | undefined;
@@ -834,7 +906,7 @@ export async function gameType(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Type failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Type failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const info = res.result.value as TypeResult | undefined;
@@ -870,7 +942,7 @@ export async function gameHover(
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Hover failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Hover failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const info = res.result.value as HoverResult | undefined;
@@ -938,7 +1010,7 @@ export async function gameKey(client: CdpClient, options: GameKeyOptions): Promi
     });
 
     if (res.exceptionDetails) {
-      return errorText(`Key press failed: ${formatException(res.exceptionDetails)}`);
+      return errorText(`Key press failed: ${explainException(res.exceptionDetails, selector)}`);
     }
 
     const info = res.result.value as KeyResult | undefined;
