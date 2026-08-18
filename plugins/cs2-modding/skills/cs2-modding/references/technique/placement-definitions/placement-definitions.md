@@ -426,7 +426,7 @@ The complementary move is to **reuse** a vanilla error prefab rather than suppre
 
 `roads-and-traffic` owns `NetCourse`, the richest kind, and both of its consumers; `CoursePosFlags`' fifteen members are all network concepts, and the game's own definition rewriter exists to split courses at intersections.
 
-`environment-and-pollution` owns the other two kinds outright, through terraforming and water: `BrushDefinition` carries the terrain tool's line, angle, size, strength, time and target, and `WaterSourceDefinition` carries position, constant depth, radius, multiplier, pollution, height and source id.
+`environment-and-pollution` owns what the other two kinds land on: a `WaterSourceDefinition` (position, constant depth, radius, multiplier, pollution, height, source id) becomes a `Game.Simulation.WaterSourceData` source entity, and a `BrushDefinition` (line, angle, size, strength, time, target) lands on terrain or on its cell maps — terrain height itself is map authoring, owned by no mechanics topic.
 `city-services-and-coverage` is reached through `IconDefinition`, which is how a notification icon is previewed alongside the thing that will carry it, and through the notification icon prefab the error prefabs share with service notifications.
 `transportation-and-vehicles` is reached through `WaypointDefinition` and `ColorDefinition` and the two-phase route pipeline.
 

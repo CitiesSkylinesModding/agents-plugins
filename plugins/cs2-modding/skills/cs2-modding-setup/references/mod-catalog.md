@@ -215,6 +215,8 @@ Reaching a vanilla system's private per-source accumulator array through reflect
 Toggling a pair of vanilla simulation systems off and back on against the in-game clock rather than once at load, so they sit disabled for part of every day.
 Toggling a shared prefab component for the duration of an in-game event by scaling one field and inferring the applied state from the field's own magnitude rather than a stored flag — the failure mode to recognise rather than a pattern to copy, since the prefab is shared by every instance and anything else moving the field past the threshold breaks the toggle.
 Building pathfinding requests by hand: the component pair added to the traveller, the path-method set composed per leg, a parked vehicle addressed as a lane entity plus a position along its curve, and a repath forced by removing the result components rather than by any update marker.
+Replacing the game's weather sampler wholesale from a prefix that returns false, rebuilding the sample by evaluating the climate prefab's own curves at a rescaled time, which is how a mod that changes the length of the year keeps the seasons landing where the map's climate says they should.
+Consuming a vanilla cell map from a forked system: taken through the owning system's data accessor, carried into a Burst job and scored by the game's own static evaluator rather than a reimplementation, with both the cell-map reader and the terrain height reader registered back after the schedule.
 
 ## Prefabs and assets from code
 
@@ -258,11 +260,16 @@ Source: [yenyang/Water_Features](https://github.com/yenyang/Water_Features)
 
 **Does:** An in-game water tool for placing and reshaping streams, rivers, lakes and seas, plus optional detention and retention basins, seasonal stream flow tied to climate, and waves and tides.
 
-**Demonstrates:** The save-safety pattern worth copying — a before-serialize system that collapses the mod's custom state back into vanilla fields, so the save loads correctly for someone who removes the mod, with the restoring half registered behind the writer so the running session keeps its state.
+**Demonstrates:** The save-safety pattern worth copying — a before-serialize system that collapses the mod's custom state back into vanilla fields, so the save loads correctly for someone who removes the mod, with the restoring half registered behind the writer so the running session keeps its state; the whole system self-gates on the game's legacy-water-sources flag, so the guarantee covers only that half of the water model.
 Registering the same systems into three phases, so one implementation serves the simulation, the editor and the save pipeline.
 Registering custom prefabs at load, gated by whether the game is in game or editor mode, from a preload hook on a system it creates but never gives a phase — the timing answer for prefab work that has to happen before a game loads and after the asset database is populated.
 One tool serving both game and editor by branching on the tool system's action mode.
 Burst jobs that tag vanilla simulation entities with the mod's own components through a command buffer.
+Retuning a running vanilla simulation by writing its public tuning fields every update rather than forking it, with the pre-mod value captured once at system creation as the only record of it, and a companion that swaps the original back while the terrain tool is active and counts a cooloff down before restoring the mod's.
+Two vanilla simulation systems switched off from a setting, paired with a one-shot cleanup that reverses what they already did — the event and damage components, the notification-icon buffer entries and the icon entities — because disabling a system does not undo its output.
+Reflection into the climate system's private state for facts it publishes no accessor for, with the date read back through its string form because the property's value reads zero — read it for the reflection helper, not as the way to ask what season it is.
+A mod-created simulation entity standing in for a global the game does not expose: a bare zero-radius water source the simulation ignores, holding the sea floor while every real sea source oscillates around it, destroyed from every exit path including before-serialize so it never reaches the save.
+Calling the game's own validity calculation in a retry loop, growing the input until it stops returning the failure value and reporting the adjustment to the player, because the vanilla call reports an unusable result as a plain number with no error.
 
 ### Tree Controller
 
@@ -276,6 +283,7 @@ Restoring the original value by reading it back off the authoring prefab object 
 A "safely remove" system that resets custom model state on demand, because some of this state is not safe to leave in a save.
 Extending brush strength past the vanilla cap with a single targeted patch.
 Forking the game's own resource-area update pipeline — the bounds sweep and quadtree walk that decide which objects an extractor area covers — re-run with the mod's own enableable marker written per object, and the mod registered as a reader on the vanilla system it duplicates.
+Reading the current season the way the game defines it — the climate system's current climate entity resolved to its prefab, then that prefab asked which season the current date falls in — and handing the result into a Burst job as a plain enum, on an update-frame slice so only a fraction of the entities are touched per update.
 
 ## UI panels, info views and injection
 
@@ -329,6 +337,7 @@ Emitting a selection definition against an existing entity so the game hands bac
 Writing a game-owned component and then adding the game's own change-event component so the vanilla propagation runs, instead of forking the system that would have propagated it, with the mod's own persistent buffer parked on the same entity.
 Catching entities that join a relationship after the edit, through a second system whose query pairs the vanilla link component with the game's created and updated markers.
 Player-authored translations: the player names and translates their own palettes in-game, each locale written to a JSON file beside the palette and registered as an in-memory source, guarded by a check that the game supports that locale at all.
+The live season matched against each colour variation's own group identifier as a filter over prefab data, with the climate prefab resolved lazily and cached, and both resolution failures logged and answered with a false rather than a throw.
 
 ### Write Everywhere
 

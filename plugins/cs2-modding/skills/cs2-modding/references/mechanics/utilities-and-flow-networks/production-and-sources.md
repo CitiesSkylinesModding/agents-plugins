@@ -151,7 +151,7 @@ BatteryAISystem, per battery:
 Sources: `src/Game/Game.Simulation/GroundWaterSystem.cs`, `src/Game/Game.Simulation/GroundWater.cs`, `src/Game/Game.Simulation/GroundWaterPollutionSystem.cs`, `src/Game/Game.Simulation/WaterPipePollutionSystem.cs`, `src/Game/Game.Simulation/CellMapSystem.cs`.
 
 The aquifer is a `CellMapSystem<GroundWater>` of `kTextureSize = 256` cells per side over the map's `kMapSize = 14336` metres; each cell is three `short`s — `m_Amount`, `m_Polluted`, `m_Max` — and `Consume` keeps the pollution ratio constant.
-It is the one cell map this topic owns — the pollution and wind maps it reads belong to `environment-and-pollution` — and it constrains what a pump or a `GroundWaterPoweredData` plant can produce, never who a pipe can reach.
+The map layer itself belongs to `environment-and-pollution` with the rest of the cell maps; here it constrains what a pump or a `GroundWaterPoweredData` plant can produce, never who a pipe can reach.
 
 ```
 GroundWaterSystem, per update, over right and down neighbour pairs:
@@ -159,12 +159,12 @@ GroundWaterSystem, per update, over right and down neighbour pairs:
     pair's total at uniform concentration, clamped to a quarter of each side's
     clean-water headroom
   amount: move a quarter of the difference in fill deficit (m_Amount - m_Max) -- water
-    flows toward the cell further below its own Perlin-varied ceiling, not toward
-    less water -- and the moved water carries its source's pollution ratio with it
-  both moves are integer divisions, so a gap under 4 moves nothing
-  then per cell:
-    m_Amount   = min(m_Amount + ceil(m_GroundwaterReplenish * m_Max), m_Max)
-    m_Polluted = clamp(m_Polluted - m_GroundwaterPurification, 0, m_Amount)
+    flows toward the cell further below its own per-cell ceiling (m_Max, authored map
+    data), not toward less water -- and the moved water carries its source's pollution ratio
+  both moves are integer divisions, so small gaps truncate to no move at all
+  then per cell, the two accumulated neighbour moves land:
+    m_Amount   = min(m_Amount + flow + ceil(m_GroundwaterReplenish * m_Max), m_Max)
+    m_Polluted = clamp(m_Polluted + pollutionDelta - m_GroundwaterPurification, 0, m_Amount)
 GroundWaterPollutionSystem: samples GroundPollution bilerped at the cell's centre (an
   equal-weight average of four pollution cells) and adds sample / 200 per update --
   integer division, so sampled pollution under 200 adds exactly zero --
