@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.1.0...cs2-modding-v0.2.0) (2026-08-18)
+
+
+### Features
+
+* **cs2-modding:** add the environment-and-pollution mechanics reference ([7a8cba0](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7a8cba0c704b9450104cccea31546ae5b84d488d))
+* **cs2-modding:** add the transportation-and-vehicles mechanics reference ([8c84d45](https://github.com/CitiesSkylinesModding/agents-plugins/commit/8c84d457c5fe5f9e414440fb3d04d171fe3277f0))
+
 ## 0.1.0 (2026-08-14)
 
 
