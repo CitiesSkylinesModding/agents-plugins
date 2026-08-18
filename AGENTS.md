@@ -120,6 +120,7 @@ A tool description may shed a trap onto another tier, never a trigger: a trap re
 - When uncertain, state the assumption and proceed conservatively.
 - When correcting prose, quote the owning source or delete; a paraphrase or an added rationale is what the next review indicts. The `cs2-modding` `AGENTS.md` states the full rule for reference corrections.
 - Resolve a ticket only after its review gate passes.
+- A test written to hold a fix earns belief once you have watched it fail with that fix backed out; reading cannot settle whether it is coupled ([the shapes that fool a reading](docs/solutions/a-regression-guard-that-passes-without-its-behavior.md)).
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
 - The gameface and unity tools show their gaps in use: when you work around a missing tool, or a missing mode of one that exists, propose an entry in [`docs/ROADMAP.md`](docs/ROADMAP.md), with the workaround you used as its evidence.
 - Formatters reformat the whole project, not your diff. Never revert what they touch: fold drift in a file your change already edits into that commit, and land drift in files it does not into a commit of its own.
