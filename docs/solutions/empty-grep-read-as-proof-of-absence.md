@@ -10,7 +10,7 @@ symptoms:
   - 'a claim reads "written once and nothing ever writes it back" and a whole directory writes it'
   - 'a claim reads "has no consumer" and the only consumer is elsewhere in the declaring file'
 tags: [research, decompile, grep, over-reach, verification, false-absence, corpus, census]
-updated: 2026-08-10
+updated: 2026-08-18
 ---
 
 # A grep came back empty and the pass concluded absence
@@ -46,7 +46,12 @@ others.
 - **A compile-time `const` is inlined at its call sites.** A name-grep finds the declaration and
   nothing else however many consumers exist. `custom-tools` shipped "nothing in the game consumes
   it, so it exists for the frontend and for mods" about a constant the tool UI system consumes to
-  build its snap mask.
+  build its snap mask. The same mechanism ran the other way in `environment-and-pollution`: the
+  unread-constant ruling's check — grep the name, declaration-only means unread — cleared
+  `ClimatePrefab.kYearDuration` as dead while its inlined `12`/`12f` literals run the curve axes;
+  the private `kOneOverYearDuration` beside it, equally declaration-only yet visibly live as
+  `(1f / 12f)`, is the control that exposed it. The check is sound for `static readonly`, which is
+  never inlined; establishing a `const` unread takes hunting the value as a literal too.
 - **A scoped grep read as a whole-assembly one.** `placement-definitions` shipped "the only system
   that writes it" from a search of a single namespace; eight sites across four namespaces write it.
   The research file recorded the scope, and the shipped prose dropped it.

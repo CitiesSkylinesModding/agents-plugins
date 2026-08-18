@@ -414,12 +414,13 @@ pollution move = clamp((own share of the pair's pollution at uniform concentrati
                         - own m_Polluted) / 4, bounded by each side's clean headroom / 4)   (:33-35)
 amount move    = clamp((neighbour fill deficit - own fill deficit) / 4, ...)                (:54-55)
                  -- fill deficit is m_Amount - m_Max, so water flows toward the cell
-                    further below its own Perlin-varied ceiling, and the moved water
-                    carries its source's pollution ratio (:58-68); both /4 are integer
-m_Amount   = min(m_Amount + ceil(m_GroundwaterReplenish * m_Max), m_Max)
-m_Polluted = clamp(m_Polluted - m_GroundwaterPurification, 0, m_Amount)
+                    further below its own per-cell ceiling (m_Max, authored map data), and the
+                    moved water carries its source's pollution ratio (:58-68); both /4 are integer
+then per cell, the two accumulated neighbour moves land:
+m_Amount   = min(m_Amount + amountMoves + ceil(m_GroundwaterReplenish * m_Max), m_Max)
+m_Polluted = clamp(m_Polluted + pollutionMoves - m_GroundwaterPurification, 0, m_Amount)
 ```
-(`:111-112`). (The diffusion lines were corrected 2026-08-11 by the orchestrator against the decompile; this file first wrote both passes as "a quarter of the difference".) The purification field's tooltip states the tick rate directly: "How much the groundwater cell purifies itself per tick (2048 ticks per day)" (`src/Game/Game.Prefabs/WaterPipeParametersPrefab.cs:37-38`).
+(`:108-114`). (The diffusion lines were corrected 2026-08-11 by the orchestrator against the decompile; this file first wrote both passes as "a quarter of the difference". The per-cell lines were corrected 2026-08-18 by the environment-and-pollution gate: the accumulated moves land in pass 3, which this file had dropped, and the ceiling is `m_Max` map data, not Perlin noise — `SetDefaults`' Perlin fill is dead for current saves.) The purification field's tooltip states the tick rate directly: "How much the groundwater cell purifies itself per tick (2048 ticks per day)" (`src/Game/Game.Prefabs/WaterPipeParametersPrefab.cs:37-38`).
 
 `GroundWaterPollutionSystem` (`src/Game/Game.Simulation/GroundWaterPollutionSystem.cs:11-32`) samples `GroundPollution` bilerped at the cell's centre — an equal-weight average of four pollution cells (`:24`) — and adds `sample / 200` per tick, integer division so a sample under 200 adds exactly zero, clamped to the cell's water amount. **`200` is a C# literal.**
 
