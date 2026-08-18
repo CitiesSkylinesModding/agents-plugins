@@ -1,6 +1,6 @@
 {
   "name": "cs2-modding",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Teach your coding agent to write Cities: Skylines II code mods (Claude Code, Codex CLI): the game's architecture, the modding techniques and the game mechanics behind them, every claim verified against the decompiled game. Knowledge only, no MCP server.",
   "author": {
     "name": "Morgan Touverey Quilling"

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.0.1...gameface-devtools-mcp-v1.1.0) (2026-08-18)
+
+
+### Features
+
+* **coherent-gameface:** name the construct behind an invalid-selector rejection ([72cd7b8](https://github.com/CitiesSkylinesModding/agents-plugins/commit/72cd7b8c2407c9ce88f17bf37f877526acfec469))
+
 ## [1.0.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.0.0...gameface-devtools-mcp-v1.0.1) (2026-08-15)
 
 
