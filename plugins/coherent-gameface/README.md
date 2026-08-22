@@ -12,8 +12,8 @@ Cities: Skylines II.
 [![node](https://img.shields.io/badge/node-%E2%89%A5%2022.4-brightgreen)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](mcp/LICENSE)
 
-[Install](#install) · [See it in action](#what-it-looks-like-in-practice) ·
-[MCP Tool reference](mcp/README.md) ·
+[Why this exists](WHY.md) · [Install](#install) ·
+[See it in action](#what-it-looks-like-in-practice) · [MCP Tool reference](mcp/README.md) ·
 [npm package](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp)
 
 </div>
@@ -40,6 +40,13 @@ It also ships two skills.
 > **Generic, but developed against Cities: Skylines II.** The server makes no assumptions about a
 > specific application; it works against any Gameface CDP endpoint. It is developed and verified
 > against Cities: Skylines II's Gameface UI, which is the reference target.
+
+> [!IMPORTANT]
+> **How is this different from Coherent Labs' own Gameface MCP?** Theirs is built and documented
+> around a `Player.exe` from a licensed Gameface SDK, and targets Cohtml 3.1.2+. This one attaches
+> to a **game that is already running**, on whatever engine it froze at ship time, and adds a JS
+> debugger, view-reload tracking and wait primitives for a UI that will not hold still.
+> [**Read the full comparison →**](WHY.md)
 
 > [!TIP]
 > **Not using Claude Code or Codex CLI?** The MCP server is also published on npm as

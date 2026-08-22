@@ -48,6 +48,7 @@ Verification context: Cohtml 1.64.0.7, V8 9.4, CDP 1.3.
 
 ## Preferred agent behavior
 
+- [`WHY.md`](WHY.md) contrasts this server against Coherent Labs' own Gameface MCP for prospective users, and states our side of that comparison as fact: a tool added, removed or reshaped in `mcp/src/`, a skill added or removed, a renamed `skills/gameface/references/` file, or a retitled `docs/ROADMAP.md` heading it deep-links can each make one of its lines false. Re-read its comparison table and its "where theirs is ahead" section against the change. Their column carries a commit and a read date; leave it alone unless you re-read their repo, and move that date when you do.
 - After changing `mcp/src/`, run `mise check:agents` and `mise build:gameface`. The running server keeps serving the old bundle: ask the user in plain text to hit Reconnect in `/mcp`, then end your turn — they cannot run `/mcp` while an AskUserQuestion prompt is pending.
 - Server launch failures (`MCP error -32000: Connection closed`, spawn/process-exit errors — not CDP errors) are diagnosable with `mise dev:mcp-logs`.
 - Keep the server generic: no assumptions about a specific game's DOM or APIs beyond the defaults.

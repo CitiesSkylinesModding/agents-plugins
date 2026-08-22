@@ -18,6 +18,12 @@ and set JS breakpoints.
 > `Target.attachedToTarget` is never emitted), so they connect but find zero drivable pages.
 > A direct CDP client only sends the commands Gameface supports, and works end-to-end.
 
+> **Why not Coherent Labs' own Gameface MCP?** Theirs is built and documented around a `Player.exe`
+> from a licensed Gameface SDK, and targets Cohtml 3.1.2+. This one attaches to a **game that is
+> already running** — no SDK, no licence, no version floor, field-verified down to Cohtml 1.64 — and
+> adds a JS debugger, view-reload tracking and wait primitives for a UI that will not hold still.
+> [**Read the full comparison →**](https://github.com/CitiesSkylinesModding/agents-plugins/blob/main/plugins/coherent-gameface/WHY.md)
+
 ## Requirements
 
 - **A Gameface application running** with its CDP debug endpoint reachable (default
