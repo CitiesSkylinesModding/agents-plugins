@@ -12,37 +12,17 @@ planned. When these land they become standard plugin components: `commands/`, `a
 `skills/` directories auto-discovered by the plugin manifest (`skills/` already ships the
 `gameface` and `gameface-driving` skills).
 
-### Removing a breakpoint the UI is paused at
+Entries in this section run **best payoff per unit of effort first**. Place a new one by that
+ranking rather than appending it to the end.
 
-`game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
-pause still standing at that very breakpoint, which leaves the UI frozen with the thing that froze
-it gone. The pause accessor the screenshot gate reads answers this at no cost: name the pause in the
-result, and route to `game_debug_step`. Worth weighing whether removal should offer to resume, which
-the rest of the debugger surface refuses to do on the agent's behalf.
+### Standing instructions for clients that load no skill
 
-### Console call sites
-
-Every `consoleAPICalled` event carries a `stackTrace`, but its frame urls arrive empty, so naming
-the file:line a log came from needs a `scriptId → url` lookup. That means the `Debugger` domain
-enabled permanently plus a script map that is empty in the common lazy-attach case, since the engine
-does not replay `scriptParsed` — too much standing cost for the payoff, so `game_console` prints no
-call site. Revisit as opportunistic resolution: when the debugger is already attached and its
-existing script map answers, render the frame; otherwise print nothing.
-
-### Expanded values in the debugger tools
-
-`game_debug_pause_state` and `game_debug_evaluate` render an object local as its bare description
-(`Object`), the defect `game_console` no longer has: `mcp/src/console.ts` owns a page-context
-serializer, a stored value tree and a depth-aware renderer, none of it coupled to console capture.
-Lift that trio into a module both facets import, then give the debugger tools the same `depth`
-parameter. Reuse rather than a second serializer is the point: two of them drift on markers, clip
-width and the DOM-node idiom, so the same object prints differently depending on which tool showed
-it.
-
-### Network inspection
-
-Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
-missing (no request interception). Surface request/response observation as tools.
+Procedure lives in `skills/`, which a standalone npm consumer of
+`@csmodding/gameface-devtools-mcp` never loads: they get the tool descriptions and nothing else.
+`McpServer` takes an `instructions` string served during the handshake, which Coherent Labs uses to
+carry a standing directive to every client. Two sentences here — reach for `game_status` when a tool
+fails, and act on the construct a rejected selector names — would close the gap as a pointer rather
+than a duplicate, leaving one tier per fact intact.
 
 ### Committing a programmatic fill
 
@@ -54,6 +34,65 @@ had to follow every fill with a hand-written
 workaround its `driving-the-menu.md` reference now teaches). A `commit` option on `game_fill` —
 dispatch a bubbling `focusout` after setting the value — would make the fill one call.
 
+### Removing a breakpoint the UI is paused at
+
+`game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
+pause still standing at that very breakpoint, which leaves the UI frozen with the thing that froze
+it gone. The pause accessor the screenshot gate reads answers this at no cost: name the pause in the
+result, and route to `game_debug_step`. Worth weighing whether removal should offer to resume, which
+the rest of the debugger surface refuses to do on the agent's behalf.
+
+### The CDP surface across engine versions
+
+Two load-bearing findings here rest on one engine version and are written as flat facts about
+Gameface. Coherent Labs' server, built for 3.1.2+, assumes the opposite of both.
+
+Input is the sharp one. `tools.ts` records that Gameface accepts `Input.dispatchMouseEvent` but
+never routes it into the Cohtml DOM event system — "(verified: handlers never fire)", with no
+version attached, though the plugin's verification context is 1.64 alone. That finding is why every
+input tool here dispatches bubbling DOM events instead, and why `game_hover` warns that the CSS
+`:hover` state stays unset. Their input path rests on `Input.dispatchMouseEvent`,
+`Input.dispatchTouchEvent` and `Input.insertText`, and their hover is commented as triggering the
+`:hover` state. Either CDP input works on a 3.x Player and our claim needs a version and a host
+qualifier, or their interaction tools do not work — and only one of those readings leaves our
+shipped prose correct.
+
+The DOM domain is the other. They report `DOM.resolveNode` returning an empty object,
+`DOM.setAttributeValue` silently no-opping and `DOM.performSearch` never returning a `searchId`,
+while `DOM.getBoxModel` and `Runtime.evaluate` both work. Every tool here reaches the page through
+`Runtime.evaluate`, so that surface has never been exercised against 1.64 at all. The answer gates
+whether a `nodeId`-addressed path is available here — the addressing their assertions and DOM search
+depend on.
+
+One probe session against a running game answers both, and the result belongs in `skills/gameface/`
+carrying the version and host it was verified on rather than stated flat.
+
+### Computed styles as a tool
+
+Reading resolved styles means hand-writing `getComputedStyle` through `game_eval` and knowing to
+wrap it in two nested rAFs, since a computed value settles two to three frames after the change that
+caused it: the `gameface` skill teaches the idiom and nothing enforces it. A tool taking a selector
+and an optional property list would fold that wait in and return the resolved values, the way
+Coherent Labs' `get_computed_styles` does — with the frame discipline theirs has no reason to carry.
+
+### Gate the documented performance rules, then decide on a lint
+
+Coherent Labs' `perf_lint` walks the rendered tree for six shapes their docs name as expensive:
+`align-items: stretch` on a flex container, flex items with no explicit `flex-basis`,
+`display: simple` children that are not absolutely positioned, inline `data:`/SVG assets that defeat
+Instaload, `:root`-scoped custom properties, and `opacity` on an element with children where
+`coh-simple-opacity` would do. Three are already prose in
+`skills/gameface/references/performance.md`; the other three name 3.x features and mean nothing on a
+1.x engine until gated. Gate them first, which improves the reference whatever follows, and let the
+surviving set decide whether a lint tool earns its place — a rule that fails gating is a false
+positive waiting to fire.
+
+Frame-timing measurement is a separate idea and does not port. rAF ticks inside the host's per-frame
+`View::Advance`, so inter-frame deltas measure the game's frame rate rather than the UI's
+contribution to it, and a number that looks meaningful while being unrelated to the question is
+worse than no number. Measuring UI cost against a live game starts from Cohtml's own per-stage
+markers, and is its own investigation.
+
 ### Value-binding reads
 
 Reading a C# value binding from the page means hand-writing the subscribe dance through
@@ -62,6 +101,75 @@ then the matching unsubscribe — which the cs2-modding research pipeline ran to
 simulation-side data the DOM never renders (the workaround `docs/SOURCES.md` entry 9 records).
 A `game_binding` tool would make it one call: subscribe, capture the first payload, unsubscribe,
 return it.
+
+### Layout assertions
+
+Verifying a layout costs a screenshot the agent has to eyeball, or a hand-written
+`getBoundingClientRect` comparison through `game_eval`: the first is expensive in context and the
+second is rewritten from scratch every time. Coherent Labs' own Gameface MCP settles the three
+recurring cases as data instead — content overflowing its own box (`scrollWidth`/`scrollHeight`
+against `clientWidth`/`clientHeight`), two boxes intersecting, and an element escaping its
+container, its named ancestor, or the viewport. Ship the same three, selector-addressed and computed
+in one page-context evaluate rather than through their `nodeId` → `getBoxModel` →
+`elementFromPoint` bridge, which exists only to work around a `DOM.resolveNode` that returns nothing
+usable. Their tolerances are worth taking: 0.5px on geometry for subpixel jitter, 1px on text fit.
+Layout here is a frame behind JS, so each check needs the rAF wrap the `gameface` skill prescribes,
+or a result that says plainly it read last frame's geometry.
+
+The plugin's shipped `WHY.md` deep-links this heading twice, so retitling or retiring the entry
+means updating those links; they resolve silently to the top of the page rather than failing.
+
+### Expanded values in the debugger tools
+
+`game_debug_pause_state` and `game_debug_evaluate` render an object local as its bare description
+(`Object`), the defect `game_console` no longer has: `mcp/src/console.ts` owns a page-context
+serializer, a stored value tree and a depth-aware renderer, none of it coupled to console capture.
+Lift that trio into a module both facets import, then give the debugger tools the same `depth`
+parameter. Reuse rather than a second serializer is the point: two of them drift on markers, clip
+width and the DOM-node idiom, so the same object prints differently depending on which tool showed
+it.
+
+### A probed support matrix for the engine the game actually ships
+
+`skills/gameface/references/version-gating.md` infers what a game supports from the changelog, then
+sends the agent to probe. Coherent Labs derived theirs the other way round, from a feature-detection
+sweep against a live engine: per-property forbidden *values* (`align-items` rejects `baseline`,
+`position` rejects `sticky`), selectors that parse but never match, and missing JS globals down to
+per-class property counts — evidence no changelog carries. Their sweep ran against 3.x and does not
+ship, and the interesting version is the one a modder actually has. Ship a probe script beside
+`scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection: CSS property and
+value acceptance by style round-trip, selector acceptance by `querySelector` try/catch, and JS
+global and per-class property presence. Running it against CS2's 1.64 turns the reference's inferred
+claims into probed ones for the reference target, while the script stays generic enough for anyone
+to point at their own game.
+
+### Console call sites
+
+Every `consoleAPICalled` event carries a `stackTrace`, but its frame urls arrive empty, so naming
+the file:line a log came from needs a `scriptId → url` lookup. That means the `Debugger` domain
+enabled permanently plus a script map that is empty in the common lazy-attach case, since the engine
+does not replay `scriptParsed` — too much standing cost for the payoff, so `game_console` prints no
+call site. Revisit as opportunistic resolution: when the debugger is already attached and its
+existing script map answers, render the frame; otherwise print nothing.
+
+### Localization and custom effects in the engine skill
+
+Coherent Labs' documentation corpus covers two topics `skills/gameface/` does not: localization
+(text expansion, RTL mirroring) and custom effects, which `references/performance.md` names only as
+a trap, since a stylesheet merely containing `coh-custom-effect` reverts the whole view to
+synchronous style solving. Both plausibly bear on a mod shipping translated UI or a styled panel.
+Scope before writing, and take the facts one at a time under
+[ADR 0011](adr/0011-coherent-labs-documentation-corpus-stays-out-of-the-gameface-skill.md): the
+subset that survives gating against a 1.x engine may be small enough to fold into the existing
+references rather than earn new ones.
+
+### Network inspection
+
+Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
+missing (no request interception). Surface request/response observation as tools. Note what already
+arrives without it: `game_console` captures `Log.entryAdded`, which is where the engine reports a
+failed resource load, so the error case is visible today and the marginal value here is bodies,
+headers and timing rather than learning that a request failed at all.
 
 ## unity-devtools
 
@@ -207,7 +315,10 @@ the small half: tools here return records the SDK serializes as text and `mcp/` 
 block anywhere, but the `ModelContextProtocol` SDK supports returning `DataContent` with an
 `image/png` mime type. Size the result in pixels rather than bytes, since an image costs the client's
 context in proportion to its pixel area: a downscale knob is the lever worth exposing, and an
-encoder quality setting is not one.
+encoder quality setting is not one. One trap worth naming, observed in Coherent Labs' Gameface MCP
+server: `take-screenshot.ts` builds a correct `{ type: "image", … }` block and `index.ts` then wraps
+it in the uniform `JSON.stringify` text path every one of its tools takes, so the image arrives as a
+wall of base64 text and nothing fails loudly.
 
 ### GameObject/MonoBehaviour tools
 

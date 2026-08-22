@@ -1,6 +1,6 @@
 ---
 date: 2026-08-03
-area: docs/research (the cs2-modding discovery pipeline, against any decompile or corpus)
+area: any counted or absence claim over a corpus (the cs2-modding pipeline and docs/research; any prose citing a census)
 symptoms:
   - 'a claim reads "nothing in the game consumes it" and the game consumes it'
   - 'a claim reads "the only system that writes it" and eight systems write it'
@@ -9,8 +9,9 @@ symptoms:
   - 'a grep of the decompiled source returns no hits for something the game plainly does'
   - 'a claim reads "written once and nothing ever writes it back" and a whole directory writes it'
   - 'a claim reads "has no consumer" and the only consumer is elsewhere in the declaring file'
+  - 'a claim counts three of twenty files carrying a marker and eight carry it'
 tags: [research, decompile, grep, over-reach, verification, false-absence, corpus, census]
-updated: 2026-08-18
+updated: 2026-08-22
 ---
 
 # A grep came back empty and the pass concluded absence
@@ -93,6 +94,14 @@ others.
   so the eye stops before opening the second one. A member used only by its own type is the normal
   case for a private helper, which is what makes this shape invisible: absence of *external*
   consumers was measured and absence of *any* consumer was written down.
+
+- **The pipe truncated the result, not the pattern.** A twenty-file census ran as
+  `grep -n "STATUS:" *.md | head -25`, whose twenty-fifth line fell four files short of the end, and
+  a `docs/ROADMAP.md` entry shipped "three of its twenty files" where eight carry the marker. Every
+  bullet above is a pattern that could not reach what it claimed about; this one reached, and the
+  output was cut on the way back. That inverts the tell: a narrow search returns little and invites
+  doubt, while a truncated one returns a screenful of real hits and reads as the whole answer. Count
+  the corpus first and make the census agree with it, or drop the pipe when the count IS the claim.
 
 ## Fix
 

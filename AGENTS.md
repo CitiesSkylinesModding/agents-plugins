@@ -111,6 +111,9 @@ In the toolkit plugins, its examples name placeholder types (`MyGame.Citizens.Ci
 Cite a checklist item by quoting its phrase, never its ordinal — an insertion silently renumbers every positional cite.
 A tool description may shed a trap onto another tier, never a trigger: a trap reaches the caller already using that tool, while a fact deciding whether to reach for it at all goes unread on the tool nobody reached — that one stays, as a pointer, on the tools whose callers need it.
 
+User-facing prose is the other deliverable: a README, `WHY.md`, anything a person reads to decide whether to install.
+It takes the opposite register to the above — contractions, one idea per sentence, em dashes rare — and the same standard of evidence, since a claim about someone else's project is checkable by the reader in a way an internal one is not.
+
 ## Preferred agent behavior
 
 - Start by inspecting existing patterns.

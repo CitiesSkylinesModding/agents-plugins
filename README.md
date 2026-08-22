@@ -25,12 +25,17 @@ Encourage my work by putting a star ⭐ if it has been useful to you!
 | Plugin | Give your agent… | Runs on | Docs |
 | --- | --- | --- | --- |
 | 🔬 **[unity-devtools](plugins/unity-devtools/README.md)** | A live line into a **Unity Mono dev build** over the Mono Soft Debugger: reflect types, evaluate C# expressions, read & write ECS state. No code injection. Plus a driving skill. | .NET 10 SDK (Windows) | [README](plugins/unity-devtools/README.md) · [Tools reference](plugins/unity-devtools/README.md#tools) · [NuGet](https://www.nuget.org/packages/UnityDevtools.Mcp) |
-| 🖼️ **[coherent-gameface](plugins/coherent-gameface/README.md)** | Eyes and hands in any **Coherent Gameface** (Cohtml) game UI over CDP: evaluate JS, screenshot, drive the DOM, console, JS breakpoints. Plus an engine skill and a driving skill. | Node 22.4+ | [README](plugins/coherent-gameface/README.md) · [Tools reference](plugins/coherent-gameface/mcp/README.md) · [npm](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp) |
+| 🖼️ **[coherent-gameface](plugins/coherent-gameface/README.md)** | Eyes and hands in any **Coherent Gameface** (Cohtml) game UI over CDP: evaluate JS, screenshot, drive the DOM, console, JS breakpoints. Plus an engine skill and a driving skill. | Node 22.4+ | [README](plugins/coherent-gameface/README.md) · [Why](plugins/coherent-gameface/WHY.md) · [Tools reference](plugins/coherent-gameface/mcp/README.md) · [npm](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp) |
 | 📚 **[cs2-modding](plugins/cs2-modding)** (*work in progress*) | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim deep-verified against multiple sources, including the decompile and the live game. Knowledge only — skills and references, no MCP server. | N/A | [Sources](plugins/cs2-modding) |
 
 The two toolkit plugins are **generic**: they target any game or application embedding the
 technology, with Cities: Skylines II as the reference target where everything is field-verified.
 `cs2-modding` is the deliberate exception, and is about that game throughout.
+
+> [!IMPORTANT]
+> **Coherent Labs published their own Gameface MCP — which should you use?** Theirs is built around
+> a `Player.exe` from a licensed Gameface SDK; this one attaches to a game that is already running.
+> [**Read the full comparison →**](plugins/coherent-gameface/WHY.md)
 
 > [!TIP]
 > **Not using Claude Code or Codex CLI?** The Gameface MCP server is also published on npm as
