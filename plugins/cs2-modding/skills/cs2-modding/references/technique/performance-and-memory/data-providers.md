@@ -52,6 +52,7 @@ A seventh queryable tree sits outside the `SearchSystem` naming: the buildings n
   It caps how many worker jobs it keeps in flight at half the job-worker count — a high-priority backlog raises that cap — and backs each with a bump allocator taken from a pool on demand, returned on completion and rewound every update.
   **Those workers come out of the same shared job pool as everything else**, so a mod scheduling a parallel job competes with them rather than against a reserved set of threads.
 - **Budget and fees.** `CityServiceBudgetSystem.GetIncomeArray`/`GetExpenseArray` + `AddArrayReader`, and `ServiceFeeSystem.GetFeeQueue` + `AddQueueWriter` — the queue is handed out to be written into, so the registration is a writer's.
+- **City state.** The same handed-out-queue shape twice more, `XPSystem.GetQueue` + `AddQueueWriter` and `CityStatisticsSystem.GetStatisticsEventQueue` + `AddWriter`, and one without a handle: `IconCommandSystem.CreateCommandBuffer` returns a fresh buffer and no dependency, registered back with `AddCommandBufferWriter`, and the buffers are cleared every update, so obtain, fill and register within one frame; `city-state-and-progression` owns what each carries.
 - **Rendering.** `PreCullingSystem.AddCullingDataReader`, and three on `BatchManagerSystem`.
 
 ## The producer side, when a mod owns the data
@@ -65,4 +66,4 @@ The vanilla commercial-demand system is the tidiest example of publishing severa
 
 Copy that last step: a producer is also a consumer, and it owes the registration exactly as any other reader does.
 
-(VOLATILE: every accessor and registration name on this page — the `SearchSystem` and `UpdateCollectSystem` types in the objects, net, zones, areas, routes and effects namespaces, the simulation namespace's terrain, water, cell-map, demand, counting, budget and service-fee systems, the prefabs namespace's resource and zone systems, the pathfind namespace's queue system, and the rendering namespace's culling and batch-manager systems.)
+(VOLATILE: every accessor and registration name on this page — the `SearchSystem` and `UpdateCollectSystem` types in the objects, net, zones, areas, routes and effects namespaces, the simulation namespace's terrain, water, cell-map, demand, counting, budget, service-fee, XP and city-statistics systems, the notifications namespace's icon command system, the prefabs namespace's resource and zone systems, the pathfind namespace's queue system, and the rendering namespace's culling and batch-manager systems.)

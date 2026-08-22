@@ -148,6 +148,7 @@ A build-time export of its English string table into the repository, locating th
 A mod-owned spatial index following the vanilla search systems closely: outstanding handles completed before disposal, and the tree cleared from the pre-deserialize hook and refilled on the next update through a first-load flag.
 Building and owning zone blocks outside the road network — creating cell buffers, running a fork of the vanilla cell-check pipeline after it, and managing a block's `Owner` by hand, which the vanilla spawner requires of any block it will spawn on.
 A second fork beside the cell-check one: the vanilla road-connection pass re-run for the mod's own entity kind, consuming the game's network quadtree through its reader-registration protocol.
+Cleaning up orphaned notifications from a settings action, by sweeping every icon entity whose owner reference has gone null, and an in-engine test asserting that the icon buffer holds exactly one notification after the placement.
 
 ### Traffic
 
@@ -178,6 +179,7 @@ The forked system re-registering itself on both sides of the vanilla plumbing it
 A working implementation of the rival approach — narrowing the vanilla system's private query by reflection so it skips the mod's entities — shipped but never registered, the substitution having been chosen over it.
 A mod-owned mirror of the engine's temporary-entity component, because the real one on a mod entity is claimed by the systems that own the placement pipeline.
 Writing a lane's yield, stop and right-of-way rules as flags on the generated lane component during lane creation, which is why the feature requires owning lane generation rather than editing anything after it.
+Resolving a vanilla error-notification prefab without naming it, by walking the chunks of the query that pairs error data with notification-icon data and matching the error kind, latched so the scan runs once — with the resulting icon added against the tool's preview entities rather than the real ones.
 
 ## Replacing a vanilla system instead of patching it
 
@@ -193,6 +195,7 @@ A deserialize-phase system that backfills entities from saves written before the
 Reusing the game's existing "historical" flag rather than inventing a parallel lock.
 Translations as embedded per-locale CSV with its own quote-aware reader, settings keys written as a short packed prefix the loader expands into the long generated key, so a translator edits a two-column spreadsheet.
 Reversing an abandonment by hand — what level-down strips: the consumer and producer components, the market state, the building condition, and the road-edge refresh that rebuilds the utility connections.
+The singleton that maps a game-wide notification concept to its prefab entity, carried by value into a Burst job beside the icon command buffer, so a forked check can add and remove the same icon the vanilla one did.
 
 ### Realistic Trips
 
@@ -217,6 +220,9 @@ Toggling a shared prefab component for the duration of an in-game event by scali
 Building pathfinding requests by hand: the component pair added to the traveller, the path-method set composed per leg, a parked vehicle addressed as a lane entity plus a position along its curve, and a repath forced by removing the result components rather than by any update marker.
 Replacing the game's weather sampler wholesale from a prefix that returns false, rebuilding the sample by evaluating the climate prefab's own curves at a rescaled time, which is how a mod that changes the length of the year keeps the seasons landing where the map's climate says they should.
 Consuming a vanilla cell map from a forked system: taken through the owning system's data accessor, carried into a Burst job and scored by the game's own static evaluator rather than a reimplementation, with both the cell-map reader and the terrain height reader registered back after the schedule.
+Writing to the city's statistics from a job through the owning system's own protocol — the event queue taken with its dependency handle, a statistics event carrying a statistic type and a delta enqueued per occurrence, and the schedule registered back as a writer — which is how a mod's simulation change reaches the player's graphs at all.
+Reading a statistic back inside a Burst job as a three-part construction — the owning system's key-to-entity lookup, a buffer lookup for the per-city samples, and the game's own static resolver over the two — because the value lives behind a hash map rather than on a component.
+Forking the statistics panel because a changed day length breaks it rather than because its content is wrong: the vanilla sample arrays come back shorter than the sample count and the chart's frame-to-date conversion drifts, so the fork left-pads every array and rescales the axis, and it reproduces four vanilla game-mode gates — map-tile upkeep, unlimited money, government subsidies and an absent transport type — that decide which statistics are shown at all.
 
 ## Prefabs and assets from code
 
@@ -239,6 +245,7 @@ Authoring a road's utility carriage as part of the prefab: the electricity and w
 Propagating a prefab change to every placed instance by walking from the changed prefab to its edges, their neighbours across each shared node, and then each edge's compositions, nodes, sub-lanes and sub-objects — a walk the engine's own prefab-replacement pass does not perform for road edges.
 Manufacturing the network pieces a composition needs rather than authoring them — cloning one wide vanilla piece per width and rewriting its width, geometry, surfaces and lane list — driven by a four-phase state machine advancing one phase per update, because each phase's prefabs must be registered before the next reads them.
 Cloning vanilla prefabs selected by literal name out of a data-component query, stripping a name prefix, and re-attaching the service and UI components a clone needs to appear in the toolbar — with the literal-name coupling as the fragile half of the technique.
+Authoring a generated prefab's unlock requirements: every requirement prefab in the game indexed by name from one query spanning the feature, dev-tree-node and three built-requirement data components, then attached as a require-all list and a built-on-unlock list whose element type the component's own field forces to one requirement family — with the requirement names as hard-coded literals chosen by category and computed width, which is the fragile half.
 
 ### Extra Assets Importer
 
@@ -319,6 +326,7 @@ The corpus's only source-generated per-entity job, which is the proof that the E
 A read-only census over the citizen population, naming the component set a demographic query needs and applying the moved-in, tourist, commuter and dead exclusions by hand rather than calling the predicates the game exports.
 Reading a vanilla simulation system's published state instead of forking it: demand, tax and company-count state read through the owning systems' own getters, with the reader's job handle registered back through the add-reader calls at the two demand-data read sites — the repository's other read sites skip that registration, so copy the registered pair, never a skip.
 Taking a panel's display grouping from the game's own UI configuration prefab rather than inventing one, so a category that aggregates several enum members stays aggregated the way the game aggregates it.
+Reproducing a game figure by calling the game's own evaluator with the live city-modifier buffer rather than reimplementing the maths, and the storage that forces it: city-wide state is a component and a buffer on the city entity reached through the owning system, not a singleton, while the prefab-side description of the same effect is a separate buffer on the prefab.
 
 ### Recolor
 
@@ -378,6 +386,7 @@ A hand-rolled supersampled capture — hide the UI view, force the graphics sett
 Reflection proxies as a declared layer rather than scattered calls, each acquiring its member once, logging what it could not find, and answering with a fallback afterwards.
 An input action owned by the frontend: a composite binding publishing the binding configuration and the action's phase, enabling the action while the frontend holds a subscription.
 Tests on both sides: xUnit over plain classes kept free of engine types, and UI component tests that load the game's own UI bundle, inject the repository's React into it, and answer binding subscriptions from a mock engine.
+The four city-wide facts a mod reads to describe a save, each with the guard its own storage demands: the milestone level as a singleton query that is empty outside a loaded game, the population as a component the city entity may not carry, the city name as a nullable system property, and the map name as a localization key that falls back to the raw save name when the map mod is gone.
 
 ## Error checks, overrides and save-safe state
 
@@ -433,4 +442,5 @@ Registering an editor tool by growing the editor's own tool array.
 Snapshotting entities into memory by transitively following entity-typed fields, holding the two prefab references back so the walk does not drag the whole prefab graph in with them, and rendering live and frozen data through one code path.
 Walking a game-owned index-and-buffer chain to render it as gizmos — a segment buffer stepped between two index components, wrapping at the end, recursing into each segment's own path buffer.
 No patching anywhere in the codebase.
+The unlock graph rendered without being walked: the unlock component shown as its two requirement-array lengths, and the generic descent depth-clamped whenever the section being rendered is that component, because both arrays are prefab references into the dev tree.
 Its helper and service classes are where all of the above is legible; its two thousand-line tool and highlight systems carry near-duplicate dispatch ladders and repay reading only for the specific mechanism you came for.

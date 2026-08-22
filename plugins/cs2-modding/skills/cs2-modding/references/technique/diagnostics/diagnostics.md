@@ -302,7 +302,7 @@ This reference stops at whether a debugger can attach at all; getting a Burst-co
 
 `mod-lifecycle-and-ordering` owns the mechanism behind steps 4 to 7 of the order — which hook, which state, whether the system stays enabled, and the anchoring failure that logs nothing.
 `navigating-the-decompile` is where a reader goes once a log line has handed them a type name or a message string, which is what the quoted strings here are for.
-`city-state-and-progression` owns the notification system from the other side: the simulation's own enumeration of failure states, rather than a mod reporting one.
+`city-state-and-progression` owns the notification system from the other side: the simulation's own failure-state icons, rather than a mod reporting one.
 `performance-and-memory` owns what a log line costs and every lever that makes one cheap, where this reference owns where a line goes and how to change that.
 It also owns the two symptoms the order above cannot take: memory growth, and a process death with no managed exception.
 

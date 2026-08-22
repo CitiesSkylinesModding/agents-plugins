@@ -56,7 +56,7 @@ Each row is a **group**: the segment before the first dot.
 | `Menu` | 98 | 185 | main menu, achievements warnings, asset upload, notifications |
 | `NaturalResourcesInfoPanel` | 8 | 8 | fertility, ore, oil, fish availability |
 | `NoisePollutionInfoPanel` | 1 | 1 | average noise pollution |
-| `Notifications` | 2 | 142 | `TITLE`/`DESCRIPTION` for a pushed notification, hashed by its key |
+| `Notifications` | 2 | 142 | `TITLE`/`DESCRIPTION`, hashed by notification icon prefab name; not every icon prefab has one |
 | `Options` | 149 | 1588 | the whole options screen, including the mod-page keys the settings helpers generate |
 | `OutsideConnectionsInfoPanel` | 2 | 2 | top imports and exports |
 | `Overlay` | 19 | 19 | platform overlay actions and controller-disconnect prompts |

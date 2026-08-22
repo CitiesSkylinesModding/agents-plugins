@@ -83,7 +83,7 @@ The gameplay side is `Game.Objects.Surface { m_Wetness, m_SnowAmount, m_Accumula
 
 **A snowplough repairs road wear and does not remove snow.**
 Nothing writes `Surface.m_AccumulatedSnow` except `WetnessSystem`, and the snow maintenance branch performs the same wear repair as the road one — snow only re-labels the request, and it leaves when the temperature-driven dry rate takes it; the depots the label routes to belong to `city-services-and-coverage`.
-Which depots respond is `MaintenanceDepotData.m_MaintenanceType`, per depot prefab — the base road depot carries `Road | Snow | Vehicle`, one mask serving both labels, and the masks are an install's content set, enumerated live.
+Which depots respond is `MaintenanceDepotData.m_MaintenanceType`, per depot prefab — the base road depot carries `Road | Snow | Vehicle`, one mask serving both labels, and the masks are an install's content set, re-derived by `ecs_query` on `Game.Prefabs.MaintenanceDepotData` reading each prefab's `m_MaintenanceType`.
 Source: `src/Game/Game.Simulation/WetnessSystem.cs`, `src/Game/Game.Buildings/BuildingUtils.cs`, `src/Game/Game.Simulation/MaintenanceVehicleAISystem.cs`.
 
 ## Day and night
@@ -91,4 +91,4 @@ Source: `src/Game/Game.Simulation/WetnessSystem.cs`, `src/Game/Game.Buildings/Bu
 `EffectFlagSystem.kNightBegin = 0.75f` and `kDayBegin = 0.25f` are the game's definition of night — `m_IsNightTime = normalizedTime >= kNightBegin || normalizedTime < kDayBegin` — and `ClimateSystem.HandleTriggers` uses the same pair inline (`src/Game/Game.Effects/EffectFlagSystem.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`).
 The cycle's effect on the world is those effect flags plus `PlanetarySystem`'s sun position from the climate's latitude, longitude and sun-elevation clamp; simulation systems that behave differently at night each compare `TimeSystem.normalizedTime` against their own windows, and what the cycle is worth in time belongs to `simulation-time-and-units`.
 
-(VOLATILE: every system, component, field, property, enum, constant, method and `Source:` path this file names — their declarations under `src/Game/` in `Game.Simulation`, `Game.Prefabs.Climate`, `Game.Prefabs`, `Game.Objects`, `Game.Buildings`, `Game.Effects`, `Game.Rendering`, `Game.Triggers` and the root `Game` namespace, at the files the sections cite.)
+(VOLATILE: every system, component, field, property, enum, constant, method and `Source:` path this file names — their declarations under `src/Game/` in `Game.Simulation`, `Game.Prefabs.Climate`, `Game.Prefabs`, `Game.Objects`, `Game.Buildings`, `Game.Effects`, `Game.Rendering`, `Game.Triggers` and the root `Game` namespace, at the files the sections cite; plus the base road depot's mask the snowplough trap states, re-derived by the query beside it.)
