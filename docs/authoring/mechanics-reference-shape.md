@@ -76,4 +76,5 @@ A formula two listings both model is transcribed in both: a listing models its m
 Every name in a mechanics file rots at the same rate and closes on the same sweep, so a marker per section restates one fact until it reads as wallpaper.
 A sibling carries its own, and `UNVERIFIED:` stays per claim.
 An edit that names a type from a new namespace is a marker edit: re-close the marker's location list against everything the file now names, in every file the pass touched.
+A namespace is on the list because a name the file mentions is declared there, never because a cited path lies under it, and a mentioned name with no cited path gets one.
 The kind list re-closes the same way: a marker missing the properties, methods or quoted strings its file names hides them from the sweep.

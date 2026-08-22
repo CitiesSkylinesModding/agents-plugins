@@ -38,6 +38,7 @@ Read these directly only to confirm what shipped when the decompile is stale or 
 
 `Cities2_Data/Content/Game/UI/` under `%CSII_INSTALLATIONPATH%` — `index.js`, `index.css`, `index.html`, beside `Fonts/`, `Media/` and `Static/`.
 **First-party and authoritative for the whole frontend**: the module registry and its paths, the React component tree, every number and string formatter, the wire format a binding arrives in, the exported package surface.
+It is also the only first-party statement of what a C# value's *magnitude* means: `Game.UI.Unit`'s constants are opaque strings, and the divisor and threshold that turn one into kilowatts or tonnes exist only in the bundle's formatter table, so for every value that crosses to the frontend "what unit is this field in?" is answered here and nowhere else.
 `index.js` ships minified to a single line, which costs less than it looks. Grepping it settles presence and absence exactly as usual; only `grep -c` misleads, counting matching lines and so answering 1 or 0 however many hits there are — `grep -o <pattern> | wc -l` gives the real occurrence count.
 What the single line genuinely blocks is reading around a match and citing one, and those need a reformatted copy.
 **Reformat with prettier at its defaults**, and check your copy's line count against the one the citing file's baseline states before trusting a line number from it. A differing count means the citations do not resolve against your copy; a matching one is good enough to go on. The reformatted copy is one of the roots the record names.
