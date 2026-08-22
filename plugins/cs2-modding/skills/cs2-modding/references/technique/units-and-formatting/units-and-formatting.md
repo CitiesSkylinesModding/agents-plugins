@@ -55,7 +55,7 @@ Most branches render through a `Common.VALUE_*` key, and the separators come fro
 The sign prefix is `-` for a negative value always, and `+` for a positive one or `±` for zero **only when the signed flag is set**; otherwise both are empty.
 
 **Fractions and bounds support far fewer units than numbers, and fail ugly outside them.**
-`LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else.
+`LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else; its `Energy` entry divides by `10` into kilowatt-hours while the total is under `1e4`, a branch the number table lacks (VOLATILE: that divisor and threshold — the frontend's fraction formatter table.)
 `LocalizedBounds` handles three — `Power`, `PercentageSingleFraction`, `Temperature` — renders `${min}–${max} <${unit}>` otherwise, and short-circuits to a plain number when min equals max.
 Both default to `Integer` when no unit is given.
 
@@ -66,7 +66,7 @@ Both default to `Integer` when no unit is given.
 `LocalizedPercentage(value, max)` computes `100 * value / max` and renders it as a percentage-unit number — but **clamps any positive result to a minimum of 1**, so 0.2% displays as 1%, and a value or max at or below zero renders 0.
 
 `LocalizedDate({ year, month })` renders a medium-date-format key with the month resolved through the indexed key `Common.MONTH_SHORT:<month>`.
-The month is **zero-based**, and a game year is twelve days, so a day _is_ a month — the game's own producer passes `dayOfYear - 1` as the month.
+The month is **zero-based**, and a game year is `daysPerYear` days, so a day _is_ a month — the game's own producer passes `dayOfYear - 1` as the month.
 
 `LocalizedDuration({ value, daysPerYear, maxMonths })` takes a value **in days** and picks a years key at or above `maxMonths` (defaulting to `daysPerYear`), a months key above one, a month key above 23.5/24 of a day, and otherwise falls through to a time-format key with hours and minutes derived from the fraction.
 

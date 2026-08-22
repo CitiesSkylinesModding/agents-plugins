@@ -30,7 +30,7 @@ Source: `src/Game/Game.Simulation/ClimateSystem.cs`.
 Sources: `src/Game/Game.Prefabs.Climate/ClimatePrefab.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`.
 
 `ClimatePrefab` carries latitude, longitude, the sun-elevation clamp, `m_FreezingTemperature`, `m_Seasons[]`, the weather prefab set and five hidden `AnimationCurve`s — generated from the seasons, each `SeasonInfo` keyed at its mid-time, rather than authored.
-The generated curves run on a fixed 0..12 time axis — `kYearDuration`, inlined as literals throughout `ClimatePrefab` — while `SampleClimate` evaluates them at `t * daysPerYear`, which comes from `TimeSettingsPrefab.m_DaysPerYear`, also 12 by coincidence rather than through a shared constant, so a mod changing the year length desyncs the sample point from the curve axis; what a year, season or day is worth in real time belongs to `simulation-time-and-units`.
+The generated curves run on a fixed 0..12 time axis — `kYearDuration`, inlined as literals throughout `ClimatePrefab` — while `SampleClimate` evaluates them at `t * daysPerYear`, which comes from `TimeSettingsPrefab.m_DaysPerYear`, matching by coincidence rather than through a shared constant, so a mod changing the year length desyncs the sample point from the curve axis; what a year, season or day is worth in game time belongs to `simulation-time-and-units`.
 `m_Seasons` is a plain array `FindSeasonByTime(normalizedDate)` walks — a climate may hold any number of seasons, not four.
 `currentSeason` resolves to the season prefab's entity and `currentSeasonName` to its name.
 Average temperature switches estimator on `daysPerYear == 12` — the Ekholm–Modén weighted monthly mean over a hard-coded table and sample hours, against a plain mean otherwise — so a mod changing the year length silently switches the game to the other estimator.
@@ -88,7 +88,7 @@ Source: `src/Game/Game.Simulation/WetnessSystem.cs`, `src/Game/Game.Buildings/Bu
 
 ## Day and night
 
-`EffectFlagSystem.kNightBegin = 0.75f` and `kDayBegin = 0.25f` are the game's definition of night — `m_IsNightTime = normalizedTime >= kNightBegin || normalizedTime < kDayBegin` — and `ClimateSystem.HandleTriggers` uses the same pair inline (`src/Game/Game.Effects/EffectFlagSystem.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`).
+`EffectFlagSystem.kNightBegin = 0.75f` and `kDayBegin = 0.25f` are night for effects and climate — `m_IsNightTime = normalizedTime >= kNightBegin || normalizedTime < kDayBegin` — and `ClimateSystem.HandleTriggers` uses the same pair inline; other consumers draw the boundary at their own constants, which `simulation-time-and-units` tabulates (`src/Game/Game.Effects/EffectFlagSystem.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`).
 The cycle's effect on the world is those effect flags plus `PlanetarySystem`'s sun position from the climate's latitude, longitude and sun-elevation clamp; simulation systems that behave differently at night each compare `TimeSystem.normalizedTime` against their own windows, and what the cycle is worth in time belongs to `simulation-time-and-units`.
 
 (VOLATILE: every system, component, field, property, enum, constant, method and `Source:` path this file names — their declarations under `src/Game/` in `Game.Simulation`, `Game.Prefabs.Climate`, `Game.Prefabs`, `Game.Objects`, `Game.Buildings`, `Game.Effects`, `Game.Rendering`, `Game.Triggers` and the root `Game` namespace, at the files the sections cite; plus the base road depot's mask the snowplough trap states, re-derived by the query beside it.)

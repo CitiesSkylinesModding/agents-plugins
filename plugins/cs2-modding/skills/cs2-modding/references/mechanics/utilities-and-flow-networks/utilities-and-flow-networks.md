@@ -116,8 +116,7 @@ Each sibling carries further traps beside its listings.
 - `environment-and-pollution` — owns the pollution cell maps, the aquifer's `GroundWater` map and the water bodies this topic reads and writes: ground pollution feeds the aquifer, pumps draw surface water down and outlets raise it; pollution inside the pipes is this topic's, pollution in the world is theirs.
 - `economy-and-companies` — owns `ServiceFeeSystem` and the fee and trade prices; both trade systems queue its `FeeEvent`s, and both adjust systems index the consumption curves by fee relative to the default.
 - `zoning-buildings-and-land-value` — owns `SpawnableBuildingData.m_Level` and the `Renter` buffer, which the renter multiplier turns into per-building consumption.
-- `simulation-time-and-units` — owns `TimeSystem.kTicksPerDay = 262144`, `SimulationSystem.frameIndex` and `SimulationUtils.GetUpdateFrame`, the substrate of the whole cadence.
-- `units-and-formatting` — 85 solver ticks per hour and 2048 per day are the conversions between per-tick flow and every human-readable figure.
+- `simulation-time-and-units` — owns `TimeSystem.kTicksPerDay = 262144`, `SimulationSystem.frameIndex` and `SimulationUtils.GetUpdateFrame`, the substrate of the whole cadence, and what 85 solver ticks per hour and 2048 per day are worth in game time.
 - `mod-lifecycle-and-ordering` — owns the modification-phase machinery the graph builders ride and the update ordering behind the `ready` gate.
 - `save-serialization` — a long-lived migration chain: both edge components read and discard removed fields, and `ElectricityFlowSystem.Deserialize` branches over several version bands.
 - `performance-and-memory` — the solve is the game's own worked example of amortising a global computation: a self-tuning step budget, persistent solver state, and sixteen-way consumer bucketing.

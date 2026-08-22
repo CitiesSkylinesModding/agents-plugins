@@ -126,5 +126,6 @@ Source: `src/Game/Game.Pathfind/PathNode.cs`.
 - `city-services-and-coverage` — its coverage and availability queries run on this topic's pathfind workers ([pathfind-queue.md](pathfind-queue.md)), and road maintenance owns the repair side of wear.
 - `utilities-and-flow-networks` — owns the utility carriage a road composition declares; the network substrate is this topic's, what flows in the pipes is theirs.
 - `environment-and-pollution` — owns what a vehicle's noise and air side effects become once written to the edge's `Pollution`.
+- `simulation-time-and-units` — owns what a frame and an update interval are worth in game time, the time-of-day tent [congestion-and-blockage.md](congestion-and-blockage.md)'s `float4` slots are blended with, and the step clamp [pathfind-queue.md](pathfind-queue.md) transcribes.
 
 (VOLATILE: every component, field, enum, system, method and `Source:` path this file names — their declarations under `src/Game/` in `Game.Net`, `Game.Prefabs`, `Game.Pathfind`, `Game.Simulation` and `Game.Tools`, at the files the rows and traps cite; plus the road-class flag shape, against the running game's prefab set, re-derived by the `ecs_query` stated beside it.)

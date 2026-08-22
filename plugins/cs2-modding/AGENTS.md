@@ -93,12 +93,13 @@ Where the prose prescribes a search, hand the finder the search and ask what it 
 Simplifying afterwards re-opens reviewed prose, which earns another gate: simplify-then-gate converges, gate-then-simplify loops.
 Aim it at what authoring overproduces — how a conclusion was reached, a rule restated in the file that does not own it, a count or a date standing where an invariant belongs.
 A sentence beside a transcribed listing is cut only against the cited source: what reads as restating the listing can be the only carrier of a guard the listing elides.
+A passage a sibling carries is cut line by line, not as a block: a section duplicated everywhere can still be the only carrier of one line, and a trap ceded to its owner can name a branch that owner never had.
 
 **A green `mise check:skill-content` says nothing about whether a reference is right.**
 It checks the shapes a script can see, which `scripts/check-skill-content.ts` enumerates.
 Counts, guard conditions, failure modes and a claim contradicting a sibling all pass it untouched, so the gate is the only thing between a plausible sentence and a wrong one.
 
-**Aim the pass at over-reach, because that is what authoring produces:** a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
+**Aim the pass at over-reach, because that is what authoring produces:** a universal — _every_, _all_, _only_ — whose counterexample sits in its own sentence's parenthesis, a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
 Prose that has gone through a gate has been wrong on exactly these, and none of it read as doubtful.
 Read these before re-deriving anything: [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md), [a read that stopped where the code agreed with it](../../docs/solutions/decompile-read-stopped-at-the-confirming-line.md), and [a result credited to the wrong change](../../docs/solutions/attributed-a-result-to-the-wrong-change.md) where the claim rests on something you ran.
 Over-reach usually enters one stage before the prose carrying it: a reference is written by an agent holding a research file and no source, so a guard, a condition or a scope dropped while the research was written down is copied into the shipped file faithfully, and reads as well there as it did in the research.

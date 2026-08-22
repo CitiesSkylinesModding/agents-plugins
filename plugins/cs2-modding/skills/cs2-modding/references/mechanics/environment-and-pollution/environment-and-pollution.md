@@ -124,7 +124,7 @@ Source: `src/Game/Game.Prefabs.Modes/GameModeSystem.cs`, `src/Game/Game.Prefabs.
 - `zoning-buildings-and-land-value` — owns `LandValueSystem`'s formula and the zone machinery; `ZonePollution` bakes zone rates into a zoned building's `PollutionData` ([emission.md](emission.md)).
 - `city-services-and-coverage` — owns the response: fire dispatch and rescue once `OnFire` is set, disaster response capacity, shelters and the building-side early-warning half ([disasters.md](disasters.md)), and the maintenance depots the snow label routes to ([climate-and-weather.md](climate-and-weather.md)).
 - `city-state-and-progression` — owns `CityModifierType`, applied to industrial emission ([emission.md](emission.md)) and disaster warning and damage ([disasters.md](disasters.md)), and the `Locked` progression gate on event prefabs.
-- `simulation-time-and-units` — owns what a frame, an update interval and `kUpdatesPerDay` are worth in real time; every rate in this topic is stated per update or per 2048-frame pass.
+- `simulation-time-and-units` — owns what a frame, an update interval and `kUpdatesPerDay` are worth in game time; every rate in this topic is stated per update or per 2048-frame pass.
 - `save-serialization` — owns save-format versioning and migration; the cell maps serialize through their base class, so a map write lands in the save ([cell-maps.md](cell-maps.md)).
 - `prefabs-and-assets` — retuning this topic means a prefab-phase system overwriting the baked `*Data` component, never patching the class field the asset overrides anyway.
 - `mod-lifecycle-and-ordering` — decides the phase for that write, and carries the `OnGameLoaded` hook that fires after the game-mode rebuild the traps name.

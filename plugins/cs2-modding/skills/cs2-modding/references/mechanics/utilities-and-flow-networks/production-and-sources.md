@@ -144,7 +144,7 @@ BatteryAISystem, per battery:
                                    capacityTicks - m_StoredEnergy)
 ```
 
-`Battery.storedEnergyHours => m_StoredEnergy / 85` and `BatteryData.capacityTicks => 85 * m_Capacity` are the unit conversion: the literal `85` both properties write matches `ElectricityFlowSystem.kUpdatesPerHour`, so stored energy is flow-units times solver ticks, and those two properties are the whole power-to-energy story (`units-and-formatting`).
+`Battery.storedEnergyHours => m_StoredEnergy / 85` and `BatteryData.capacityTicks => 85 * m_Capacity` are the unit conversion: the literal `85` both properties write matches `ElectricityFlowSystem.kUpdatesPerHour`, so stored energy is flow-units times solver ticks, and those two properties are the whole power-to-energy story (`simulation-time-and-units`).
 
 ## Groundwater and pipe pollution
 

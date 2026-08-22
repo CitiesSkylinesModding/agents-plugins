@@ -277,6 +277,7 @@ Two vanilla simulation systems switched off from a setting, paired with a one-sh
 Reflection into the climate system's private state for facts it publishes no accessor for, with the date read back through its string form because the property's value reads zero — read it for the reflection helper, not as the way to ask what season it is.
 A mod-created simulation entity standing in for a global the game does not expose: a bare zero-radius water source the simulation ignores, holding the sea floor while every real sea source oscillates around it, destroyed from every exit path including before-serialize so it never reaches the save.
 Calling the game's own validity calculation in a retry loop, growing the input until it stops returning the failure value and reporting the adjustment to the player, because the vanilla call reports an unusable result as a plain number with no error.
+Update cadence expressed as updates per simulated day rather than as a frame count — a per-system constant divided into the day's tick count, the same idiom across four systems, so the number in the source reads as a rate instead of a period.
 
 ### Tree Controller
 
