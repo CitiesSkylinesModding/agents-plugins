@@ -24,7 +24,7 @@ Three rules keep them straight:
 3. **Probe the territory.** Two games on the same Cohtml version can still differ: per-game compatibility flags and embedder choices gate complex-selector styling, WebSockets, localization, text-transform, and more.
    When a game is reachable, `game_status` reports the engine version (the CDP endpoint answers `Browser: "Cohtml/x.y.z"`), and `game_eval` settles support questions in one probe: `typeof ResizeObserver` for APIs, a style round-trip for CSS (`el.style.setProperty('gap', '4px')` then read it back; the parser rejects unsupported values, so they read back empty).
    `CSS.supports` does not exist (the `CSS` global is only unit factories like `CSS.px`).
-   Page JS has no version global; feature-detect, never UA-sniff.
+   Page JS has no version global, but `navigator.userAgent` carries the engine version; sniff it for the version, feature-detect everything else.
 
 A support claim is settled only once it is version-gated, and probed when a game is connected.
 

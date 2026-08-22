@@ -12,7 +12,8 @@ Repo-side, `mise skills:check-changelog` diffs this ceiling against the live cha
 ## Detect the game's version
 
 - `game_status` reports the engine version: the CDP endpoint's `GET /json/version` answers with `Browser: "Cohtml/1.64.0.7"` style values.
-- Page JS has no version global and no documented userAgent format, so feature-detect instead.
+- Page JS has no version global, but `navigator.userAgent` carries the version in an undocumented, stable shape: `Cohtml/<version> (<platform>; Native) cohtml/<version> (Coherent Labs)`, which `/cohtml\/([\d.]+)/i` parses (verified on CS2: `Cohtml/1.64.0.7 (Windows; Native) cohtml/1.64.0.7 (Coherent Labs)`).
+  It is the one version probe a page-context script can reach, and it answers which engine, never which features: feature-detect those.
   Handy probes for `game_eval`:
   - `typeof ResizeObserver` defined: >= 1.47
   - `'attributeStyleMap' in HTMLElement.prototype`: >= 1.51 (it is NOT on `Element.prototype`)
