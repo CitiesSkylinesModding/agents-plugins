@@ -234,7 +234,7 @@ function checkDecompileWarnings(files: readonly string[]): void {
   const closerOffset = 4;
 
   for (const file of files) {
-    if (!isTrunkReference(file)) {
+    if (!isDecompileBackedReference(file)) {
       continue;
     }
 
@@ -252,7 +252,7 @@ function checkDecompileWarnings(files: readonly string[]): void {
       openers.length,
       1,
       `${file} carries ${openers.length} warning openers on a line of their own; every reference ` +
-        `under the trunk skill opens its warning block exactly once, on one of:\n${acceptedPairs}`
+        `under the trunk and UI skills opens its warning block once, on one of:\n${acceptedPairs}`
     );
 
     const variant = headerVariants.find(each => each.opener == openers[0]);
@@ -311,17 +311,29 @@ function checkDecompileWarnings(files: readonly string[]): void {
 
 // Every reference under the trunk skill, rather than the two families it happens to hold today: a
 // third family added below it would otherwise be exempt from the warning rule while the run stayed
-// green. The other skills' references are correctly out of scope -- the rule is the trunk's.
-function isTrunkReference(file: string): boolean {
-  return isReference(file) && file.startsWith(`${skillsRoot}/cs2-modding/references/`);
+// green. The UI skill's references rest on the decompile too, so they carry the same rule; the
+// setup and mod-project skills' references are correctly out of scope.
+function isDecompileBackedReference(file: string): boolean {
+  return isReference(file) && (isUnderTrunkSkill(file) || isUiReference(file));
 }
 
 function isMechanicsReference(file: string): boolean {
   return isReference(file) && file.includes('/references/mechanics/');
 }
 
+// The UI skill's references sit flat under its references folder rather than in a technique
+// directory, and every one of them is a technique reference: they take that family's shape and its
+// prose budget.
 function isTechniqueReference(file: string): boolean {
-  return isReference(file) && file.includes('/references/technique/');
+  return isReference(file) && (file.includes('/references/technique/') || isUiReference(file));
+}
+
+function isUnderTrunkSkill(file: string): boolean {
+  return file.startsWith(`${skillsRoot}/cs2-modding/references/`);
+}
+
+function isUiReference(file: string): boolean {
+  return file.startsWith(`${skillsRoot}/cs2-modding-ui/references/`);
 }
 
 // Volatile claims are found by grepping the marker, and that grep is the maintenance checklist for
