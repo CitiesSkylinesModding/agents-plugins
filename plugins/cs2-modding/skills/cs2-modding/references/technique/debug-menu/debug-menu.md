@@ -277,7 +277,7 @@ The consequences a mod author needs:
 - **`isHiddenCallback` does nothing in this menu.**
   The translation never reads it, so a callback that hides a widget in the render pipeline's own IMGUI renderer changes nothing here; `isEditorOnly` is the flag that works, skipping the widget and, when a panel has no other children, the panel.
   Source: `src/Game/Game.UI.Debug/DebugWidgetBuilders.cs`.
-- **An unmapped widget type renders as a red box reading `Unknown element type <name>` — no throw, no warning.**
+- **An unmapped widget type renders as a yellow-on-red box reading `Unknown element type <name>` — no throw, no warning.**
   The frontend dispatches on the widget's fully qualified C# type name against a fixed component map covering exactly what `DebugWidgetBuilders` produces, so vanilla never shows one; a mod reaching the widget layer another way can, since most of the shared widget layer's kinds are unmapped here.
   Source: `Cities2_Data/Content/Game/UI/index.js`.
 
@@ -350,5 +350,5 @@ The routes, the selectors and the traps — a fill that never commits, a select 
 `performance-and-memory` owns the per-frame rules the cost model instantiates, and gains the `[DebugWatchOnly]` idiom — a first-party pattern for a system that costs nothing while nobody watches.
 `ecs-in-this-game` owns archetypes, chunks and queries; the `ECS Components` census and the `Search` query builder are those concepts with a UI on them.
 `patching` owns the transpiler that repairs the tool enumeration — an instructive case, since the injection point is forced by two allocations sizing themselves from the array it rewrites.
-`binding-layer` owns everything under the `debug` binding group and the shared widget-over-bindings machinery; the module-registry defect recorded in [driving the menu from outside](driving-the-menu.md) bites any binding, not just this group's.
+`binding-layer` owns the shared widget-over-bindings transport the `debug` group rides; the group's own binding table and the module-registry defect that bites any binding, not just this group's, are recorded in [driving the menu from outside](driving-the-menu.md).
 A reader leaves knowing the menu is a C# widget tree the game's own React renders, that a mod joins it by attribute or by registry with no patching, and that the launch flags gate keys and tooling rather than capability.
