@@ -3,7 +3,7 @@
 **Baseline.** Decompiled game 1.6.0f1, read under `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2\src\`.
 Installed game read at the same version: the shipped locale package `Cities2_Data/Content/Game/Locale.cok`, and the UI bundle `Cities2_Data/Content/Game/UI/index.js` cited through a copy reformatted with prettier at its defaults at `DecompiledCitiesSkylines2/src-ui/source.js`, **135,021 lines** — check your copy's count before trusting a line number from it.
 Mod corpus read 2026-08-06, 22 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`.
-The official UI mod scaffold read at `C:\Users\Morgan\AppData\Roaming\npm\node_modules\@colossalorder\create-csii-ui-mod\`, cited as `create-csii-ui-mod/<path>`.
+The official UI mod scaffold read through the npm global root and cited as `create-csii-ui-mod/<path>`; that root is a junction to `<install>/Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/`, so the files are the game's own, versioned by the install and not by npm (conflicts.md's ruled scaffold-citation entry).
 Prevalence figures come from the user's Paradox mods cache at `%CSII_USERDATAPATH%/.cache/Mods/pdx_mods/`, read 2026-08-06: **432 directories, 391 distinct mod ids, 147 of them shipping a managed assembly**.
 The wiki was not fetched: it has no page on this subject (see `## Dead ends`).
 The game was not running for this pass; every live question below records its experiment instead of its result.

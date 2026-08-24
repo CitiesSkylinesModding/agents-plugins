@@ -11,6 +11,7 @@ A later pass amending the formatting half amends it here and says which referenc
 A fourth source is the user's own installed copy at `1.6.0f1 (419.d6c6) [6216.19404]` — the same build the decompile was taken from — and it holds two things the decompile cannot: the strings themselves as compiled `.loc` assets, and the whole frontend as a plain 2.2 MB bundle at `Cities2_Data/Content/Game/UI/index.js`.
 Both are first-party and version-known, so they outrank everything else on anything they can answer, and the install is read-only throughout.
 The bundle ships minified to one line, so the frontend claims here cite a copy of it reformatted with prettier at its defaults and read at `DecompiledCitiesSkylines2/src-ui/source.js`, **135,021 lines** — the count to check a fresh reformat against before trusting a line number below.
+Scaffold citations (`@colossalorder/create-csii-ui-mod/<path>`) expand through the npm-global junction to `<install>/Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/<path>`, the game's own files, versioned by the install and not by npm (conflicts.md's ruled scaffold-citation entry).
 
 No frontend claim rests on `CS2-Platter/Platter/UI/tools/source.js` any more, the unversioned copy a corpus author vendored into a repository — every one of them was re-derived from the shipped bundle in a pass on 2026-08-03, and it is cited below only where the two disagree.
 Its divergences turned out to be staleness rather than error, in the same one-way direction the `.loc` data had already bounded.

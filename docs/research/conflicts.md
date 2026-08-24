@@ -9,7 +9,7 @@ Not every disagreement lands here: where the decompile settles a fact, the resea
 What arrives here is the residue — a judgement about what ships, a claim no source can settle, a question whose answer changes the product.
 The launch-flag entry below is the shape of it: the decompile settled which spellings work, and choosing which one to write was the judgement left over.
 
-**Baseline.** Citations here span five kinds of source, and they do not age together: decompiled source under `src/`, regenerated per game version and read at 1.6.0f1; the game's own shipped files read out of a 1.6.0f1 install, including the UI bundle, whose citations are to a copy reformatted with prettier at its defaults at `DecompiledCitiesSkylines2/src-ui/source.js`, 135,021 lines; hand-written prose sitting in a decompile checkout, which carries no version and tracks nothing; this repository's own files, read at the commit in hand; and wiki pages, as `survey-wiki-inventory.md` recorded them on 2026-07-31.
+**Baseline.** Citations here span six kinds of source, and they do not age together: decompiled source under `src/`, regenerated per game version and read at 1.6.0f1; the game's own shipped files read out of a 1.6.0f1 install, including the UI bundle, whose citations are to a copy reformatted with prettier at its defaults at `DecompiledCitiesSkylines2/src-ui/source.js`, 135,021 lines; the official UI mod scaffold, cited as `create-csii-ui-mod/<path>` and expanding through the npm-global junction to `<install>/Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/<path>` — the game's own files, versioned by the install and not by npm (this file's ruled scaffold-citation entry below); hand-written prose sitting in a decompile checkout, which carries no version and tracks nothing; this repository's own files, read at the commit in hand; and wiki pages, as `survey-wiki-inventory.md` recorded them on 2026-07-31.
 
 **Entry shape.** A `###` heading naming what is contested — a line, not a paragraph — then three labelled paragraphs:
 
@@ -35,6 +35,22 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 ## Open
 
 ## Ruled
+
+### The pipeline cites the official UI scaffold by a path that only exists on a machine where `npm link` ran, and that names the wrong owner
+
+**Sources.** `README.md:41` fixes the citation shape for a toolchain package as `<package>/<path>:<line>`, and every cite of the UI scaffold in the pipeline follows it — `frontend-and-injection.md` and `ui-build-and-devloop.md` both address it as `create-csii-ui-mod/template/…`, and `../SOURCES.md:70` described it, when this entry was raised, as an npm package installed globally by the toolchain — the entry has since been amended (see **Established**).
+
+**Established.** The global entry is a **junction**, not a package. `NpxModProjectDependency` installs the scaffold by running `npm link` with its working directory set to `<install>/Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod` (`src/Game/Game.Modding.Toolchain.Dependencies/NpxModProjectDependency.cs:20`, `:116`), and on the maintainer's machine `~/AppData/Roaming/npm/node_modules/@colossalorder/create-csii-ui-mod` reports `LinkType: Junction` with that install path as its target, with `diff -rq` between the two returning nothing.
+So the files a cite resolves to are the game's own, shipped and patched with it. `../SOURCES.md`'s entry 6 was amended in place on 2026-08-24 to say so; the citation shape was left alone.
+Two costs are real and small. A reader without the toolchain installed cannot resolve any `create-csii-ui-mod/…` cite at all, though the same is already true of `%CSII_TOOLPATH%`-relative cites. And the form implies an npm version — the package reports `1.0.0` (`create-csii-ui-mod/package.json:3`) and has since at least the 2024 file timestamps on the install copy, while the `template/types/` behind it demonstrably changed across game versions, which is exactly the mismatch that makes a stale vendored copy invisible.
+
+**Needs a ruling on.** Whether the pipeline keeps citing the scaffold as `create-csii-ui-mod/<path>` or moves to the install-relative form the other game-shipped sources use, `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/<path>`.
+For keeping it: two research files and the shipped references derived from them already carry the short form, the junction resolves it correctly on any machine with the toolchain, and the long path is four segments of noise on every cite.
+For moving: the short form names an npm package whose version number is inert and whose contents are the game's, which is the single fact a reader most needs when asking "is this declaration file current?" — and `../SOURCES.md:8-12`'s precedence rule turns on which first-party source *owns* a subject, so filing the scaffold under the install rather than under npm is the same distinction the rule already draws.
+A third option is to keep the short form and add it to `README.md:41`'s list explicitly, as an alias whose expansion the baseline states once per file.
+Nothing about the reference's content turns on this; it is a convention with pipeline-wide reach. The ruling goes into the research files for `frontend-and-injection` and `ui-build-and-devloop`, and into `README.md` if the shape changes.
+
+**Ruling (2026-08-24, the ticket 35 orchestrating session, under the maintainer's delegation of the pass's calls).** The third option: keep `create-csii-ui-mod/<path>` and declare it in `README.md`'s citation list as an alias whose expansion the citing file's baseline states once. What a reader actually needs — that the files behind the alias are the game's own, versioned by the install and not by the inert npm `1.0.0` — is one baseline sentence, which the long path would not state either.
 
 ### Two first-party sources disagree about the mod-facing UI API, and the one that is right is the one a mod author's compiler does not read
 

@@ -1,7 +1,7 @@
 # Settings and input
 
 **Baseline.** Decompiled game 1.6.0f1; mod corpus read 2026-08-03 at the commits the 20-repository checkout carried; wiki fetched live 2026-08-03 (the bot challenge did not fire, so no snapshot substitution was needed).
-The frontend claims added in the 2026-08-03 re-sweep read the user's own installed copy at 1.6.0f1 — the same build the decompile was taken from — through two artifacts the original pass had no list naming: the shipped UI bundle, cited as a copy of `Cities2_Data/Content/Game/UI/index.js` reformatted with prettier at its defaults and read at `DecompiledCitiesSkylines2/src-ui/source.js`, **135,021 lines**; and the official UI mod scaffold's declarations at `@colossalorder/create-csii-ui-mod/template/types/`, cited package-relative.
+The frontend claims added in the 2026-08-03 re-sweep read the user's own installed copy at 1.6.0f1 — the same build the decompile was taken from — through two artifacts the original pass had no list naming: the shipped UI bundle, cited as a copy of `Cities2_Data/Content/Game/UI/index.js` reformatted with prettier at its defaults and read at `DecompiledCitiesSkylines2/src-ui/source.js`, **135,021 lines**; and the official UI mod scaffold's declarations at `@colossalorder/create-csii-ui-mod/template/types/`, cited package-relative — the package resolving through the npm-global junction to `<install>/Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/`, the game's own files, versioned by the install and not by npm (conflicts.md's ruled scaffold-citation entry).
 Check a fresh reformat against that line count before trusting a line number from the bundle.
 
 ## Findings
