@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.2.0...cs2-modding-v0.3.0) (2026-08-24)
+
+
+### Features
+
+* **cs2-modding:** add the binding-layer reference for the UI skill ([480866a](https://github.com/CitiesSkylinesModding/agents-plugins/commit/480866a8c47064b648f959bc8fb475f8cf233682))
+* **cs2-modding:** add the city-state-and-progression mechanics reference ([7d872ec](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7d872ec9e5457707fe7af5ef8717034b591914b8))
+* **cs2-modding:** add the frontend-and-injection reference for the UI skill ([714f293](https://github.com/CitiesSkylinesModding/agents-plugins/commit/714f29390a6ea3a0015cdc8f9001725afc36e65b))
+* **cs2-modding:** add the simulation-time-and-units mechanics reference ([e23281d](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e23281d3dc9089ae9b99d9ba64edce78d1f58bec))
+* **cs2-modding:** add the ui-build-and-devloop reference for the UI skill ([39d58da](https://github.com/CitiesSkylinesModding/agents-plugins/commit/39d58dae5a89ea90056b3c1161621bd397435617))
+
 ## [0.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.1.0...cs2-modding-v0.2.0) (2026-08-18)
 
 

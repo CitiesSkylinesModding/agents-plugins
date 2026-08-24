@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.1.0...coherent-gameface-v1.1.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** correct the claim that page JS cannot read the engine version ([a77f234](https://github.com/CitiesSkylinesModding/agents-plugins/commit/a77f23448dd6dc0e9a91f718610a671b0d8a18fa))
+* **coherent-gameface:** correct the live-reload watcher account in gameface-driving ([1498019](https://github.com/CitiesSkylinesModding/agents-plugins/commit/14980195193f0d23f17b30ae90c87dddd951338b))
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.0.1...coherent-gameface-v1.1.0) (2026-08-18)
 
 
