@@ -78,16 +78,15 @@ That is what you want for a directory you ship and edit while iterating, and it 
 
 Watching is not what serves the file either.
 Resolution holds no cache — a request walks the host's paths and reads the file off disk again — so **a file written after startup is served the next time the frontend asks for it, watched or not.**
+Whether the frontend asks again is the other half, and it is `frontend-and-injection`'s: the view's image cache pins a URL to the bytes it first resolved to, so a raster or SVG file rewritten under a fixed name is served stale until the URL itself changes, and the one C# call tested against it, `ClearCachedUnusedImages`, did not clear it.
 
 **One branch runs before that walk, and it is a name collision waiting to happen.**
 A request for a raster image — the extension list is `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.psd`, `.tga`, `.astc`, `.pkm`, `.dds`, `.ktx`, and pointedly not `.svg` — is first looked up as a Unity resource under `UI/SharedImages`, keyed on the file name with its extension dropped, and only falls through to the host walk when that lookup comes back null.
 So `coui://yourmod/settings.png` serves the game's built-in `settings` texture if one exists under that name, and your file is never read.
 **Name a raster file you serve after something no shared image is called**, or ship it as `.svg`, which never takes this branch.
-What may not ask again is the frontend, and a fixed file name rewritten in place is where that bites.
-A version query on the name reaches the same file, since the resolved path comes from the URL's path alone and the `coui` branch reads no query at all.
-(UNVERIFIED: what the engine's image cache does with a URL it already holds when the bytes under it change — no source this plugin reads states the cache's key or its invalidation, and nobody has watched a re-request in a running game.)
+A query on the URL reaches the same file, since the resolved path comes from the URL's path alone and the `coui` branch reads no query at all — which is what lets a changed query defeat the frontend's cache above without touching the file.
 
-The game registers three hosts of its own, and they are the shapes to recognise: `gameui` for the base UI, `ui-mods` for the directory of every mod's UI module asset, and one host per UI host asset found in the database.
+The game registers two kinds of host of its own, and they are the shapes to recognise: `ui-mods`, a `coui` host over the directory of every mod's UI module asset, and one host per UI host asset found in the database — which is how the base UI's own `gameui` is registered, as an `assetdb` database host rather than a `coui` one, so `coui://gameui/…` resolves to nothing.
 
 **Where a `coui://` URL is consumed on the prefab side.**
 `UIObject.m_Icon` is a plain string, and the image system returns it when non-empty, falling back to the UI group's icon.
@@ -96,4 +95,4 @@ The thumbnail chain is the one to know: icon if set, else a placeholder when thu
 
 The Cohtml side of the frontend is `frontend-and-injection`.
 
-(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — the UI system, the UI live-reload class, and the default resource handler.)
+(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names and which scheme each is registered under, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — the UI system, the UI live-reload class, the default resource handler, and for the host schemes the game manager's UI initialisation over the install's `*.uiHost` files.)

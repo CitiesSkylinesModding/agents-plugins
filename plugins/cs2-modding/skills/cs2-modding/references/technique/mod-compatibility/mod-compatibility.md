@@ -144,7 +144,7 @@ Your assembly's own simple name is a claim in the same sense and the only one th
 ## The frontend chains where C# does not
 
 `frontend-and-injection` owns the UI module registry.
-The compatibility half is one property: **`extend` and `append` wrap whatever is already at the path and therefore chain across mods, while `override` replaces an export outright and `reset` restores vanilla and strips every other mod's changes with it.**
+The compatibility half is one property: **`extend` and `append` wrap whatever is already at the path and therefore chain across mods, while `override` replaces an export outright and `reset` restores every override it recorded — never an added path, an SCSS class map, or an object mutated in place — stripping every other mod's recorded overrides with it.**
 `add` is not in that company: it registers a path that does not exist yet and throws when one does, so it can never take another mod's module, and it is the only call that puts a path in the registry for anything else to extend.
 
 **Chaining is not composing.**
@@ -152,8 +152,9 @@ The compatibility half is one property: **`extend` and `append` wrap whatever is
 Render what you were handed on every branch, and put your own condition inside that component rather than around it.
 
 Whenever the mod set changes the reset runs and every registrar runs again, restoring every overridden export but leaving every added path in place.
-So a registrar that calls `add` throws the second time through, and the registrars are one unguarded loop, so that throw takes every later mod's registration with it.
-Nothing removes an added path, which is also the remedy: guard your `add` so it runs once, and let every later run fall through to the `extend` and `append` calls the reset did wipe.
+So a registrar that calls `add` throws the second time through, and the registrars are one unguarded loop, so that throw takes every later mod's registration with it — unless the body is wrapped in its own `try`/`catch`, which confines the loss to that mod's remaining calls.
+Nothing removes an added path, which is also the remedy: guard your `add` so it runs once, and let every later run fall through to the `extend` and `append` calls the reset did wipe — all but an SCSS class map or an object mutated in place, which `frontend-and-injection` shows survive it.
+Two more cross-mod facts ride the same loader, stated there: one mod whose `hasCSS` stylesheet never answers 200 keeps every mod unregistered, its own and every other's, and registrar order is import-completion order, so which mods a throw or a hang takes down varies between runs of the same playset.
 
 ## Another mod's data
 

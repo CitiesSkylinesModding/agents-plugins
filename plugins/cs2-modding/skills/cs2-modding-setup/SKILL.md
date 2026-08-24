@@ -133,6 +133,7 @@ The other three are independent of it and of each other, so offer them and let t
 - Making the game's UI bundle readable, worth offering to anyone working on a mod's interface.
   `Cities2_Data/Content/Game/UI/index.js` under the install ships minified to a single line, so reading around a match or citing one needs a reformatted copy.
   Copy it somewhere of the user's choosing, reformat that copy with prettier at its defaults, and fill both record keys with the path and the resulting line count.
+  `index.css` beside it ships the same single-line way; a session working on the game's UI reformats a copy of it next to the script's.
 
 ## Refreshing after a game update
 

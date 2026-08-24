@@ -78,6 +78,7 @@ A preview entity path that renders an outline before anything is committed.
 Its own native containers and a line-sweep intersection pass, which is what reading it costs and what it teaches.
 Each job owns its component and buffer lookups behind an assign-once and a refresh-per-update method, which is the clearest hand-written form of the type-handle discipline the source generator otherwise supplies.
 Adding a panel to the game's developer menu imperatively — one panel taken from the render pipeline's panel registry at mod load and held in a static, appended to from each system's own `OnCreate`, so the menu shows live getters, toggles and numeric fields with no game type involved beyond the registry itself.
+Naming every UI registry path and export as a typed constant in one file and spreading the pair into the registry call, which is the shape that survives a game version renaming a path.
 No runtime patching anywhere.
 
 ### Network Tools
@@ -215,6 +216,7 @@ Carries the game's own generated type-handle struct into each fork and refreshes
 Replacing one branch of a vanilla job-scheduling method from a prefix — a private target resolved by explicit signature, the type handles and lookups the vanilla method would have refreshed rebuilt by hand, and the substitute job's handle returned rather than completed, so the caller's temporary allocations outlive the work.
 Runtime detection of sibling mods by name, including keeping a dead system registered purely so old saves still load.
 Retuning the game's balance without editing a prefab asset, by overwriting parameter components in place once prefab initialization has written them — some systems registered into two phases by two calls so they run inside the load and save pipelines as well, and one rewriting a per-prefab component rather than a singleton.
+The corpus's only use of the module registry's SCSS form — merging a mod's own class map into a vanilla `.module.scss` so both rule sets apply — and extending a vanilla widget and its newer replacement in the same registrar, since both ship.
 The corpus's only keyed UI bindings: one map binding keyed by statistics group, and a second delegating straight to the vanilla prefab-requirements writer, beside hand-written JSON writers for the panels a plain value binding could not shape.
 Reaching a vanilla system's private per-source accumulator array through reflected field handles from a postfix on its update, paired with a postfix on the method that produced the value, because correcting the producer alone leaves the consumer's own cached copy untouched.
 Toggling a pair of vanilla simulation systems off and back on against the in-game clock rather than once at load, so they sit disabled for part of every day.
@@ -368,6 +370,7 @@ The same classes serve as both the mod's XML file format and its save payload, w
 The corpus's only cleanup components, keeping a residue entity alive after deletion so a disposal system can release the mesh and material handles a component owns.
 A documented update-order dependency graph kept in a comment above the system registration, which is the discipline this ordering model actually needs.
 Reading a chain of game-owned link components for display, and the limit that comes with it: some of its tests are disabled because the game's buffer types cannot be JIT-compiled outside the running game.
+The corpus's only registration of an entirely new game panel type: two registry `extend` calls that mutate the panel-type enum and the type-to-component map the game's own panel renderer keys on, paired with a C# panel class whose emitted type name is the key.
 A transpiler that repairs the developer menu's tool enumeration for every mod in the session, not just its own, and stands down when the patched loop's opcodes show another mod already fixed it.
 (UNVERIFIED: the transpiler's own source — it lives in the submodule a plain clone leaves empty, and its shape is read from the repository's change record.)
 
@@ -380,6 +383,7 @@ It also replaces the loading screen's background with the last image it loaded.
 
 **Demonstrates:** A mod whose product is its frontend, so its C# exists to serve one.
 Extending vanilla React components the module registry exposes and no shipped declaration file names — the menu shell, its backdrops, the master screen, the loading-screen overlay, the photo-mode panel — each wrapper returning the vanilla component untouched when the feature is off, which is what makes an injection reversible from a setting.
+A registrar split into one function per UI area and composed into a single default export.
 One local module per vanilla module it imports, filed under that module's own `game-ui/…` path and resolving the export through the registry behind a type guard and a fallback, so a module no declaration file names still reads as an ordinary typed import at every call site.
 Reaching the vanilla DOM from such a wrapper by resolving the wrapped component's scoped CSS-module class names through the module registry and mounting a React portal into the node they find, with every module and class accessor guarded so a renamed class costs a missing button rather than a broken menu.
 A frontend binding facade, one module per binding group, whose value bindings are created on first read rather than at import.
@@ -412,6 +416,7 @@ Suppressing a placement error by setting a disable flag on the error's own prefa
 The corpus's largest definition rewriter, walking a whole run of net-course definitions in order and writing each course's end elevation into the next course's start to force a constant slope.
 A change applied inside a modification phase deferred to the next frame through the mod's own tag, because the update marker does not survive being added in the phase that made the change.
 Suppressing clearance detection by collapsing the derived prefab field the collision pass reads — the composition height range — rather than patching validation, with the original recorded on the composition entity and a companion system restoring it.
+The reference copy of the community's vanilla-component resolver, the lazy name-to-path map many UI mods share for pulling unexported game components out of the module registry, carrying the discovery workflow in its own comments.
 
 ### Better Bulldozer
 

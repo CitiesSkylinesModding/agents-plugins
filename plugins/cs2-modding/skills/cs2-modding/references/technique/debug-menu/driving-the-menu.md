@@ -68,7 +68,7 @@ Clicks need no such care: an arrow control's buttons step the value, a toggle fl
 
 ## Selectors
 
-The menu's class names are content-hashed and change on any UI rebuild, so treat every selector below as a fingerprint of this version and re-derive them from the DOM when they miss.
+The menu's class names carry a hash of each module's path and local name, renamed whenever a local or its module moves, so treat every selector below as a fingerprint of this version and re-derive them from the DOM when they miss.
 (VOLATILE: every class name below — the menu's class maps in the shipped bundle, `Cities2_Data/Content/Game/UI/index.js`.)
 
 The root is `div.debugging_dvz` holding `div.debug-ui_M_y`; the tab bar is `div.tab-bar_b_c` with one `button.button_BNH` per tab, the active one also carrying the literal class `selected`.

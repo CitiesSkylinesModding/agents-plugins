@@ -121,7 +121,7 @@ Subscribe with `+=`.
 
 **The vanilla UI cannot activate a mod tool.**
 The tool-selection trigger binding takes a string and routes it through a hard-coded switch over the nine vanilla tool ids, whose default arm returns the default tool.
-The mode-selection trigger is the same story: it type-tests the active tool against five vanilla tool types and does nothing for anything else, even though the binding layer faithfully publishes whatever `GetUIModes` returns for any tool.
+The mode-selection trigger is the same story: it type-tests the active tool against five vanilla tool types, and for anything else only re-pushes the unchanged active tool, so the click changes nothing on screen, even though the binding layer faithfully publishes whatever `GetUIModes` returns for any tool.
 So a mod tool may advertise modes to the UI and read `uiModeIndex` back, but nothing vanilla will set them: **activation and mode switching both have to come back through the mod's own C#**, driven by its own binding group rather than by the `"tool"` group.
 The mode icon path the UI synthesises is `"Media/Tools/" + toolID + "/" + modeName + ".svg"`, a game-content path rather than a `coui://` host, so a mod tool's mode icons resolve to nothing.
 `frontend-and-injection` owns the panel that replaces all of this, and `prefabs-and-assets` owns host locations.
@@ -402,7 +402,7 @@ Mimicking is for a mod's _additional_ actions — a second modifier, a mode togg
 That reference owns the definition components and their flags, and it owns the other direction too — a mod that wants to change what an existing tool places rewrites definitions rather than writing a tool.
 
 `settings-and-input` owns every action a mod declares, and the mimicking attributes above are its vocabulary.
-`frontend-and-injection` owns the tool-options panel, which is where a mod tool has to put its activation control and its mode switcher, since the vanilla ones are hard-coded to vanilla tools.
+`frontend-and-injection` owns the tool-options panel, which is where a mod tool has to put its activation control and its mode switcher, since the vanilla ones are hard-coded to vanilla tools; a tool overriding none of the panel-triggering virtuals above gets no panel at all until that reference's visibility hook is extended.
 
 `roads-and-traffic` is what the network half of the raycast surface exists for, and it carries the deepest tool state machines: a tool over lanes or connections is also the case that most often needs a parallel raycast pipeline, because the things it selects are mod-owned entities no vanilla search tree holds.
 `zoning-buildings-and-land-value` is reached through the zone and lot masks and the grid snap flags, and any tool that places something on the ground meets that grid.
