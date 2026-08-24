@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.1.0...gameface-devtools-mcp-v1.1.1) (2026-08-24)
+
+
+### Miscellaneous Chores
+
+* **gameface-devtools-mcp:** Synchronize coherent-gameface versions
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.0.1...gameface-devtools-mcp-v1.1.0) (2026-08-18)
 
 
