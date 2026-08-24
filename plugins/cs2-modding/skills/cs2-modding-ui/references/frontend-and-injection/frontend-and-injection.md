@@ -244,7 +244,7 @@ Source: the scaffold's `types/ui.d.ts`, `types/api.d.ts`, `types/l10n.d.ts`; the
 The scaffold's `assets.d.ts` is wildcard module declarations for `*.scss`, `*.css`, `*.svg`, `*.png`, `*.jpg` and `*.gif` — the ambient typing that lets a mod `import icon from "./icon.svg"` — and there is no such window global, read from the running game, and no such external.
 Source: the scaffold's `types/assets.d.ts`.
 
-`ReactDOMClient` and `chart.js` are on `window` and absent from the scaffold's webpack externals, so a mod importing `chart.js` bundles its own copy beside the one the game already ships unless it adds the external itself, which `ui-build-and-devloop` owns.
+`ReactDOMClient` and `chart.js` are on `window` and absent from the scaffold's webpack externals, so a mod importing `chart.js` bundles its own copy beside the one the game already ships; whether adding the external yourself reaches the game's copy instead is `ui-build-and-devloop`'s to answer.
 
 ## Styling
 

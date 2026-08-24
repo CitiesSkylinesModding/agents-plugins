@@ -65,6 +65,7 @@ Command buffers the mod allocates itself and plays back on the spot inside a sys
 A custom quadtree iterator walking three vanilla search trees with mod-defined selection, serving its marquee, bounds, point and ray searches.
 The vanilla node and edge generation systems ignore a change to a node's elevation, so the mod ships a system spliced ahead of composition selection whose only job is to set the modify flag the pipeline needs.
 Bezier control points modelled as mod-created entities of a three-component archetype — prefab reference, culling info, and its own control-point component — so handles are hoverable and selectable through the same paths as real entities.
+Worked build engineering of the UI seam: the npm build hooked after the deploy target with the wipe it dodges written down beside it, MSBuild switches for turning the UI half off, a lockfile stamp so `npm ci` runs only when the lockfile changed, timeouts on both npm calls, and a failure that aborts a release build and only warns in Debug.
 
 ### Area Bucket
 
@@ -170,6 +171,8 @@ A logging facade built on compile-time categories, each method carrying a condit
 A custom raycast system registered in the raycast phase.
 Rebindable actions declared as settings attributes and consumed by the tool, scoped with its own usage strings beside the built-in ones.
 Letting the player choose, from the settings screen, between the mod's own bindings and watchers that keep them equal to the vanilla apply and cancel bindings.
+Generating the frontend's binding types from the C# rather than writing them twice — a typings generator configured to substitute the types the game's own declaration files export for the engine's entity and binding-proxy types, so the binding names, the enums and the payload shapes all come from one side.
+Renaming the webpack image output directory away from the scaffold's default, because every mod's images resolve under one shared `coui://` host and the default collides.
 Migrating another mod's saved data on load, and detecting an incompatible build of it by scanning loaded assemblies.
 Its own placement-definition component beside the game's, with a generator, a validator, a clear system and an apply system each spliced next to the vanilla one it parallels — the corpus's only extension of that protocol to a new kind.
 An empty prefab class with no content, registered in the pre-deserialize hook, whose only job is to give the mod's own entities a prefab reference the game's load-time reference remapping can resolve.
@@ -396,6 +399,7 @@ Reflection proxies as a declared layer rather than scattered calls, each acquiri
 An input action owned by the frontend: a composite binding publishing the binding configuration and the action's phase, enabling the action while the frontend holds a subscription.
 Tests on both sides: xUnit over plain classes kept free of engine types, and UI component tests that load the game's own UI bundle, inject the repository's React into it, and answer binding subscriptions from a mock engine.
 The four city-wide facts a mod reads to describe a save, each with the guard its own storage demands: the milestone level as a singleton query that is empty outside a loaded game, the population as a component the city entity may not carry, the city name as a nullable system property, and the map name as a localization key that falls back to the raw save name when the map mod is gone.
+Four divergences from the official UI build, each with its reason recorded in the config's own header: the stylesheet-presence export written by hand in the entry module instead of injected by the scaffold's plugin, CSS-module class names prefixed so they are addressable from outside, the game's own image URLs excluded from the stylesheet loader's resolver, and the game's type declarations taken from a versioned dependency instead of a vendored folder.
 
 ## Error checks, overrides and save-safe state
 

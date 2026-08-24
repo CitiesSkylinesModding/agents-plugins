@@ -45,7 +45,7 @@ npx create-csii-ui-mod
 ```
 
 Run it inside the C# project's folder; it prompts for a project name and an author, takes `--name=` and `--author=` to skip the prompts, and creates a subfolder with a webpack build, a `mod.json` and the game's TypeScript type declarations.
-Its `update` subcommand refreshes those declarations after a game update, and `clean` deletes the local install so the game stops seeing the mod.
+Its `update` subcommand refreshes those declarations after a game update — and overwrites `webpack.config.js` and `tsconfig.json`, taking any local edit with them — and `clean` deletes the shared deploy folder so the game stops seeing the mod: the C# half's `.dll` and `.pdb` go with the bundle.
 
 The `id` in `mod.json` must equal the C# project's assembly name.
 Both halves deploy by that name into one folder — the C# build to `%CSII_LOCALMODSPATH%\<assembly name>` and the UI build to `%CSII_USERDATAPATH%\Mods\<mod.json id>`, which is the same directory — so a mismatch installs two half-mods instead of one whole one.
@@ -56,6 +56,9 @@ To make one `dotnet build` do both, run the UI build from an `Exec` target hooke
 Everything past the project layout — the binding between C# and the frontend, and the frontend itself — is a separate discipline; the sibling `coherent-gameface` plugin drives the UI engine underneath it, for anyone who has it installed.
 
 ## Project settings that are not obvious
+
+**A game assembly is referenced with a bare `<Reference Include>`, no hint path.**
+The toolchain's `Mod.props` declares only one reference — mscorlib — and puts `$(ManagedPath)` on the assembly search path, so `<Reference Include="Colossal.UI.Binding">` resolves on its own, and the template's own references take this form; a project generated with the template's settings option already declares that one, so check the csproj before adding a duplicate, and a `HintPath` adds only a per-machine path the resolver does not need.
 
 **Every game and Unity reference carries `<Private>false</Private>`.**
 The template sets it on each reference it declares; keep it on the ones you add.

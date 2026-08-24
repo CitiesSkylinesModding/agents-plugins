@@ -11,7 +11,7 @@ The C# side up to the call that crosses is this reference's; the far end is show
 The frontend as source — the module registry, React, injection — is `frontend-and-injection`'s, and building the UI project is `ui-build-and-devloop`'s.
 
 The binding kinds all live in one small assembly, `Colossal.UI.Binding`, under `src/Colossal.UI.Binding/Colossal.UI.Binding/` in the decompile; the systems that register them and the gates around them (`UISystemBase`, `GameMode`, `UIUpdateState`) are in `Game`.
-A mod project reaches it only through an explicit `<Reference Include="Colossal.UI.Binding">` in its own csproj — the toolchain's props put `$(ManagedPath)` on the assembly search path, so no hint path is needed, but they declare no game assembly (`ui-build-and-devloop` owns the csproj).
+A mod project reaches it only through an explicit `<Reference Include="Colossal.UI.Binding">` in its own csproj — the toolchain's props put `$(ManagedPath)` on the assembly search path, so no hint path is needed, but they declare no game assembly (`cs2-mod-project` owns the csproj and its reference rules).
 
 ## Three kinds, and a container
 
@@ -404,7 +404,7 @@ Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/IBindingGroup.cs`, `Composi
 
 `frontend-and-injection` owns the other end of every wire here: the data-binding module whose `bindValue`, `bindMap`, `bindEvent`, `bindTrigger` and `call` compose the strings above, the typed renderer that turns a `__Type` into a component and draws the unknown-element box when it cannot, and the injection that gets a mod's React onto the page at all.
 
-`ui-build-and-devloop` owns the csproj half of the one build fact here — the manual reference to `Colossal.UI.Binding.dll` — and the UI project that consumes the scaffold's `bindings.d.ts`.
+`cs2-mod-project` owns the csproj half of the one build fact here — the manual reference to `Colossal.UI.Binding.dll` — and `ui-build-and-devloop` the UI project that consumes the scaffold's `bindings.d.ts`.
 
 `localization` owns what goes into a `LocalizedString`; this reference owns the wire and the `l10n` group as its live probe.
 

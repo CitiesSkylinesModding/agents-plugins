@@ -96,7 +96,7 @@ Publishing runs its own path checks and then the publisher, over the folder this
 
 ## Hooking into the build
 
-`Mod.targets` documents three supported moves in its own header, and all three go in the csproj **after** the two imports:
+`Mod.targets` documents three supported moves in its own header, and all three go in the csproj **after** the two imports — declared above them, a redefined target is overwritten by the import, and a target sharing `DeployWIP`'s own `AfterTargets="AfterBuild"` anchor runs before the wipe, its output deleted with the build still green:
 
 - Redefine a target with the same name to replace it outright.
 - Add a target with `BeforeTargets` or `AfterTargets` to insert work — `AfterTargets="DeployWIP"` is the documented place to copy extra files into the deploy folder, and where a UI build or any other extra artifact belongs.
