@@ -313,7 +313,7 @@ TLE's variant: everything is a JSON string over `GetterValueBinding<string>` wit
 
 ### 6.3 TS side — injection into the game's UI
 
-Every mod exports `const register: ModRegistrar = (moduleRegistry) => {...}` from `src/index.tsx`. Two operations:
+Every mod exports `const register: ModRegistrar = (moduleRegistry) => {...}` from `src/index.tsx`. Two operations: *[ed. 2026-08-23: a census of corpus use at 12 repositories, not the API — `types/modding.d.ts` declares eight operations plus a registry map; `frontend-and-injection.md` carries the full surface.]*
 
 - `moduleRegistry.append(anchor, Component)` — anchors observed: `'Game'`, `'Editor'`, `'GameTopLeft'`, `'Menu'`.
 - `moduleRegistry.extend(modulePath, exportName, hoc)` — the HOC receives the original export and returns a replacement. Paths observed across the corpus:
