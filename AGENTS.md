@@ -103,6 +103,7 @@ For the same reason a repo-wide sweep — renaming a term, retiring a rule — h
 Such a sweep edits what it finds there: a live spec and its tickets are the instructions the next authoring pass runs on, so one still teaching a rule a decision has retired is a defect like any other, and a review that parks it as out of scope leaves the sweep half done.
 A sweep correcting shipped `cs2-modding` prose covers `docs/research/` too: those files are the next authoring pass's inputs, and a retired teaching surviving there walks straight back into the reference.
 **Sweep by subject rather than by the sentence being retired** — the same wrong claim is stated in other words elsewhere, and a grep for the old phrasing returns none of those files.
+Rescoping a rule takes the same sweep: enumerate every copy first and land them all in one batch, since each copy left behind becomes the file's counterexample.
 A file carrying a dated correction can still carry the pre-correction claim further down, since appending the note is not editing the original.
 
 Agent-facing prose is a deliverable here, not documentation of one: a plugin's `skills/`, every `AGENTS.md`, the rules files, and an MCP tool's or parameter's `[Description]` (agent-facing despite living in `.cs`).

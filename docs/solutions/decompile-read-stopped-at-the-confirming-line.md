@@ -1,6 +1,6 @@
 ---
 date: 2026-08-04
-updated: 2026-08-09
+updated: 2026-08-25
 area: docs/research (the cs2-modding discovery pipeline, against any decompile)
 symptoms:
   - 'a correction lands, and the corrected sentence is wrong again for the same reason'
@@ -59,6 +59,20 @@ Three stops, each on a line that confirmed the belief.
 Read past the confirmation: the rest of the method, the caller that reaches it, and the lines
 immediately after the one you cited. A range that ends exactly where the claim is satisfied is the
 shape to distrust in your own citations.
+
+Three more stops from a later review (2026-08-25), each a dimension the rule above missed:
+
+- **The modifier on the cited line.** A trap cited `EntityManager.cs:2694-2705` for a lookup route
+  whose every overload is `internal` — unreachable from any mod, stated on the very lines cited.
+- **The override of the virtual.** "`DestroyInstance` completes nothing" read `ComponentSystemBase`
+  and never followed `OnBeforeDestroyInternal` into `SystemBase`'s override, whose body is
+  `m_JobHandle.Complete()`.
+- **The siblings of the member.** "Acquisition is the only wait on the lookup surface" generalized
+  from the indexer without sweeping the `SystemAPI` accessors declared in a file the claim already
+  cited, each of which completes fences per call.
+
+So the read also covers the modifiers on the cited line, every override of a virtual you quote, and
+the siblings of the member an "only" generalizes over.
 
 ## The counting variant
 
