@@ -303,7 +303,8 @@ Four UI bindings read all of this: two that call `GetAvailableSnapMask`, one tha
 Unlike tool selection and mode selection, **these four go through the base-class virtuals and therefore work for a mod tool unchanged.**
 
 **Snapping by hand is a job you schedule yourself.**
-The vanilla object tool's snapping lives in a private method called from seven places in its update, so a mod that wants different snapping _for that vanilla tool_ has to prefix it: schedule your own job against the zone, net and whatever other quadtrees you need, register the search-tree readers, complete, assign the result and return false.
+The vanilla object tool's snapping lives in a private method called from seven places across its cancel, apply and update paths, so a mod that wants different snapping _for that vanilla tool_ has to prefix it: schedule your own job against the zone, net and whatever other quadtrees you need — combining the handle the method was given into the schedule — register the search-tree readers, assign the scheduled handle as the result and return false: the vanilla method does exactly that and never completes, its callers chaining the handle it returns, and `patching` states the same rule for every prefix that schedules.
+Source: `src/Game/Game.Tools/ObjectToolSystem.cs`.
 Your own tool has no such problem: call `GetActualSnap()`, branch on the flags it returns and schedule whatever snap job you like, which is exactly what the vanilla bulldoze tool does.
 Where a mod carries several tools that all snap, the generalisation that pays is a base class parameterised on the tool type and on a flags enum of the mod's own snap kinds, with abstract raycast-initialisation and snap methods and a helper that feeds the tool's own `GetAvailableSnapMask` into `GetActualSnap`.
 

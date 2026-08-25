@@ -292,7 +292,7 @@ Around that walk it does placeholder resolution, attachment resolution, the lowe
 **So "vanilla-quality preview" is not about rendering — no tool renders anything.**
 It means a definition tree complete enough that the generation system produces the same `Temp` entities the vanilla tool would, which is what makes a placed building bring its own driveway, lawn and lamp posts along with it.
 
-A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled — keeps and drops along a clean line.
+A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled, after completing the handles it takes per `performance-and-memory`'s schedule-form rule — keeps and drops along a clean line.
 
 **What has to be kept** is everything driven by prefab structure: the recursive walk over sub-objects, sub-nets and sub-areas, the `OwnerDefinition` threading, placeholder variation resolution, the attached-parent resolution, the lowered-parent test, the parent-prefab check and the clear-area plumbing.
 **What can be dropped** is everything driven by tool state: brush scattering and with it the object search tree, snapping and distance, the frame delta, removal and stamping, decoration mode, the lane editor, the transform prefab — and dropping that last one means the fork never sets `CreationDefinition.m_SubPrefab` — and the attachment and service-upgrade data.

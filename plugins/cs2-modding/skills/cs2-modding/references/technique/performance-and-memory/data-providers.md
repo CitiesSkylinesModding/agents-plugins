@@ -6,7 +6,7 @@ Verified against game version 1.6.0f1.
 The technique holds without one, but every game symbol named below is checkable only there.
 `cs2-modding-setup` provisions it.
 
-The systems a mod's job is most likely to take data from, all of them following the reader/writer handle protocol in `performance-and-memory`.
+The systems a mod's job is most likely to take data from, most of them following the reader/writer handle protocol in `performance-and-memory` — the tool systems' work lists are the second shape, a single getter with no register-back, whose discipline that reference states.
 Take the data with the right `readOnly` flag, combine the returned handle into your schedule, and register the **scheduled** handle back with every provider you took from.
 
 The protocol is used throughout the game assembly; the ones below are what a mod actually meets.

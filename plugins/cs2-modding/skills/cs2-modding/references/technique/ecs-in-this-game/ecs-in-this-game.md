@@ -240,6 +240,7 @@ A stale handle, an out-of-bounds chunk index, or two jobs writing the same compo
 Skipping the refresh is not something you can do by accident when you use those calls.
 
 **Two hand-rolled idioms exist, and you need one whenever the generator is not writing that code for you** — which is exactly the case in a fork built from decompiled source.
+Either way acquire in `OnCreate`: the first `GetComponentLookup` or `GetComponentTypeHandle` call for a type completes the system's tracked jobs on the spot — `performance-and-memory` owns that sync — and the generated struct's create-time assignment is what dodges it.
 
 - **Carry the generated struct into the fork and refresh it yourself.**
   The pasted struct is now ordinary source; the generator will not regenerate it, and nothing will refresh its fields.

@@ -24,7 +24,7 @@ Loading a city, returning to the main menu, loading another city and quitting ag
 
 Three consequences a mod designs around:
 
-- **`OnCreate` runs once per process and `OnDestroy` runs once per process.**
+- **`OnCreate` runs once per process and `OnDestroy` runs once per process**, nothing in the supported lifecycle destroying a system mid-session.
   An `Allocator.Persistent` container allocated in `OnCreate` and disposed in `OnDestroy` is correct and costs one allocation for the whole session.
   A container allocated per loaded city and disposed in `OnDestroy` leaks once per city the player opens, and the player sees only memory climbing across a long session.
 - **Per-city state is cleared, not recreated.**
@@ -99,6 +99,35 @@ And `Dispose(JobHandle)` on a `NativeArray` from a custom allocator throws `Inva
 
 (VOLATILE: the allocator enum's members and the custom-allocator index threshold — the `Allocator` enum and `AllocatorManager` in the collections package.)
 
+## One dependency graph, and what `Complete()` drains
+
+Every scheduled job hangs off one world-wide dependency graph, and the scheduler tracks it per component type, per system.
+When your update runs, `base.Dependency` is derived fresh from that graph: for every type your system reads, the handle of the last chain that wrote it; for every type it writes, that handle plus every reader's.
+Each of those handles is a whole system's combined output — a system publishes one handle covering everything it scheduled — so your job waits on jobs touching components it never uses, and every system after you inherits your handle the same way.
+None of that inheritance stalls the main thread by itself: a dependency defers a job's start behind its chain on the workers, and the main thread waits only when something completes.
+
+**`Complete()` finishes the job and every job upstream of its handle — the chain jumps the worker queue, and the completing thread attempts the job itself.**
+So the cost of completing a handle is not bounded by your job's duration — it is the job plus however much of the chain upstream of you has not finished, which for a job scheduled against simulation components is a slice of the frame's simulation.
+It is still one chain: the sync that completes **every** job in the world is the structural change, whose section below owns that cost.
+Source: `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs`, `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs` (`Complete` is an `extern`; the semantics are the engine's own, per https://docs.unity3d.com/2022.3/Documentation/Manual/JobSystemJobDependencies.html and https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Unity.Jobs.JobHandle.Complete.html).
+
+Complete when the main thread must have the value now; record the outcome from inside the job and let a barrier play it back when the output is a write, per the structural-change section below; and at teardown a completion guards nothing the world has not already completed, per the disposal section and its two gaps.
+A completion to hunt for: a second job scheduled against `base.Dependency` instead of against the job that filled its input, with a `Complete()` between them doing the ordering a chained handle would have done for free.
+
+### Taking a lookup mid-frame is a hidden, one-time sync
+
+`GetComponentLookup` and `GetBufferLookup` register the type with your system, and the first registration of a type completes your system's tracked dependencies on the spot — for the type being registered, read-write waits for its in-flight writers and readers, read-only for the writers alone, and every type you had already registered enters the same wait.
+`GetComponentTypeHandle` and `GetBufferTypeHandle` take the same registering path; the shared-component and entity handles register nothing and never wait.
+A type first taken read-only and later taken read-write fires it a second time.
+Every later acquisition of the same type is free, which makes the cost easy to misattribute: a `GetComponentLookup` call inside `OnUpdate` stalls on the first frame and never again.
+The shape that never pays it is vanilla's own: acquire in `OnCreate`, keep the lookup in a field, and call its `Update(this)` at the top of `OnUpdate` — on this build that refresh is a version bump and nothing else.
+`SystemAPI.GetComponentLookup` is already that shape: the generator hoists the acquisition into its compiler-run create hook and leaves only the refresh at the call site, so the idiomatic form never pays the stall — the direct `GetComponentLookup` call on the system is what does.
+Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities.Internal/InternalCompilerInterface.cs`.
+
+On this build *using* a lookup you hold never syncs and never warns — the indexer is a raw read or write with every guard compiled out, so a main-thread write through it while jobs are in flight is a silent race — and acquisition is the only point where the lookup itself ever waits.
+The generated `SystemAPI.GetComponent`-style single-entity accessors are a different call: each one completes the type's fences before touching the data, a per-call stall the acquire-once shape never pays.
+(VOLATILE: the first-acquisition completion and the `Update` refresh — `SystemState` and `ComponentLookup` in the entities package.)
+
 ## Disposing a container a job may still be reading
 
 Two mechanisms, and the type forces the choice rather than taste deciding it.
@@ -109,12 +138,15 @@ The free happens on a worker thread after the reading job finishes.
 Every stock container has this overload.
 
 **Most of the game's own containers do not have it**, and for those the discipline is complete-then-dispose; [`colossal-collections.md`](colossal-collections.md) names the two that do.
-`Complete()` is a main-thread stall until the job finishes, which is acceptable at teardown because teardown happens once per process — and it is the only option those types leave you.
-Complete **every** outstanding handle before disposing: the vanilla object search system makes four `Complete()` calls to guard two `Dispose()` calls, one per reader and writer handle per tree.
+`Complete()` is a main-thread stall until the job and every job upstream of its handle finish — the dependency-graph section above owns why that chain can be a slice of the frame.
+Complete **every** outstanding handle before disposing or clearing while the world is live: the vanilla search systems take each tree `readOnly: false` and complete the one combined handle it returns before the load-boundary `Clear()`.
 
-Vanilla is not consistent here, and the inconsistency is worth knowing before you copy one.
-Only the object search system completes; the other five dispose their trees bare in `OnDestroy`.
-They get away with it because the process is exiting, which is not a property a mod should lean on — complete first, and treat the five bare teardowns as something to fix in a fork rather than to reproduce.
+`OnDestroy` is the exception, and vanilla's own teardowns split exactly there — some search systems complete first, the rest dispose bare, and both forms are safe.
+By the time `OnDestroy` runs on the world's own teardown — the only path this game takes to it — every published job is complete: `World.Dispose` completes all tracked jobs before it destroys the first system.
+So a bare `Dispose()` in `OnDestroy` touches nothing a job still holds, provided every job that touched the container published its handle through `base.Dependency` — an unpublished handle is one gap a teardown completion would still cover, and a job scheduled without being published is already a bug against the discipline below.
+The other gap is a system torn down individually by a direct world call — nothing in the supported lifecycle does that, per `mod-lifecycle-and-ordering` — which completes only that system's own published handle on the way down, so a foreign job still holding the container leaves that `OnDestroy` under the live-world rule above.
+Source: `src/Unity.Entities/Unity.Entities/World.cs`.
+(VOLATILE: the complete-before-destroy ordering — `World.Dispose` in the entities package.)
 
 ### The canonical shape, and it is ten lines
 
@@ -147,11 +179,21 @@ Five things happen and each is load-bearing: the gather is asynchronous and hand
    The protocol is below.
 4. **Register with the barrier if you wrote through its command buffer.**
    `AddJobHandleForProducer`, and the contract is `ecs-in-this-game`'s.
-5. **Complete only where the type forces it.**
-   Every `Complete()` is a main-thread stall, and the legitimate places are teardown and a genuine main-thread readback.
+5. **Complete only where something outside the chained graph forces it: a genuine main-thread readback, the conflicting work before a `Run`, an unregistered provider's next write, or a container without `Dispose(JobHandle)` before a live-world dispose or clear.**
+   Every `Complete()` is a main-thread stall until the job and its whole upstream chain finish; at teardown the world has already completed everything, per the disposal section.
 6. **Do not carry a handle across simulation iterations.**
    A simulation phase runs up to eight times in one frame, and a system the interval gate lets run has `base.Dependency` reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a handle you published last iteration is no longer chained to anything.
    Anything that must outlive an iteration is held in your own field, not read back out of `base.Dependency`.
+
+### Choosing the schedule form
+
+`ScheduleParallel` splits the work across workers chunk by chunk, and is the default wherever every write goes through a parallel-safe sink — a `ParallelWriter`, a parallel command buffer, or the entity's own components.
+`Schedule` runs the whole job as one sequential unit on one worker: plain container writes with no `ParallelWriter`, state carried across chunks, a guaranteed iteration order — still off the main thread and overlapped with everything else, as long as nothing completes it early.
+`Run` executes the job body on the main thread immediately, and a job struct's `Run` completes nothing first: complete your conflicting work before it — `CompleteDependency()` for the ECS graph, plus a `Complete()` on any provider handle you took, which lives outside that graph — because the safety system that would have caught a job still holding your data is compiled out, and the overlap is silent.
+Source: `src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs`.
+
+**`Schedule()` followed immediately by `Complete()` adds only a scheduling round trip to `Run`: complete the same conflicting work and write `Run` instead.**
+The scheduler attempts a completed job on the completing thread itself, so the pairing buys a scheduling round trip and nothing else — it does not even reliably buy a worker.
 
 ## The reader/writer protocol
 
@@ -197,7 +239,13 @@ Combining is the form that survives a second writer, so combine in a mod-owned p
 3. **Register the handle you got back from `Schedule`** with _every_ provider you took from.
    Passing back the handle the provider gave you is a no-op — the owner already waited for it — and the owner's next write then does not wait for your job, so the container is mutated while your job walks it.
    Registering with only some of the providers you took from has the same effect on the ones you skipped.
-4. **Complete before disposing anything that has no asynchronous dispose**, per the containers named above.
+4. **Complete before disposing anything that has no asynchronous dispose while the world is live**, per the containers named above — at teardown nothing needs it, per the disposal section.
+
+**A second provider shape exists, and the register-back step has nothing to bind to.**
+Several vanilla tool systems publish a work list through a single getter that hands out the owner's own `base.Dependency` and the container, with no reader or writer registration method beside it.
+A provider that never learns your handle cannot wait for you, so nothing stops its next write from landing while your job still reads — the returned handle orders you after the owner, never the owner after you.
+Consume it the way the game's own rendering consumers do — schedule against the returned handle in the same frame and publish through `base.Dependency` — and treat the loan as over once the owner updates again, since nothing orders the owner's next write after you: a job that can still be running by then needs its own completion or its own copy of the data.
+Source: `src/Game/Game.Tools/NetToolSystem.cs`, `src/Game/Game.Rendering/GuideLinesSystem.cs`.
 
 `custom-tools` and `placement-definitions` both consume vanilla search trees during a raycast or a snap, and `roads-and-traffic` is the heaviest area to query.
 
@@ -205,7 +253,7 @@ Combining is the form that survives a second writer, so combine in a mod-owned p
 
 `NativeQuadTree<TItem, TBounds>` is the game's own, and **the item type is a parameter rather than always `Entity`**.
 A job field or an iterator written against a provider has to match that provider's pair, not a single assumed one; [`data-providers.md`](data-providers.md) tables them per system.
-Its constructor takes a minimum item size and an allocator; every vanilla tree passes `1f`.
+Its constructor takes a minimum item size — a tuning choice scaled to the items it will hold rather than a constant to copy — and an allocator; the vanilla trees pass `1f`.
 Its surface is `Add`/`TryAdd`, `Update`/`TryUpdate`, `AddOrUpdate`, `Remove`/`TryRemove`, `Get`/`TryGet`, `Clear`, four `Iterate` overloads and `Select`, driven by the iterator and selector interfaces beside it.
 
 **Four of the non-`Try` forms throw a bare `System.Exception`, and those throws are not conditional** — unlike almost everything else in this collections stack, they will fire in a player's game.
@@ -219,8 +267,7 @@ What a mod-owned index needs, beyond the container:
 - **A `Clear()` from the pre-deserialize hook**, not a dispose-and-reallocate, so the tree survives city changes.
   Take the tree with `readOnly: false`, complete the handle it returns, and only then clear — the vanilla systems all complete before clearing, and clearing under a running reader is an unsynchronised structural mutation with no diagnostic.
 - **The three-method protocol above**, with the writer combining rather than assigning.
-- **Completion of every reader and writer handle in `OnDestroy` before `Dispose()`**, because `NativeQuadTree` has no `Dispose(JobHandle)`.
-  Skipping that completion is a use-after-free with no diagnostic rather than an error.
+- **A `Dispose()` in `OnDestroy`, which may be bare** once every job that touched the tree published through `base.Dependency` — the disposal section owns the gaps.
 
 (VOLATILE: the vanilla accessor names — `GetStaticSearchTree`, `AddStaticSearchTreeReader` and their siblings across the search systems in the objects, net, zones, areas, routes and effects namespaces.)
 
@@ -270,7 +317,7 @@ Register it in the `Cleanup` phase: that phase runs after the whole main loop, s
   Issuing both the removal and the destroy is correct rather than redundant — the removal is what frees an entity already sitting in residue, and the destroy is what kills one still live; on an entity the removal already freed, the destroy is a silent no-op.
   Enqueuing the value is what makes this work: the handle travels out of the job as plain unmanaged data, so the main thread can still reach the managed object after the component is gone.
 - **`OnUpdate` completes the job and drains the queue on the main thread**, calling `Dispose()` per element.
-  That `Complete()` is a stall and is unavoidable; the job's work is the lookup and the command-buffer recording, which is what keeps the disposal itself off the worker thread.
+  That `Complete()` is the genuine main-thread readback the handle discipline allows, and the find belongs in a parallel schedule — a sequential `Schedule` completed immediately is the `Run` shape the schedule-form rule retires, and `Run` itself would put the whole find on the main thread.
   If you schedule it parallel, the queue needs its `ParallelWriter` and so does the command buffer — on this build neither omission throws.
 
 **Neither guard catches the handle free.**
@@ -364,6 +411,8 @@ private partial struct MyJob : IJobEntity { }
 The hazard is plain C#: **a preprocessor symbol defined nowhere produces no warning, no error and a build indistinguishable from a working one.**
 The `#if` compiles, the attribute vanishes, and the mod ships unbursted with nothing to tell you.
 If you write one, verify the symbol reaches the compiler in the configuration you meant.
+The attribute belongs on the job struct: on a system class whose only Burst code is its nested jobs it is legal and inert, so an audit that counts attributes to check the gate has to count the ones on jobs.
+Source: `src/Unity.Burst/Unity.Burst/BurstCompileAttribute.cs`.
 
 (VOLATILE: the `[BurstCompile]` attribute's spelling, the launch argument and the environment variable name — the Burst package's attribute declarations and `BurstCompilerOptions`.)
 
@@ -393,6 +442,7 @@ The rest follow, in the order to reach for them.
   Setting `keepStreamOpen` on the logger removes the per-message open and close, which is the bulk of the cost, and is one line in the mod's load hook.
 - **To pay nothing at all in a release build, gate the call at compile time rather than at runtime.**
   A logging method marked `[Conditional("SYMBOL")]` has its **call sites removed entirely** when the symbol is undefined — arguments included — so an interpolated message is never built and the runtime level check never runs.
+  The removal reaches nothing above the call: a costly expression hoisted into a named local survives the stripping and runs for a value nothing reads.
   One method per category, each with its own symbol, gives per-category logging that costs a release build nothing.
   An undefined symbol is as silent here as it is on the Burst gate above, and it resolves differently: `[Conditional]` is applied where the call is compiled, not where the method is declared.
   So the symbol goes in the project holding the call sites: a logging helper living in a shared assembly is stripped or kept by the _calling_ mod's configuration, never by the shared assembly's.
@@ -425,9 +475,16 @@ A per-frame `ToEntityArray` costs frame time and shows up under the mod's own sy
 
 This is the heaviest sync point available and it is one line of mod code.
 Every `EntityManager` method marked `[StructuralChangeMethod]` — adding a component, removing one, creating or destroying an entity — routes through a call that completes **all** jobs, not just the ones touching your components.
+Chained structural calls pay the drain once — the first completes everything in flight and the rest find nothing — but each add is still its own archetype move, so build with `CreateEntity` plus an archetype rather than as a create followed by adds.
 `EntityManager.SetComponentData` and the read-write data path are cheaper but not free: each completes the read and write dependency for that one type.
 
-**A barrier's command buffer is the alternative, and it costs the mod nothing to own.**
+**A barrier's command buffer is the alternative to completing, not only to `EntityManager`.**
+Where the reason to complete is to act on a job's output — add a component from a result, destroy what a scan found, write a computed value back — the job records the action into the buffer instead, component writes included, and the barrier completes its own producers at its own phase before playing back.
+The stall the mod would have paid mid-frame merges into the wait the game's own producers already share at that barrier.
+The work itself does not shrink: playback performs every recorded change, so a deferred per-entity churn is a per-entity churn the barrier pays.
+What a buffer cannot replace is a value the mod itself must read on the main thread this frame: deferral moves a write, not a read.
+Source: `src/Unity.Entities/Unity.Entities/EntityCommandBufferSystem.cs`.
+
 The barrier allocates each buffer from its own rewindable allocator, plays every pending buffer back in its own update, disposes it and rewinds — so a mod never disposes a buffer it got from `CreateCommandBuffer()` and never should.
 A hand-rolled `new EntityCommandBuffer(Allocator.TempJob)` is the exception: that one the caller owns and disposes.
 The barrier contract itself is `ecs-in-this-game`'s.

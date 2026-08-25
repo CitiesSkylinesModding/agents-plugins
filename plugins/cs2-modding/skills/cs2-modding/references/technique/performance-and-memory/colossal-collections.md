@@ -26,7 +26,7 @@ The ones a fork meets first:
 | `AnimationCurve1`–`4` | A lossy fixed-step resample held inline, so their numbers do not match `NativeCurve`'s. |
 
 **Exactly two of this library's types carry an asynchronous `Dispose(JobHandle)`** — the accumulator and the parallel queue.
-Every other one that owns memory has to be completed before it is disposed: complete every outstanding reader and writer handle, then call `Dispose()`.
+Every other one that owns memory has to be completed before a live-world dispose or clear: complete every handle still covering the container, then dispose or clear — at world teardown every published job is already complete, per [`performance-and-memory.md`](performance-and-memory.md)'s disposal section.
 The stack-allocated and inline types own none and declare no `Dispose` at all, so calling one is a compile error rather than a leak.
 That is the inverse of stock Unity, where the container types carry the overload, subject to the custom-allocator carve-out [`performance-and-memory.md`](performance-and-memory.md) states with the allocators — so the library you are in decides which discipline applies.
 
