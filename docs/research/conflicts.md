@@ -34,6 +34,22 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 
 ## Open
 
+### Editor-toolbar registration is a demonstrated technique no shipped reference owns
+
+**Sources.** Four corpus mods register a tool into the map editor's toolbar — the catalog's Scene Explorer, Water Features, Road Builder and Write Everywhere entries each name their variant — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/custom-tools.md`'s re-sweep section (`Game.UI.Editor.EditorToolUISystem.tools`, a property-backed `IEditorTool[]` with no registration API, the vanilla four seeded in `OnCreate`, the world-once-per-process timing, the `Editor.TOOL[<id>]` locale key).
+
+**Established.** The full derivation with citations sits in that research section. The shipped `custom-tools` reference owns `ToolSystem.tools` — a different surface sharing no code — and the UI skill owns the frontend; a grep of `skills/cs2-modding/references/` finds no shipped mention of the editor tool array, so the catalog's four **Demonstrates** lines are its only shipped surface.
+
+**Needs a ruling on.** Whether a shipped reference should own editor-tool registration — a `custom-tools` sibling file, a topic of its own, or nothing, leaving the catalog's four entries as the shipped surface. What turns on it: an agent asked for an editor toolbar entry today finds no reference and must read mod source. The ruling is written into `docs/research/custom-tools.md`.
+
+### Runtime-typed component access is a demonstrated technique no shipped reference owns
+
+**Sources.** The catalog's inspection entry (Scene Explorer) reads components of types chosen at runtime — cached `MakeGenericMethod` over `EntityManager`'s generic getters, a pick list enumerated from `TypeManager.AllTypes` — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/ecs-in-this-game.md`'s re-sweep section.
+
+**Established.** Mod component types enter the registry from the game's own assembly-load callback before `OnLoad`, so an ordinary mod registers nothing and needs none of this; the non-generic enableable overloads carry no constraint and no runtime check in this build. Citations in that research section.
+
+**Needs a ruling on.** Whether `ecs-in-this-game` (or a sibling file) should own runtime-typed access, or it stays research-only as a tool-mod technique outside the ordinary-mod boundary the ticket's trap guard drew. What turns on it: the unguarded non-generic enableable calls are a trap with no shipped home. The ruling is written into `docs/research/ecs-in-this-game.md`.
+
 ## Ruled
 
 ### The pipeline cites the official UI scaffold by a path that only exists on a machine where `npm link` ran, and that names the wrong owner

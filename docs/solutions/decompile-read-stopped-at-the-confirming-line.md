@@ -123,3 +123,6 @@ _prompt_ one — its entry 11 now says so.
 
 A correction is new prose and earns another `/review-gate` on the same terms as anything else. Three
 rounds here each found real defects in the passage the round before had just rewritten.
+
+The cross-seam form of the same stop — a declaration read as if it were its own consumer — is
+[a binding without a consumer](a-binding-without-a-consumer.md).
