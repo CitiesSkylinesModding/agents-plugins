@@ -114,7 +114,7 @@ What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
 
 ## The query APIs, and what decides between them
 
-Four APIs exist in the package, and the game reaches for them unevenly.
+Several query forms exist in the package, and the game reaches for them unevenly.
 
 | Form | Expresses | Needs the generators |
 | --- | --- | --- |
@@ -142,6 +142,8 @@ The post-processing step the toolchain runs _after_ the build is the Burst and I
 Then the small rules:
 
 - **Build queries in `OnCreate`.** Universal in the game, and the generated form does the same thing from `OnCreateForCompiler`.
+  The mechanism is ownership: `GetEntityQuery` compares the requested shape against every query the system already holds, appends a new one to a list that lives as long as the system, and joins it to the system's job-dependency tracking — so repeated identical calls are cheap, and a query built per call from a **runtime-chosen** type set grows that list for the world's lifetime, with nothing logged.
+  For a type set decided at runtime — a user choice, another mod's components — build with `EntityQueryBuilder.Build(EntityManager)`, which returns a query the caller owns and disposes after the read; the system-taking overloads — `Build(SystemBase)`, `Build(ref SystemState)` — route back into the system's cache.
 - **Mark components read-only unless you write them.** The generated handle names encode the mode, so a decompiled system tells you its intent at a glance.
 - **The varargs form cannot express `Any`.** It has `ReadOnly`, `ReadWrite` and `Exclude`, which map to `All` and `None` and nothing else; reach for `EntityQueryDesc`, or construct `EntityQueryBuilder` by hand, which takes an allocator and needs no generator.
 - **A fork of a vanilla system inherits the vanilla form**, because the starting point is decompiled source.

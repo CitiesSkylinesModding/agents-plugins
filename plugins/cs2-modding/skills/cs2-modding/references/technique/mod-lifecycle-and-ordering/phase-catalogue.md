@@ -41,7 +41,7 @@ Where each phase sits in the frame, and what that position costs, is the phase t
 ## Driven from the late update
 
 - **`LateUpdate`** — the drivers themselves, and nothing else. Registering here means running between the drivers of the whole simulation.
-- **`PreSimulation`** — driven every frame and occupied by nobody, vanilla or mod. The one genuinely empty phase, and the only place to run exactly once per frame immediately before that frame's simulation steps.
+- **`PreSimulation`** — driven every frame, with no vanilla occupant. The only place to run exactly once per frame immediately before that frame's simulation steps.
 - **`GameSimulation`** — by far the largest phase; the whole city simulation, and where `citizens-and-households`, `economy-and-companies` and `city-services-and-coverage` live. Runs 0–8 times per frame with the update-interval mask applied.
 - **`EditorSimulation`** — time, climate, snow, wind, natural resources, fire, street lights: environment only, no city. A mod that must also work in the editor registers the same systems into both this and `GameSimulation`; that dual registration is the pattern `environment-and-pollution` needs.
 - **`LoadSimulation`** — navigation and AI systems, run eight iterations per frame while the loading counter is positive — on the order of a thousand iterations for a new game. Everything registered here pays that multiplier.

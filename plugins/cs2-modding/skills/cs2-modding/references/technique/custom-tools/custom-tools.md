@@ -61,7 +61,7 @@ A tool therefore overrides `protected virtual JobHandle OnUpdate(JobHandle input
 | `GetAllowApply()` | `protected virtual bool` | Whether the current preview may be committed |
 | `GetAvailableSnapMask(out Snap, out Snap)` | `public virtual void` | Which snap flags exist, and which of them are forced on |
 | `GetUIModes(List<ToolMode>)` and `uiModeIndex` | `public virtual` | Publish the tool's modes and say which one is current |
-| `SetUnderground(bool)`, `ElevationUp()`, `ElevationDown()`, `ElevationScroll()` | `public virtual void` | Empty hooks the tool-options UI calls |
+| `SetUnderground(bool)`, `ElevationUp()`, `ElevationDown()`, `ElevationScroll()` | `public virtual void` | Empty hooks. The UI's underground toggle calls `SetUnderground`; in game the elevation arrows render for the net tool alone, and the map editor's screen registers an elevation input over the same hooks; nothing calls `ElevationScroll` |
 | `OnCreate`, `OnStartRunning`, `OnStopRunning` | overridden by the base itself | Call `base`: the tool-specific work lives in the base body |
 
 The game-lifecycle hooks a tool shares with every other system — loading-complete, focus changed, preload, loaded, world ready — behave exactly as `mod-lifecycle-and-ordering` describes, including which of them disable the system when they throw.
@@ -167,6 +167,7 @@ Eleven fields are settable, all plain properties on `ToolRaycastSystem`: `raycas
 
 **`CollisionMask`** — which vertical band counts.
 `OnGround = 1`, `Overground = 2`, `Underground = 4`, `ExclusiveGround = 8`.
+`Underground` alone casts against objects the player cannot see — the going-underground bullet under Input barriers names the members that open the view.
 
 **`Game.Net.Layer : uint`** — the network layer filter.
 `Road = 1`, `PowerlineLow = 2`, `PowerlineHigh = 4`, `WaterPipe = 8`, `SewagePipe = 0x10`, `StormwaterPipe = 0x20`, `TrainTrack = 0x40`, `Pathway = 0x80`, `Waterway = 0x100`, `Taxiway = 0x200`, `TramTrack = 0x400`, `SubwayTrack = 0x800`, `Fence = 0x1000`, `MarkerPathway = 0x2000`, `MarkerTaxiway = 0x4000`, `PublicTransportRoad = 0x8000`, `LaneEditor = 0x10000`, `ResourceLine = 0x20000`, `NetFence = 0x40000`, `None = 0`, `All = uint.MaxValue`.
@@ -394,7 +395,11 @@ Mimicking is for a mod's _additional_ actions — a second modifier, a mode togg
 - A static event on the base class fires for any tool action reaching the performed phase, which is a cheap hook for a mod that wants to observe tool input globally.
 - **Committing a placement should play the matching UI sound.** `ToolUXSoundSettingsData` is a singleton component of entity references — bulldoze, place building, place prop, net start, net node and more — read through a singleton query and played with `AudioManager.PlayUISound(entity)`. The vanilla bulldoze tool picks between two of them on whether anything substantial was demolished.
 - `UpdateInfoview(Entity prefab)` reads the prefab's placeable-infoview-item buffer, sets the tool's infoview from the first entry and fills its infomodes from the rest; `OnStopRunning` clears both, so the infoview follows the tool automatically.
-- The `require*` properties — `requireZones`, `requireUnderground`, `requirePipelines`, `requireNetArrows`, `requireStopIcons`, `requireAreas`, `requireRoutes`, `requireStops`, `requireNet` — tell the rendering side what to show while the tool is active, and the vanilla bulldoze tool sets four of them every frame. `allowUnderground` and the empty `SetUnderground(bool)` hook are the underground pair the UI binds.
+- The `require*` properties — `requireZones`, `requireUnderground`, `requirePipelines`, `requireNetArrows`, `requireStopIcons`, `requireAreas`, `requireRoutes`, `requireStops`, `requireNet` — tell the rendering side what to show while the tool is active, and the vanilla bulldoze tool sets four of them every frame.
+- **Going underground takes more than `CollisionMask.Underground`, which does nothing visible on its own.**
+  `allowUnderground` gates the underground control: the tool-options entry exists only while the active tool returns true, the top-toolbar toggle greys out without it, and both forward to the `SetUnderground(bool)` hook — so a tool that never overrides `allowUnderground` has a dead hook and, in game, no player-facing path into its underground mode (the map editor's screen registers an elevation input over the same hooks, so they can still fire there).
+  And what opens the underground _view_ is `requireUnderground`, not the collision mask — a tool that sets only the mask hits buried objects the player cannot see.
+  Source: `src/Game/Game.UI.InGame/ToolUISystem.cs`, `src/Game/Game.Rendering/UndergroundViewSystem.cs`, and the shipped UI bundle (`Cities2_Data/Content/Game/UI/index.js`) for what renders.
 
 ## What this reference hands to others
 

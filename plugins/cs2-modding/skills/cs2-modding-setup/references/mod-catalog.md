@@ -253,6 +253,7 @@ Propagating a prefab change to every placed instance by walking from the changed
 Manufacturing the network pieces a composition needs rather than authoring them — cloning one wide vanilla piece per width and rewriting its width, geometry, surfaces and lane list — driven by a four-phase state machine advancing one phase per update, because each phase's prefabs must be registered before the next reads them.
 Cloning vanilla prefabs selected by literal name out of a data-component query, stripping a name prefix, and re-attaching the service and UI components a clone needs to appear in the toolbar — with the literal-name coupling as the fragile half of the technique.
 Authoring a generated prefab's unlock requirements: every requirement prefab in the game indexed by name from one query spanning the feature, dev-tree-node and three built-requirement data components, then attached as a require-all list and a built-on-unlock list whose element type the component's own field forces to one requirement family — with the requirement names as hard-coded literals chosen by category and computed width, which is the fragile half.
+Adding an editor-toolbar entry from a preload hook gated on editor mode, resizing the editor UI system's tool array and assigning it back, guarded against a repeat by scanning the existing entries for its own id — with the entry's enable and disable hooks overridden without calling base, so activation runs through the mod's own UI system instead of the base's panel-and-tool switch.
 
 ### Extra Assets Importer
 
@@ -285,6 +286,7 @@ Reflection into the climate system's private state for facts it publishes no acc
 A mod-created simulation entity standing in for a global the game does not expose: a bare zero-radius water source the simulation ignores, holding the sea floor while every real sea source oscillates around it, destroyed from every exit path including before-serialize so it never reaches the save.
 Calling the game's own validity calculation in a retry loop, growing the input until it stops returning the failure value and reporting the adjustment to the player, because the vanilla call reports an unusable result as a plain number with no error.
 Update cadence expressed as updates per simulated day rather than as a frame count — a per-system constant divided into the day's tick count, the same idiom across four systems, so the number in the source reads as a rate instead of a period.
+Putting a tool on the map editor's toolbar by copying the editor UI system's tool array into a longer one and assigning it back — from a UI system's `OnCreate` rather than a per-load hook, which is what makes a duplicate guard unnecessary, since the world is built once per process and the write survives every load.
 
 ### Tree Controller
 
@@ -376,6 +378,7 @@ Reading a chain of game-owned link components for display, and the limit that co
 The corpus's only registration of an entirely new game panel type: two registry `extend` calls that mutate the panel-type enum and the type-to-component map the game's own panel renderer keys on, paired with a C# panel class whose emitted type name is the key.
 A transpiler that repairs the developer menu's tool enumeration for every mod in the session, not just its own, and stands down when the patched loop's opcodes show another mod already fixed it.
 (UNVERIFIED: the transpiler's own source — it lives in the submodule a plain clone leaves empty, and its shape is read from the repository's change record.)
+An editor-toolbar entry carrying nothing but an id and an icon served from its own UI, appended from an editor-mode preload hook behind a one-shot latch — with neither a panel nor a tool set, which the base class's activity test then reports active whenever no editor panel is open, since it compares the active panel against the entry's own null one.
 
 ### Hall of Fame
 
@@ -447,12 +450,13 @@ It writes no simulation values; what it does change is the vanilla highlight on 
 
 **Demonstrates:** Reading a component whose type is not known until runtime, by caching `MakeGenericMethod` results over the entity manager's own generic getters and classifying each `ComponentType` into unmanaged, managed, shared, buffer, tag and enableable before rendering it, which is what a mod needs when it must handle types it cannot name at compile time.
 Building an entity query at runtime from the type manager's registry, with all-any-none sets staged through pending add and remove collections so a UI callback never mutates a live set mid-layout.
+The runtime query taken off the entity manager through the allocator-backed builder rather than off a system — the caller-owned form, disposed after each read, which is what keeps a per-user-choice query from accumulating in a system's query cache for the world's lifetime.
 The vanilla selection glow on an arbitrary entity, by adding the game's own highlight component paired with the batch-update component that forces the re-render — the second half is what makes the first take effect.
 Driving both the overlay buffer and the gizmo batcher from Burst jobs, with the writer registration the gizmo side requires.
 Passing UI intent to renderer systems through ECS components rather than object references: each window owns an entity of a published archetype and writes its hover target into it, and the rendering system rebuilds its map from whichever of those entities changed.
 Distinguishing a structural change from a value change on every refresh — comparing the entity's component-type list against the cached one, rebuilding the whole model when it differs and re-reading values when it does not.
 A logging facade whose three category methods each carry a conditional-compilation attribute, so a build without the symbol drops the call and the message it would have built, behind a static constructor that suppresses the logger's UI errors as it creates it.
-Registering an editor tool by growing the editor's own tool array.
+Registering an editor tool by growing the editor UI system's tool array and assigning it back through the property, whose setter rebuilds the parallel disabled-state cache the update loop indexes in lockstep with the array — paired with a panel on the game's editor-panel base, a unique tool id, and a locale entry under the editor's tool-tooltip key namespace.
 Snapshotting entities into memory by transitively following entity-typed fields, holding the two prefab references back so the walk does not drag the whole prefab graph in with them, and rendering live and frozen data through one code path.
 Walking a game-owned index-and-buffer chain to render it as gizmos — a segment buffer stepped between two index components, wrapping at the end, recursing into each segment's own path buffer.
 No patching anywhere in the codebase.

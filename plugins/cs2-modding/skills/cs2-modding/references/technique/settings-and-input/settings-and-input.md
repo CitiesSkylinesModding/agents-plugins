@@ -403,6 +403,12 @@ The per-row warning triangle is broader for a mod than for the game: it tests `h
 A `ProxyAction` answers `IsPressed()`, `IsInProgress()`, `WasPressedThisFrame()`, `WasReleasedThisFrame()`, `WasPerformedThisFrame()`, `GetMagnitude()`, `ReadValue<T>()` and `ReadValueAsObject()`, and raises an `onInteraction` event carrying the action and its phase for a callback rather than a poll.
 Its value type resolves from the underlying control layout: `float` for a button and an axis, `Vector2` for a vector.
 
+**Showing the player which key an action is on is a first-party call, not a parser you write.**
+`ProxyBinding.ToHumanReadablePath()` yields each modifier's display form and then the key's, so `string.Join("+", binding.ToHumanReadablePath())` is the whole of a `Ctrl+E` label.
+`ProxyBinding` is a struct, so a binding held since `OnCreate` is a snapshot the player's first rebind silently outdates: rebuild the label from the cached action's `bindings` each time you show it, or subscribe `ProxyAction.onChanged`, which fires on every rebind — including the swaps the game's own conflict resolution makes, which the settings-applied event misses.
+(VOLATILE: the `ToHumanReadablePath` and `onChanged` members — `Game.Input.ProxyBinding` and `Game.Input.ProxyAction`.)
+Source: `src/Game/Game.Input/ProxyBinding.cs`, `src/Game/Game.Input/ProxyAction.cs`.
+
 **An action a mod registers is inert until the mod enables it.**
 `shouldBeEnabled` is the switch, and it lazily creates the action's default activator on first set.
 It throws `"Built-in actions can not be enabled directly"` for a built-in action, which is the wall a mod hits the moment it reaches for a vanilla action.
