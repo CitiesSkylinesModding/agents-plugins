@@ -35,6 +35,8 @@ Source: `src/Game/Game.Modding/ModManager.cs`.
 ```
 
 The anchor is whatever first-party artifact the claim is checkable against: a decompile path, an install artifact, the frontend bundle, the official toolchain's shipped files, or Harmony's own source — the one nameable library.
+Where the decompile's half is an `extern` — engine semantics native code owns — the anchor adds the engine's own documentation at a version-pinned URL beside the decompile path that shows the delegation, the pin matching the version the game ships — the engine's for engine manuals, the package's for package docs.
+A parenthetical on the `Source:` line may state what each artifact proves, and nothing else — model content a reader acts on belongs in the body.
 A claim about mod-to-mod behaviour anchors to the mediating game surface — the delegate field both mods write, the shared resource host, the manager that merges — which is game code even when the collision is between mods.
 **A trap provable only by running the game carries `UNVERIFIED:` in place of the `Source:` line**; that is that marker's job, and the two never appear together as a trap's anchor — a per-claim `UNVERIFIED:` on one unsettled sub-claim may sit in a paragraph whose other claims a `Source:` line anchors.
 A bolded rule whose truth is the pattern itself — a design discipline the game contains no code for — owes no source, because there is nothing to open.
