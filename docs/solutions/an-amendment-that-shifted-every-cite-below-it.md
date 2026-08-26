@@ -4,7 +4,9 @@ area: docs/research (the cs2-modding pipeline's cited stage, against docs/SOURCE
 symptoms:
   - 'a research cite names a SOURCES.md line that is blank or carries an unrelated sentence'
   - 'a quote attributed to a line sits one or two lines below it'
-tags: [citations, line-numbers, sources, amendment]
+  - 'a dated correction re-points a cite past the end of the file'
+tags: [citations, line-numbers, sources, amendment, correction]
+updated: 2026-08-26
 ---
 
 # An amendment that shifted every cite below it
@@ -28,6 +30,16 @@ A reader who opens a stale cite finds unrelated text and either treats a support
 After any edit to `docs/SOURCES.md` that changes its line count, sweep every `SOURCES.md:<n>` and `../SOURCES.md:<n>` cite under `docs/research/` and re-point the ones at or below the insertion.
 Where the amendment can extend an existing line instead of adding one, do that — the entry-7 amendment landed this way and moved nothing.
 
+## A cite can also be broken by correcting it
+
+Added 2026-08-26. The other way a cite stops resolving is a pass that re-cites a line without opening it.
+A review round "corrected" `ComponentSystemBase.cs:449` to `:459` — past the end of a 458-line file — and inverted which overload sits at which line. The original cite was right.
+
+This is worse than drift, because the correction arrives dated and therefore looks newer and better-founded than what it replaced: the next pass trusts it over the working cite and propagates it.
+
+Open the line before re-citing it, exactly as the original derivation had to. A citation is a claim like any other, and a correction to one earns the same opening.
+
 ## Prevention
 
 Prefer same-line amendments to SOURCES.md; when a new line is unavoidable, the sweep above is part of the amendment, not a follow-up.
+Re-cite only from an opened line, whether the cite is new, drifted, or being corrected.

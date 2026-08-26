@@ -5,6 +5,7 @@ symptoms:
   - 'verifier returned REFUTED while its quoted evidence proved the candidate'
   - 'verifier returned CONFIRMED while its quoted evidence disproved the candidate'
 tags: [review-gate, verifiers, subagents, verdicts]
+updated: 2026-08-26
 ---
 
 # Verifier verdict labels inverted against their own evidence
@@ -26,3 +27,7 @@ Normalize every verdict from its quoted evidence, never from its label; a verdic
 ## Prevention
 
 Pin the target in the brief — "verdict is on whether the EDIT is correct: CONFIRMED = edit correct; REFUTED = edit wrong, with the proving quote" — and require the evidence to quote the proving line, so a flipped label is detectable.
+
+**The briefing fix does not take (updated 2026-08-26).** It inverted four more times in one seven-round gate whose verifier briefs pinned the target as above *and* named this file. One pass returned three verdicts labelled REFUTED whose evidence confirmed all three.
+
+So the brief is a detection aid, not a control. Read every verdict's evidence and decide from it; treat the label as advisory, always, including when it agrees with you. Budget for that — it is a per-verdict read, not a spot check, and it is the only thing that has actually worked.
