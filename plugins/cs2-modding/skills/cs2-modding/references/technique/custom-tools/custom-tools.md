@@ -49,13 +49,14 @@ Setting it false again yourself is harmless and redundant.
 
 `ToolBaseSystem` seals the parameterless `OnUpdate()` and redirects it: it assigns `Dependency = OnUpdate(Dependency)`, then clears its focus-changed and force-update flags.
 A tool therefore overrides `protected virtual JobHandle OnUpdate(JobHandle inputDeps)` and can never override the other one.
+The seal assigns rather than combines, so returning a handle that does not chain `inputDeps` publishes a dependency missing the fence it carries — which is why the base's own body returns `inputDeps` unchanged.
 
 | Member | Kind | What it is for |
 | --- | --- | --- |
 | `toolID` | `public abstract string` | Identity for the UI binding and for cross-mod string checks |
 | `GetPrefab()` | `public abstract PrefabBase` | The prefab the toolbar should highlight; `null` is legal |
 | `TrySetPrefab(PrefabBase)` | `public abstract bool` | Claim or decline a prefab during the tool-list walk |
-| `OnUpdate(JobHandle)` | `protected virtual JobHandle` | The per-frame body; return the tool's job handle |
+| `OnUpdate(JobHandle)` | `protected virtual JobHandle` | The per-frame body; return a handle chained onto `inputDeps`, which the seal assigns to `Dependency` outright |
 | `InitializeRaycast()` | `public virtual void` | Configure this frame's cast; the base resets every field first |
 | `GetRaycastResult(out ControlPoint)` and its `out bool forceUpdate` twin | `protected virtual bool` | Turn a hit into a control point; the seam for substituting your cast |
 | `GetAllowApply()` | `protected virtual bool` | Whether the current preview may be committed |
@@ -333,12 +334,15 @@ Dependency = handle;
 ```
 
 Two placements are both in wide use and the choice is about cohesion rather than correctness.
-From the tool's own `OnUpdate`, which keeps the draw next to the state it draws.
+From the tool's own `OnUpdate`, which keeps the draw next to the state it draws — there the last step is `return handle;` instead, since the seal assigns `Dependency` from what the override returns and the block's own assignment is dead.
 Or from a dedicated system registered at `Rendering` — and anchoring that system after the area render system puts it exactly where the vanilla overlay system itself sits, which is the placement to copy when order against vanilla overlays matters.
 
 **One shortcut is worth recognising rather than copying.**
-Taking the buffer once in `OnCreate`, caching the struct in a field, discarding the dependency handle and drawing from the main thread does work, because the draws are synchronous and the underlying lists are persistently allocated.
-But the struct also snapshots two terrain-scale floats at construction, so that arrangement depends on the buffer never being reallocated rather than on the contract above.
+Taking the buffer once in `OnCreate`, caching the struct in a field, discarding the dependency handle and drawing from the main thread works only while no other overlay job is in flight.
+The draw methods append with a plain list add and read-modify-write a shared bounds value, and the handle that shortcut discards is the accumulated one every other writer registered.
+Nothing drains those writers until the overlay system's own update at `Rendering`, and the safety system that would have caught the overlapping write is compiled out of this build, so it corrupts a frame's overlay quietly rather than throwing.
+The struct also snapshots two terrain-scale floats at construction, so a cached copy carries whatever the terrain scale was when it was taken.
+Source: `src/Game/Game.Rendering/OverlayRenderSystem.cs`.
 
 ## Tooltips are a separate system, in a phase that is a hard requirement
 
@@ -412,6 +416,8 @@ That reference owns the definition components and their flags, and it owns the o
 
 `roads-and-traffic` is what the network half of the raycast surface exists for, and it carries the deepest tool state machines: a tool over lanes or connections is also the case that most often needs a parallel raycast pipeline, because the things it selects are mod-owned entities no vanilla search tree holds.
 `zoning-buildings-and-land-value` is reached through the zone and lot masks and the grid snap flags, and any tool that places something on the ground meets that grid.
+
+`performance-and-memory` owns every job this reference tells you to schedule: what `base.Dependency` carries, how a provider handle is taken and registered back, and why a container held across frames has to be disposed in `OnDestroy` with nothing to tell you when it is not.
 
 `patching` owns the third raycast route and any change to a vanilla tool's own behaviour.
 `ecs-in-this-game` owns `Temp`, the frame-scoped tags and the barrier contract the definition destruction above uses.

@@ -113,7 +113,7 @@ The first consequence still holds — vanilla is registered either way, and a mo
 **A system created on that path misses `OnWorldReady` permanently**, because the event is raised once at boot and never again, so a mod that puts one-shot setup there does nothing at all when the player enables it without restarting.
 Put that setup somewhere that fires per load instead.
 
-## Ordering is imperative, and the stock ECS attributes do nothing here
+## Ordering is imperative, and the stock ECS ordering attributes do nothing here
 
 `[UpdateInGroup]`, `[UpdateBefore]` and `[UpdateAfter]` — the attributes, as opposed to the methods of the same name below — compile and have **no effect whatsoever** in this game.
 They are not merely discouraged; nothing reads them.
@@ -125,7 +125,9 @@ The clearest demonstration is in the game's own code: a stock ECS system that ca
 
 So an attribute on a mod's system is silent decoration at best.
 At worst it is a lie in the source: an attribute can state a relation that the imperative registration inverts, and the registration wins every time.
-An agent arriving from stock ECS should read the attributes it knows as inert and reach only for the methods.
+An agent arriving from stock ECS should read those three as inert and reach for the methods instead.
+`[RequireMatchingQueriesForUpdate]` is read off the system type when the system is created and still gates `OnUpdate` — for a system that requires no query of its own, since an explicit `RequireForUpdate` is answered first and the attribute never consulted.
+Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`.
 
 ## The five registration methods and the three bands
 
@@ -365,8 +367,13 @@ Reading those log files, and what reaches the player, is `diagnostics`.
 ## Disabling a vanilla system and slotting a fork into its place
 
 Setting `Enabled = false` on a system does not unregister it.
-The update still runs, skips `OnUpdate`, calls `OnStopRunning` once, and the system stays in the phase's run.
+The update still runs, skips `OnUpdate`, and the system stays in the phase's run.
 **That is what makes the substitution pattern work: a disabled system is still a valid anchor.**
+
+**`OnStopRunning` is a transition rather than a consequence of the flag**, so disabling a vanilla system does not reliably run its teardown.
+It fires on the next update and only if the system had already run once, which on the boot path it has not: `OnLoad` is step 4 and nothing has ticked yet, so the hook never runs.
+On the mid-session path, where the world has been ticking, it does fire.
+Source: `src/Unity.Entities/Unity.Entities/SystemBase.cs`.
 
 The recipe:
 
@@ -479,7 +486,10 @@ What belongs there:
 
 What does not belong there: unregistering systems.
 Neither `IMod` nor the update system offers a way to, and the five registration methods are the complete surface.
-A mod's systems live until the world does.
+A mod's systems live until the world does, and the world outlives `OnDispose`: the mod manager disposes every mod before the world is destroyed, so whatever an `OnDispose` body reaches for is still there.
+The systems then come down in reverse creation order, so a mod's — created in `OnLoad`, after the vanilla registration pass — come down ahead of every vanilla system that pass created; the few the game creates lazily afterwards, from a camera `MonoBehaviour` or on the first save load, are already gone by then.
+The system lookup does not say so: it is cleared only after every `OnDestroy` has run, so an existing-only lookup during teardown still hands back a system whose own teardown is finished.
+Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Unity.Entities/Unity.Entities/World.cs`.
 
 ## What this reference hands to others
 

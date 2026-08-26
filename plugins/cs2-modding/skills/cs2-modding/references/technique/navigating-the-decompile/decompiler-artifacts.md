@@ -17,7 +17,7 @@ Neither is in the original source; both are the decompiler's output style, and t
 
 ## The catalogue
 
-1. **`__TypeHandle`, `__AssignHandles`, `__AssignQueries`, `OnCreateForCompiler`.** In nearly every system. `__AssignQueries` is frequently a no-op whose whole body is `new EntityQueryBuilder(Allocator.Temp).Dispose();`. Ignore the machinery — but the field names _inside_ the `TypeHandle` struct are the best index of what a system reads and writes.
+1. **`__TypeHandle`, `__AssignHandles`, `__AssignQueries`, `OnCreateForCompiler`.** In nearly every system. `__AssignQueries` is almost always a no-op whose whole body is `new EntityQueryBuilder(Allocator.Temp).Dispose();`, and the query fields it does assign are named `__query_<hash>_<n>`. Ignore the machinery — but the field names _inside_ the `TypeHandle` struct are the best index of what a system reads and writes.
 2. **`InternalCompilerInterface.Get*` wrappers.** The codegen form of `SystemAPI.GetComponentLookup<X>()`. A mod writes the ordinary form.
 3. **Field-like events lowered to `Delegate.Combine`/`Delegate.Remove`.** `loadGameSystem.onOnSaveGameLoaded = (LoadGameSystem.EventGameLoaded)Delegate.Combine(…)` is a source-level `+=`. The lowering marks a delegate **field**; a real `event` keeps the ordinary `+=`, and `GameSystemBase` shows both forms two lines apart, so the form tells you which you are looking at.
 4. **Named arguments partly reconstructed.** `isReadOnly: true` is restored from a boolean-literal heuristic; most other call sites show bare positional literals, so an absent argument name means nothing.
@@ -50,13 +50,13 @@ The trap is pure adjacency: `AssemblyVersion("0.0.0.0")` sits one line under the
 The last one carrying a version string names `1.5.7f1`; the `current` field below it carries a bare `[VersionConstant]` with no string and a value past that milestone, so the named list is not a reading of what the running build writes.
 `save-serialization` owns what any of it implies for a save.
 
-(VOLATILE: the four `VersionInternal` strings and `Version.cs`'s last named constant — `src/Game/Properties/AssemblyInfo.cs` and `src/Game/Game/Version.cs`.)
+(VOLATILE: the four `VersionInternal` strings and `Version.cs`'s last named constant — `src/Game/Properties/AssemblyInfo.cs` and `src/Game/Game/Version.cs`; and the mangled names themselves, whose eight-hex block is a row id that moves with the method table — the `BurstCompiler.StaticTypeReinit` attributes in that same `AssemblyInfo.cs`.)
 
 ## Burst mangled names read as noise and are the better search key
 
 `src/Game/Properties/AssemblyInfo.cs` carries `BurstCompiler.StaticTypeReinit` attributes naming types like `Game_002ERendering_002EDequeueAndSort_00004B5A_0024BurstDirectCall`.
 
-`_002E` is `.`, `_0024` is `$`, and the four-hex block is a compiler-assigned id.
+`_002E` is `.`, `_0024` is `$`, and the eight-hex block between the method name and `_0024BurstDirectCall` is the RID of the method's metadata token — its row in the method table, zero-padded, without the token's own `06` table byte — so it changes whenever that table shifts.
 **Grep the mangled name rather than the decoded one, and grep it from the method name onward.** The full attribute string, namespace segments and all, appears only in `AssemblyInfo.cs`; drop the `<Namespace>_002E…` prefix and the remainder resolves to the declaring source file as well as to the generated tables — `DequeueAndSort_00004B5A_0024BurstDirectCall` lands on `src/Game/Game.Rendering/WaterRenderSystem.cs`, where it is the generated class's own declaration.
 The decode is what dead-ends: the encoded segments name the namespace and the method and omit the declaring type, so `Game.Rendering.DequeueAndSort` matches nothing and two different types can encode to one identical decoded name.
 `-BurstDirectCallInitializer.cs` is where that pays off: it writes `WaterRenderSystem.DequeueAndSort_00004B5A_0024BurstDirectCall.Initialize();`, naming the declaring type the encoded form leaves out.

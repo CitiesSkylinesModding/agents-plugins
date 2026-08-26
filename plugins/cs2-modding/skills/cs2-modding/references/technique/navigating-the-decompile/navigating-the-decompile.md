@@ -132,23 +132,23 @@ public ComponentLookup<Citizen>               __Game_Citizens_Citizen_RW_Compone
 
 **The family is two shapes, not one.**
 
-- `__<Namespace_With_Underscores>_<Type>_<RO|RW>_<ComponentLookup|ComponentTypeHandle|BufferLookup|BufferTypeHandle>` — the eight access-bearing shapes.
+- `__<Namespace_With_Underscores>_<Type>_<RO|RW>_<ComponentLookup|ComponentTypeHandle|BufferLookup|BufferTypeHandle>` — the eight access-bearing shapes **this build uses**. The generator emits more that `src/Game` never shows: `AspectTypeHandle` and `AspectLookup` in both access modes, plus a `JobEntityTypeHandle` carrying `WithDefaultQuery` or `WithoutDefaultQuery` where the access segment sits.
 - `__<Namespace>_<Type>_SharedComponentTypeHandle` — **no access segment at all**, on every shared-component handle in the game.
 
-Two more escape both: an entity handle is `__Unity_Entities_Entity_TypeHandle`, with no game namespace in it, and `__EntityStorageInfoLookup` carries no namespace or type segment whatsoever.
+Three more escape both: an entity handle is `__Unity_Entities_Entity_TypeHandle`, with no game namespace in it, `__EntityStorageInfoLookup` carries no namespace or type segment whatsoever, and a `SystemAPI.Query` foreach's container handle is `__IFE_<id>_<n>_TypeHandle`, which names no component type at all.
 
 **What this buys**, on `Game.Citizens.Citizen`: a word-boundary grep for the bare name returns every file that so much as mentions it, and `ComponentLookup<Citizen>` narrows that but says nothing about read versus write.
 `__Game_Citizens_Citizen_` returns only the systems that actually take a handle on it, and sorts them into readers and writers on the field name alone, in one pass.
 Read-only dominates, so an `_RW_` sweep comes back small enough to read whole.
 
-**Two limits, and both are load-bearing.**
+**The limits, and every one is load-bearing.**
 A `_RW_` sweep for a _shared_ component finds nothing, because those fields carry no access segment.
 And the family only covers handle-based access the generator rewrote: a write made through an `EntityCommandBuffer` with an inferred type argument carries no type name at any call site, which is the dominant form in tool code.
-So `_RW_` enumerates the systems that write a component through a lookup or a chunk handle — not everything that writes it.
+So `_RW_` enumerates the systems that took **write access** through a lookup or a chunk handle — not everything that writes it, and not only what writes it: the access mode is the call form the generator saw, so a system that only reads still carries an `_RW_` field wherever it used a read-write default.
 
 The names are also strictly per-system: nothing outside the declaring system ever consumes a mangled field, so the field list is a reliable index of one system and never a cross-system one.
 
-(VOLATILE: the handle-name scheme and the two shapes it takes — the generated `TypeHandle` structs across `src/Game`.)
+(VOLATILE: which shapes this build uses — the generated `TypeHandle` structs across the decompile, `src/Game` for the vanilla ones; and the scheme's full shape list — the field-description types under the Entities package's `SourceGenerators/…/INonQueryFieldDescriptions/`, in the modding toolchain's Unity project package cache.)
 
 ## Three decompiler artifacts that make a reader wrong
 
@@ -292,7 +292,7 @@ Cheapest first.
 
 1. **A type name is known** → `Glob src/**/<Name>.cs`. Usually one hit in the reading universe. More than one → qualify by namespace directory; still more than one → qualify by assembly.
 2. **"When does this run" / "what runs in phase P"** → `Grep "<Name>"` or `Grep "SystemUpdatePhase.<P>"` in `src/Game/Game.Common/SystemOrder.cs`. It holds every registration in the game, so a miss there is a real absence — remembering that `PreSimulation` is empty and pumped anyway.
-3. **"What data does this system touch"** → read its nested `TypeHandle` struct and its `OnCreate` query. **"Who reads or writes component C"** → `Grep "__<Namespace_With_Underscores>_<C>_RO_"` and `_RW_` across `src/Game`, remembering the two limits above.
+3. **"What data does this system touch"** → read its nested `TypeHandle` struct and its `OnCreate` query. **"Who reads or writes component C"** → `Grep "__<Namespace_With_Underscores>_<C>_RO_"` and `_RW_` across `src/Game`, remembering the limits above.
 4. **"What components does prefab type P produce"** → open `P.cs`, read its `GetArchetypeComponents` override, then follow each `base.GetArchetypeComponents(…)` up the chain, since every level adds its own. One file never answers this: the prefab's attached `ComponentBase` objects contribute more at load, so the C# gives you the fixed part of the archetype and never the whole of it.
 5. **"How do I expose Y to the UI"** → find a comparable `UISystemBase` in `Game.UI.InGame` and read its `AddBinding` calls; the binding types are all in `Colossal.UI.Binding`.
 6. **The search came back empty** → run the four checks before concluding absence. Is it a `const` (search the value)? Was the search scoped (state the span, or widen it)? Does the subject live outside C# (go to the install)? Does the pattern reach the whole family (an inferred generic type argument names nothing)?

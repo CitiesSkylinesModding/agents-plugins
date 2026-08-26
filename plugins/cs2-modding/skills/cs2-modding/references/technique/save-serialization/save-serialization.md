@@ -76,6 +76,8 @@ A flag set travelling beside each type name in the save records which of these a
 
 **A component implementing none of the interfaces is dropped without a word.**
 The serializer only visits archetype members it has a serializer index for, so such a component simply does not exist after a reload.
+The one thing that fails loudly instead is a _managed_ component — a `class` rather than a `struct` — that implements one of them: the two `ISerializable` serializers above are generic over an unmanaged struct, so declaring one takes the whole serializer library down rather than dropping just that type.
+The one exception is a plain `IEmptySerializable` that is not enableable, whose serializer is not generic and takes the type at runtime; add `IEnableableComponent` and it goes back through a generic constrained the same way.
 
 (VOLATILE: the interface names, the serializer type names and the flag set above — the `Colossal.Serialization.Entities` namespace, the component serializer library.)
 
@@ -100,7 +102,10 @@ Its `None` list is `NetCompositionData`, `EffectInstance`, `LivePath`, `Temp`, `
 
 Two consequences:
 
-1.  **A mod component is enough to get its entity saved**, even on an entity carrying no vanilla anchor.
+1.  **A mod component is enough to get its entity saved**, even on an entity carrying no vanilla anchor, and an enabled bit is not a way to control that either way.
+    Admission is per chunk: the query skips a chunk only when no entity in it matches, and the serializer then discards the mask and rebuilds it as every entity in the chunk, narrowed only by `PrefabData`.
+    So a disabled entity is saved whenever a chunk-mate matches and dropped when none does, which is chunk co-tenancy rather than anything you control — use the exclusion recipe below instead.
+    Source: `src/Game/Game.Serialization/SerializerSystem.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/EntitySerializer.cs`.
 2.  **`Temp` and `Deleted` entities are never saved.**
     Both are excluded because they are already on their way out: `Deleted` is the game's destroy request, not an exclusion flag.
     A cleanup pass queries it every frame with no further filter and destroys every match, so adding `Deleted` to a live entity to keep it out of one save destroys that entity instead.
@@ -144,7 +149,7 @@ Five rules the format enforces or exposes:
   **A byte-count mismatch is therefore detected only at the end of the whole block**, after every entity of that archetype has already been read past the end of its own record.
 - **Read and write must be exactly symmetric per entity.**
   There is no per-entity framing.
-  A read indexes the buffer directly and advances, so in a Burst release build a read past your own record silently returns the next entity's bytes.
+  A read indexes the buffer directly and advances, so a read past your own record silently returns the next entity's bytes — they are inside the same buffer, so no bounds check anywhere would object.
 - **A buffer writes its length first, then its elements**, and the deserializer resizes the `DynamicBuffer` to the stored length before reading.
   Your element's `Serialize` is called per element, never per buffer.
 - **A `Serialize` that writes nothing throws.**
@@ -168,6 +173,11 @@ The system serializer library walks the world's systems and wraps each one imple
   It extends `ISerializable` with `void SetDefaults(Context)`, which **is called for every registered system serializer whose type was absent from the save** — exactly the case of a save written before your mod existed.
 - A system implementing plain `ISerializable` works but logs an error at library build time telling you to use one of the other two.
 - `IJobSerializable` is the job-scheduling variant, for state large enough to want off-thread work.
+
+**`Deserialize` and `SetDefaults` read bytes and do nothing else.**
+Both run while the loader holds an exclusive entity transaction on the world, so the `EntityManager` is off limits inside them — and on a player build the check that would have said so is compiled out, so a read there neither throws nor waits for the loader's own jobs to finish.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the transaction) and `src/Unity.Entities/Unity.Entities/EntityManager.cs` (the compiled-out assertion).
+Put the work in `OnGameLoaded` and a later `OnUpdate`, as the migration split below does.
 
 **Phase registration is irrelevant here, but existing early is not.**
 The library scans the world's systems once and rebuilds only when marked dirty, and the game marks it dirty when a mod assembly loads — before `OnLoad` runs.
@@ -235,7 +245,7 @@ Without it, the only way to change a component's layout is to break every existi
 1.  The old save's block is shorter than what the new `Deserialize` reads.
     There is no per-entity bound check, so entity 0 consumes entity 1's bytes and so on down the archetype — every value is garbage, not merely absent.
 2.  At the end of the block the size check fails and the deserialize job throws.
-3.  That job is one of many, Burst-compiled and scheduled off the main thread, and the block-end check resyncs the reader before throwing.
+3.  That job is one of many, scheduled off the main thread, and the block-end check resyncs the reader before throwing.
 
 **So nothing visibly breaks.**
 The city loads fully populated, every other component reads correctly, and the damage is confined to your own component's values being garbage on every entity that carries it.

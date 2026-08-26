@@ -220,6 +220,7 @@ Read the definitions of the frame, decide, write back, in ascending order of how
   Walk the frame's definitions in array order and write each course's end elevation into the next course's start, and a dragged road holds a constant slope instead of following the terrain; a parallel-course variant repeats it per side.
 - **`CreationDefinition.m_Prefab`** changes what is built.
   Pick a different prefab per definition, seed a `Unity.Mathematics.Random` from that definition's own `m_RandomSeed` so the substitution survives the frames the preview is rebuilt across, write the definition back, and adjust the kind component to match — `ObjectDefinition.m_Age` for a tree, for instance, since the age the tool chose belonged to the prefab it thought it was placing.
+  Force that seed non-zero before you construct the generator: a `Unity.Mathematics.Random` built on zero stays on zero and returns the same value from every draw for the rest of its life, and the check that would have thrown on it is compiled out of this build.
 
 **Gate the rewriter on the active tool.**
 A system whose query is `{CreationDefinition, Updated}` matches every definition in the world, including the ones the simulation emits and the ones other tools draw, so the first lines of the update should return early unless the tool system's active tool is the one this rewrite is meant for, and unless that tool is in a mode that places rather than selects.
@@ -311,8 +312,6 @@ Collapsing the vanilla `NativeList<ControlPoint>` to a single `ControlPoint` and
 - **Area**: a two-line helper that adds the `CreationDefinition` beside a `Game.Areas.Node` buffer filled from the polygon and closed into a ring.
 - **Brush**: a `BrushDefinition` naming the brush prefab entity; extra data your own consumer needs can be written onto that prefab entity rather than onto the definition, which keeps the definition's shape vanilla.
 
-**Add the `CreationDefinition` last, after the kind component**, which is the ordering every vanilla producer uses.
-
 Where a mod ports the vanilla selection path wholesale, the shape is one `AddEntity(Entity original, Entity owner, OwnerDefinition, bool isParent, bool attachParentCreated)` that branches on what the original is and attaches the matching kind — a `NetCourse` for an edge or a node, an `ObjectDefinition` for anything with a transform, a `Game.Areas.Node` buffer copied wholesale for an area, a `WaypointDefinition` buffer rebuilt from the route's waypoints, an `IconDefinition` from the live icon, an `AggregateElement` buffer copied wholesale — and recurses into sub-areas with an `OwnerDefinition` built from the parent's prefab and transform.
 Gate the `CreationFlags.Select` branch on a field of your own rather than setting it unconditionally, and the same code can build a definition tree without lighting the selection up.
 
@@ -338,7 +337,8 @@ Where the mod also wants its own feedback buffer, override `GetAllowApply()` to 
 
 **The rule.**
 An entity that carries a `PrefabRef` must point at a prefab entity registered through `PrefabSystem.AddPrefab`, carrying `PrefabData`, by the time the load pass runs.
-Every entity carrying a `PrefabRef` and not `Temp` or `Deleted` is matched by the serialization pass that remaps prefab references, and its job indexes the prefab-data lookup with the referenced entity directly — no `TryGetComponent`, no null guard — so a reference to anything else faults inside a Burst job during load.
+Every entity carrying a `PrefabRef` and not `Temp` or `Deleted` is matched by the serialization pass that remaps prefab references, and its job indexes the prefab-data lookup with the referenced entity directly — no `TryGetComponent`, no null guard, and the lookup's own has-this-component assertion compiled out of this build.
+A reference to a destroyed entity faults inside that Burst job; a reference to a live entity of your own that carries no `PrefabData` does not — it reads the head of that entity's chunk as a prefab index and carries the garbage into the load's arrays, which is the worse of the two.
 The pre-deserialize hook is the last place a mod can register a prefab before that pass runs, which is why registration goes there and not in `OnLoad` or in a system's `OnCreate`.
 
 **The practice built on it.**

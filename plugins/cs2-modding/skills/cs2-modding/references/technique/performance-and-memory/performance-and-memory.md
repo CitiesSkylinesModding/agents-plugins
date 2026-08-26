@@ -108,7 +108,7 @@ None of that inheritance stalls the main thread by itself: a dependency defers a
 
 **`Complete()` finishes the job and every job upstream of its handle — the chain jumps the worker queue, and the completing thread attempts the job itself.**
 So the cost of completing a handle is not bounded by your job's duration — it is the job plus however much of the chain upstream of you has not finished, which for a job scheduled against simulation components is a slice of the frame's simulation.
-It is still one chain: the sync that completes **every** job in the world is the structural change, whose section below owns that cost.
+It is still one chain: the sync that completes **every job the dependency graph knows** is the structural change, whose section below owns that cost.
 Source: `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs`, `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs` (`Complete` is an `extern`; the semantics are the engine's own, per https://docs.unity3d.com/2022.3/Documentation/Manual/JobSystemJobDependencies.html and https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Unity.Jobs.JobHandle.Complete.html).
 
 Complete when the main thread must have the value now; record the outcome from inside the job and let a barrier play it back when the output is a write, per the structural-change section below; and at teardown a completion guards nothing the world has not already completed, per the disposal section and its two gaps.
@@ -181,9 +181,11 @@ Five things happen and each is load-bearing: the gather is asynchronous and hand
    `AddJobHandleForProducer`, and the contract is `ecs-in-this-game`'s.
 5. **Complete only where something outside the chained graph forces it: a genuine main-thread readback, the conflicting work before a `Run`, an unregistered provider's next write, or a container without `Dispose(JobHandle)` before a live-world dispose or clear.**
    Every `Complete()` is a main-thread stall until the job and its whole upstream chain finish; at teardown the world has already completed everything, per the disposal section.
-6. **Do not carry a handle across simulation iterations.**
-   A simulation phase runs up to eight times in one frame, and a system the interval gate lets run has `base.Dependency` reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a handle you published last iteration is no longer chained to anything.
-   Anything that must outlive an iteration is held in your own field, not read back out of `base.Dependency`.
+6. **Do not read a handle back out of `base.Dependency` across simulation iterations.**
+   A simulation phase runs up to eight times in one frame, and a system the interval gate lets run has `base.Dependency` reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below.
+   That reset pre-empts the completion stock `SystemBase.Update` would have performed, so last iteration's handle is not completed for you before the next one runs — while `base.Dependency` still comes back derived from the graph, carrying nothing for a container the graph does not track.
+   Anything that must outlive an iteration is held in your own field, and combined rather than replaced when you consume it.
+   Source: `src/Game/Game/UpdateSystem.cs` and `src/Game/Game/GameSystemBase.cs` (the reset and its interval gate), `src/Unity.Entities/Unity.Entities/SystemState.cs` (the pre-empted completion).
 
 ### Choosing the schedule form
 
@@ -369,8 +371,9 @@ The shape to copy is an interval **plus** a relevance gate — a system feeding 
 
 **`RequireForUpdate` / `RequireAnyForUpdate` skip `OnUpdate` entirely** when a required query is empty.
 The check is a length read on a cached chunk list: no chunk walk, no dependency sync.
-It tests the query **ignoring your filter**, so a query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set — a filter is not a throttle.
-`IsEmptyIgnoreFilter` is the same free check spelled by hand, and is what to use inside `OnUpdate` when one system schedules several independent jobs each needing its own gate.
+It tests the query **ignoring your filter and its enableable components' state**, so a query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set — a filter is not a throttle, and neither is a disabled marker.
+`IsEmptyIgnoreFilter` is the same free check spelled by hand, and is what to use inside `OnUpdate` when one system schedules several independent jobs each needing its own gate — with the same blind spot, so a gate over an enableable marker never closes.
+`ecs-in-this-game` owns what the gate does and does not see.
 
 **The chunk-level early exit inside the job body is the finest-grained form**, and is what the simulation actually runs on: one shared-component read rejects a whole chunk's worth of entities.
 A per-entity job cannot express it — that is one of the three things holding the chunk buys you, per `ecs-in-this-game` — so a per-entity job wanting the same throttle pushes the test into the query as a shared-component filter before scheduling instead.
@@ -471,10 +474,10 @@ The synchronous forms are not forbidden, and the game's own load and editor path
 A leaked container costs memory and shows nothing.
 A per-frame `ToEntityArray` costs frame time and shows up under the mod's own system name in a profile.
 
-### Structural changes on the main thread complete every job in the world
+### Structural changes on the main thread complete every job the dependency graph knows
 
 This is the heaviest sync point available and it is one line of mod code.
-Every `EntityManager` method marked `[StructuralChangeMethod]` — adding a component, removing one, creating or destroying an entity — routes through a call that completes **all** jobs, not just the ones touching your components.
+Every `EntityManager` method marked `[StructuralChangeMethod]` — adding a component, removing one, creating or destroying an entity, and assigning a shared component value — routes through a call that completes **every job the dependency graph knows**, not just the ones touching your components — a handle you kept in a field and never published through `Dependency` is not one of them, and survives the drain still running.
 Chained structural calls pay the drain once — the first completes everything in flight and the rest find nothing — but each add is still its own archetype move, so build with `CreateEntity` plus an archetype rather than as a create followed by adds.
 `EntityManager.SetComponentData` and the read-write data path are cheaper but not free: each completes the read and write dependency for that one type.
 
@@ -502,6 +505,8 @@ Work out which you are before adding a field: past the threshold, one more byte 
 A dynamic buffer costs its header plus its internal capacity in **every** entity's chunk slot, occupied or not.
 `[InternalBufferCapacity(0)]` moves the payload out of the chunk entirely, leaving the header, and overflow allocates from `Allocator.Persistent`.
 That trades chunk density for one heap allocation per non-empty buffer, which is the right trade when most entities have none.
+**The spill does not undo itself.** A buffer that outgrows its internal capacity moves to the heap and stays there until something asks for it back, paying the allocation and the reserved inline bytes together however short it later gets.
+So size for the maximum a buffer will reach rather than for its typical length, or call `TrimExcess()` once the spike is over: it reallocates to the length you are actually holding, and returns the payload to the chunk when that length fits the internal capacity.
 
 ## The game's three forced garbage collections
 

@@ -87,6 +87,7 @@ Three chunk operations show up in code a mod writes:
   Nothing signals the mistake at the call: the returned array wraps a null pointer and the shipped indexer bounds-checks nothing, so the fault lands on the read rather than on the call that handed it back.
   Pair it with `chunk.Has` or check `.Length` before indexing.
 - **`chunk.Has(ref handle)`** — a presence test that branches once per chunk instead of once per entity.
+  It answers archetype membership only: for an enableable component it is true even where every entity in the chunk has it disabled, and `chunk.IsComponentEnabled(ref handle, i)` is the per-entity question.
 - **`chunk.GetSharedComponent(handle)`** — reads the chunk's single shared value.
 
 **The shared component a mod meets is `UpdateFrame`**, a single `uint` index that partitions simulated entities into buckets so each pass touches a fraction of them.
@@ -119,8 +120,8 @@ Several query forms exist in the package, and the game reaches for them unevenly
 | Form | Expresses | Needs the generators |
 | --- | --- | --- |
 | `GetEntityQuery(ComponentType…)` | `All`, `None` | no |
-| `GetEntityQuery(new EntityQueryDesc{…})` | `All`, `Any`, `None`, `Options` | no |
-| `SystemAPI.QueryBuilder()` | all four, fluently | **yes** |
+| `GetEntityQuery(new EntityQueryDesc{…})` | `All`, `Any`, `None`, `Disabled`, `Absent`, `Present`, `Options` | no |
+| `SystemAPI.QueryBuilder()` | the same, fluently | **yes** |
 | `SystemAPI.Query<T>()`, `Entities.ForEach` | iteration, not a query object | **yes** |
 
 **Every iteration query in the game is hand-built with `GetEntityQuery`.**
@@ -153,8 +154,9 @@ Then the small rules:
 `RequireForUpdate(query)` appends to a list and `ShouldRunSystem` returns false if **any** required query is empty, so repeated calls are ANDed.
 `RequireAnyForUpdate(params EntityQuery[])` decomposes the queries you pass and rebuilds them into a single OR query, and is the only way to express "run if either matches".
 
-**The gate tests the query ignoring its filter.**
+**The gate tests the query ignoring its filter and its enableable components' state.**
 A query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set, so a system gated on a per-bucket query runs on every pass and does nothing on all but one bucket's worth of them.
+A query naming an enableable component gates on the entities that carry it, enabled or not, so a gate over `Locked` stays open once everything is unlocked.
 That is by design and the game relies on it; it is only a surprise if you expected the gate to save the update.
 
 ## Jobs: write per-entity, read per-chunk
@@ -234,6 +236,7 @@ Nothing throws, nothing logs, and the symptom is a system further down the frame
 Handles, lookups and `ArchetypeChunk` carry no safety field, and the bounds and aliasing assertions are all conditional on a collections-checks define that is compiled out of the shipped assembly.
 A stale handle, an out-of-bounds chunk index, or two jobs writing the same component in parallel produce wrong data or a crash, never a diagnostic.
 `performance-and-memory` owns what that means for scheduling; here it means the handle discipline has no backstop.
+The same absence covers what a structural change does to data you are already holding: adding or removing a component, destroying an entity or assigning a shared component value can move the entity to another chunk, so a `DynamicBuffer`, a chunk `NativeArray` or a component pointer taken before the change points at the old storage afterwards — reacquire it, because nothing here invalidates it for you: the engine call that would have, in an editor build, has that half compiled out.
 
 **With the generator, the discipline is free.**
 `SystemAPI.GetComponentTypeHandle<T>()`, `GetComponentLookup<T>()`, `GetBufferTypeHandle<T>()` and their siblings are rewritten into a generated nested `TypeHandle` struct — one field per handle, assigned once from `OnCreateForCompiler`, and refreshed at the point of use every update.
@@ -283,6 +286,17 @@ Toggling an enableable component is a bit flip rather than an archetype move, wh
 
 **A query naming an enableable component matches only entities where it is enabled**, unless the query carries `EntityQueryOptions.IgnoreComponentEnabledState`.
 So a query is narrower than it reads whenever one of its components is enableable, and whether a given one is costs a single read — the interface list on that component's own declaration.
+**`None` inverts rather than excludes.** An enableable type in `None` does not keep its archetype out: the archetype still matches, and what comes through is every entity carrying the type *disabled*, plus every entity not carrying it at all.
+That is exactly "not currently flagged", so it is the query a marker you flip on and off wants, and it is what vanilla writes wherever it asks for "unlocked" — `ComponentType.Exclude<Locked>()`, which the query builder routes into `None`.
+`Absent` is the other category and not a substitute for it: it rejects the archetype whatever the bit says, so it answers "never carries this type" where `None` answers "does not carry it right now".
+Source: `src/Unity.Entities/Unity.Entities/EntityQueryManager.cs` (the two categories and the `Exclude` routing), `src/Game/Game.City/CityConfigurationSystem.cs` (a vanilla "unlocked" query).
+
+**A flip on an entity whose archetype never carried the type corrupts the chunk list.**
+That is the other half of what a `None` query hands you, so the two compose into it: the index lookup returns `-1` on a miss, and every write route — `EntityManager`, `ComponentLookup<T>`, the chunk handle, and the command buffer at playback — indexes the archetype's arrays with that `-1` and writes over the archetype's own chunk-list entry.
+Reading the bit is no safer except off the chunk handle, the one surface that tests the miss and returns `false`; the other two read out of bounds and hand you an arbitrary answer.
+So test membership before either, which is true whatever the bit says: `HasComponent<T>` on `EntityManager` and `ComponentLookup<T>`, `Has<T>` off the chunk handle as above.
+An entity the query returned because it never carried the type needs `AddComponent`, not a flip.
+Source: `src/Unity.Entities/Unity.Entities/ChunkDataUtility.cs` and `src/Unity.Entities/Unity.Entities/ArchetypeChunkData.cs`.
 A buffer element can carry `IEnableableComponent` the same way, which is what the enabled-buffer helpers below exist for.
 Some enableable components carry a disabled state a reader would never guess from the name:
 
@@ -294,6 +308,11 @@ Toggle from a job through the command buffer, as the vanilla aging system does a
 ```csharp
 m_CommandBuffer.SetComponentEnabled<BicycleOwner>(unfilteredChunkIndex, citizen, true);
 ```
+
+That route defers the flip to the barrier, so the rest of the job's walk and every system before the playback still read the old value.
+`ComponentLookup<T>.SetComponentEnabled` and the chunk handle's own `SetComponentEnabled` flip it inside the job instead, which is what you want when a later step of the same job has to see the new state.
+The cost of choosing them is that you own the ordering: both flip the mask word with a compare-and-swap loop, so parallel writers do not lose each other's bits — but two threads writing opposite values to one entity's bit resolve last-writer-wins, and nothing reports it.
+That cover is theirs alone, so do not carry it across to the third route: the `EnabledMask` an `IJobChunk` takes off `chunk.GetEnabledMask` writes the word plainly, and two threads flipping different entities of one chunk through it can lose an update.
 
 **Unlocking is not that call.**
 `Locked` is flipped on the main thread through the `EntityManager`, inside the unlock system, which also raises the `Unlock` event that the UI, achievement and prefab-requirement systems query.
@@ -336,7 +355,7 @@ Reach for one of the twelve instead.
 
 1. **`CreateCommandBuffer()` once per `OnUpdate`, not once per job.** Every call appends another buffer to the barrier's flush list.
 2. **`AddJobHandleForProducer(handle)` after scheduling.** Without it the barrier plays back while your job is still writing into the buffer.
-3. **Playback runs in list order and then rewinds the allocator**, so a buffer is single-playback and the handle you got is dead after the barrier updates.
+3. **Playback runs in list order and then rewinds the allocator**, so a buffer is single-playback and the handle you got is dead after the barrier updates. Recording into a dead one is unguarded here: the engine refuses it in an editor build and that refusal is compiled out with the rest of the safety system, so a cached buffer field records into rewound memory and nothing objects. (UNVERIFIED: whether such a write is a silent no-op, a corruption of whatever the allocator has since handed out, or a fault — one run with a barrier's buffer held in a field across two updates settles it.)
 
 The vanilla shape, worth copying exactly:
 
@@ -353,7 +372,8 @@ A constant or a thread index there makes your mod's structural changes order-dep
 
 **Writing to a barrier outside its window throws, loudly.**
 Each barrier closes itself immediately before playing back, and a companion system re-opens it; creating a buffer while it is closed raises `Trying to create EntityCommandBuffer when it's not allowed!`.
-This is the one place in this ECS where the failure is an exception rather than silence, so trust it.
+This is one of the few places in this ECS where the failure is an exception rather than silence, so trust it.
+The other on this surface is calling `Playback` on a buffer twice, which throws here for real.
 
 **Write only to the barrier belonging to the phase you are running in.**
 That is the general rule, and it falls out of where each barrier's opener sits.
@@ -410,7 +430,7 @@ Three consequences a mod needs:
 - `Overridden` — this object conflicts with another object or network but is not deleted. Persists across a save; raycasting and lane generation both skip overridden geometry.
 - `Native` — marks map-native content. Persists.
 - `Owner` — a single `Entity m_Owner`, the standard back-reference from a sub-object to its parent, and the shape to copy when attaching your own entity to a game entity. Networks are dense graphs reached through it, which is why `roads-and-traffic` leans on it hardest.
-- `PseudoRandomSeed` — a `ushort` seed plus `GetRandom(uint reason)`, which derives an independent stream per reason from the one stored seed. This is how the game gets stable per-entity randomness that survives a save without storing a stream, and a mod wanting reproducible per-entity variation should use it rather than seeding its own.
+- `PseudoRandomSeed` — a `ushort` seed plus `GetRandom(uint reason)`, which derives an independent stream per reason from the one stored seed. This is how the game gets stable per-entity randomness that survives a save without storing a stream, and a mod wanting reproducible per-entity variation should use it rather than seeding its own. It also forces the seed non-zero before constructing the generator, which a hand-rolled seed has to do for itself.
 
 **`Temp` is the tool-preview tag, and it is the one to exclude.**
 It lives in the tools namespace, is not serialized, and carries `m_Original` — the real entity this preview stands for — plus a curve position, a value, a cost and flags.
@@ -445,14 +465,15 @@ Prefix your components rather than naming them after the concept alone.
 | --- | --- |
 | Zero-field `IComponentData` | No per-entity bytes at all. The cost is the extra archetype: adding or removing it moves every affected entity between chunks. |
 | `IComponentData` with fields | Its size, per entity, in every chunk of every archetype carrying it. |
-| `IBufferElementData` | `InternalBufferCapacity` elements reserved inline in the chunk, spilling to the heap beyond that. Default capacity is 128 bytes' worth of elements. |
-| `ISharedComponentData` | Nothing per entity, and one set of chunks per distinct value. |
+| `IBufferElementData` | `InternalBufferCapacity` elements reserved inline in the chunk, spilling to the heap the first time the length exceeds them and staying there until something asks for it back. Default capacity is 128 bytes' worth of elements. |
+| `ISharedComponentData` | Nothing per entity, and one set of chunks per distinct value. Assigning a value is a structural change — the entity moves to a chunk carrying it — which is why vanilla writes one through a command buffer rather than the `EntityManager`. |
 | `IEnableableComponent` | Its own bits in the chunk's enabled masks, and a toggle that is not a structural change. |
 | `ICleanupComponentData` | A residue entity that outlives `DestroyEntity` until you remove the component. |
 
 `[InternalBufferCapacity(0)]` means **never inline**: every non-empty buffer becomes a heap allocation and an empty one allocates nothing, which keeps chunks dense when most entities carry an empty buffer.
 Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
-`performance-and-memory` owns that trade in full.
+Pick a capacity the buffer will not exceed rather than a typical one: shrinking the length leaves the payload on the heap, so a buffer that overflows once pays the heap allocation and the reserved inline bytes together until something asks for it back.
+`performance-and-memory` owns that trade and the call that asks.
 
 **Save cost is decided by one interface and nothing else.**
 The serializer library walks every type the type manager knows and registers a serializer for each that implements one of two interfaces; a component implementing neither is simply not written.
@@ -489,6 +510,8 @@ if (EntityManager.TryGetComponent(entity, out PrefabRef prefabRef))
     // …
 }
 ```
+
+The `Enabled` half of that list is not a convenience variant: `TryGetComponent` and `TryGetBuffer` test archetype membership alone and succeed on a disabled component, handing back its stored value, while `HasEnabledComponent`, `HasEnabledBuffer`, `TryGetEnabledComponent` and `TryGetEnabledBuffer` are the four that consult the bit — so pick by whether the component is enableable.
 
 These ship with the game rather than coming from anywhere else, so they cost a mod no dependency at all.
 Reach for them before writing your own.

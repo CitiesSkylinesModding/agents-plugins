@@ -62,7 +62,7 @@ The shape is fixed:
 
 1. Reflect the private query field off the target system instance.
 2. Guard on `originalQuery.GetHashCode() == 0`, which is how a system whose `OnCreate` has not run yet is detected.
-3. Call `EntityQuery.GetEntityQueryDescs()`, and append your own `ComponentType` to each desc's `None`, skipping descs that already carry it.
+3. Call `EntityQuery.GetEntityQueryDescs()`, and append your own `ComponentType` to each desc's `None`, skipping descs that already carry it — to `Absent` instead where your marker is enableable **and** the exclusion is permanent, since an entity `Absent` rejects is never re-admitted by flipping the bit back.
 4. Reflect `ComponentSystemBase.GetEntityQuery(params EntityQueryDesc[])` — it is `protected internal`, so a system can call it on itself but not on another system's instance — and **invoke it on the target system**, so the new query is owned by the right system.
 5. Write the result back into the field, and call the public `RequireForUpdate(query)`.
 
@@ -198,12 +198,14 @@ Assign on every branch either way: `entity = Entity.Null; hit = default; return 
 ## A Burst-compiled job is not what you patch
 
 **A `[BurstCompile]` method still takes a patch, but the patch wraps a trampoline.**
-The managed body of such a method is one line dispatching to a generated invoker, which fetches a native function pointer and calls it, falling through to the real managed body only when Burst is disabled.
-So a prefix or postfix on it runs, and **you can read and rewrite the arguments and the result but you cannot change the logic**, because the logic is in the native image the fallback path never reaches.
+The managed body of such a method is one line dispatching to a generated invoker, which fetches a native function pointer and calls it, falling through to the real managed body when Burst is disabled **or when that method has no compiled native body**.
+So a prefix or postfix on it runs, and **while the native body is in play you can read and rewrite the arguments and the result but you cannot change the logic**, because the logic is in the native image the fallback path never reaches.
 
 For a Burst-compiled **job**, the substitution point is not in C# at all: a job's entry is registered through an `extern` reflection-data call, and the point where Burst swaps in the compiled body is native.
 So a patch on that `Execute` never runs while Burst is enabled: it rewrites the managed body, and the managed body is exactly what the native compilation replaces.
-`performance-and-memory` settles the same fact from the other side — a breakpoint set in that body binds and never fires.
+Check the attribute before you conclude that — and know it settles only one direction, because it is a request rather than a record.
+A job struct without it takes a patch like any other, and so does one that carries it and was never compiled: Burst declines a generic job whose concrete type is closed only at runtime, which is how the serializers build theirs.
+`performance-and-memory` settles the same fact from the other side — a breakpoint set in that body binds and never fires — and owns the launch switch that turns Burst off for a session, which is how you tell a patch that never runs from one that never bound; a patch that fires with Burst still on is proof that job was never compiled.
 
 **So the rule is: replace the job, not its body.**
 Patch the managed method that _schedules_ the job — the last managed instruction before the schedule — and schedule your own job instead.
@@ -213,7 +215,7 @@ The worked shape, from the two mods that do it:
 - Resolve the private target by explicit signature, through `TargetMethod()` when an attribute cannot express it.
 - Return `true` immediately for every case you are not replacing, so the vanilla path is untouched for everything else.
 - **Rebuild every component type handle and lookup by hand off `__instance`**, because those are per-system state the vanilla method would have refreshed.
-- Reach protected base members — `SystemBase.Dependency` above all — through a `MethodInfo` cached in a static field, since a static patch method in another assembly cannot touch them.
+- Reach protected base members through a `MethodInfo` cached in a static field, since a static patch method in another assembly cannot touch them — but look for a public equivalent first. `SystemBase.Dependency` is a pass-through to the public `SystemState.Dependency`, and `__instance.CheckedStateRef` is public on the instance you already hold, handing you that `SystemState` by `ref` in one hop.
 - **Assign the scheduled handle to `ref __result` and return `false`, rather than completing the job**, so the caller's temporary allocations still outlive the work.
 
 `ecs-in-this-game` owns jobs, handles and the Burst story itself.

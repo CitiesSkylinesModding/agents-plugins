@@ -50,11 +50,13 @@ The same call shape stores geometry, locale and image assets.
 Registration is one call:
 
 ```csharp
-UISystem.AddHostLocation(string hostName, string path, bool shouldWatch = true, int priority = 0);
+// AddHostLocation and RemoveHostLocation are instance methods on UISystem.
+// UIManager.defaultUISystem is the accessor the game's own mod manager uses.
+UIManager.defaultUISystem.AddHostLocation(hostName, path, shouldWatch: true, priority: 0);
 ```
 
 It inserts the path into the host's list at a binary-searched position on priority alone, ignores a duplicate path, and raises a host-added event carrying the watch flag.
-An overload takes several paths at once, and `RemoveHostLocation` exists — put it in `OnDispose`, since a host location is state registered outside your own world.
+An overload takes several paths at once, and `RemoveHostLocation` exists — put it in `OnDispose`.
 **Unregister with the two-argument form, naming both the host and the path**: the single-argument overload drops the whole host and every path any other mod registered under it.
 
 **Resolution walks the host's paths in priority order and takes the first that reads.**
@@ -81,7 +83,7 @@ Resolution holds no cache — a request walks the host's paths and reads the fil
 Whether the frontend asks again is the other half, and it is `frontend-and-injection`'s: the view's image cache pins a URL to the bytes it first resolved to, so a raster or SVG file rewritten under a fixed name is served stale until the URL itself changes, and the one C# call tested against it, `ClearCachedUnusedImages`, did not clear it.
 
 **One branch runs before that walk, and it is a name collision waiting to happen.**
-A request for a raster image — the extension list is `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.psd`, `.tga`, `.astc`, `.pkm`, `.dds`, `.ktx`, and pointedly not `.svg` — is first looked up as a Unity resource under `UI/SharedImages`, keyed on the file name with its extension dropped, and only falls through to the host walk when that lookup comes back null.
+A request for a raster image — the extension list is `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.psd`, `.tga`, `.astc`, `.pkm`, `.dds`, `.ktx`, and pointedly not `.svg` — is first looked up as a Unity resource under `UI/SharedImages`, keyed case-insensitively on the file name with its extension dropped, and only falls through to the host walk when that lookup comes back null.
 So `coui://yourmod/settings.png` serves the game's built-in `settings` texture if one exists under that name, and your file is never read.
 **Name a raster file you serve after something no shared image is called**, or ship it as `.svg`, which never takes this branch.
 A query on the URL reaches the same file, since the resolved path comes from the URL's path alone and the `coui` branch reads no query at all — which is what lets a changed query defeat the frontend's cache above without touching the file.

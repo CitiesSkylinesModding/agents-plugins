@@ -18,8 +18,12 @@ This is the number-one conceptual trap in the subject, and almost every prefab b
 | Layer | What it is | Lives as |
 | --- | --- | --- |
 | **Authoring** | the values a designer typed, one managed object per prefab, plus a list of attached components | `PrefabBase` / `ComponentBase`, both `ScriptableObject` |
-| **Prefab entity** | the ECS entity the game registers for that prefab, carrying blittable `*Data` copies of the above | an `Entity` with `PrefabData` on it |
+| **Prefab entity** | the ECS entity the game registers for that prefab, carrying unmanaged `*Data` copies of the above | an `Entity` with `PrefabData` on it |
 | **Instance** | one placed building, vehicle, tree or net segment, whose archetype the prefab declared | an `Entity` with `PrefabRef` on it |
+
+**None of the three is Unity's own entity-prefab machinery, whose words this table borrows.**
+`Unity.Entities.Prefab`, the engine tag that hides an entity from every query that does not pass `IncludePrefab`, is named nowhere in this game's code, and no vanilla code calls `EntityManager.Instantiate` — so a prefab entity here is queryable like any other, and an instance is built from the archetype the prefab cached rather than copied from the prefab entity.
+Source: `src/Game/Game.Objects/ObjectEmergeSystem.cs` and `src/Game/Game.Prefabs/ObjectData.cs` (the cached archetype an instance is created from), against `src/Unity.Entities/Unity.Entities/Prefab.cs` (the engine tag the vocabulary borrows).
 
 One vanilla file shows all three at once.
 `Game.Prefabs.DeathcareFacility` is an authoring `ComponentBase` holding `m_HearseCapacity`, `m_StorageCapacity`, `m_ProcessingRate` and `m_LongTermStorage`.
@@ -28,8 +32,8 @@ Its `GetArchetypeComponents` puts `Game.Buildings.DeathcareFacility` on every pl
 
 So three distinct types share one short name, and they are different in kind rather than merely in namespace:
 
-- `Game.Prefabs.DeathcareFacility` is a managed object and **cannot appear in a query at all**;
-- `Game.Prefabs.DeathcareFacilityData` is the blittable authoring copy, on the prefab entity;
+- `Game.Prefabs.DeathcareFacility` is a `ScriptableObject` implementing no ECS component interface — its base carries the game's own `IComponentBase`, which is not `IComponentData` — so it **cannot appear in a query at all**;
+- `Game.Prefabs.DeathcareFacilityData` is the unmanaged authoring copy, on the prefab entity;
 - `Game.Buildings.DeathcareFacility` is instance runtime state — `m_TargetRequest`, `m_Flags`, `m_ProcessingState`, `m_LongTermStoredCount` — and holds no copy of an authoring value.
 
 **The field name does not survive the copy, which is the trap inside the trap.**
@@ -117,7 +121,8 @@ public bool TryGetPrefab<T>(PrefabData prefabData, out T prefab) where T : Prefa
 The `as T` cast is unchecked and its result is never tested, so **`true` means "this entity is a live prefab", not "you got a `T`"**.
 The entity and `PrefabRef` overloads delegate to this one.
 The three single-argument `GetPrefab<T>` overloads share the same unchecked `as T` and return null on a failed cast — but they carry no live-prefab guard at all, so a dead prefab throws out of the index rather than returning null.
-**Null-check the out parameter yourself** on every typed lookup — `TryGetPrefab(x, out T p) && p is not null` — or wrap it once in an extension method and call only that.
+**Null-check the out parameter yourself** on every typed lookup — `TryGetPrefab(x, out T p) && p != null` — or wrap it once in an extension method and call only that.
+Write that test as `!= null` and not as `is not null`: `PrefabBase` is a `UnityEngine.Object`, whose `==` also reports an object whose native side was destroyed, and the pattern form tests the reference alone and misses it.
 
 **By query singleton.**
 `GetSingletonPrefab<T>(EntityQuery)` and `TryGetSingletonPrefab<T>` exist; the `Try` form gates on the query ignoring its filter, so a shared-component filter does not narrow the gate.
