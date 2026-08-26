@@ -82,6 +82,7 @@ Ask first before:
 - Reworking architecture.
 - Performing destructive file or data operations.
 - Acting on the user's running game — launching it, quitting it, loading or reloading a save, changing a setting in it. Say what you need done and why, then wait: only they can see what the game is actually on, and a launch costs minutes of their machine. Building, deploying and reading logs need no such permission.
+  **The ask ends the turn.** Put it last, in bold at the top level of your reply, and stop there rather than carrying on with the rest of the work — an ask buried mid-message under paragraphs of what you did instead goes unread, and the session then ships the workaround it was asking permission to avoid. Check `mcp__unity__status` or `game_status` before asking: the beacon answers in one call and the game is often already up.
 
 ## Where knowledge goes
 
@@ -126,5 +127,5 @@ It takes the opposite register to the above — contractions, one idea per sente
 - Resolve a ticket only after its review gate passes.
 - A test written to hold a fix earns belief once you have watched it fail with that fix backed out; reading cannot settle whether it is coupled ([the shapes that fool a reading](docs/solutions/a-regression-guard-that-passes-without-its-behavior.md)).
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.
-- The gameface and unity tools show their gaps in use: when you work around a missing tool, or a missing mode of one that exists, propose an entry in [`docs/ROADMAP.md`](docs/ROADMAP.md), with the workaround you used as its evidence.
+- The gameface and unity tools show their gaps only in use, so a session that drove either MCP owes the repo what it learned: the tool you wished existed, the mode missing from one that does, the parameter or output shape that cost you a round trip, the workaround you wrote instead. Collect them as you hit them and propose each as an entry in [`docs/ROADMAP.md`](docs/ROADMAP.md), naming the moment in the session that produced it as its evidence — the call you made, what came back, what you did instead. Surface the list at `/compound` time with the rest of the session's learnings, and let the user approve, redirect or drop each one; a proposal lands in `ROADMAP.md` only on an approval.
 - Formatters reformat the whole project, not your diff. Never revert what they touch: fold drift in a file your change already edits into that commit, and land drift in files it does not into a commit of its own.

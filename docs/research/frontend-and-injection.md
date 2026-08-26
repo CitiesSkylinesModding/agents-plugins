@@ -409,7 +409,7 @@ The replacement is the registry, and the four vanilla paths those two mods would
 
 ### Composition: what chains, what clobbers, and what survives a reset
 
-This is the compatibility surface `mod-compatibility.md:375` names, and the mechanism is four lines of the registry.
+This is the compatibility surface `mod-compatibility.md:382` names, and the mechanism is four lines of the registry.
 
 - **`extend` chains.** It is `override(path, name, cb(current))` (`source.js:13406`), so the second mod's callback receives the first mod's result. Every extension of `MouseToolOptions` in a playset composes into one wrapper chain, outermost being the mod that registered last.
 - **`append` chains too, and across anchors**, because every anchor append extends the same `ModdingHook` export and each wrapper filters on the rendered hook's `name` prop, passing through unchanged when it does not match (`:13421`). The wrapper sets `displayName = "Extended ModdingHook:<Anchor>+"` (`:13452`), which is how a chain reads back in the component tree.

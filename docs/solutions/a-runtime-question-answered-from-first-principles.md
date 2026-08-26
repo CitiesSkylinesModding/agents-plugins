@@ -76,3 +76,6 @@ framed it as a two-mod install.
 When a marker names an impractical experiment, ask what the claim is actually about before
 dropping it. Here the answer moved the experiment from an unreproducible player setup to two
 `csc` invocations and a file copy.
+
+Related: [a live read with no subject to read](a-live-read-with-no-subject-to-read.md) is the case
+where the question genuinely does need the running game, and the cost is finding something to read.

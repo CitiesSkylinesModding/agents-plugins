@@ -259,6 +259,16 @@ by statement count. The exclusions landed in the tool description, and with the 
 `unity-driving` skill, on 2026-08-10; what remains open is an `ecs_get_component` mode accepting
 several entities in one call, which would beat the recipe outright.
 
+### A buffer filter on `ecs_query`
+
+`ecs_query` matches on component presence, so it cannot tell an entity whose `DynamicBuffer` holds
+elements from one whose buffer is empty. Settling whether the debug proxy's buffer read pins a
+`bool`-carrying element type needed a non-empty buffer, and finding one meant probing entities one
+at a time: `Game.Rendering.Emissive` twice, `Game.Net.ArrowPosition`, `Game.Rendering.Skeleton` —
+all length 0 — before `Game.Net.LabelPosition` came back with 51. Either report the length beside
+each listed entity when a queried type is a buffer, or take a minimum-length filter; the first is
+cheaper and answers the same question.
+
 ### What a failed `eval` reports
 
 On failure `eval` reports the failing statement, the in-game exception, and every local evaluated so
@@ -273,6 +283,24 @@ resumed; re-evaluate it instead of using _`, on a call that used no `_`. The loc
 triggering a collection that invalidated the mirror. If that holds, the message should name the
 collected local and the constraint behind it — an allocation mid-sequence can invalidate object
 mirrors held across it — rather than a slot the caller never used.
+
+### `eval` cannot cast to an array type
+
+`(Game.Net.LabelPosition[])em.Debug.GetComponentBoxed(entity, type)` fails to parse:
+`unsupported: array type`. The workaround is `(System.Array)` plus `GetValue(int)`, which reads the
+elements back but renders each one truncated (`float3 {...}`), so a call returning an array is
+unusable at its natural type. Every `EntityManager.Debug` route that boxes a buffer hands back
+`object` over a `T[]`, and so does any game method returning an array, so accepting `T[]` in the
+cast grammar — and in `typeof` with it — closes a class of read rather than one call.
+
+### `eval` will not bind an enum argument
+
+`System.Runtime.InteropServices.GCHandle.Alloc(o, System.Runtime.InteropServices.GCHandleType.Pinned)`
+returns `Incorrect number or types of arguments (Parameter 'arguments')`, with `o` already bound to
+a local by a preceding statement. The enum member access itself resolves, so the failure is in
+overload matching — likely the argument arriving as the enum type where the parameter check wants
+its underlying integer, or the reverse. It blocked settling a runtime question in its general form
+and left only the field types the game happens to ship as evidence.
 
 ### Injected in-game helper (exploratory, opt-in)
 
