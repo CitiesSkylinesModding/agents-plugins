@@ -177,7 +177,6 @@ Another mod's components are in the world as soon as its assembly loaded, and a 
 The Entities package has runtime-typed reads that do, and each gives something up.
 `ArchetypeChunk.GetDynamicComponentDataArrayReinterpret<T>`, off a `DynamicComponentTypeHandle`, lets a job read the chunk — but `T` is your own mirror of the foreign struct, so you are asserting a layout you do not own, and a change to it misreads rather than throws.
 `EntityManager.Debug.GetComponentBoxed` needs no layout and costs a boxed copy per entity on the main thread: it allocates an empty instance, pins it, and copies the chunk bytes into the pinned address.
-(UNVERIFIED: whether that pin refuses a component the runtime treats as non-blittable, which would fail the read outright rather than misread it — the decision sits in a native call the decompile cannot follow, and one live read of such a component through the debug proxy would settle it.)
 
 **Where the other mod wrote its effect into vanilla components, re-derive from those instead.**
 That is the migration a change to the foreign struct cannot break, and it holds the foreign type to what its name reliably buys.
