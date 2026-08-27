@@ -48,8 +48,7 @@ Sources: `src/Game/Game.Simulation/NoisePollutionSystem.cs`, `src/Game/Game.Simu
 ```
 every 2048 frames, two parallel jobs:
 swap:  m_Pollution = temp[centre]/4 + (temp of N,S,E,W)/8 + (temp of the 4 corners)/16
-       // weights sum to 1: a uniform field is preserved, a point source spread without gain;
-       // off-map neighbours read 0
+       // weights sum to 1: a uniform field is preserved, a point source spread without gain; off-map neighbours read 0
 clear: every m_PollutionTemp = 0
 ```
 
@@ -65,8 +64,7 @@ Source: `src/Game/Game.Simulation/NoisePollution.cs`, `src/Game/Game.Simulation/
 Sources: `src/Game/Game.Simulation/ObjectPolluteSystem.cs`, `src/Game/Game.Objects/ObjectUtils.cs`.
 
 ```
-per plant, once per 8192 frames — ObjectPolluteSystem.kUpdatesPerDay = 32, sharded 16 ways,
-    a quarter of the maps' 128 updates per day:
+per plant, once per 8192 frames — ObjectPolluteSystem.kUpdatesPerDay = 32, sharded 16 ways, a quarter of the maps' 128 updates per day:
 Plant.m_Pollution = saturate(m_Pollution + (m_PlantGroundMultiplier * ground
                                           + m_PlantAirMultiplier   * air
                                           − m_PlantFade) / kUpdatesPerDay)
@@ -83,8 +81,7 @@ prepare: cache (waterDepth, terrainHeight, forestAmbience) per cell
 per cell, over the neighbourhood within max(m_ForestDistance, m_ShoreDistance):
     m_ForestBonus = max of saturate(1 − dist / m_ForestDistance) * forestAmbienceThere
     m_ShoreBonus  = max of saturate(1 − dist / m_ShoreDistance)  * (waterDepthThere > 2 ? 1 : 0)
-EvaluateAttractiveness = m_ForestEffect * forest + m_ShoreEffect * shore
-                       + min(m_HeightBonus.z, max(0, terrainHeight − m_HeightBonus.x) * m_HeightBonus.y)
+EvaluateAttractiveness = m_ForestEffect * forest + m_ShoreEffect * shore + min(m_HeightBonus.z, max(0, terrainHeight − m_HeightBonus.x) * m_HeightBonus.y)
 ```
 
 The shore test is a hard 2-metre depth threshold, a C# literal — the same literal the fish derivation applies to water depth ([natural-resources.md](natural-resources.md)).

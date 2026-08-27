@@ -93,20 +93,13 @@ Source: `src/Game/Game.Prefabs/StorageCompany.cs`, `src/Game/Game.Simulation/Ind
 Sources: `src/Game/Game.Simulation/CommercialSpawnSystem.cs`, `src/Game/Game.Simulation/IndustrialSpawnSystem.cs`.
 
 ```
-CommercialSpawnSystem (runs only on one frame in every 128, and only while the
-                       commercial company demand is positive), per resource:
-  skip unless demand > 0 and the last spawn for it is older than
-    DemandParameterData.m_FrameIntervalForSpawning.y
+CommercialSpawnSystem (runs only on one frame in every 128, and only while the commercial company demand is positive), per resource:
+  skip unless demand > 0 and the last spawn for it is older than DemandParameterData.m_FrameIntervalForSpawning.y
   skip if any propertyless commercial company already produces it
-  else instantiate a uniformly random CommercialCompanyData prefab whose output
-    masks the resource
-IndustrialSpawnSystem (same gate on another frame, against the industrial + storage
-                       + office demand sum), per resource:
-  produceable non-material: roll NextInt(round(5000 / min(5, max(1, log10(1 + population)))))
-    < demand, skip if a propertyless industrial company already produces it, else spawn
-  produceable material: spawn an extractor when no propertyless extractor company
-    produces it -- no demand test -- and break out of the resource loop, ending
-    the pass: no later resource's roll or warehouse check runs
+  else instantiate a uniformly random CommercialCompanyData prefab whose output masks the resource
+IndustrialSpawnSystem (same gate on another frame, against the industrial + storage + office demand sum), per resource:
+  produceable non-material: roll NextInt(round(5000 / min(5, max(1, log10(1 + population))))) < demand, skip if a propertyless industrial company already produces it, else spawn
+  produceable material: spawn an extractor when no propertyless extractor company produces it -- no demand test -- and break out of the resource loop, ending the pass: no later resource's roll or warehouse check runs
   independently, any tradable resource with warehouse demand > 0: spawn a warehouse
 ```
 

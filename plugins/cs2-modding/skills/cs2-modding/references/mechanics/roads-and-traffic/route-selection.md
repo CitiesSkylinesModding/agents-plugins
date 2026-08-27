@@ -23,35 +23,23 @@ PathfindExecutor.CalculateCost(spec, flags, rules, delta):   // rules already ma
   value.xyw += spec.m_Length * float3(1 / speed,
                  rules has any Forbid* rule ? 1 : 0,         // behaviour, per metre
                  rules has AvoidBicycles    ? 0.1 : 0)       // comfort, per metre
-  value.y += 100 when having a matching authorization differs from
-             the edge's RequireAuthorization flag
-  value.xyz = 0 when the edge is free in the travelled direction (FreeForward /
-              FreeBackward), or the crossing is Boarding-only
+  value.y += 100 when having a matching authorization differs from the edge's RequireAuthorization flag
+  value.xyz = 0 when the edge is free in the travelled direction (FreeForward / FreeBackward), or the crossing is Boarding-only
   return dot(value, weights.m_Value) * abs(delta.y - delta.x)
 
 PathUtils.CalculateSpeed(spec, parameters):
   agent = m_WalkSpeed on pedestrian edges, else m_MaxSpeed    // each a float2; a
           .y on an EdgeFlags.Secondary edge, else .x          // Secondary edge uses .y
-  speed = min(agent, spec.m_MaxSpeed)            // spec.m_MaxSpeed unclamped for modes
-                                                 // outside Pedestrian / Road / Track /
-                                                 // Flying / MediumRoad / Bicycle
+  speed = min(agent, spec.m_MaxSpeed)            // spec.m_MaxSpeed unclamped for modes outside Pedestrian / Road / Track / Flying / MediumRoad / Bicycle
   return speed - spec.m_FlowOffset / 256 * speed // congestion penalty, off under IgnoreFlow
 
 PathfindExecutor.AddConnections:
-  costFactor *= 0.5 under ParkingReset — armed on a parking-method edge and
-                     latched for every edge after it, through the item's
-                     PathfindItemFlags.ReducedCost propagating to successors
+  costFactor *= 0.5 under ParkingReset — armed on a parking-method edge and latched for every edge after it, through the item's PathfindItemFlags.ReducedCost propagating to successors
   costFactor *= random in [0.5, 1)   unless PathfindFlags.Stable
 
 PathfindExecutor.Initialize:                     // the heuristic
-  m_HeuristicCostFactor = min over the agent's enabled PathMethods of
-      dot(that mode's cheapest per-metre costs + 1 / max(0.01, speed)
-          in the time component, agent weights)
-      // speed: the agent's own m_WalkSpeed.x on foot and its m_MaxSpeed.x
-      // for car, track, flying and off-road alike, a literal 111.11 for
-      // taxi, and the network-wide transport and cargo top speeds passed
-      // in; 1000000 when no enabled method has a branch; the transport
-      // and cargo modes start from zero costs
+  m_HeuristicCostFactor = min over the agent's enabled PathMethods of dot(that mode's cheapest per-metre costs + 1 / max(0.01, speed) in the time component, agent weights)
+      // speed: the agent's own m_WalkSpeed.x on foot and its m_MaxSpeed.x for car, track, flying and off-road alike, a literal 111.11 for taxi, and the network-wide transport and cargo top speeds passed in; 1000000 when no enabled method has a branch; the transport and cargo modes start from zero costs
   factor = 0             under NoHeuristics      // A* becomes Dijkstra
   factor *= 2            unless Stable           // greedier, less exact
   factor *= 0.5          under ParkingReset

@@ -20,11 +20,9 @@ Source: `src/Game/Game.Citizens/CitizenUtils.cs`.
 CitizenUtils.GetPathfindWeights(citizen, household, householdCitizens):
   time      = 5 * (4 - 3.75 * citizen.m_LeisureCounter / 255)
   behaviour = 2                                              // every citizen
-  money     = 2500 * max(1, householdCitizens)
-                   / max(250, household.m_ConsumptionPerDay)
+  money     = 2500 * max(1, householdCitizens) / max(250, household.m_ConsumptionPerDay)
   comfort   = 1 + 2 * citizen.GetPseudoRandom(TrafficComfort).NextFloat()
-  money    *= 0.1  when the household is not MovedIn and the citizen is not
-                   MovingAwayReachOC / Tourist / Commuter
+  money    *= 0.1  when the household is not MovedIn and the citizen is not MovingAwayReachOC / Tourist / Commuter
 ```
 
 This is the only computation of a citizen's weights, its three parameters are all it reads, and every call site passes the same three — the weighting does not vary by age.

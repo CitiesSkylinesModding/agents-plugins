@@ -25,20 +25,15 @@ Sources: `src/Game/Game.Pathfind/ParkingLaneDataSystem.cs`, `src/Game/Game.Net/N
 ParkingLaneDataSystem.CalculateFreeSpace(curve, lane, laneData, objects, overlaps, blocked):
   VirtualLane flag                       -> 0
   laneData.m_SlotInterval != 0           // slotted: lots, angled or perpendicular kerb
-    place the slot run on the curve: at the end away from a StartingLane or
-    EndingLane flag, centred otherwise
-    walk it slot by slot (NetUtils.GetParkingSlotCount / GetParkingSlotInterval,
-    unspawned parked cars skipped)
+    place the slot run on the curve: at the end away from a StartingLane or EndingLane flag, centred otherwise
+    walk it slot by slot (NetUtils.GetParkingSlotCount / GetParkingSlotInterval, unspawned parked cars skipped)
     a slot clear of parked cars, lane overlaps and the blocked range
                                          -> return m_MaxCarLength immediately
     none clear                           -> 0
   else                                   // continuous kerb
     walk the sorted parked cars (unspawned ones skipped) and merged overlaps
-    gap = distance between consecutive obstacles, minus each one's parking offsets
-          plus one metre (VehicleUtils.GetParkingOffsets + 1), a flat half metre
-          for an overlap or an unflagged lane end, shortened by the blocked range
-                                         -> the largest gap,
-                                            clamped to m_MaxCarLength when that is set
+    gap = distance between consecutive obstacles, minus each one's parking offsets plus one metre (VehicleUtils.GetParkingOffsets + 1), a flat half metre for an overlap or an unflagged lane end, shortened by the blocked range
+                                         -> the largest gap, clamped to m_MaxCarLength when that is set
 ```
 
 So a slotted lane reports a binary free-or-full dressed as a length, and a continuous lane reports a real length — a reader averaging `m_FreeSpace` across lanes is mixing the two.

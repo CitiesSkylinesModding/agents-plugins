@@ -60,11 +60,9 @@ Source: `src/Game/Game.UI.InGame/StatisticsUISystem.cs`, `src/Game/Game.Simulati
 Sources: `src/Game/Game.Simulation/StatisticTriggerSystem.cs`, `src/Game/Game.Prefabs/StatisticTriggerPrefab.cs`, `src/Game/Game.Prefabs/StatisticTriggerData.cs`.
 
 ```
-authoring (LateInitialize): if the statistic or its normaliser is Daily,
-    m_MinSamples = max(m_MinSamples, 32 + max(0, m_TimeFrame - 1))
+authoring (LateInitialize): if the statistic or its normaliser is Daily, m_MinSamples = max(m_MinSamples, 32 + max(0, m_TimeFrame - 1))
 per trigger, n = max(1, m_TimeFrame), a = the statistic's int series, b = the normaliser's:
-    skip when either series is shorter than n or m_MinSamples,
-        or the statistic entity (or the normaliser) has Locked enabled
+    skip when either series is shorter than n or m_MinSamples, or the statistic entity (or the normaliser) has Locked enabled
     normalised, by m_Type:
         TotalValue:     Σ_{j=1..n} (float)a[^j] / (float)b[^j]               // only when every b[^j] != 0
         AverageValue:   that sum / n

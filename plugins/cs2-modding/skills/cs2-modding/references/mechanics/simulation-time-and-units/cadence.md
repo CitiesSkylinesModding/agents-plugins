@@ -23,8 +23,7 @@ Refresh, for a system whose offset is negative:
     interval == 1                      → offset 0
     ordered before or after a system of the same interval and phase
                                        → inherits that system's offset, declared or assigned
-    otherwise                          → an offset assigned by a bit-reversal walk over the
-                                         systems sharing its interval, spreading them across residues
+    otherwise                          → an offset assigned by a bit-reversal walk over the systems sharing its interval, spreading them across residues
 ```
 
 The three-argument `Update` is called from `LoadSimulation`, `EditorSimulation` and `GameSimulation` only; the one-argument `Update(phase)` never reads `m_Interval`, so an interval override on a system in any other phase is inert and the system runs every call.
@@ -46,16 +45,11 @@ the vanilla idiom:  public static readonly int kUpdatesPerDay = N;
                     GetUpdateInterval(phase) => 262144 / kUpdatesPerDay
                     or, sharded:              262144 / (kUpdatesPerDay * 16)
 
-GetUpdateFrame(frame, updatesPerDay, groupCount)
-    = (frame / (262144 / (updatesPerDay * groupCount))) & (groupCount - 1)
-GetUpdateFrameWithInterval(frame, interval, groupCount)
-    = (frame / interval) & (groupCount - 1)
-GetUpdateFrameRare(frame, daysPerUpdate, groupCount)
-    = (frame / (daysPerUpdate * 262144 / groupCount)) & (groupCount - 1)
+GetUpdateFrame(frame, updatesPerDay, groupCount) = (frame / (262144 / (updatesPerDay * groupCount))) & (groupCount - 1)
+GetUpdateFrameWithInterval(frame, interval, groupCount) = (frame / interval) & (groupCount - 1)
+GetUpdateFrameRare(frame, daysPerUpdate, groupCount) = (frame / (daysPerUpdate * 262144 / groupCount)) & (groupCount - 1)
 
-a sharded system with interval 262144 / (kUpdatesPerDay * groupCount) runs
-    kUpdatesPerDay * groupCount times a day and touches each entity kUpdatesPerDay times,
-    the entities whose UpdateFrame.m_Index equals GetUpdateFrame(frameIndex, …) on that pass
+a sharded system with interval 262144 / (kUpdatesPerDay * groupCount) runs kUpdatesPerDay * groupCount times a day and touches each entity kUpdatesPerDay times, the entities whose UpdateFrame.m_Index equals GetUpdateFrame(frameIndex, …) on that pass
 ```
 
 `AgingSystem` declares `kUpdatesPerDay = 1` and returns `262144 / (kUpdatesPerDay * 16)`, so it runs sixteen times a day and ages each citizen once; `BirthSystem` does the same at `16`, and scales a per-day probability by `/ kUpdatesPerDay` inside the job.

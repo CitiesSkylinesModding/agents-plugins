@@ -15,33 +15,22 @@ Sources: `src/Game/Game.Simulation/CitizenFindJobSystem.cs`, `src/Game/Game.Simu
 ```
 CitizenFindJobSystem (kUpdatesPerDay = 256, UpdateFrame bucket):
   Child or Elderly: m_UnemploymentTimeCounter = 0, skip
-  still inside the seek cooldown (HasJobSeeker.m_LastJobSeekFrameIndex
-      + rand(kJobSeekCoolDownMin..Max)), or the household is moving away:
-    m_UnemploymentTimeCounter += 1/256, skip -- these two sit ABOVE the branch split,
-      so an employed citizen inside its cooldown ticks up instead of being zeroed
-  unemployed branch: m_UnemploymentTimeCounter += 1/256, so also on the pass
-      that creates the seeker
+  still inside the seek cooldown (HasJobSeeker.m_LastJobSeekFrameIndex + rand(kJobSeekCoolDownMin..Max)), or the household is moving away:
+    m_UnemploymentTimeCounter += 1/256, skip -- these two sit ABOVE the branch split, so an employed citizen inside its cooldown ticks up instead of being zeroed
+  unemployed branch: m_UnemploymentTimeCounter += 1/256, so also on the pass that creates the seeker
     proceed only when the free workspaces at levels 0..education pass a rand(100) gate
-  employed branch (promotion; this branch's job is scheduled only when a float draw in
-      [0, 1) exceeds m_SwitchJobRate, so a higher rate means fewer passes): m_UnemploymentTimeCounter = 0
-    looks again only when the current level -- 0 for an outside-connection workplace,
-    Worker.m_Level otherwise -- is below the education level AND the band between them
-    holds more than 100 free workspaces (plus a rand(500) gate)
-  seeker entity: JobSeeker { m_Level = citizen.GetEducationLevel(), m_Outside = Commuter bit },
-    Owner -> citizen, CurrentBuilding = the home property
-    (the temp home for a homeless household, the current building for a commuter)
+  employed branch (promotion; this branch's job is scheduled only when a float draw in [0, 1) exceeds m_SwitchJobRate, so a higher rate means fewer passes): m_UnemploymentTimeCounter = 0
+    looks again only when the current level -- 0 for an outside-connection workplace, Worker.m_Level otherwise -- is below the education level AND the band between them holds more than 100 free workspaces (plus a rand(500) gate)
+  seeker entity: JobSeeker { m_Level = citizen.GetEducationLevel(), m_Outside = Commuter bit }, Owner -> citizen, CurrentBuilding = the home property (the temp home for a homeless household, the current building for a commuter)
 
 FindJobSystem (interval 16, no bucket):
   pathfinds the seeker to a workplace
-  FreeWorkplaces.GetBestFor(seeker.m_Level) walks DOWN from that level and returns
-    the highest free slot at or below it, or -1
-  hire: Worker { m_Workplace, m_Level = bestFor, m_LastCommuteTime, m_Shift } on the citizen,
-        Employee { m_Worker, m_Level } appended to the workplace's buffer
+  FreeWorkplaces.GetBestFor(seeker.m_Level) walks DOWN from that level and returns the highest free slot at or below it, or -1
+  hire: Worker { m_Workplace, m_Level = bestFor, m_LastCommuteTime, m_Shift } on the citizen, Employee { m_Worker, m_Level } appended to the workplace's buffer
         m_Shift drawn from WorkplaceData.m_EveningShiftProbability / m_NightShiftProbability
 
 PayWageSystem (kUpdatesPerDay = 32, UpdateFrame bucket):
-  walks every household's citizens and pays each 1/32 of a daily figure (table below)
-  into the household's Resource.Money; a company workplace is debited the same amount
+  walks every household's citizens and pays each 1/32 of a daily figure (table below) into the household's Resource.Money; a company workplace is debited the same amount
 ```
 
 | Case | Daily figure |
@@ -89,8 +78,7 @@ CalculateNumberOfWorkplaces(totalWorkers, complexity, buildingLevel):
 
 GetWorkerWorkforce(happiness, level):
   ((level == 0 ? 2 : 1) + 2.5 * level) * (0.75 + happiness / 200)
-  // at happiness 50 the ladder is 2, 3.5, 6, 8.5, 11: the level-0 special case lifts
-  // the bottom rung, so the smallest gap on the ladder is the first one
+  // at happiness 50 the ladder is 2, 3.5, 6, 8.5, 11: the level-0 special case lifts the bottom rung, so the smallest gap on the ladder is the first one
   summed over the Employee buffer, then multiplied into company production:
   buildingEfficiency * sectorEfficiency * GetWorkforce(employees) * kCompanyUpdatesPerDay
 
@@ -98,8 +86,7 @@ work window (WorkerSystem.cs):
   [m_WorkDayStart, m_WorkDayEnd] rounded to the hour
   + a per-citizen WorkOffset in +-10922/262144 of a day (the WorkOffset seed)
   + 0.33 of a day for Workshift.Evening, 0.67 for Workshift.Night
-  start extended back by 60 * m_LastCommuteTime,
-    or by 40000 frames when that product comes to under 60 -- an unmeasured commute included
+  start extended back by 60 * m_LastCommuteTime, or by 40000 frames when that product comes to under 60 -- an unmeasured commute included
   off day: rand(100) > min(40, round(100 / max(1, sqrt(m_TrafficReduction * population))))
 ```
 

@@ -70,6 +70,22 @@ It names its source files above it and lives in its own sibling file, and a mech
 Pseudo-code rather than the decompiled C#: shipping the game's own code is the publisher's call rather than this plugin's.
 A formula two listings both model is transcribed in both: a listing models its method whole, and neither reader should need the other sibling.
 
+**A statement is never broken to fit a width.** No column limit reaches these files, and a fence wrapped to one spends its structural signal, indent, on the typesetter; a statement runs its natural length instead, however long that is.
+**A break inside a statement is therefore deliberate** — an expression's operands, a ternary's arms, a labelled row, what a call computes — and stays as it was laid out. A conclusion drawn from the steps around it rides behind whichever comment marker its fence already uses, `//` or `--`.
+
+The shape, from `roads-and-traffic/parking.md`. Two statements run past a hundred columns and are not broken; the outcome column is, and its rows line up. A body opens under a bare condition as readily as under a `:`:
+
+```
+ParkingLaneDataSystem.CalculateFreeSpace(curve, lane, laneData, objects, overlaps, blocked):
+  VirtualLane flag                       -> 0
+  laneData.m_SlotInterval != 0           // slotted: lots, angled or perpendicular kerb
+    place the slot run on the curve: at the end away from a StartingLane or EndingLane flag, centred otherwise
+    walk it slot by slot (NetUtils.GetParkingSlotCount / GetParkingSlotInterval, unspawned parked cars skipped)
+    a slot clear of parked cars, lane overlaps and the blocked range
+                                         -> return m_MaxCarLength immediately
+    none clear                           -> 0
+```
+
 ## Markers
 
 **One `VOLATILE:` marker covers a file's names** — the map's components and fields, the symbols its traps and formulas name, and the `Source:` paths with them — stating the declarations they all come from.

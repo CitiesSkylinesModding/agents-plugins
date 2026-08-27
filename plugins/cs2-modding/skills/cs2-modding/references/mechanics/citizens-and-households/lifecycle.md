@@ -22,8 +22,7 @@ Converting any of them to game years divides by `TimeSettingsData.m_DaysPerYear`
 Sources: `src/Game/Game.Simulation/AgingSystem.cs`.
 
 ```
-AgingJob (interval 16384, UpdateFrame bucket unless s_DebugAgeAllCitizens
-          -- so each household is visited once per day):
+AgingJob (interval 16384, UpdateFrame bucket unless s_DebugAgeAllCitizens -- so each household is visited once per day):
   iterates households; for each member:
     age = TimeSystem.GetDay(frame, timeData) - citizen.m_BirthDay
   Child  at 21: leave school if enrolled, SetAge(Teen), enable BicycleOwner
@@ -43,8 +42,7 @@ Sources: `src/Game/Game.Simulation/BirthSystem.cs`.
 
 ```
 BirthSystem (kUpdatesPerDay = 16, UpdateFrame bucket), per candidate:
-  candidate: CitizenAge.Adult, not Male | Tourist | Commuter,
-             household has a PropertyRenter        // so a homeless household has no births
+  candidate: CitizenAge.Adult, not Male | Tourist | Commuter, household has a PropertyRenter        // so a homeless household has no births
   p  = CitizenParametersData.m_BaseBirthRate
   p += m_AdultFemaleBirthRateBonus   if the household holds an adult Male
   p *= m_StudentBirthRateAdjust      if the candidate is a Student
@@ -81,17 +79,12 @@ Sources: `src/Game/Game.Simulation/DeathCheckSystem.cs`, `src/Game/Game.Simulati
 DeathCheckSystem (kUpdatesPerDay = 16, UpdateFrame bucket), per citizen:
   skip while riding a vehicle (ResidentFlags.InVehicle) and skip the already Dead
   draw = citizen.GetPseudoRandom(CitizenPseudoRandom.Death).NextFloat()
-  old age: die if draw < HealthcareParameterData.m_DeathRate
-                          .Evaluate((ageInDays + normalizedTimeOfDay - 0.5)
-                                    / m_DaysPerYear / kMaxAgeInGameYear)   // kMaxAgeInGameYear = 9
+  old age: die if draw < HealthcareParameterData.m_DeathRate.Evaluate((ageInDays + normalizedTimeOfDay - 0.5) / m_DaysPerYear / kMaxAgeInGameYear)   // kMaxAgeInGameYear = 9
            (m_LegacyDeathRate for saves predating the curve swap)
   else, if HealthProblemFlags.Sick | Injured:
     n = 10 - m_Health / 10
     die if rand(kUpdatesPerDay * 1000) <= n*n + 8     // the +8 is a floor no health escapes
-    else roll recovery against a fail threshold: Logistic(3, 1000, 6, n/10 - 0.35),
-         minus 10 * Game.Buildings.Hospital.m_TreatmentBonus while inside an active hospital,
-         then the RecoveryFailChange modifier; recover when a float draw in [0, 1000)
-         lands at or above the threshold
+    else roll recovery against a fail threshold: Logistic(3, 1000, 6, n/10 - 0.35), minus 10 * Game.Buildings.Hospital.m_TreatmentBonus while inside an active hospital, then the RecoveryFailChange modifier; recover when a float draw in [0, 1000) lands at or above the threshold
 ```
 
 **A given citizen's old-age death draw never changes.**

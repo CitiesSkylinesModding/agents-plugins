@@ -15,16 +15,13 @@ Sources: `src/Game/Game.Simulation/TransportStopSystem.cs`, `src/Game/Game.Simul
 ```
 comfort = saturate(TransportStopData.m_ComfortFactor)
 loading = max(0, 1 + TransportStopData.m_LoadingFactor)
-if a TransportStation owns the stop (the first Owner carrying one, stepping
-                                     exactly one hop further when that owner's
-                                     own owner is also a station):
+if a TransportStation owns the stop (the first Owner carrying one, stepping exactly one hop further when that owner's own owner is also a station):
     comfort = saturate(comfort + (1 - comfort) * station.m_ComfortFactor)
     loading = max(0, loading * station.m_LoadingFactor)
     active  = station has TransportStationFlags.TransportStopsActive
 else:
     active  = true
-when any of the three changed: PathfindUpdated on every ConnectedRoute waypoint,
-                               and on the stop itself when it is a taxi stand
+when any of the three changed: PathfindUpdated on every ConnectedRoute waypoint, and on the stop itself when it is a taxi stand
 ```
 
 **Comfort composes as a diminishing blend and loading as a product** — that shape is the mechanism; the magnitudes are prefab values.
@@ -35,8 +32,7 @@ station.m_ComfortFactor = saturate(prefab.m_ComfortFactor * efficiency)
 station.m_LoadingFactor = max(0, (1 + prefab.m_LoadingFactor) * efficiency)
 efficiency > 0 ? copy the four refuel masks and set TransportStopsActive
                : zero the four masks and clear it
-then: active and offering any refuelling, but zero connected lines
-      -> clear TransportStopsActive again
+then: active and offering any refuelling, but zero connected lines -> clear TransportStopsActive again
 ```
 
 **A refuelling station with no line through it deactivates its own stops.**
@@ -59,8 +55,7 @@ count: per resident at a transport stop, or queued with a positive target radius
     m_OngoingAccumulation += resident.m_Timer * that * (2/15)   // timer units to seconds
 tick:
     1 chance in 64: m_SuccessAccumulation++ (capped at 65535)
-    quotients = (m_OngoingAccumulation, m_ConcludedAccumulation)
-                ceil-divided by max(1, (m_Count, m_SuccessAccumulation))
+    quotients = (m_OngoingAccumulation, m_ConcludedAccumulation) ceil-divided by max(1, (m_Count, m_SuccessAccumulation))
     avg = min(65535, cmax(quotients) rounded down to a multiple of 5)
     if avg != m_AverageWaitingTime: PathfindUpdated on the waypoint
     decay = (m_SuccessAccumulation + random(0..255)) >> 8

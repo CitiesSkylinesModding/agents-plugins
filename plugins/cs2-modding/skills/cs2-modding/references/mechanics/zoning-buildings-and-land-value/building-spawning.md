@@ -15,8 +15,7 @@ Sources: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Prefabs/Z
 ```
 ZoneSpawnSystem (GameSimulation, interval 16, offset 13):
   four gates, from the demand systems' outputs (debugFastSpawn forces all four and sets m_MinDemand = 0):
-    residential: (low + medium + high building demand) / 3 > 0   // integer division:
-                 // a lone demand of 1 or 2 leaves the gate shut
+    residential: (low + medium + high building demand) / 3 > 0   // integer division: a lone demand of 1 or 2 leaves the gate shut
     commercial:  commercial building demand > 0
     industrial:  (industrial building demand + office building demand) / 2 > 0
     storage:     storage building demand > 0
@@ -48,30 +47,16 @@ SelectBuilding:
                * (demand + 1)
                * csum(select(0.01, 0.5, lot corner flags == building access flags))
     the land value handed to the score is scaled first:
-        residential: the building width is first widened to the lot's when one cell short and the zone
-                     lacks SupportNarrow, then
-                     landValue * (building width * the VACANT LOT's depth)
-                         / (m_ResidentialProperties == 1 ? 2 : CountProperties())
+        residential: the building width is first widened to the lot's when one cell short and the zone lacks SupportNarrow, then landValue * (building width * the VACANT LOT's depth) / (m_ResidentialProperties == 1 ? 2 : CountProperties())
         the rest:    landValue / m_SpaceMultiplier
-    priority *= ZoneEvaluationUtils.GetScore(...)           // below; SelectBuilding's extractor
-               // parameter is false at its one call site, so the extractor bypass arms in this
-               // method are dead at 1.6.0f1;
-               with m_MinDemand == 0 the score is floored at 0 and 1 is added first
-  the winner's lot rectangle is shrunk to its footprint, anchored by its access flags,
-      with a coin flip when it has neither
+    priority *= ZoneEvaluationUtils.GetScore(...)           // below; SelectBuilding's extractor parameter is false at its one call site, so the extractor bypass arms in this method are dead at 1.6.0f1; with m_MinDemand == 0 the score is floored at 0 and 1 is added first
+  the winner's lot rectangle is shrunk to its footprint, anchored by its access flags, with a coin flip when it has neither
 
 SpawnBuildingJob (IJobParallelFor scheduled over exactly 3 indices):
-  index 0 residential, 1 commercial, 2 industrial; each dequeues its whole queue
-      and keeps the single highest priority
-  so at most three buildings are created per update, one per area type, storage riding inside
-      industrial -- that is the growth throttle, and no parameter tunes it
-  Spawn: writes CreationDefinition { m_Prefab, CreationFlags.Permanent | Construction } and an
-      ObjectDefinition into the archetype declared in OnCreate, and the definition machinery
-      builds the entity (placement-definitions)
-  position and rotation from ZoneUtils.GetPosition / GetRotation, ground height sampled at the
-      lot front, y clamped under the cell height ceiling -- re-read, unguarded, from the Cell
-      buffer of every block the zone search tree returns under the footprint -- minus the
-      building height minus 0.1
+  index 0 residential, 1 commercial, 2 industrial; each dequeues its whole queue and keeps the single highest priority
+  // so at most three buildings are created per update, one per area type, storage riding inside industrial -- that is the growth throttle, and no parameter tunes it
+  Spawn: writes CreationDefinition { m_Prefab, CreationFlags.Permanent | Construction } and an ObjectDefinition into the archetype declared in OnCreate, and the definition machinery builds the entity (placement-definitions)
+  position and rotation from ZoneUtils.GetPosition / GetRotation, ground height sampled at the lot front, y clamped under the cell height ceiling -- re-read, unguarded, from the Cell buffer of every block the zone search tree returns under the footprint -- minus the building height minus 0.1
 ```
 
 **A block spawns only through its `Owner`, and a wrong owner is skipped in silence.**
@@ -90,23 +75,19 @@ ZoneEvaluationUtils.GetScore, every coefficient a ZonePreferenceData field:
                - m_ResidentialSignificanceWorkplaces / max(0.1, workplaces availability)
                + dot(m_ResidentialSignificancePollution, pollution)
                + m_ResidentialSignificanceLandValue * (landValue - m_ResidentialNeutralLandValue)
-  commercial:  555 + max(m_CommercialSignificanceConsumers * (2 - lerp(uneducated factor, educated factor, 0.67)),
-                         m_CommercialSignificanceWorkplaces * (2 - workplaces factor))
+  commercial:  555 + max(m_CommercialSignificanceConsumers * (2 - lerp(uneducated factor, educated factor, 0.67)), m_CommercialSignificanceWorkplaces * (2 - workplaces factor))
                + m_CommercialSignificanceCompetitors * (-0.4 + services factor)   // positive in service scarcity
                + m_CommercialSignificanceLandValue * (landValue - m_CommercialNeutralLandValue)
-               // GetScore blends 0.9 * lodging:false + 0.1 * lodging:true, and GetCommercialScore
-               // never reads its lodging parameter, so the blend is 1.0 of the same number
+               // GetScore blends 0.9 * lodging:false + 0.1 * lodging:true, and GetCommercialScore never reads its lodging parameter, so the blend is 1.0 of the same number
   office:      555 + m_OfficeSignificanceEmployees * (0.25 - 5 * educated-citizens factor)
                + m_OfficeSignificanceServices * (0.25 - 2 * services factor)
   industrial:  555 + m_IndustrialSignificanceInput * GetTransportScore(m_AllowedManufactured, ...)
                + m_IndustrialSignificanceLandValue * (landValue - m_IndustrialNeutralLandValue)
                - 0.5 * landValue        // a second, unparameterised land-value penalty found nowhere else
-  storage:     num = min over allowed resources with nonzero demand of BOTH
-                     GetStorageScore(resource, marketPrice, ...) and 0.05 / max(0.1, supply availability);
+  storage:     num = min over allowed resources with nonzero demand of BOTH GetStorageScore(resource, marketPrice, ...) and 0.05 / max(0.1, supply availability);
                max(0, 555 - 10 * num)   // no such resource leaves num at +inf, so the score is 0
   AreaType.None: 0
-  // office here means the lot's zone: an industrial-area lot whose zone prefab has an empty
-  // ProcessEstimate buffer is scored as office
+  // office here means the lot's zone: an industrial-area lot whose zone prefab has an empty ProcessEstimate buffer is scored as office
 ```
 
 **The suitability infoview's factors and the spawner's score are different expressions.**

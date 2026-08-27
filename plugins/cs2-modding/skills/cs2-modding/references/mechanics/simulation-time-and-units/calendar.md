@@ -37,8 +37,7 @@ GetDateTime / GetCurrentDateTime:
     hour   = floor(24 * timeOfDay)
     minute = floor(60 * (24 * timeOfDay - hour))
     day    = 1 + floor(D * timeOfYear) % D                                   // DateTime's *day* slot holds the game's month
-    CreateDateTime(year, day, hour, minute, second) builds from DateTime(0, Utc)
-        and adds one hour when the result IsDaylightSavingTime()
+    CreateDateTime(year, day, hour, minute, second) builds from DateTime(0, Utc) and adds one hour when the result IsDaylightSavingTime()
 
 DebugAdvanceTime(minutes):   data.m_FirstFrame -= (uint)(minutes * 262144) / 1440
 ```

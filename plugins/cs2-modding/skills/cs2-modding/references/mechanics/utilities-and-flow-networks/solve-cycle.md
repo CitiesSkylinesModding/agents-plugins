@@ -45,29 +45,18 @@ Both adjust systems assert `GetUpdateInterval >= 128` at creation — a first-pa
 Sources: `src/Game/Game.Simulation/ElectricityFlowJob.cs`, `src/Game/Game.Simulation/WaterPipeFlowJob.cs`, `src/Game/Game.Simulation.Flow/MaxFlowSolver.cs`, `src/Game/Game.Simulation.Flow/FluidFlowSolver.cs`.
 
 ```
-ElectricityFlowJob.Phase: Initial -> Producer -> PostProducer -> Battery -> PostBattery
-                          -> Trade -> PostTrade -> Complete
-  budget per frame = max(100, m_LastTotalSteps / 124); the final frame ignores it and
-    runs to completion
+ElectricityFlowJob.Phase: Initial -> Producer -> PostProducer -> Battery -> PostBattery -> Trade -> PostTrade -> Complete
+  budget per frame = max(100, m_LastTotalSteps / 124); the final frame ignores it and runs to completion
   Producer:     a full max-flow with every battery and trade edge FlowDirection.None
-  PostProducer: label the shortage sub-graphs backwards from the sink; enable discharge
-    edges whose node sits inside a shortage sub-graph, charge edges whose node does not
-    -- a battery decides per node from the previous solve's min cut, not from a global figure
+  PostProducer: label the shortage sub-graphs backwards from the sink; enable discharge edges whose node sits inside a shortage sub-graph, charge edges whose node does not -- a battery decides per node from the previous solve's min cut, not from a global figure
   Battery:      solve again with those edges on
-  PostBattery:  disable every battery edge, re-label, then enable a TradeNode's import
-    edge (source -> node) at a shortage node and its export edge (node -> sink) elsewhere
+  PostBattery:  disable every battery edge, re-label, then enable a TradeNode's import edge (source -> node) at a shortage node and its export edge (node -> sink) elsewhere
   Trade:        solve again
   PostTrade:    import on, export off; label connectivity and bottlenecks for the apply pass
-WaterPipeFlowJob.Phase: Initial -> Producer -> PostProducer -> Trade -> PostTrade
-                        -> FluidFlow -> Complete
-  scheduled twice per cycle over one topology: the fresh instance with
-    (import, export) = (1073741823, 1073741823), the sewage instance with (1073741823, 0)
-    -- unlimited handling-capacity import, no export, which is the sewage inversion
+WaterPipeFlowJob.Phase: Initial -> Producer -> PostProducer -> Trade -> PostTrade -> FluidFlow -> Complete
+  scheduled twice per cycle over one topology: the fresh instance with (import, export) = (1073741823, 1073741823), the sewage instance with (1073741823, 0) -- unlimited handling-capacity import, no export, which is the sewage inversion
   no battery phases; PostProducer labels shortages and enables trade edges directly
-  FluidFlow: MaxFlowSolver returns an arbitrary member of the equal-value maximum flows,
-    so FluidFlowSolver re-runs the assignment along short paths (two NativeMinHeap passes,
-    label then push) and the apply pass reads its m_FinalFlow; skipped entirely when
-    WaterPipeFlowSystem.fluidFlowEnabled is false
+  FluidFlow: MaxFlowSolver returns an arbitrary member of the equal-value maximum flows, so FluidFlowSolver re-runs the assignment along short paths (two NativeMinHeap passes, label then push) and the apply pass reads its m_FinalFlow; skipped entirely when WaterPipeFlowSystem.fluidFlowEnabled is false
 ```
 
 `fluidFlowEnabled` is a public settable property defaulting to true, and the developer menu ships it as its "Water Pipe Fluid Flow" toggle (`src/Game/Game.Simulation/WaterPipeFlowSystem.cs`, `src/Game/Game.Debug/DebugSystem.cs`).

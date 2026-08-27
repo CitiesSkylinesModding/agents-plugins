@@ -15,9 +15,7 @@ Sources: `src/Game/Game.Simulation/TaxSystem.cs`, `src/Game/Game.City/TaxRate.cs
 A tax rate is not a component: `TaxSystem` owns a persistent 92-slot `NativeArray<int>`, handed out by `GetTaxRates()` with `AddReader(JobHandle)`, and the layout is documented by an enum in another namespace:
 
 ```
-Game.City.TaxRate: Main = 0, ResidentialOffset = 1, CommercialOffset = 2, IndustrialOffset = 3,
-  OfficeOffset = 4, EducationZeroOffset = 5, CommercialResourceZeroOffset = 10,
-  IndustrialResourceZeroOffset = 51, Count = 92
+Game.City.TaxRate: Main = 0, ResidentialOffset = 1, CommercialOffset = 2, IndustrialOffset = 3, OfficeOffset = 4, EducationZeroOffset = 5, CommercialResourceZeroOffset = 10, IndustrialResourceZeroOffset = 51, Count = 92
 GetTaxRate(area)             = rates[0] + rates[(int)area]
 GetResidentialTaxRate(level) = GetTaxRate(Residential) + rates[5 + level]
 GetCommercialTaxRate(res)    = GetTaxRate(Commercial)  + rates[10 + denseIndex(res)]
@@ -39,17 +37,13 @@ Tax is charged from an accrual on the payer, not computed at collection: income 
 The writers are the production and wage systems — `ProcessingCompanySystem`, `ServiceCompanySystem`, `ExtractorCompanySystem` and, for households, `PayWageSystem` — not anything in `TaxPayer.cs` itself, which is only the struct.
 
 ```
-TaxSystem (kUpdatesPerDay = 32, UpdateFrame), three jobs over three queries -- the
-definition of who pays what:
+TaxSystem (kUpdatesPerDay = 32, UpdateFrame), three jobs over three queries -- the definition of who pays what:
   residential: TaxPayer + UpdateFrame + Resources + Household
   commercial:  TaxPayer + UpdateFrame + Resources + ServiceAvailable
-  industrial:  TaxPayer + UpdateFrame + Resources + ProcessingCompany,
-               excluding StorageCompany and ServiceAvailable
+  industrial:  TaxPayer + UpdateFrame + Resources + ProcessingCompany, excluding StorageCompany and ServiceAvailable
 PayTax: tax = round(0.01 * m_AverageTaxRate * m_UntaxedIncome)
   deduct round(m_PaidMultiplier * tax) from the payer's money
-  industrial payer whose prefab output has m_Weight == 0 -> booked into the
-    OfficeTaxableIncome statistic; the parallel IncomeSource.TaxOffice reassignment
-    is a dead store, and the budget's TaxOffice row is filled from the statistic
+  industrial payer whose prefab output has m_Weight == 0 -> booked into the OfficeTaxableIncome statistic; the parallel IncomeSource.TaxOffice reassignment is a dead store, and the budget's TaxOffice row is filled from the statistic
   book m_UntaxedIncome * 32 into the per-area taxable-income statistic
   m_UntaxedIncome = 0; m_AverageTaxPaid = tax * 32
 ```
@@ -77,10 +71,7 @@ Sources: `src/Game/Game.Prefabs/OutsideTradeParameterData.cs`, `src/Game/Game.Si
 Utility trade is priced per unit on `OutsideTradeParameterData` (`m_ElectricityImportPrice`, `m_ElectricityExportPrice`, `m_WaterImportPrice`, `m_WaterExportPrice`, `m_SewageExportPrice`), and the five outside service imports are per capita, each gated on `CityOption.ImportOutsideServices`:
 
 ```
-fee helper returns -(int)(fee * (population / m_OCServiceTradePopulationRange + 1)
-                          * m_OCServiceTradePopulationRange)
-with CityModifierType.CityServiceImportCost applied; the expense slot stores its
-negation, so the stored cost is positive
+fee helper returns -(int)(fee * (population / m_OCServiceTradePopulationRange + 1) * m_OCServiceTradePopulationRange) with CityModifierType.CityServiceImportCost applied; the expense slot stores its negation, so the stored cost is positive
 ```
 
 So the charge steps in whole population blocks, and turning the city option off zeroes all five.
@@ -94,13 +85,8 @@ Source: `src/Game/Game.Prefabs/OutsideTradeParameterData.cs`.
 Sources: `src/Game/Game.Simulation/CityServiceBudgetSystem.cs`, `src/Game/Game.Simulation/BudgetApplySystem.cs`, `src/Game/Game.City/IncomeSource.cs`, `src/Game/Game.City/ExpenseSource.cs`.
 
 ```
-IncomeSource:  TaxResidential, TaxCommercial, TaxIndustrial, FeeHealthcare, FeeElectricity,
-  GovernmentSubsidy, FeeEducation, ExportElectricity, ExportWater, FeeParking,
-  FeePublicTransport, TaxOffice, FeeGarbage, FeeWater, Count
-ExpenseSource: SubsidyResidential, LoanInterest, ImportElectricity, ImportWater, ExportSewage,
-  ServiceUpkeep, SubsidyCommercial, SubsidyIndustrial, SubsidyOffice, ImportPoliceService,
-  ImportAmbulanceService, ImportHearseService, ImportFireEngineService, ImportGarbageService,
-  MapTileUpkeep, Count
+IncomeSource:  TaxResidential, TaxCommercial, TaxIndustrial, FeeHealthcare, FeeElectricity, GovernmentSubsidy, FeeEducation, ExportElectricity, ExportWater, FeeParking, FeePublicTransport, TaxOffice, FeeGarbage, FeeWater, Count
+ExpenseSource: SubsidyResidential, LoanInterest, ImportElectricity, ImportWater, ExportSewage, ServiceUpkeep, SubsidyCommercial, SubsidyIndustrial, SubsidyOffice, ImportPoliceService, ImportAmbulanceService, ImportHearseService, ImportFireEngineService, ImportGarbageService, MapTileUpkeep, Count
 ```
 
 `CityServiceBudgetSystem` fills the slots each pass: the four tax incomes from `TaxSystem.GetEstimatedTaxAmount(area, TaxResultType.Income, ...)` and the four subsidies from the same call with `TaxResultType.Expense` negated — so a negative slider is an expense row, not a negative income, and a mod reading only the income slots undercounts.
@@ -120,11 +106,8 @@ LoanSystem.GetTargetInterest:
   value = 100 * lerp(interestRange.x, interestRange.y, saturate(loan / max(1, creditworthiness)))
   CityModifierType.LoanInterest applied
   return max(0, 0.01 * value)
-CalculateLoan: LoanInfo { m_Amount, m_DailyInterestRate, m_DailyPayment = round(amount * rate) },
-  or an all-zero LoanInfo when amount <= 0
-ChangeLoan clamps to [max(0, currentLoan - max(0, money)), Creditworthiness] and enqueues;
-  the queued action does PlayerMoney.Add(newAmount - oldAmount) and stamps a fresh
-  m_LastModified -- no separate disbursement
+CalculateLoan: LoanInfo { m_Amount, m_DailyInterestRate, m_DailyPayment = round(amount * rate) }, or an all-zero LoanInfo when amount <= 0
+ChangeLoan clamps to [max(0, currentLoan - max(0, money)), Creditworthiness] and enqueues; the queued action does PlayerMoney.Add(newAmount - oldAmount) and stamps a fresh m_LastModified -- no separate disbursement
 ```
 
 The rate rises linearly with how much of the credit line is drawn, from `EconomyParameterData.m_LoanMinMaxInterestRate.x` at nothing to `.y` at the limit, and every loan figure is daily — there is no monthly loan payment to convert from.

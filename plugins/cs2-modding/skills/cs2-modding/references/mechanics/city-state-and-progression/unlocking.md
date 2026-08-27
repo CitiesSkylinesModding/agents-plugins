@@ -15,8 +15,7 @@ Without one you cannot check anything below.
 Source: `src/Game/Game.Prefabs/UnlockSystem.cs` (`MainLoop`; enabled only while `mode.IsGame()`).
 
 ```
-run when a pending Unlock event names a still-locked prefab, on the first update after load,
-    or when the Locked + UnlockRequirement + Updated query is non-empty
+run when a pending Unlock event names a still-locked prefab, on the first update after load, or when the Locked + UnlockRequirement + Updated query is non-empty
 ProcessEvents: each Unlock.m_Prefab still Locked → disable Locked, no new event
 loop:
     per locked entity with an UnlockRequirement buffer, over each entry (break once blockedAll):
@@ -52,8 +51,7 @@ Milestones and dev-tree nodes gate unlocks without being subclasses: `MilestoneP
 `ObjectBuiltRequirementSystem` is the shape the others follow (`src/Game/Game.Prefabs/ObjectBuiltRequirementSystem.cs`):
 
 ```
-query: PrefabRef with Any { Created, Deleted }, None { Native, Temp };
-    on the first update after load, every PrefabRef entity without Native or Temp instead, so the city is recounted once
+query: PrefabRef with Any { Created, Deleted }, None { Native, Temp }; on the first update after load, every PrefabRef entity without Native or Temp instead, so the city is recounted once
 per instance whose prefab carries an UnlockOnBuildData buffer, per listed requirement:
     num = max(m_Progress + (deleted ? -1 : +1), 0)
     m_Progress = min(m_MinimumCount, num)                       // the display saturates

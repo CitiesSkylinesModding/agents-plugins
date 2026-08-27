@@ -24,14 +24,11 @@ ApplyToSchoolSystem (interval 512, UpdateFrame bucket):
   else:  target = GetEducationLevel() + 1
          0 failed attempts and age > Teen and target == College -> target University
          // the age term is load-bearing: a teen keeps College
-  admission: age == Child
-             or (age == Teen  and HighSchool <= target < University)
-             or (age == Adult and target >= HighSchool)
+  admission: age == Child or (age == Teen  and HighSchool <= target < University) or (age == Adult and target >= HighSchool)
   requires CitizenUtils.HasMovedIn(household)
   roll GetEnteringProbability (below):
     pass, and the household rents, is no tourist and is not moving away:
-      seeker entity { SchoolSeeker.m_Level, Owner -> citizen, CurrentBuilding = home }
-      + HasSchoolSeeker on the citizen
+      seeker entity { SchoolSeeker.m_Level, Owner -> citizen, CurrentBuilding = home } + HasSchoolSeeker on the citizen
     fail above HighSchool: failed-education count + 1 (capped at 3), SchoolSeekerCooldown
 
 FindSchoolSystem (interval 16, no bucket):
@@ -45,8 +42,7 @@ FindSchoolSystem (interval 16, no bucket):
 StudentSystem (interval 16, no bucket):
   attendance, per citizen per day:
     rand(100) <= min(40, round(100 / max(1, sqrt(m_TrafficReduction * population))))
-  school day is [m_WorkDayStart - commute, m_WorkDayEnd], shifted per citizen
-    by the WorkOffset seed in +-10922/262144 of a day
+  school day is [m_WorkDayStart - commute, m_WorkDayEnd], shifted per citizen by the WorkOffset seed in +-10922/262144 of a day
   queues Purpose.GoingToSchool, ends Purpose.Studying when the day closes
 
 GraduationSystem (interval 16384, UpdateFrame bucket):
@@ -55,8 +51,7 @@ GraduationSystem (interval 16384, UpdateFrame bucket):
   p = GetGraduationProbability (below)
   pass: SetEducationLevel(max(current, level)); leaves school above Elementary
   fail at level > 2:
-    under three failed attempts: count + 1, then a dropout roll
-      amplified as 1 - (1-p)^32
+    under three failed attempts: count + 1, then a dropout roll amplified as 1 - (1-p)^32
     at three: expelled outright, CitizenFailedSchool instead of CitizenDroppedOutSchool
 ```
 
@@ -81,12 +76,10 @@ Source: `src/Game/Game.Simulation/StudentSystem.cs`, `src/Game/Game.Simulation/W
 ```
 GetEnteringProbability (ApplyToSchoolSystem.cs):
   Elementary:  1 for a Child, 0 for anyone else
-  HighSchool:  m_AdultEnterHighSchoolProbability for an adult or a worker,
-               m_EnterHighSchoolProbability otherwise
+  HighSchool:  m_AdultEnterHighSchoolProbability for an adult or a worker, m_EnterHighSchoolProbability otherwise
   n = wellbeing / 60 * (0.5 + studyWillingness)      // StudyWillingness pseudo-random seed
   College:     0.5 * (worker ? m_WorkerContinueEducationProbability : 1) * log(1.6n + 1)
-  University:  0.3 * (worker ? m_WorkerContinueEducationProbability : 1) * n,
-               then the UniversityInterest city modifier
+  University:  0.3 * (worker ? m_WorkerContinueEducationProbability : 1) * n, then the UniversityInterest city modifier
   // the m_* fields live on EducationParameterData, a singleton
 
 GetGraduationProbability (GraduationSystem.cs):
@@ -99,8 +92,7 @@ GetGraduationProbability (GraduationSystem.cs):
   then p = 1 - (1-p) / efficiency, + SchoolData.m_GraduationModifier
 
 GetDropoutProbability (GraduationSystem.cs):
-  compares lifetime earnings at the current wage against expected earnings after
-  graduating, net of the school fee and the unemployment benefit forgone
+  compares lifetime earnings at the current wage against expected earnings after graduating, net of the school fee and the unemployment benefit forgone
   returns 1.0 (certain dropout) where studying does not pay
 ```
 
@@ -109,12 +101,10 @@ GetDropoutProbability (GraduationSystem.cs):
 `ServiceFeeSystem` charges the fee to the household, per student, from `Resource.Money` (`src/Game/Game.Simulation/ServiceFeeSystem.cs`).
 
 ```
-PayFeeJob (ServiceFeeSystem.cs, interval 2048, no UpdateFrame => 128 passes per day,
-           each pass over every student in every school's Game.Buildings.Student buffer):
+PayFeeJob (ServiceFeeSystem.cs, interval 2048, no UpdateFrame => 128 passes per day, each pass over every student in every school's Game.Buildings.Student buffer):
   debit = round(GetFee(resource, city ServiceFee buffer) / 128)
   the ledger books the unrounded cost, so ledger and household disagree at small fees
-  GetEducationResource: level 1 -> BasicEducation, 2 -> SecondaryEducation,
-                        3 and 4 -> HigherEducation
+  GetEducationResource: level 1 -> BasicEducation, 2 -> SecondaryEducation, 3 and 4 -> HigherEducation
 ```
 
 **College and University charge the same fee.**

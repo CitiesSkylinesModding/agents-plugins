@@ -19,8 +19,7 @@ PostDeserialize:
     NewGame at version >= Version.editorMapTiles: drop null entries from m_StartTiles, remove Native from the rest
     NewGame below that version: LegacyGenerateMapTiles(editorMode: false); NewMap: LegacyGenerateMapTiles(editorMode: true)
 LegacyGenerateMapTiles(editorMode):
-    destroy existing tiles; create 529 entities from the MapTilePrefab archetype
-    (const LEGACY_GRID_WIDTH = 23, LEGACY_GRID_LENGTH = 23, LEGACY_CELL_SIZE = 623.3043f, centred on the origin)
+    destroy existing tiles; create 529 entities from the MapTilePrefab archetype (const LEGACY_GRID_WIDTH = 23, LEGACY_GRID_LENGTH = 23, LEGACY_CELL_SIZE = 623.3043f, centred on the origin)
     add Native to all of them unless editorMode              // a NewMap generation leaves every tile owned
     AddOwner on the 3×3 block (10,10)..(12,12), index = y * 23 + x: remove Native, append to m_StartTiles
 ```
@@ -40,8 +39,7 @@ constants: static readonly int kAutoUnlockedTiles = 9
 
 permits = max(0, max(kAutoUnlockedTiles, startTiles.Length) + Σ m_MapTiles over [MilestoneData, Exclude<Locked>] - ownedTiles)
 
-tileValue(tile) = Σ_j MapFeatureElement[j].m_Amount * GetBaselineModifier(j) * 10.0
-                      * MapFeatureData[j].m_Cost * TilePurchaseCostFactor.m_Amount
+tileValue(tile) = Σ_j MapFeatureElement[j].m_Amount * GetBaselineModifier(j) * 10.0 * MapFeatureData[j].m_Cost * TilePurchaseCostFactor.m_Amount
 CalculateOwnedTilesCost(includeSelection):
     over the selection when includeSelection and one exists, else over the owned tiles;
     start tiles are skipped; returns Σ tileValue, and adds each tile's amounts into m_FeatureAmounts
@@ -59,8 +57,7 @@ UpdateStatus:
 
 mult(tileCount) = tileCount <= kAutoUnlockedTiles ? 0 : EconomyParameterData.m_MapTileUpkeepCostMultiplier.Evaluate(tileCount)
 CalculateOwnedTilesUpkeep() = round(CalculateOwnedTilesCost(false) * mult(owned))
-GetFeatureAmount(feature) = m_FeatureAmounts[(int)feature], FertileLand converted through
-                            NaturalResourceSystem.ResourceAmountToArea   // every other feature raw
+GetFeatureAmount(feature) = m_FeatureAmounts[(int)feature], FertileLand converted through NaturalResourceSystem.ResourceAmountToArea   // every other feature raw
 ```
 
 Price is linear in the tiles already owned, and the sort pairs the most valuable selected tile with the lowest multiplier.

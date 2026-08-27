@@ -13,20 +13,13 @@ Sources: `src/Game/Game.Zones/BlockSystem.cs`, `src/Game/Game.Prefabs/RoadFlags.
 ```
 BlockSystem (SystemUpdatePhase.Modification4):
   gate: the edge's RoadComposition carries RoadFlags.EnableZoning -- no flag, no blocks
-      // NetInitializeSystem sets the flag when RoadPrefab.m_ZoneBlock names a block prefab, which is
-      // what makes highways unzonable without any zoning code knowing what a highway is
-  three further suppressors: an owner chain carrying Building, an Elevated or Tunnel composition,
-      and a per-side Raised or Lowered flag
+      // NetInitializeSystem sets the flag when RoadPrefab.m_ZoneBlock names a block prefab, which is what makes highways unzonable without any zoning code knowing what a highway is
+  three further suppressors: an owner chain carrying Building, an Elevated or Tunnel composition, and a per-side Raised or Lowered flag
   block prefab: RoadPrefab.m_ZoneBlock -> RoadData.m_ZoneBlockPrefab -> RoadComposition.m_ZoneBlockPrefab
-  a CHAIN of blocks per side of the edge -- segments split by curvature and again at 10 cells --
-      plus node blocks only where the composition is a Roundabout
-  per side, ZoneUtils.GetCellWidth(m_Width -+ m_MiddleOffset * 2) = ceil(width / 8 - 0.01) cells,
-      and the row sits cellWidth * 4 metres out from the curve; a block's own m_Size is its chain
-      segment's length capped at 10 cells wide, by 6 deep
+  a CHAIN of blocks per side of the edge -- segments split by curvature and again at 10 cells -- plus node blocks only where the composition is a Roundabout
+  per side, ZoneUtils.GetCellWidth(m_Width -+ m_MiddleOffset * 2) = ceil(width / 8 - 0.01) cells, and the row sits cellWidth * 4 metres out from the curve; a block's own m_Size is its chain segment's length capped at 10 cells wide, by 6 deep
   instantiates ZoneBlockData.m_Archetype, which ZoneBlockPrefab.LateInitialize built:
-      Block, CurvePosition, ValidArea, BuildOrder, Cell, CullingInfo, MeshBatch, Created, Updated,
-      plus PrefabRef from the base prefab machinery; BlockSystem then adds Owner = the road edge,
-      outside the archetype
+      Block, CurvePosition, ValidArea, BuildOrder, Cell, CullingInfo, MeshBatch, Created, Updated, plus PrefabRef from the base prefab machinery; BlockSystem then adds Owner = the road edge, outside the archetype
 ```
 
 **A block without a zoning road edge as `Owner` never spawns anything, silently.**
@@ -42,20 +35,13 @@ Source: `src/Game/Game.Prefabs/NetZoneData.cs`, `src/Game/Game.Prefabs/RoadCompo
 Sources: `src/Game/Game.Zones/CellCheckSystem.cs`, `src/Game/Game.Zones/CellOccupyJobs.cs`, `src/Game/Game.Zones/ZoneUtils.cs`, `src/Game/Game.Zones/CellFlags.cs`.
 
 ```
-CellCheckSystem (Modification5), short-circuiting unless a collect system reports an update,
-then a fixed job chain (the schedule in its OnUpdate is the authoritative order):
+CellCheckSystem (Modification5), short-circuiting unless a collect system reports an update, then a fixed job chain (the schedule in its OnUpdate is the authoritative order):
   0 CellCheckHelpers.CollectBlocksJob    - builds the block array every later job iterates
-  1 CellBlockJobs.BlockCellsJob          - blocks cells against roads and areas, writes ValidArea,
-        and writes the Roadside / RoadLeft / RoadRight / RoadBack direction bits
+  1 CellBlockJobs.BlockCellsJob          - blocks cells against roads and areas, writes ValidArea, and writes the Roadside / RoadLeft / RoadRight / RoadBack direction bits
   2 CellCheckHelpers.FindOverlappingBlocksJob -> GroupOverlappingBlocksJob
-  3 CellOccupyJobs.ZoneAndOccupyCellsJob - marks cells occupied by existing objects, occupies any
-        cell whose height headroom is under max(ZoneData.m_MinOddHeight, m_MinEvenHeight), and
-        inherits zone types from deleted blocks
-  4 ZoneToggleJob                        - sets only CellFlags.Blocked, for a composition carrying
-        the ZonesDisabled side flag (the road upgrade that turns zoning off);
-        CityConfigurationSystem.leftHandTraffic is only its tie-break for which side a block is on
-  5 CellOverlapJobs.CheckBlockOverlapJob - resolves the overlap groups; ZoneUtils.CanShareCells and
-        IsNeighbor both dispatch on BuildOrder.m_Order
+  3 CellOccupyJobs.ZoneAndOccupyCellsJob - marks cells occupied by existing objects, occupies any cell whose height headroom is under max(ZoneData.m_MinOddHeight, m_MinEvenHeight), and inherits zone types from deleted blocks
+  4 ZoneToggleJob                        - sets only CellFlags.Blocked, for a composition carrying the ZonesDisabled side flag (the road upgrade that turns zoning off); CityConfigurationSystem.leftHandTraffic is only its tie-break for which side a block is on
+  5 CellOverlapJobs.CheckBlockOverlapJob - resolves the overlap groups; ZoneUtils.CanShareCells and IsNeighbor both dispatch on BuildOrder.m_Order
   6 CellCheckHelpers.UpdateBlocksJob, then LotSizeJobs.UpdateLotSizeJob - writes the VacantLot buffer
   7 LotSizeJobs.UpdateBoundsJob          - feeds the changed bounds back to the zone update collector
 ```
@@ -63,8 +49,7 @@ then a fixed job chain (the schedule in its OnUpdate is the authoritative order)
 `CellFlags` is the whole state a cell can be in, declared at `src/Game/Game.Zones/CellFlags.cs`:
 
 ```
-Blocked, Shared, Roadside, Visible, Overridden, Occupied, Selected, Redundant, Updating,
-RoadLeft, RoadRight, RoadBack, Highlight
+Blocked, Shared, Roadside, Visible, Overridden, Occupied, Selected, Redundant, Updating, RoadLeft, RoadRight, RoadBack, Highlight
 ```
 
 `Visible` is the bit every consumer tests first.
@@ -89,14 +74,12 @@ Sources: `src/Game/Game.Serialization/ResolvePrefabsSystem.cs`, `src/Game/Game.P
 
 ```
 ZoneSystem.InitializeZonePrefabs, at prefab creation:
-  each zone prefab with an AreaType gets a fresh ZoneType.m_Index from GetNextIndex(),
-      starting at 1 and reusing holes left by removed zones
+  each zone prefab with an AreaType gets a fresh ZoneType.m_Index from GetNextIndex(), starting at 1 and reusing holes left by removed zones
   an AreaType.None prefab keeps index 0, gains ZoneFlags.SupportNarrow and height limits of 1
       // that is the "Remove Zoning" eraser
 
 ResolvePrefabsSystem, on every load:
-  FillZoneTypeArrayJob - maps each loaded zone prefab's old index to the actual prefab's new
-      ZoneType, writing ZoneType.None where the loaded prefab resolves to nothing
+  FillZoneTypeArrayJob - maps each loaded zone prefab's old index to the actual prefab's new ZoneType, writing ZoneType.None where the loaded prefab resolves to nothing
   FixZoneTypeJob       - rewrites every Cell.m_Zone and every VacantLot.m_Type through that table
 ```
 
@@ -112,17 +95,13 @@ Sources: `src/Game/Game.Buildings/ZoneCheckSystem.cs`.
 
 ```
 ZoneCheckSystem (SystemUpdatePhase.ModificationEnd), three stages over the updated zone bounds:
-  1 FindSpawnableBuildingsJob - every object with Building whose prefab has SpawnableBuildingData
-        and not SignatureBuildingData
+  1 FindSpawnableBuildingsJob - every object with Building whose prefab has SpawnableBuildingData and not SignatureBuildingData
   2 CollectEntitiesJob        - sort and dedupe
   3 CheckBuildingZonesJob     - validate each, then add or remove Condemned and its icon:
     editor mode passes everything
-    ValidateAttachedParent: passes a building attached to a parent whose prefab has
-        PlaceholderBuildingData naming the SAME zone prefab
-    ValidateZoneBlocks: false outright for the obsolete-prefab case -- ZoneData present, ZoneType
-        not None, and PrefabData DISABLED; every other case proceeds:
-        every cell under the footprint must be Visible and carry exactly that ZoneType,
-        and the lot's front row must meet a road (the accumulated direction bits)
+    ValidateAttachedParent: passes a building attached to a parent whose prefab has PlaceholderBuildingData naming the SAME zone prefab
+    ValidateZoneBlocks: false outright for the obsolete-prefab case -- ZoneData present, ZoneType not None, and PrefabData DISABLED; every other case proceeds:
+        every cell under the footprint must be Visible and carry exactly that ZoneType, and the lot's front row must meet a road (the accumulated direction bits)
 ```
 
 (VOLATILE: every system, job, component, field, flag, constant and `Source:` path this file names, the shader-array arithmetic included — their declarations in `Game.Zones`, `Game.Prefabs`, `Game.Buildings`, `Game.Net`, `Game.Common`, `Game.Rendering`, `Game.City`, `Game.Simulation` and `Game.Serialization` under `src/Game/`, at the files the section sources cite.)

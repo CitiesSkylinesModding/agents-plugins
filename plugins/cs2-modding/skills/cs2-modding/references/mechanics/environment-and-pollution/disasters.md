@@ -15,8 +15,7 @@ Source: `src/Game/Game.Simulation/WeatherHazardSystem.cs`.
 
 ```
 every 2048 frames, per event prefab with EventData + WeatherPhenomenonData:
-skip when the prefab's Locked is enabled          // progression gate; Locked is enableable,
-                                                  // so HasComponent is true either way
+skip when the prefab's Locked is enabled          // progression gate; Locked is enableable, so HasComponent is true either way
 skip when m_DamageSeverity != 0 and natural disasters are switched off   // the city setting
 tFactor = max(0, 1 − ((temperature − centre(m_OccurenceTemperature)) / max(0.5, extents))²)
 rFactor and cFactor, from m_OccurenceRain and m_OccurenceCloudiness:
@@ -50,13 +49,11 @@ initialise:
     position = first TargetElement with a Transform, else random xz in ±6000
     early-warning buildings stamped only when the prefab carries EarlyDisasterWarningEventData
 tick, with num = 4/15 seconds per update (one update every 16 frames):
-    intensity ramps ±0.2 * num, clamped to [0,1] — up between the frames, down past m_EndFrame,
-        but the delete below lands on the first update past it, so the down-ramp is at most two ticks
+    intensity ramps ±0.2 * num, clamped to [0,1] — up between the frames, down past m_EndFrame, but the delete below lands on the first update past it, so the down-ramp is at most two ticks
     while intensity != 0 — so nothing moves or damages during the early-warning window:
         position.xz += 20 * Wind.SampleWind(windMap, position) * num, re-grounded to water-or-terrain height
         the hotspot chases the centre with an instability term and a radial correction keeping it inside
-        damage only when m_DamageSeverity != 0; lightning on its own timer;
-            traffic accidents when the prefab also carries TrafficAccidentData
+        damage only when m_DamageSeverity != 0; lightning on its own timer; traffic accidents when the prefab also carries TrafficAccidentData
     unconditionally, intensity 0 included — which is what makes the early-warning window work:
         endangerment (below); DangerLevel = the prefab's m_DangerLevel between its frames, 0 otherwise
         past m_EndFrame: Deleted, and every early-warning building gets EffectsUpdated
@@ -64,8 +61,7 @@ severity and damage:
     severity   = m_Intensity * m_DamageSeverity * (1 − distance(position, hotspot) / m_HotspotRadius)
     damageRate = severity / structuralIntegrity     // integrity >= 1e8 is the indestructible sentinel
     buildings scale by CityModifierType.DisasterDamageRate; then rate = min(0.5, rate * 1.0666667)
-    an object with a Damaged component accumulates rate into m_Damage.x, capped at 1;
-        a Destroy event is created when its total damage reaches exactly 1
+    an object with a Damaged component accumulates rate into m_Damage.x, capped at 1; a Destroy event is created when its total damage reaches exactly 1
     an object without one gets a Damage event carrying the rate instead
 ```
 

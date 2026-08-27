@@ -22,38 +22,21 @@ Source: `src/Game/Game.Prefabs/TransportDepotData.cs`.
 `TransportDepotAISystem.Tick`, interval 256 (`src/Game/Game.Simulation/TransportDepotAISystem.cs`, `src/Game/Game.Buildings/BuildingUtils.cs`):
 
 ```
-capacity = BuildingUtils.GetVehicleCapacity(min(efficiency, immediateEfficiency),
-                                            prefab.m_VehicleCapacity)
-         = select(0, clamp(int(efficiency * capacity), 1, capacity),
-                  efficiency > 0.001 && capacity > 0)      // any efficiency -> at least one
+capacity = BuildingUtils.GetVehicleCapacity(min(efficiency, immediateEfficiency), prefab.m_VehicleCapacity)
+         = select(0, clamp(int(efficiency * capacity), 1, capacity), efficiency > 0.001 && capacity > 0)      // any efficiency -> at least one
 walk OwnedVehicle:
-    DummyTraffic vehicle          -> skipped entirely (the two transit arms; the taxi
-                                     arm carries no such test)
-    parked, odometer nonzero      -> odometer and RequiresMaintenance cleared, backlog add
-                                     attempted (trap below)
+    DummyTraffic vehicle          -> skipped entirely (the two transit arms; the taxi arm carries no such test)
+    parked, odometer nonzero      -> odometer and RequiresMaintenance cleared, backlog add attempted (trap below)
     parked, lane or location gone -> vehicle deleted
-    out of the depot              -> takes a slot; Disabled toggled against a second
-                                     capacity scaled by immediate efficiency alone
+    out of the depot              -> takes a slot; Disabled toggled against a second capacity scaled by immediate efficiency alone
 if m_MaintenanceDuration > 0:
     m_MaintenanceRequirement -= 256 / (262144 * m_MaintenanceDuration) * efficiency, floored at 0
     free slots -= ceil(m_MaintenanceRequirement - 0.001)
-m_ProductionDuration > 0 -> advance Produced { m_Completed } on the one vehicle carrying it,
-                            spawning one to carry it when none does and a free slot exists
-                            (it takes that slot); on completion raise the VehicleLaunchData
-                            event of this transport type (the space program's path) -- both
-                            spawn and event are skipped while the building carries
-                            Game.Events.SpectatorSite, which the launch event it raised
-                            puts there from its preparation through its termination window
-drain ServiceDispatch: spawn at most one vehicle this tick for a dispatched
-                       TransportVehicleRequest or TaxiRequest; a surviving surplus request
-                       burns one free slot per loop pass before it is dropped, so a tick
-                       with any surplus ends at zero free slots
+m_ProductionDuration > 0 -> advance Produced { m_Completed } on the one vehicle carrying it, spawning one to carry it when none does and a free slot exists (it takes that slot); on completion raise the VehicleLaunchData event of this transport type (the space program's path) -- both spawn and event are skipped while the building carries Game.Events.SpectatorSite, which the launch event it raised puts there from its preparation through its termination window
+drain ServiceDispatch: spawn at most one vehicle this tick for a dispatched TransportVehicleRequest or TaxiRequest; a surviving surplus request burns one free slot per loop pass before it is dropped, so a tick with any surplus ends at zero free slots
 cull parked vehicles at random while parked > max(0, prefab.m_VehicleCapacity - outCount)
 m_AvailableVehicles = clamp(free slots, 0, 255)
-free slots > 0 -> set HasAvailableVehicles and, when m_TargetRequest no longer holds a
-                  live ServiceRequest, file a reversed request
-                  (TaxiRequest at RequestGroup(16) for a taxi depot,
-                   else TransportVehicleRequest(depot, available / capacity) at RequestGroup(8))
+free slots > 0 -> set HasAvailableVehicles and, when m_TargetRequest no longer holds a live ServiceRequest, file a reversed request (TaxiRequest at RequestGroup(16) for a taxi depot, else TransportVehicleRequest(depot, available / capacity) at RequestGroup(8))
 HasDispatchCenter = m_DispatchCenter && efficiency > 0.001
 ```
 

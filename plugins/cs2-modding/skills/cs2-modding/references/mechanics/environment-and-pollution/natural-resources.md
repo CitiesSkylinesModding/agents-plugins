@@ -24,8 +24,7 @@ fish:
     over the water-simulation sub-cells covering this cell, with d = max(0, depth − 2):
         waterTerm += d;  pollutionTerm += d * m_Polluted     // both scaled by 300 / subCellsPerCell
     pollutionTerm += waterVolume * noisePollution * 6.25e-05
-    newBase = min(10000, waterVolume); a newBase of 1..19 snaps to 0,
-        and a current m_Base of 1..19 counts as 20 in the test below
+    newBase = min(10000, waterVolume); a newBase of 1..19 snaps to 0, and a current m_Base of 1..19 counts as 20 in the test below
     m_Base is written (and the area tree notified) only when |newBase − current| >= 20
     m_Used chases clamp(pollutionTerm * 50, 0, 10000):
         up by RoundToIntRandom(pollutionTerm * 3.125) per update, down by the flat 25
@@ -47,8 +46,7 @@ fertility, fish:  m_Used += min(what the chosen cell scores, extracted), capped 
 ore, oil:
     original = m_Base * 1e-4;  current = (m_Base − m_Used) * 1e-4
     m_Used  += RoundToIntRandom(mu * original * exp(−(log(original) − log(current))) * extracted * 10000)
-    // the expression reduces to mu * (m_Base − m_Used) * extracted,
-    // with mu = 1 / m_OreConsumption or 1 / m_OilConsumption
+    // the expression reduces to mu * (m_Base − m_Used) * extracted, with mu = 1 / m_OreConsumption or 1 / m_OilConsumption
 a cell with nothing available is skipped
 ```
 

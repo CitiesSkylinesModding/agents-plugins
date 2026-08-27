@@ -14,27 +14,20 @@ Sources: `src/Game/Game.Areas/AreaUtils.cs`, `src/Game/Game.Areas/District.cs`, 
 
 ```
 AreaUtils.CheckOption:   (District.m_OptionMask & (1 << (int)option)) != 0
-    // DistrictOption: PaidParking, ForbidCombustionEngines, ForbidTransitTraffic,
-    //                 ForbidHeavyTraffic, ForbidBicycles
+    // DistrictOption: PaidParking, ForbidCombustionEngines, ForbidTransitTraffic, ForbidHeavyTraffic, ForbidBicycles
 
 AreaUtils.ApplyModifier: if (modifiers.Length > (int)type) { value += delta.x; value += value * delta.y; }
-    // DynamicBuffer<DistrictModifier> of float2 m_Delta, indexed positionally by DistrictModifierType:
-    // an additive half and a multiplicative half in one entry
+    // DynamicBuffer<DistrictModifier> of float2 m_Delta, indexed positionally by DistrictModifierType: an additive half and a multiplicative half in one entry
 
 AreaUtils.CheckServiceDistrict, the one- and two-district overloads:
   the service has no ServiceDistrict buffer -> true    (serves everywhere)
   the buffer is empty                       -> true    (serves everywhere)
   the target's district(s) all null         -> false   (a target in no district is unreachable)
-  otherwise                                 -> membership test; the two-district overload is the
-                                               road form and passes on either BorderDistrict side
-the third overload (building + buffer + CurrentDistrict lookup) folds the same tests into one
-  conjunction with a true fallback: a target with NO CurrentDistrict component at all passes,
-  and one carrying CurrentDistrict with a null district fails the membership test
+  otherwise                                 -> membership test; the two-district overload is the road form and passes on either BorderDistrict side
+the third overload (building + buffer + CurrentDistrict lookup) folds the same tests into one conjunction with a true fallback: a target with NO CurrentDistrict component at all passes, and one carrying CurrentDistrict with a null district fails the membership test
 
-CurrentDistrictSystem (Modification5): recomputes CurrentDistrict by testing the entity's position
-    against the area search tree; a road gets BorderDistrict { m_Left, m_Right } instead
-ServiceDistrictSystem (Modification5): a deleted district is stripped from every ServiceDistrict
-    buffer in the world
+CurrentDistrictSystem (Modification5): recomputes CurrentDistrict by testing the entity's position against the area search tree; a road gets BorderDistrict { m_Left, m_Right } instead
+ServiceDistrictSystem (Modification5): a deleted district is stripped from every ServiceDistrict buffer in the world
 ```
 
 Whether a given service is scopable is a read of its own prefab class: each service's `ComponentBase` under `Game.Prefabs` adds the `ServiceDistrict` buffer to its archetype under its own condition.
@@ -77,18 +70,13 @@ Source: `src/Game/Game.Prefabs/ThemeRequirementData.cs`, `src/Game/Game.Prefabs/
 Sources: `src/Game/Game.Prefabs/ZoneBuiltRequirementSystem.cs`, `src/Game/Game.Prefabs/ZoneBuiltRequirementData.cs`.
 
 ```
-ZoneBuiltRequirementData { m_RequiredTheme, m_RequiredZone, m_MinimumSquares, m_MinimumCount,
-                           m_RequiredType, m_MinimumLevel }
+ZoneBuiltRequirementData { m_RequiredTheme, m_RequiredZone, m_MinimumSquares, m_MinimumCount, m_RequiredType, m_MinimumLevel }
 ZoneBuiltRequirementSystem (Modification5), three mutually exclusive branches:
   m_RequiredZone set  -> tally that zone's squares and count at or above m_MinimumLevel
-  m_RequiredTheme set -> walk each built zone's ObjectRequirementElement buffer for a ThemeData
-                         requirement equal to the required theme
+  m_RequiredTheme set -> walk each built zone's ObjectRequirementElement buffer for a ThemeData requirement equal to the required theme
   else                -> tally by AreaType at or above m_MinimumLevel
   a requirement passes only when BOTH m_MinimumSquares and m_MinimumCount are met
-  tallies: a map of ZoneBuiltDataKey { m_Zone, m_Level } -> ZoneBuiltDataValue { m_Squares, m_Count },
-           fed primarily by a building create-and-delete chunk pass, with the ZoneBuiltLevelUpdate
-           records level-up emits (level-up-loop.md) covering only level transitions --
-           so bulldozing moves the tally too
+  tallies: a map of ZoneBuiltDataKey { m_Zone, m_Level } -> ZoneBuiltDataValue { m_Squares, m_Count }, fed primarily by a building create-and-delete chunk pass, with the ZoneBuiltLevelUpdate records level-up emits (level-up-loop.md) covering only level transitions -- so bulldozing moves the tally too
 ```
 
 The unlock it drives belongs to `city-state-and-progression`.

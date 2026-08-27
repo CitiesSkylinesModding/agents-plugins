@@ -16,27 +16,21 @@ Source: `src/Game/Game.Simulation/RoadSafetySystem.cs`, `src/Game/Game.Net/NetUt
 ```
 duration = dot(m_TrafficFlowDuration0 + m_TrafficFlowDuration1, timeFactors) * 2.6666667
 distance = dot(m_TrafficFlowDistance0 + m_TrafficFlowDistance1, timeFactors) * 2.6666667
-if distance < 0.01, or the composition prefab     // no traffic, no accidents
-   has no RoadComposition: skip
+if distance < 0.01, or the composition prefab has no RoadComposition: skip     // no traffic, no accidents
 flowSpeed = NetUtils.GetTrafficFlowSpeed(duration, distance)      // 0..1
 
 safety  = 500 / sqrt(distance)                    // volume: more traffic, less safe
 safety *= lerp(0.5, 1, flowSpeed)                 // congestion: slow flow, less safe
 safety *= lerp(1, 0.75, csum(NetCondition.m_Wear) * 0.05)         // wear
 safety *= lerp(lit, 1, min(1, dayLightBrightness * 2))            // darkness
-          where lit = 0.9 if Game.Prefabs.RoadFlags.HasStreetLights
-                          and not Game.Net.RoadFlags.LightsOff
+          where lit = 0.9 if Game.Prefabs.RoadFlags.HasStreetLights and not Game.Net.RoadFlags.LightsOff
                     = 0.7 otherwise
 safety *= 1.1 if RoadFlags.SeparatedCarriageways
-apply district StreetTrafficSafety per side, then keep only the weaker
-   side's net effect — opposing sides, or a modifier-carrying district on
-   one side alone, change nothing                 // unless UseHighwayRules, and only
-                                                  // on an edge carrying BorderDistrict
+apply district StreetTrafficSafety per side, then keep only the weaker side's net effect — opposing sides, or a modifier-carrying district on one side alone, change nothing                 // unless UseHighwayRules, and only on an edge carrying BorderDistrict
 apply city HighwayTrafficSafety modifier          // if UseHighwayRules
 
 TryStartAccident:
-  for each accident prefab with TrafficAccidentData, not Locked,
-      whose m_RandomSiteType == EventTargetType.Road:
+  for each accident prefab with TrafficAccidentData, not Locked, whose m_RandomSiteType == EventTargetType.Road:
     if random(1) < m_OccurenceProbability / max(1, safety):
       create the event entity with a TargetElement naming this edge; return
 ```

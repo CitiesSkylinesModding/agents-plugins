@@ -11,26 +11,19 @@ Without one you cannot check anything below.
 Sources: `src/Game/Game.Simulation/CarNavigationSystem.cs`, `src/Game/Game.Simulation/TrafficFlowSystem.cs`, `src/Game/Game.Net/NetUtils.cs`, `src/Game/Game.Pathfind/PathUtils.cs`.
 
 ```
-CarNavigationSystem.ApplySideEffects:              // per traversed car lane with any
-  skipped while CarLaneFlags.ResetSpeed is set     // progress; ResetSpeed marks the
-                                                   // just-entered stretch after a spawn
-                                                   // or connection, cleared ~10 m in
-  flow = float2(duration * min(prefab m_MaxSpeed, lane m_SpeedLimit * f),
-                distance) / max(1, curveLength)    // f = 2 for an emergency
-                                                   // vehicle, else 1
+CarNavigationSystem.ApplySideEffects:              // per traversed car lane with any progress
+  skipped while CarLaneFlags.ResetSpeed is set     // ResetSpeed marks the just-entered stretch after a spawn or connection, cleared ~10 m in
+  flow = float2(duration * min(prefab m_MaxSpeed, lane m_SpeedLimit * f), distance) / max(1, curveLength)    // f = 2 for an emergency vehicle, else 1
   flow = -flow  for bicycles                       // the sign routes the accumulation
 ApplyLaneEffectsJob:
   any negative component -> SecondaryFlow.m_Next -= flow   // bicycles, as magnitudes
   else                   -> LaneFlow.m_Next += flow
-  LaneCondition.m_Wear = min(m_Wear + sideEffects.x
-                             * LaneDeteriorationData.m_TrafficFactor, 10)   // capped, C#
+  LaneCondition.m_Wear = min(m_Wear + sideEffects.x * LaneDeteriorationData.m_TrafficFactor, 10)   // capped, C#
   sideEffects.yz add into the owner edge's Game.Net.Pollution
-TrafficFlowSystem (a 512-frame tick over lanes spread across 16 groups,
-                   so each lane 32 times a day):
+TrafficFlowSystem (a 512-frame tick over lanes spread across 16 groups, so each lane 32 times a day):
   m_Duration and m_Distance are float4s, one slot per quarter of the day
   each lerps toward m_Next with t = m_TimeFactors * 0.125, then m_Next clears
-                                                   // m_TimeFactors: a tent over the
-                                                   // current time-of-day quarter
+                                                   // m_TimeFactors: a tent over the current time-of-day quarter
 UpdateLaneFlow:
   flowSpeed = NetUtils.GetTrafficFlowSpeed(LaneFlow + SecondaryFlow, summed)
             = saturate(distance / duration)        // achieved over free-flow, 0..1

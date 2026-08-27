@@ -26,18 +26,13 @@ ResidentialDemandSystem.UpdateResidentialDemandJob:
     complex workplaces: the same shape, clamped to [0, 20]                     // both can only push up
     students:           m_StudentEffect * clamp(study positions at levels 1-4 / 200, 0, 5)
     unemployment:       m_NeutralUnemployment - unemployment rate
-  each factor then through GetFactorValue: multiplied by weight.x when negative, weight.y when
-      positive, truncated to int
-  m_HouseholdDemand = min(200, decay + happiness + homeless(down) + taxes + unemployment + students
-                               + max(simple workplaces, complex workplaces))
+  each factor then through GetFactorValue: multiplied by weight.x when negative, weight.y when positive, truncated to int
+  m_HouseholdDemand = min(200, decay + happiness + homeless(down) + taxes + unemployment + students + max(simple workplaces, complex workplaces))
   per density i in (low, medium, high):
     pressure[i]  = round(100 * (m_FreeResidentialRequirement[i] - free[i]) / m_FreeResidentialRequirement[i])
                    // negative the moment free properties exceed the requirement
-    factor slots (the reported arrays): [7] happiness, [11] taxes, [5] unemployment,
-                   [6] simple workplaces (halved for low density), [12] students (medium and high),
-                   [8] homeless(up) (high only), [13] pressure[i]
-                   // homeless(up) in the high sum only: the negative half reaches every
-                   // density through m_HouseholdDemand / 2, the positive half only high
+    factor slots (the reported arrays): [7] happiness, [11] taxes, [5] unemployment, [6] simple workplaces (halved for low density), [12] students (medium and high), [8] homeless(up) (high only), [13] pressure[i]
+                   // homeless(up) in the high sum only: the negative half reaches every density through m_HouseholdDemand / 2, the positive half only high
     factorSum[i] = that density's slots summed, the whole sum zeroed when pressure[i] < 0
     m_BuildingDemand[i] = clamp(m_HouseholdDemand / 2 + pressure[i] + factorSum[i], 0, 100)
                    // pressure sits in the slots too, so it enters twice when nonnegative
@@ -59,9 +54,7 @@ Source: `src/Game/Game.Simulation/ResidentialDemandSystem.cs`.
 One `DemandFactor` enum serves all six values, declared whole at `src/Game/Game.Simulation/DemandFactor.cs`:
 
 ```
-StorageLevels, UneducatedWorkforce, EducatedWorkforce, CompanyWealth, LocalDemand, Unemployment,
-FreeWorkplaces, Happiness, Homelessness, TouristDemand, LocalInputs, Taxes, Students, EmptyBuildings,
-EmptyZones, PoorZoneLocation, PetrolLocalDemand, Warehouses, BuildingDemand, Count
+StorageLevels, UneducatedWorkforce, EducatedWorkforce, CompanyWealth, LocalDemand, Unemployment, FreeWorkplaces, Happiness, Homelessness, TouristDemand, LocalInputs, Taxes, Students, EmptyBuildings, EmptyZones, PoorZoneLocation, PetrolLocalDemand, Warehouses, BuildingDemand, Count
 ```
 
 ## Commercial
@@ -70,17 +63,13 @@ Sources: `src/Game/Game.Simulation/CommercialDemandSystem.cs`, `src/Game/Game.Pr
 
 ```
 CommercialDemandSystem.UpdateCommercialDemandJob, per commercial resource:
-  tax term = -0.05 * (commercial tax rate for the resource - 10) * m_TaxEffect.y
-             + a game-mode offset (m_CommercialTaxEffectDemandOffset, latched at load)
+  tax term = -0.05 * (commercial tax rate for the resource - 10) * m_TaxEffect.y + a game-mode offset (m_CommercialTaxEffectDemandOffset, latched at load)
   demand   = resource == Lodging
-             ? (int(m_HotelRoomPercentRequirement * current tourists) > lodging capacity
-                 ? 100 : the 0 every slot was reset to at the top of Execute)
+             ? (int(m_HotelRoomPercentRequirement * current tourists) > lodging capacity ? 100 : the 0 every slot was reset to at the top of Execute)
              : max(0, round(m_CommercialStorageEffect * (m_CommercialStorageMinimum - 100 * current / (1 + total))))
   demand   = round((1 + tax term) * demand)     // so no shortfall means lodging demand 0, tax or no tax
-  building demand for the resource = demand, but only when
-      free properties - propertyless companies <= 0          // companies exist with nowhere to go
-  totals: both divided by the count of resources with COMPANY demand and clamped 0-100, so a
-      resource with company demand and no building demand dilutes the building total
+  building demand for the resource = demand, but only when free properties - propertyless companies <= 0          // companies exist with nowhere to go
+  totals: both divided by the count of resources with COMPANY demand and clamped 0-100, so a resource with company demand and no building demand dilutes the building total
   building demand zeroed outright when no commercial zone type is unlocked
   m_UnlimitedDemand then forces both totals to 100
 ```

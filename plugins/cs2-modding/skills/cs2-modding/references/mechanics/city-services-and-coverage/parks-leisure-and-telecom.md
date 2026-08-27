@@ -18,14 +18,12 @@ Leisure lands here on the supply side, while the citizen's leisure demand belong
 m_Maintenance = max(0, m_Maintenance - (400 + 50 * renterCount) / kUpdatesPerDay)
                                           // integer division; kUpdatesPerDay = 256
 fill  = m_Maintenance / max(1, ParkData.m_MaintenancePool)
-steps = floor(fill / 0.3)                 // 0..3: the vehicle's refill caps m_Maintenance
-                                          // at the pool
+steps = floor(fill / 0.3)                 // 0..3: the vehicle's refill caps m_Maintenance at the pool
 m_Magnitude = prefab magnitude * (0.95 + 0.05 * min(1, steps) + 0.1 * max(0, steps - 1))
 m_Magnitude = ApplyModifier(m_Magnitude, CityModifierType.ParkEntertainment)
 m_Range     = prefab range * (0.95 + 0.05 * steps)
 m_Capacity  = the prefab's, untouched
-a MaintenanceRequest (with RequestGroup(32)) is raised while none is outstanding and
-    m_MaintenancePool - m_Maintenance - m_MaintenancePool / 10 > 0    // a 10% deadband
+a MaintenanceRequest (with RequestGroup(32)) is raised while none is outstanding and m_MaintenancePool - m_Maintenance - m_MaintenancePool / 10 > 0    // a 10% deadband
 ```
 
 Source: `src/Game/Game.Prefabs/Park.cs`, `src/Game/Game.Simulation/ParkAISystem.cs`, `src/Game/Game.Buildings/ParkInitializeSystem.cs`, `src/Game/Game.Buildings/ModifiedServiceCoverage.cs`, `src/Game/Game.Simulation/MaintenanceVehicleAISystem.cs` (the refill cap).
@@ -60,9 +58,7 @@ range    = TelecomFacilityData.m_Range * sqrt(efficiency)
 capacity *= efficiency
 skip the facility           when range < 1 or capacity < 1
 users    = CalculateNetworkUsers(the facility's signal share of density over the range's cells)
-add capacity / max(1, users) to each covered cell, weighted by the facility's share of the
-    cell's accumulated signal and skipped where that accumulated signal is ~0
-    (obstruction slopes per facility; TelecomFacilityData.m_PenetrateTerrain exempts a mast)
+add capacity / max(1, users) to each covered cell, weighted by the facility's share of the cell's accumulated signal and skipped where that accumulated signal is ~0 (obstruction slopes per facility; TelecomFacilityData.m_PenetrateTerrain exempts a mast)
 ```
 
 **Telecom is the one service in this topic whose reach genuinely moves with efficiency** — as a square root on range, linearly on capacity; every road-coverage service moves only in magnitude ([coverage.md](coverage.md)).
@@ -74,8 +70,7 @@ Each cell stores two bytes, and quality derives from them:
 m_SignalStrength = clamp(strength * 255, 0, 255)
 m_NetworkLoad    = clamp(127.5 / max(0.0001, capacity), 0, 255)
 networkQuality   = m_SignalStrength * 510 / (255 + (m_NetworkLoad << 1))
-SampleNetworkQuality = bilinear interpolation of min(1, strength / (127.5 + load))
-                       over the four surrounding cells
+SampleNetworkQuality = bilinear interpolation of min(1, strength / (127.5 + load)) over the four surrounding cells
 ```
 
 Source: `src/Game/Game.Simulation/TelecomCoverage.cs`, `src/Game/Game.Simulation/TelecomCoverageSystem.cs` (the two byte clamps).

@@ -41,9 +41,7 @@ OnUpdate (PreCulling):
             lat = 51.2277f; lon = 6.7735f; time = 14.5f; day = 177; year = 2020; treat as overridden
         if not overridden, with TimeSettingsData and TimeData singletons:
             renderingFrame = (RenderingSystem.frameIndex - data.m_FirstFrame) + RenderingSystem.frameTime
-            UpdateTime(TimeSystem.GetTimeOfYear(settings, data, renderingFrame),
-                       TimeSystem.GetTimeOfDay(settings, data, renderingFrame) * debugTimeMultiplier,
-                       TimeSystem.GetYear(settings, data))
+            UpdateTime(TimeSystem.GetTimeOfYear(settings, data, renderingFrame), TimeSystem.GetTimeOfDay(settings, data, renderingFrame) * debugTimeMultiplier, TimeSystem.GetYear(settings, data))
     in GameMode.Editor: the same without the dayNightVisual branch, and GetYear(…, renderingFrame)
     then the sun direction from the date, lat, lon and sunLimit
 
@@ -79,8 +77,7 @@ FindSeasonByTime(t):
         if end > 1 and t < end - 1: return (season, start, end)
     fallback        → (m_Seasons[0], 0, 1)
 
-CountElapsedSeasons(startTime, elapsedTime): 0 with no seasons, 1 with one, else the number of ordered
-    (start, next start) spans [startTime, startTime + elapsedTime) intersects, wrapping
+CountElapsedSeasons(startTime, elapsedTime): 0 with no seasons, 1 with one, else the number of ordered (start, next start) spans [startTime, startTime + elapsedTime) intersects, wrapping
     // AchievementTriggerSystem's "a full year has passed"
 
 UpdateSeason(prefab, normalizedDate):

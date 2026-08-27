@@ -22,17 +22,12 @@ TripNeededSystem (interval 16, no UpdateFrame partition) reads trips[0]:
   else:
     priority = TripPriorityParametersData.GetPriority(trips[0].m_Purpose, citizen)
     cost ceiling = m_BaseMaxCost * priority / 128       // TripPriority.kDefault = 128
-    mode: bicycle at 20 % for an enabled BicycleOwner, shifted by the home district's
-          BikeProbability modifier; a reserved car overrides
-    build PathfindParameters + SetupQueueItem, enqueue to the pathfind queue;
-    on the citizen-level purposes, add Target { Entity.Null } as the pending marker
-  a GoingToWork path that returns no destination removes Worker unless a household
-    car is free to try (see employment-and-wages.md)
+    mode: bicycle at 20 % for an enabled BicycleOwner, shifted by the home district's BikeProbability modifier; a reserved car overrides
+    build PathfindParameters + SetupQueueItem, enqueue to the pathfind queue; on the citizen-level purposes, add Target { Entity.Null } as the pending marker
+  a GoingToWork path that returns no destination removes Worker unless a household car is free to try (see employment-and-wages.md)
 
 CitizenTravelPurposeSystem (ordered before TripNeededSystem) promotes on arrival:
-  GoingToWork -> Working, GoingToSchool -> Studying, Hospital -> InHospital,
-  GoingToJail -> InJail, GoingToPrison -> InPrison, Deathcare -> InDeathcare,
-  EmergencyShelter -> InEmergencyShelter
+  GoingToWork -> Working, GoingToSchool -> Studying, Hospital -> InHospital, GoingToJail -> InJail, GoingToPrison -> InPrison, Deathcare -> InDeathcare, EmergencyShelter -> InEmergencyShelter
   purposes that end on arrival (GoingHome, Shopping, Leisure, ...) clear TravelPurpose
   a GoingHome arrival as ArriveType.Resident is the write that sets HouseholdFlags.MovedIn
 
@@ -40,8 +35,7 @@ CitizenUtils.GetPathfindWeights(citizen, household, householdCitizens):
   time      = 5 * (4 - 3.75 * m_LeisureCounter / 255)
   behaviour = 2
   money     = 2500 * max(1, householdSize) / max(250, household.m_ConsumptionPerDay)
-              * 0.1 when the household is not MovedIn and the citizen is not
-              MovingAwayReachOC / Tourist / Commuter
+              * 0.1 when the household is not MovedIn and the citizen is not MovingAwayReachOC / Tourist / Commuter
   comfort   = 1 + 2 * GetPseudoRandom(TrafficComfort).NextFloat()
 ```
 

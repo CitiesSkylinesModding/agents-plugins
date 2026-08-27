@@ -28,9 +28,7 @@ XPBuiltSystem, only while actionMode.IsGame(), over Created entities without Tem
         m_XPReward > 0 → enqueue ServiceBuilding
         prefab has SignatureBuildingData → add PlacedSignatureBuildingData to the PREFAB entity (pays once ever)
     prefab with ServiceUpgradeData: m_XPReward > 0 → enqueue ServiceUpgrade
-    once, while XP.m_XPRewardRecord lacks ElectricityGridBuilt: the first ElectricityConsumer with
-        m_FulfilledConsumption > 0 enqueues kElectricityGridXPBonus (static readonly int = 25)
-        as ElectricityNetwork and latches the flag
+    once, while XP.m_XPRewardRecord lacks ElectricityGridBuilt: the first ElectricityConsumer with m_FulfilledConsumption > 0 enqueues kElectricityGridXPBonus (static readonly int = 25) as ElectricityNetwork and latches the flag
 
 NetXPSystem, no IsGame gate, over created and deleted edges without Temp:
     per edge with PlaceableNetData.m_XPReward > 0:
@@ -86,10 +84,7 @@ accrual, when MilestoneReachedEvent entities exist:
     GetDefaultPoints(level) = level <= 0 ? 0 : level >= 19 ? 10 : (level + 1) / 2 + 1
 
 Purchase(node), public, also a DevTreeNodePrefab overload:
-    unlock when m_Cost <= points
-        and Locked is enabled on the node
-        and (m_Service == Entity.Null or Locked is not enabled on it)
-        and (no DevTreeNodeRequirement buffer, or no non-null entry in it, or ANY listed non-null node has Locked disabled)
+    unlock when m_Cost <= points and Locked is enabled on the node and (m_Service == Entity.Null or Locked is not enabled on it) and (no DevTreeNodeRequirement buffer, or no non-null entry in it, or ANY listed non-null node has Locked disabled)
     then points -= m_Cost; create Unlock(node) on EndFrameBarrier; Telemetry.DevNodePurchased
 ```
 

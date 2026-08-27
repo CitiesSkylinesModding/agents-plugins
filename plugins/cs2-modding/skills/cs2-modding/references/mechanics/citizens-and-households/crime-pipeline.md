@@ -18,13 +18,11 @@ CrimeCheckSystem (kUpdatesPerDay = 1, UpdateFrame tested inside the job):
   the code also skips Child and Elderly, and anyone whose Criminal.m_Event != Entity.Null
   t = wellbeing <= 25 ? wellbeing / 25 : ((100 - wellbeing) / 75)^2
   for each unlocked crime event prefab whose random target type is Citizen:
-    p = lerp over CrimeData.m_OccurenceProbability by t
-        (m_RecurrenceProbability instead for a citizen already carrying Criminal)
+    p = lerp over CrimeData.m_OccurenceProbability by t (m_RecurrenceProbability instead for a citizen already carrying Criminal)
     the CrimeProbability city modifier applies
     ceiling = max(population / PoliceConfigurationData.m_CrimePopulationReduction * 100, 100)
     crime event created if random.NextFloat(ceiling) < p
-    a repeat offender is further suppressed by home welfare coverage
-      * PoliceConfigurationData.m_WelfareCrimeRecurrenceFactor, against the same ceiling
+    a repeat offender is further suppressed by home welfare coverage * PoliceConfigurationData.m_WelfareCrimeRecurrenceFactor, against the same ceiling
 
 Game.Events InitializeSystem.InitializeCrimeEvent:
   resolves the event's targets to citizens and emits
@@ -35,8 +33,7 @@ AddCriminalSystem (SystemUpdatePhase.Modification4):
 
 CriminalSystem (interval 16, UpdateFrame tested inside the job) runs the state machine:
   Planning -> Preparing -> (crime committed) -> Arrested -> Sentenced -> Prisoner -> released
-  sentencing: rand(100) < CrimeData.m_PrisonProbability, duration from m_PrisonTimeRange,
-    then the PrisonTime city modifier
+  sentencing: rand(100) < CrimeData.m_PrisonProbability, duration from m_PrisonTimeRange, then the PrisonTime city modifier
   m_JailTime is stored as duration * 262144 / 256 and decremented per pass
 ```
 

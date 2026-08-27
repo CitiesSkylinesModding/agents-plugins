@@ -29,10 +29,8 @@ per Modify, when the target has a Policy buffer (the target gets Updated either 
     found (any remaining case): entry.m_Flags = modify.m_Flags; entry.m_Adjustment = modify.m_Adjustment; RefreshEffects
     not found, and Active set: append Policy(policy, flags, adjustment); RefreshEffects;
         fire TriggerType.PolicyActivated; emit PolicyEventInfo(activated)     // the only path that fires it
-RefreshEffects(target, policy, buffer): for each scope whose pair matches, rebuild that scope's
-    option mask or modifier buffer from the whole Policy buffer; then add Updated
-side paths: a Modify on an Extension with a policy carrying BuildingOption.Inactive toggles ExtensionFlags.Disabled;
-    a Modify on a ServiceUpgrade marks its owner Updated
+RefreshEffects(target, policy, buffer): for each scope whose pair matches, rebuild that scope's option mask or modifier buffer from the whole Policy buffer; then add Updated
+side paths: a Modify on an Extension with a policy carrying BuildingOption.Inactive toggles ExtensionFlags.Disabled; a Modify on a ServiceUpgrade marks its owner Updated
 ```
 
 ## Modifier composition
@@ -47,8 +45,7 @@ RefreshCityModifiers (from ModifiedSystem, and every 256 frames from CityModifie
                  delta = lerp(element.m_Range.min, element.m_Range.max, t)
         toggle:  delta = element.m_Range.min
         AddModifier(element, delta)
-    per CityEffectProvider entity (not Deleted, Destroyed or Temp), its prefab's CityModifierData
-        plus each InstalledUpgrade's not flagged BuildingOption.Inactive:
+    per CityEffectProvider entity (not Deleted, Destroyed or Temp), its prefab's CityModifierData plus each InstalledUpgrade's not flagged BuildingOption.Inactive:
         no Signature and an Efficiency buffer → delta = lerp(m_Range.min, m_Range.max, efficiency)
         otherwise                             → delta = m_Range.max
         AddModifier(element, delta)

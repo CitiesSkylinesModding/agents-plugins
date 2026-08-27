@@ -123,8 +123,7 @@ Source: `src/Game/Game.City/CityService.cs`, `src/Game/Game.Prefabs/ServicePrefa
 The two expressions no sibling carries — every other transcription lives in the sibling its mechanism owns:
 
 ```
-EfficiencyFactor.Garbage = 1 - m_GarbagePenalty
-    * saturate((garbage - m_WarningGarbageLimit) / (m_MaxGarbageAccumulation - m_WarningGarbageLimit))
+EfficiencyFactor.Garbage = 1 - m_GarbagePenalty * saturate((garbage - m_WarningGarbageLimit) / (m_MaxGarbageAccumulation - m_WarningGarbageLimit))
 a patrol visit subtracts   min(PoliceCarData.m_CrimeReductionRate, m_Crime)
 ```
 

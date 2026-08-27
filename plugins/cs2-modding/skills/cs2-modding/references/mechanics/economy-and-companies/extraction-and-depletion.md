@@ -27,24 +27,14 @@ Sources: `src/Game/Game.Simulation/ExtractorCompanySystem.cs`, `src/Game/Game.Pr
 ```
 GetEffectiveConcentration(params, feature, concentration) = min(1, concentration / X)
   X = m_FullOil | m_FullFertility | m_FullFish | m_FullOre by map feature, 1 otherwise
-GetBestConcentration: the surface-area-weighted mean effective concentration over every
-  sub-area and installed upgrade of the hub; returns false at zero, which skips the
-  company's entire production pass
+GetBestConcentration: the surface-area-weighted mean effective concentration over every sub-area and installed upgrade of the hub; returns false at zero, which skips the company's entire production pass
 ExtractorCompanySystem tick (per-entity rate kCompanyUpdatesPerDay = 256):
-  EfficiencyFactor.NaturalResources = that concentration, written BEFORE the zero check,
-    so a depleted extractor's building shows 0%
-  production and profit both run with isIndustrial: true, which buys the industrial
-    price and the industrial work-per-unit; the sector efficiency is
-    m_ExtractorProductionEfficiency because the extractor mask is tested first,
-    independent of that flag
-  accrual into TaxPayer as the industrial rate; CompanyStatisticData.m_LastUpdateProduce
-    = produced * 256, the one field the income statement reads back instead of recomputing
+  EfficiencyFactor.NaturalResources = that concentration, written BEFORE the zero check, so a depleted extractor's building shows 0%
+  production and profit both run with isIndustrial: true, which buys the industrial price and the industrial work-per-unit; the sector efficiency is m_ExtractorProductionEfficiency because the extractor mask is tested first, independent of that flag
+  accrual into TaxPayer as the industrial rate; CompanyStatisticData.m_LastUpdateProduce = produced * 256, the one field the income statement reads back instead of recomputing
   ProcessArea, per sub-area: share = produced * area / max(1, concentration * totalSize)
-    a deposit-requiring area (both flags below) clamps to
-      clamp(share * effectiveConcentration, 0, remaining)
-    m_ExtractedAmount and m_TotalExtracted += share * GetExtractionMultiplier(sub-area)
-      (m_FertilityConsumption | m_FishConsumption | m_ForestConsumption by feature, else 1)
-      -- accrued for every area, flags or not
+    a deposit-requiring area (both flags below) clamps to clamp(share * effectiveConcentration, 0, remaining)
+    m_ExtractedAmount and m_TotalExtracted += share * GetExtractionMultiplier(sub-area) (m_FertilityConsumption | m_FishConsumption | m_ForestConsumption by feature, else 1) -- accrued for every area, flags or not
     m_WorkAmount += share * ExtractorAreaData.m_WorkAmountFactor
 ```
 
@@ -65,12 +55,10 @@ Sources: `src/Game/Game.Simulation/AreaLotSimulationSystem.cs`, `src/Game/Game.P
 `AreaLotSimulationSystem` writes the grid down once an area's `m_ExtractedAmount` reaches `max(1, feature is Ore or Oil ? 1 : m_ResourceAmount * 0.001)` — fertile land and fish subtract the extracted amount from the best cell directly, while ore and oil go through:
 
 ```
-GetUnlimitedUsage(originalConcentration, currentConcentration, mu = 1 / m_OreConsumption
-                                                                 (or 1 / m_OilConsumption)):
+GetUnlimitedUsage(originalConcentration, currentConcentration, mu = 1 / m_OreConsumption (or 1 / m_OilConsumption)):
   n     = log(originalConcentration) - log(currentConcentration)
   usage = RoundToIntRandom(mu * originalConcentration * exp(-n) * extractedAmount * 10000)
-  // exp(-(log o - log c)) = c/o, so usage = mu * currentConcentration * extracted * 10000:
-  // concentration decays as exp(-extracted / m_OreConsumption) in cumulative units
+  // exp(-(log o - log c)) = c/o, so usage = mu * currentConcentration * extracted * 10000: concentration decays as exp(-extracted / m_OreConsumption) in cumulative units
 ```
 
 So an ore or oil deposit yields exponentially less as it is worked, reaching 1/e of its original concentration after exactly `m_OreConsumption` (or `m_OilConsumption`) extracted units — the field's own tooltip states the same 1/2.71 figure, phrased as efficiency — and viability drops only once the decayed concentration crosses below the `m_Full*` threshold above.

@@ -16,16 +16,11 @@ Sources: `src/Game/Game.Simulation/GroundWaterSystem.cs`, `src/Game/Game.Simulat
 ```
 pass 1, pollution equalisation:
     target = bothAmounts > 0 ? amountHere * (pollutedHere + pollutedThere) / (amountHere + amountThere) : 0
-    delta  = clamp((target − pollutedHere) / 4,
-                   −(amountThere − pollutedThere) / 4,
-                    (amountHere  − pollutedHere ) / 4)
-    // toward equal concentration, a quarter of the way per pair per update,
-    // bounded by the clean water available on each side
+    delta  = clamp((target − pollutedHere) / 4, −(amountThere − pollutedThere) / 4, (amountHere  − pollutedHere ) / 4)
+    // toward equal concentration, a quarter of the way per pair per update, bounded by the clean water available on each side
 pass 2, flow:
-    flow = clamp(((amountThere − maxThere) − (amountHere − maxHere)) / 4,
-                 −amountHere / 4, amountThere / 4)
-    // head is measured against each cell's own m_Max, so a high-capacity cell pulls from
-    // a low-capacity one at equal absolute fill; flow carries pollution at the source's concentration
+    flow = clamp(((amountThere − maxThere) − (amountHere − maxHere)) / 4, −amountHere / 4, amountThere / 4)
+    // head is measured against each cell's own m_Max, so a high-capacity cell pulls from a low-capacity one at equal absolute fill; flow carries pollution at the source's concentration
 pass 3, per cell:
     m_Amount   = min(m_Amount + flow + ceil(m_GroundwaterReplenish * m_Max), m_Max)
     m_Polluted = clamp(m_Polluted + pollutionDelta − m_GroundwaterPurification, 0, m_Amount)
@@ -49,12 +44,10 @@ The CPU face is an asynchronous readback — `WaterSystem.GetSurfaceData(out Job
 The write surface is the source list: every entity carrying `Game.Simulation.WaterSourceData` plus a `Transform` is cached one frame and dispatched one kernel each the next, so editing that component is the whole supported write.
 
 ```
-the cached radius is m_Radius * m_Modifier; a source whose cached radius is 0,
-    or which lies outside the terrain bounds, is skipped
+the cached radius is m_Radius * m_Modifier; a source whose cached radius is 0, or which lies outside the terrain bounds, is skipped
 if m_Polluted > 0:   Add kernel — inject volume 0.3165952 * SimulationCycleSteps * m_Height
                      per step, at pollution fraction m_Polluted   // m_Height is an output rate
-else:                AddConstant kernel — hold the water level at m_Position.y + m_Height,
-                     or at lerp(0, −1, m_Height / −150000) when m_Height < 0
+else:                AddConstant kernel — hold the water level at m_Position.y + m_Height, or at lerp(0, −1, m_Height / −150000) when m_Height < 0
 ```
 
 `m_Modifier` is not serialized and resets to 1 on deserialize.

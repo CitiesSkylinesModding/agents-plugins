@@ -18,14 +18,11 @@ TourismSystem (interval a flat 32768 -- 8 passes a game day):
   attractiveness = 200 / (1 + exp(-0.3 * sum)) - 100      // bounded at 100 before the modifier
   CityModifierType.Attractiveness applied
   Tourism.m_Attractiveness = round(attractiveness)
-  Tourism.m_Lodging = (renting tourist households, renters + m_FreeRooms) summed over
-    hotels with a property -- the total is reconstructed from a m_FreeRooms the lodging
-    system wrote on its own last pass, so it can lag a pass behind
+  Tourism.m_Lodging = (renting tourist households, renters + m_FreeRooms) summed over hotels with a property -- the total is reconstructed from a m_FreeRooms the lodging system wrote on its own last pass, so it can lag a pass behind
 AttractionSystem (interval 16), per provider building:
-  start from the prefab's AttractionData.m_Attractiveness, add installed upgrades'
+  start from the prefab's AttractionData.m_Attractiveness, add installed upgrades' own
   multiply by the building's efficiency -- UNLESS it is a Signature building
-  park: multiply by 0.8 + 0.2 * (Park.m_Maintenance / ParkData.m_MaintenancePool)
-        (a zero maintenance pool counts as ratio 1)
+  park: multiply by 0.8 + 0.2 * (Park.m_Maintenance / ParkData.m_MaintenancePool) (a zero maintenance pool counts as ratio 1)
   multiply by 1 + 0.01 * TerrainAttractivenessSystem.EvaluateAttractiveness(position)
 ```
 
@@ -43,11 +40,7 @@ GetSpawnProbability(a, current):
   current >= target      -> a / 1000
   current/padded < 0.5   -> 1
   else t = 1 - (current/padded - 0.5) / 0.5 -> saturate(1.5 * t²)
-GetWeatherEffect: 1 + ONE temperature term (an if/else-if chain: m_TemperatureAffect.x
-  peaking at the centre of the m_AttractiveTemperature band and fading to 0 at its
-  edges, OR 0 to .y across 10 degrees past either m_ExtremeTemperature end)
-  + ONE precipitation term (snow, else rain, across m_SnowEffectRange / m_RainEffectRange)
-  + m_SnowRainExtremeAffect.z when Stormy, then clamp to [0.5, 1.5]
+GetWeatherEffect: 1 + ONE temperature term (an if/else-if chain: m_TemperatureAffect.x peaking at the centre of the m_AttractiveTemperature band and fading to 0 at its edges, OR 0 to .y across 10 degrees past either m_ExtremeTemperature end) + ONE precipitation term (snow, else rain, across m_SnowEffectRange / m_RainEffectRange) + m_SnowRainExtremeAffect.z when Stormy, then clamp to [0.5, 1.5]
 GetTouristProbability = GetSpawnProbability * GetWeatherEffect
 Tourism.m_AverageTourists = round(2 * GetTouristProbability * 100000 / 16)  // display figure, not a count
 ```
@@ -66,18 +59,12 @@ A hotel is any `ProcessingCompany` prefab whose output is `Lodging` — that con
 LodgingProviderSystem (kUpdatesPerDay = 32, UpdateFrame), per hotel with a property:
   roomCount = (int)(lotSize.x * lotSize.y * buildingLevel * BuildingPropertyData.m_SpaceMultiplier)
     // rooms are the building's, not the company's, and scale linearly with level
-  evict any renter that is not a TouristHousehold, then any renter past roomCount
-    (clearing its TouristHousehold.m_Hotel)
-  charge = LeisureParametersData.m_TouristLodgingConsumePerDay / kUpdatesPerDay
-           * marketPrice(Lodging)
-  each tourist household pays (int)charge -- truncated -- while the hotel is credited
-    round(charge * renters), so the pass is not a conserving transfer
-  the hotel's Lodging stock drops by the room-nights consumed, with no floor, so it
-    can go negative; ServiceAvailable drops the same amount floored at 0
+  evict any renter that is not a TouristHousehold, then any renter past roomCount (clearing its TouristHousehold.m_Hotel)
+  charge = LeisureParametersData.m_TouristLodgingConsumePerDay / kUpdatesPerDay * marketPrice(Lodging)
+  each tourist household pays (int)charge -- truncated -- while the hotel is credited round(charge * renters), so the pass is not a conserving transfer
+  the hotel's Lodging stock drops by the room-nights consumed, with no floor, so it can go negative; ServiceAvailable drops the same amount floored at 0
   m_Price = (int)(charge * kUpdatesPerDay); m_FreeRooms = roomCount - renters
-a LodgingProvider with NO property instead clears its whole Renter buffer without
-  clearing any renter's m_Hotel, leaving those tourists pointing at a hotel they
-  no longer rent
+a LodgingProvider with NO property instead clears its whole Renter buffer without clearing any renter's m_Hotel, leaving those tourists pointing at a hotel they no longer rent
 ```
 
 A hotel with no `Lodging` stock still charges; its `ServiceAvailable` floors at 0, and the commercial production taper then lets it restock ([production-and-profit.md](production-and-profit.md)).

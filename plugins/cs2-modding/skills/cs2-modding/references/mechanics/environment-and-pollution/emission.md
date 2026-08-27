@@ -21,15 +21,12 @@ if destroyed or abandoned:
     noise  = destroyed ? 0 : 5 * lotSize.x * lotSize.y * m_AbandonedNoisePollutionMultiplier
 else if efficiency > 0 and the prefab carries PollutionData:
     data = the prefab's PollutionData                       // ground, air, noise
-    data += each installed upgrade's PollutionData          // upgrades flagged Inactive are
-                                                            // skipped, and each is first scaled
-                                                            // by its own PollutionEmitModifier
+    data += each installed upgrade's PollutionData          // upgrades flagged Inactive are skipped, and each is first scaled by its own PollutionEmitModifier
     if data.m_ScaleWithRenters and not a park and the building has a Renter buffer:
         count, education = summed over every household citizen and employee of every renter
         level  = SpawnableBuildingData.m_Level, or 5 for a non-spawnable
         factor = count > 0 ? 5 * count / (level + 0.5 * floor(education / count)) : 0
-                                                            // education / count is C# integer
-                                                            // division: the mean is floored
+                                                            // education / count is C# integer division: the mean is floored
         all three channels *= factor
     if the zone is Industrial without the Office flag:
         apply CityModifierType.IndustrialGroundPollution and .IndustrialAirPollution
@@ -55,9 +52,7 @@ Source: `src/Game/Game.Prefabs/Pollution.cs`, `src/Game/Game.Buildings/Pollution
 Source: `src/Game/Game.Simulation/BuildingPollutionAddSystem.cs`.
 
 ```
-weight cache: 256 entries of GetWeight(d, m_DistanceExponent) = 1 / max(20, pow(d, exponent)),
-    indexed by 255 * d² / maxRadiusSq, rebuilt only when m_DistanceExponent changes;
-    maxRadiusSq is the square of the largest of the three channel radii
+weight cache: 256 entries of GetWeight(d, m_DistanceExponent) = 1 / max(20, pow(d, exponent)), indexed by 255 * d² / maxRadiusSq, rebuilt only when m_DistanceExponent changes; maxRadiusSq is the square of the largest of the three channel radii
 for each cell whose centre lies within the channel's radius of the source:
     weight   = lerp over the cache at that cell's squared distance
     per-cell = pollution * multiplier * weight / (Σ weights * kUpdatesPerDay)
@@ -95,18 +90,9 @@ noise fans out to a (left, centre, right) triple the upgrades multiply:
         both sides (0.5, 0.5, 0.5); left only (0.5, 0.75, 1); right only (1, 0.75, 0.5)
     each middle beautification (0.875, 0.5, 0.875)
 radius = max(m_NetNoiseRadius, composition width / 2); "wide" below = radius above m_NetNoiseRadius
-an edge below ground at both ends whose composition carries Tunnel is skipped outright;
-    a node is skipped only when its own elevation is below ground on both axes
-    and every connected edge with a composition is such a tunnel
-node stamp: upgrades run per connected edge and the triples average, the side channels folding
-    into one as (left + right) / 2; air lands on the node's own cell; noise is divided by 8,
-    then the side amount lands on four cardinal points at ±radius and the centre amount on
-    four inner points at ±radius/3 when wide, else 4× on the node cell
-curve stamp: each map subdivides the curve into ceil(2 * length / its cellSize) samples;
-    air splits evenly, one cell per sample; noise is divided by 4 * samples — the centre
-    channel doubled before the upgrades, then halved again when wide — and lands per sample
-    along the curve normal: the centre amount on two points at ±radius/3 when wide, else on
-    the sample point, plus left and right at ±radius
+an edge below ground at both ends whose composition carries Tunnel is skipped outright; a node is skipped only when its own elevation is below ground on both axes and every connected edge with a composition is such a tunnel
+node stamp: upgrades run per connected edge and the triples average, the side channels folding into one as (left + right) / 2; air lands on the node's own cell; noise is divided by 8, then the side amount lands on four cardinal points at ±radius and the centre amount on four inner points at ±radius/3 when wide, else 4× on the node cell
+curve stamp: each map subdivides the curve into ceil(2 * length / its cellSize) samples; air splits evenly, one cell per sample; noise is divided by 4 * samples — the centre channel doubled before the upgrades, then halved again when wide — and lands per sample along the curve normal: the centre amount on two points at ±radius/3 when wide, else on the sample point, plus left and right at ±radius
 every noise deposit splits bilinearly over four cells; air is written with no interpolation
 ```
 

@@ -36,20 +36,16 @@ ResourceBuyerSystem.BuyJob, per queued sale:
     seller not an outside connection and not commercial:
       m_SellCost = lerp(m_SellCost, perUnit + buyer's m_SellCost, 0.5)
     buyer has a TradeCost buffer and is not an outside connection:
-      m_BuyCost pulled toward perUnit + seller's m_BuyCost -- an improvement taken
-        outright, a worsening lerped at 0.5
-  if the seller's stock of the resource is <= 0: abort the sale here -- the trade costs
-    above have already moved, and nobody pays
+      m_BuyCost pulled toward perUnit + seller's m_BuyCost -- an improvement taken outright, a worsening lerped at 0.5
+  if the seller's stock of the resource is <= 0: abort the sale here -- the trade costs above have already moved, and nobody pays
   commercial seller (ServiceAvailable present) with a property:
     price *= GetServicePriceMultiplier(m_ServiceAvailable, m_MaxService)
              = lerp(0.7, 1.3, saturate(1 - available / max))
     ServiceAvailable = max(0, round(available - amount))
-    m_MeanPriority = min(1, lerp(m_MeanPriority, available / max, 0.1)),
-      assigned without the lerp when it was <= 0
+    m_MeanPriority = min(1, lerp(m_MeanPriority, available / max, 0.1)), assigned without the lerp when it was <= 0
   seller stock -= min(stock, amount) unless the seller is a StorageCompany
   buyer pays round(price); a non-storage seller with a property is credited the same
-  a SaleFlags.Virtual sale adds the resource straight to the buying company's buffer,
-    with no delivery
+  a SaleFlags.Virtual sale adds the resource straight to the buying company's buffer, with no delivery
 ```
 
 **A shop with empty shelves charges 1.3x and a full one 0.7x** — the opposite of a reader's intuition, and the demand-side price signal on a sale.
@@ -60,20 +56,14 @@ Source: `src/Game/Game.Economy/EconomyUtils.cs`, `src/Game/Game.Simulation/Resou
 Sources: `src/Game/Game.Simulation/BuyingCompanySystem.cs`.
 
 ```
-BuyingCompanySystem (constants: kNotificationCostLimit = 5, kResourceLowStockAmount = 4000,
-                     kResourceMinimumRequestAmount = 2000):
+BuyingCompanySystem (constants: kNotificationCostLimit = 5, kResourceLowStockAmount = 4000, kResourceMinimumRequestAmount = 2000):
   slots = 1, or 2 with a second input; +1 if output differs from input1 AND has weight
   slotCapacity = StorageLimitData.m_Limit / slots
-  a need fires when on-hand + buying-truck loads + pending Purpose.Shopping trips
-    falls below max(4000, slotCapacity * 0.25)
-  request = min(slotShare - onHand, min(storageLeft, truckCapacity))
-    where slotShare is limit/3 with a second input, the whole limit for a single-input
-    pass-through or weightless output, else limit/2; abandoned at or below 2000
+  a need fires when on-hand + buying-truck loads + pending Purpose.Shopping trips falls below max(4000, slotCapacity * 0.25)
+  request = min(slotShare - onHand, min(storageLeft, truckCapacity)) where slotShare is limit/3 with a second input, the whole limit for a single-input pass-through or weightless output, else limit/2; abandoned at or below 2000
   a weightless input skips the sizing and requests a flat 2000
   the need is computed for inputs only; the output pass just consumes storageLeft
-  result, only for a company renting a property with a Transform: a ResourceBuyer
-    { m_Payer, m_AmountNeeded = min(request, selected truck's capacity),
-      Industrial|Import, m_Location, m_ResourceNeeded } on the company
+  result, only for a company renting a property with a Transform: a ResourceBuyer { m_Payer, m_AmountNeeded = min(request, selected truck's capacity), Industrial|Import, m_Location, m_ResourceNeeded } on the company
 ```
 
 **The "no inputs" notification is priced, not stocked.**
@@ -93,18 +83,14 @@ TradeSystem (kUpdatesPerDay = 128, no UpdateFrame; kRefreshRate = 0.01):
   buy  = weightCost(type) * weight;  if (balance < 0) buy  *= 1 + distanceCost(type) * max(50, sqrt(-balance))
   sell = weightCost(type) * weight;  if (balance > 0) sell *= 1 + distanceCost(type) * max(50, sqrt(balance))
   CityModifierType.ImportCost / ExportCost applied; cached per resource x transfer type
-  per connection (StorageLimitData combined with installed upgrades), per resource the
-    prefab stores -- plus every office resource, stored or not:
+  per connection (StorageLimitData combined with installed upgrades), per resource the prefab stores -- plus every office resource, stored or not:
     OutgoingMail: stock set to 0, nothing else happens
     target = limit / storedResourceCount, but 0 for an office resource
       (garbage: GarbageFacilityData.m_GarbageCapacity)
     delta = target/2 - current stock; ratio = |delta / (target/2)|
-    move  = ratio > 1 ? delta : (int)(delta * ratio / 128) * 8
-      -- an office resource's zero target makes ratio infinite, so its stock is
-         wiped every pass
+    move  = ratio > 1 ? delta : (int)(delta * ratio / 128) * 8 -- an office resource's zero target makes ratio infinite, so its stock is wiped every pass
     m_TradeBalances[resource] -= move, feeding the sqrt cost above
-    each move books StatisticType.Trade and the import/export accumulator,
-      except the three mail resources (the mask 28672)
+    each move books StatisticType.Trade and the import/export accumulator, except the three mail resources (the mask 28672)
     the connection's TradeCost is rewritten from the cheapest qualifying transfer type
 ```
 
@@ -116,14 +102,9 @@ Sources: `src/Game/Game.Simulation/ResourceExporterSystem.cs`, `src/Game/Game.Si
 
 ```
 ResourceExporterSystem, per ResourceExporter:
-  weightless: pick a random outside connection; if it is a StorageCompany and the
-    seller has a TradeCost buffer, credit the seller industrialPrice * amount plus
-    a trade-cost term and add the stock to the connection
-  weighted:   pathfind to a storage target; on success the export becomes a
-    Purpose.Exporting TripNeeded and a CurrentTrading entry, and the money
-    arrives on delivery
-  either way the stock leaves the seller now -- when the weightless guard fails,
-    the stock is gone and nobody paid
+  weightless: pick a random outside connection; if it is a StorageCompany and the seller has a TradeCost buffer, credit the seller industrialPrice * amount plus a trade-cost term and add the stock to the connection
+  weighted:   pathfind to a storage target; on success the export becomes a Purpose.Exporting TripNeeded and a CurrentTrading entry, and the money arrives on delivery
+  either way the stock leaves the seller now -- when the weightless guard fails, the stock is gone and nobody paid
 ```
 
 **An export credits the seller and debits nobody, so the outside world is a money source by construction.**
@@ -136,13 +117,11 @@ Sources: `src/Game/Game.Simulation/OfficeAISystem.cs`, `src/Game/Game.Simulation
 
 ```
 OfficeAISystem (kUpdatesPerDay = 32; kMinStorageAllow = 30000, kMinimumTradeResource = 2000):
-  total = the shared counter ProcessingCompanySystem fills with every unit produced
-          by non-commercial companies not renting an office property this tick
+  total = the shared counter ProcessingCompanySystem fills with every unit produced by non-commercial companies not renting an office property this tick
   per office company with stock > 30000:
     sold = min(stock, ceil(total / officeCount) * EconomyParameterData.m_OfficeResourceConsumedPerIndustrialUnit)
     credit itself ceil(sold * industrialPrice(output)) directly -- no delivery, no pathfind
-    a ResourceExporter is added for the surplus above 2/3 of kMaxVirtualResourceStorage
-      (plus the 2000 minimum)
+    a ResourceExporter is added for the surplus above 2/3 of kMaxVirtualResourceStorage (plus the 2000 minimum)
 ```
 
 An office company's customer is the industrial sector in aggregate, with no per-company matching; the scaling parameter is `m_OfficeResourceConsumedPerIndustrialUnit`, not the dead field whose tooltip describes this mechanism ([economy-and-companies.md](economy-and-companies.md), Traps).

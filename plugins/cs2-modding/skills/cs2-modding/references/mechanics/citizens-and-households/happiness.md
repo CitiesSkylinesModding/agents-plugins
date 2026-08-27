@@ -66,25 +66,17 @@ All in `src/Game/Game.Simulation/CitizenHappinessSystem.cs`; the `m_*` fields li
 apartment    GetApartmentWellbeing(sizePerResident, level):
              0.8 * (4*(level-1) + 24.55531 - 70.21 / (1 + (sizePerResident/0.03690514)^25.2376)^0.01494523)
              a homeless citizen is scored as GetApartmentWellbeing(0.01, 1)
-tax          GetTaxBonuses: (10 - residentialTaxRate), the TaxHappiness modifier,
-             then * -multiplier, the multiplier per education level
-             (m_TaxUneducatedMultiplier .. m_TaxHighlyEducatedMultiplier; the magnitude
-              rises with education, scaling both the penalty and the bonus)
-welfare      GetWellfareBonuses: coverage * m_WelfareMultiplier * max(0, (50 - happiness) / 50)
-             -- helps only citizens below 50, fading to nothing at 50
-unemployment GetUnemploymentBonuses: -min(m_MaxAccumulatedUnemployedWellbeingPenalty,
-             m_UnemploymentTimeCounter * m_UnemployedWellbeingPenaltyAccumulatePerDay)
+tax          GetTaxBonuses: (10 - residentialTaxRate), the TaxHappiness modifier, then * -multiplier, the multiplier per education level (m_TaxUneducatedMultiplier .. m_TaxHighlyEducatedMultiplier; the magnitude rises with education, scaling both the penalty and the bonus)
+welfare      GetWellfareBonuses: coverage * m_WelfareMultiplier * max(0, (50 - happiness) / 50) -- helps only citizens below 50, fading to nothing at 50
+unemployment GetUnemploymentBonuses: -min(m_MaxAccumulatedUnemployedWellbeingPenalty, m_UnemploymentTimeCounter * m_UnemployedWellbeingPenaltyAccumulatePerDay)
              zero for tourists
-sickness     GetSicknessBonuses: m_SicknessPenalty latched at m_Health / 2 on the first
-             sick tick, applied to health until the problem clears
-death        GetDeathPenalty: any dead household member costs every member
-             (-m_DeathHealthPenalty, -m_DeathWellbeingPenalty)
+sickness     GetSicknessBonuses: m_SicknessPenalty latched at m_Health / 2 on the first sick tick, applied to health until the problem clears
+death        GetDeathPenalty: any dead household member costs every member (-m_DeathHealthPenalty, -m_DeathWellbeingPenalty)
 homeless     GetHomelessBonuses: a flat (m_HomelessHealthEffect, m_HomelessWellbeingEffect)
 leisure      GetLeisureBonuses: (m_LeisureCounter - 128) / 16 wellbeing; a flat +7 for a Tourist
 consumption  inline: min(15, household.m_ShoppedValueLastDay / 50) when positive
 traffic      m_PenaltyCounter decays 1 per pass; while non-zero adds m_PenaltyEffect to wellbeing
-education    GetEducationBonuses: sqrt(n) * m_EducationWellbeingMultiplier
-             * (educationCoverage - m_NeutralEducation)
+education    GetEducationBonuses: sqrt(n) * m_EducationWellbeingMultiplier * (educationCoverage - m_NeutralEducation)
 ```
 
 Two more producers read a building instance component rather than these fields: the student term (`Game.Buildings.School`, [education-pipeline.md](education-pipeline.md)) and the prisoner term (`Game.Buildings.Prison`, [crime-pipeline.md](crime-pipeline.md)).

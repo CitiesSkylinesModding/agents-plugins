@@ -18,9 +18,7 @@ UpdateRequestGroupJob (every new request):
   index = random.NextUInt(RequestGroup.m_GroupCount)     // drawn once, per request
   remove RequestGroup; add shared UpdateFrame(index)
 
-HandleRequestJob (ModificationEnd), per reported request, all HandleRequests collapsed first
-                 (the first report is kept; a later Completed replaces it wholesale, a later
-                  PathConsumed merges only that flag, any other later report is discarded):
+HandleRequestJob (ModificationEnd), per reported request, all HandleRequests collapsed first (the first report is kept; a later Completed replaces it wholesale, a later PathConsumed merges only that flag, any other later report is discarded):
   skip                                   when the request no longer has ServiceRequest
   destroy the request                    when m_Completed
   else when m_Handler != Null:                                    // accepted
@@ -55,8 +53,7 @@ FindVehicleSource (ambulance):         weights (time, behaviour, money, comfort)
 FindVehicleSource (hearse):            weights (1, 1, 1, 1), m_MaxSpeed = 111.111115
 
 SetupAmbulancesJob, per source:
-  return                               when the chunk is an OutsideConnection and
-                                       !CityOption.ImportOutsideServices           // whole-chunk gate
+  return                               when the chunk is an OutsideConnection and !CityOption.ImportOutsideServices           // whole-chunk gate
   hospital:
     roadTypes  = Car        if HospitalFlags.HasAvailableAmbulances
                | Helicopter if HospitalFlags.HasAvailableMedicalHelicopters
@@ -64,8 +61,7 @@ SetupAmbulancesJob, per source:
     roadTypes &= what the request's target accepts
     seed cost  = weights.time * 10f     when any road type survives
   ambulance already on the road:
-    only when flagged Returning and neither Dispatched, Transporting nor Disabled
-    (or a parked one not Disabled), and its owner station passes the same district check
+    only when flagged Returning and neither Dispatched, Transporting nor Disabled (or a parked one not Disabled), and its owner station passes the same district check
     seed cost  = 0f
 ```
 
@@ -83,9 +79,7 @@ no buffer, or an empty buffer          -> true    (serves everywhere)
 buffer non-empty, target district Null -> false   (excludes anything in no district)
 otherwise                              -> the buffer contains that district
 
-the overloads differ at the edges: the border-road one (two districts) fails only
-when BOTH sides are Null and passes when either is in the buffer, and the building
-one passes any building carrying no CurrentDistrict at all
+the overloads differ at the edges: the border-road one (two districts) fails only when BOTH sides are Null and passes when either is in the buffer, and the building one passes any building carrying no CurrentDistrict at all
 ```
 
 Source: `src/Game/Game.Areas/AreaUtils.cs`.
@@ -103,9 +97,7 @@ The bill is an expense line per population rather than a fee:
 per imported dispatched service, only while CityOption.ImportOutsideServices is on:
   importFee = m_<X>ImportServiceFee                                // OutsideTradeParameterData
   importFee = ApplyModifier(importFee, CityModifierType.CityServiceImportCost)
-  expense   = importFee * (population / m_OCServiceTradePopulationRange + 1)
-                        * m_OCServiceTradePopulationRange          // a population step
-                                                                   // function, truncated to int
+  expense   = importFee * (population / m_OCServiceTradePopulationRange + 1) * m_OCServiceTradePopulationRange          // a population step function, truncated to int
 ```
 
 with one such getter for each of the five dispatched imports, accumulated as a positive figure against its `ExpenseSource.Import*` member; imported electricity and water bill differently, through `ServiceFeeSystem.GetServiceFees`.

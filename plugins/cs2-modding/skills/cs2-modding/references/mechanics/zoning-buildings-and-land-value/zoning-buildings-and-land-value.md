@@ -125,8 +125,7 @@ Upkeep, computed once per prefab (when, and what that bakes in, is [level-up-loo
 ```
 PropertyRenterSystem.GetUpkeep (src/Game/Game.Simulation/PropertyRenterSystem.cs):
   residential:             round(pow(level, m_ResidentialUpkeepLevelExponent) * ZoneServiceConsumptionData.m_Upkeep * lotSize)
-  commercial / industrial: round(pow(level, m_CommercialUpkeepLevelExponent or m_IndustrialUpkeepLevelExponent)
-                                 * ZoneServiceConsumptionData.m_Upkeep * lotSize * (isStorage ? 0.5 : 1))
+  commercial / industrial: round(pow(level, m_CommercialUpkeepLevelExponent or m_IndustrialUpkeepLevelExponent) * ZoneServiceConsumptionData.m_Upkeep * lotSize * (isStorage ? 0.5 : 1))
   AreaType.None:           exponent 1, so the factor is level itself, on the commercial/industrial return
 ```
 
@@ -162,8 +161,7 @@ Apartments per building, computed at prefab initialisation for each level — sk
 
 ```
 ZoneProperties.GetBuildingPropertyData (src/Game/Game.Prefabs/ZoneProperties.cs):
-  m_ResidentialProperties = round((m_ScaleResidentials ? (1 + 0.25 * (level - 1)) * lotSize : 1)
-                                  * ZoneProperties.m_ResidentialProperties)
+  m_ResidentialProperties = round((m_ScaleResidentials ? (1 + 0.25 * (level - 1)) * lotSize : 1) * ZoneProperties.m_ResidentialProperties)
 ```
 
 There is no level-3-or-5 branch anywhere: apartment counts jump at whatever levels the rounding makes them jump for a given lot.

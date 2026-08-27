@@ -15,28 +15,19 @@ Sources: `src/Game/Game.Simulation/AdjustElectricityConsumptionSystem.cs`, `src/
 ```
 AdjustElectricityConsumptionSystem, per building in this cycle's UpdateFrame bucket:
   c  = ConsumptionData.m_ElectricityConsumption      -- combined over InstalledUpgrade
-  c *= ElectricityParameterData.m_TemperatureConsumptionMultiplier
-         .Evaluate(ClimateSystem.temperature)        -- 1 when the singleton is absent
-  c *= ServiceFeeParameterData.m_ElectricityFeeConsumptionMultiplier
-         .Evaluate(fee / m_ElectricityFee.m_Default)
-       -- a chunk carrying CityServiceUpkeep skips the fee: multiplier 1, fee efficiency 1
-  c  = AreaUtils.ApplyModifier(c, DistrictModifierType.EnergyConsumptionAwareness)
-       -- when the building sits in a district with modifiers
+  c *= ElectricityParameterData.m_TemperatureConsumptionMultiplier.Evaluate(ClimateSystem.temperature)        -- 1 when the singleton is absent
+  c *= ServiceFeeParameterData.m_ElectricityFeeConsumptionMultiplier.Evaluate(fee / m_ElectricityFee.m_Default) -- a chunk carrying CityServiceUpkeep skips the fee: multiplier 1, fee efficiency 1
+  c  = AreaUtils.ApplyModifier(c, DistrictModifierType.EnergyConsumptionAwareness) -- when the building sits in a district with modifiers
   unless the chunk has Park or StorageProperty, and a Renter buffer exists:
     c *= FlowUtils.GetRenterConsumptionMultiplier(...)
-  either way: if c was > 0 and is now < 1, c = 1     -- a small positive demand floors
-    to 1 rather than rounding away
-  wanted = c > 0 ? MathUtils.RoundToIntRandom(random, c) : 0
-    -- the guard is reachable: a district modifier can push c negative, past the floor
+  either way: if c was > 0 and is now < 1, c = 1     -- a small positive demand floors to 1 rather than rounding away
+  wanted = c > 0 ? MathUtils.RoundToIntRandom(random, c) : 0 -- the guard is reachable: a district modifier can push c negative, past the floor
   wanted /= 10 when BuildingOption.Inactive
-  on change: write ElectricityConsumer.m_WantedConsumption, push onto the consumer edge's
-    m_Capacity, and enqueue the road edge for the aggregate re-sum
-  EfficiencyFactor.ElectricityFee = BuildingEfficiencyParameterData.m_ElectricityFeeFactor
-    .Evaluate(relativeFee)
+  on change: write ElectricityConsumer.m_WantedConsumption, push onto the consumer edge's m_Capacity, and enqueue the road edge for the aggregate re-sum
+  EfficiencyFactor.ElectricityFee = BuildingEfficiencyParameterData.m_ElectricityFeeFactor.Evaluate(relativeFee)
 
 FlowUtils.GetRenterConsumptionMultiplier:
-  n   = citizens across the Renter buffer -- household members via HouseholdCitizen,
-        or workers via Employee
+  n   = citizens across the Renter buffer -- household members via HouseholdCitizen, or workers via Employee
   edu = their summed Citizen.GetEducationLevel()
   level = SpawnableBuildingData.m_Level, or 5 where the prefab has none
   n == 0: return 0 -- which the caller's floor above then turns into wanted = 1:
@@ -60,33 +51,20 @@ DispatchElectricitySystem, per consumer, on the cycle's dispatch frame:
   road-edge aggregate (no building connection):
     edge = roadEdgeNode -> sink
     edge saturated (m_Capacity == m_Flow): flow = m_WantedConsumption
-    else: flow = floor(wanted * m_Flow / m_Capacity)
-      -- pro-rata and floored, so every building on an undersupplied road is equally short
+    else: flow = floor(wanted * m_Flow / m_Capacity) -- pro-rata and floored, so every building on an undersupplied road is equally short
   m_FulfilledConsumption = min(flow, m_WantedConsumption)
-  cooldown (skipped entirely while the electricity asset-menu prefab is Locked, the
-            efficiency factors below still computing from the frozen counters;
-            DispatchWaterSystem gates on its own asset-menu prefab the same way,
-            its dirty-water icon included):
+  cooldown (skipped entirely while the electricity asset-menu prefab is Locked, the efficiency factors below still computing from the frozen counters; DispatchWaterSystem gates on its own asset-menu prefab the same way, its dirty-water icon included):
     short: m_CooldownCounter = min(counter + 1, 10000)
-      at kAlertCooldown (public static readonly short = 2) raise the warning flag --
-      the bottleneck icon when beyondBottleneck, the plain no-electricity icon otherwise
+      at kAlertCooldown (public static readonly short = 2) raise the warning flag -- the bottleneck icon when beyondBottleneck, the plain no-electricity icon otherwise
     fulfilled: counter = 0
-  Connected = wanting ? fulfilled >= wanted : !disconnected
-    -- the second arm is why an empty lot still shows a power symbol
-  EfficiencyFactor.ElectricitySupply =
-    1 - m_ElectricityPenalty * saturate(counter / m_ElectricityPenaltyDelay)
+  Connected = wanting ? fulfilled >= wanted : !disconnected -- the second arm is why an empty lot still shows a power symbol
+  EfficiencyFactor.ElectricitySupply = 1 - m_ElectricityPenalty * saturate(counter / m_ElectricityPenaltyDelay)
 
 DispatchWaterSystem: fresh and sewage each ride the same two arms, with these differences --
-  no clamp: an own connection's m_FulfilledFresh/m_FulfilledSewage take the edge's raw
-    flow where electricity takes min(flow, wanted) -- a shape difference: the consumer
-    edge's capacity is the same wanted figure, so the raw flow stays within it anyway;
-    the road aggregate is pro-rata per layer
-  the cooldowns are bytes capped at byte.MaxValue, not 10000; kAlertCooldown is its own
-    identical declaration of 2
-  WaterConsumerFlags is None/WaterConnected/SewageConnected, rebuilt every pass --
-    connectivity only, no shortage bit for a mod to check
-  a non-wanting building's connectivity comes from the edge's shortage/disconnection
-    flag pair instead of fulfilment, decided after the cooldown pass
+  no clamp: an own connection's m_FulfilledFresh/m_FulfilledSewage take the edge's raw flow where electricity takes min(flow, wanted) -- a shape difference: the consumer edge's capacity is the same wanted figure, so the raw flow stays within it anyway; the road aggregate is pro-rata per layer
+  the cooldowns are bytes capped at byte.MaxValue, not 10000; kAlertCooldown is its own identical declaration of 2
+  WaterConsumerFlags is None/WaterConnected/SewageConnected, rebuilt every pass -- connectivity only, no shortage bit for a mod to check
+  a non-wanting building's connectivity comes from the edge's shortage/disconnection flag pair instead of fulfilment, decided after the cooldown pass
   m_Pollution = freshFlow > 0 ? edge.m_FreshPollution : 0
   the dirty-water icon toggles as m_Pollution crosses WaterPipeParameterData.m_MaxToleratedPollution
   EfficiencyFactor.WaterSupply    = 1 - m_WaterPenalty * saturate(freshCooldown / m_WaterPenaltyDelay)
@@ -107,24 +85,18 @@ Source: `src/Game/Game.Simulation/FlowUtils.cs`, `src/Game/Game.UI.Tooltip/Rayca
 Sources: `src/Game/Game.Simulation/ElectricityTradeSystem.cs`, `src/Game/Game.Simulation/WaterTradeSystem.cs`.
 
 ```
-ElectricityTradeSystem: over every TradeNode's ConnectedFlowEdge buffer,
-  export += flow on edges ending at the sink; import += flow on edges starting at the source
+ElectricityTradeSystem: over every TradeNode's ConnectedFlowEdge buffer, export += flow on edges ending at the sink; import += flow on edges starting at the source
   exportRevenue = export / 2048 * OutsideTradeParameterData.m_ElectricityExportPrice
   importCost    = import / 2048 * m_ElectricityImportPrice
-  both queued as ServiceFeeSystem.FeeEvent { m_Outside = true }, the import amount negated
-  -- 2048 matches kUpdatesPerDay, converting per-tick flow to a per-day amount;
-     both trade systems write the bare literal, so grep for 2048f, not the symbol
+  both queued as ServiceFeeSystem.FeeEvent { m_Outside = true }, the import amount negated -- 2048 matches kUpdatesPerDay, converting per-tick flow to a per-day amount; both trade systems write the bare literal, so grep for 2048f, not the symbol
 
 WaterTradeSystem: four sums instead of two --
   sink-side edges:   freshExport += m_FreshFlow
-                     pollutedExport += min(round(m_FreshPollution
-                       / m_WaterExportPollutionTolerance * m_FreshFlow), m_FreshFlow)
-                     (asserts m_SewageFlow == 0 there -- the sewage inversion: sewage rides
-                       source to sink as handling capacity, so its export sums on importing edges)
+                     pollutedExport += min(round(m_FreshPollution / m_WaterExportPollutionTolerance * m_FreshFlow), m_FreshFlow)
+                     (asserts m_SewageFlow == 0 there -- the sewage inversion: sewage rides source to sink as handling capacity, so its export sums on importing edges)
   source-side edges: freshImport += m_FreshFlow; sewageExport += m_SewageFlow
   freshExport = max(min(availableWater, freshExport), 0)  -- capped at the city's spare water
-  exportRevenue = (freshExport - pollutedExport) / 2048 * m_WaterExportPrice
-    -- dirty water sold abroad earns nothing
+  exportRevenue = (freshExport - pollutedExport) / 2048 * m_WaterExportPrice -- dirty water sold abroad earns nothing
   freshImport and sewageExport are both billed as costs (negated amounts)
 ```
 

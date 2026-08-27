@@ -28,8 +28,7 @@ Sources: `src/Game/Game.Simulation/PathfindSetupSystem.cs`, `src/Game/Game.Pathf
 ```
 GetQueue:      m_ResultFrame = frameIndex + maxDelayFrames
 pendingSimulationFrame:
-  min over every outstanding request's m_ResultFrame, queued and in flight,
-  composed across the setup and result systems; uint.MaxValue when none
+  min over every outstanding request's m_ResultFrame, queued and in flight, composed across the setup and result systems; uint.MaxValue when none
 SimulationSystem.OnUpdate:
   if pendingSimulationFrame < uint.MaxValue:     // no queue, no throttle
     slack  = max(0, pendingSimulationFrame - frameIndex - 1)
@@ -37,8 +36,7 @@ SimulationSystem.OnUpdate:
     frames = min(frames, slack)          // and the frame count is capped
   frames = min(frames, performance-preference cap)
   frames = clamp(frames, 0, max(1, min(8, round(speed * min(1, slack / 48) * 2))))
-                                         // the step ceiling collapses with the
-                                         // same slack ratio — a second throttle
+                                         // the step ceiling collapses with the same slack ratio — a second throttle
 ```
 
 When the queue falls behind its nearest deadline the simulation slows, and at the deadline it advances no frames at all — the game cannot outrun its own pathfinder.

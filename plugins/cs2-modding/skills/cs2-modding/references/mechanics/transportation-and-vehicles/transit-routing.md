@@ -15,9 +15,7 @@ m_MaxSpeed      = 277.77777f          // the 1000 km/h sentinel
 m_WalkSpeed     = 5.555556f
 m_Weights       = (1, 1, 1, 1)
 m_PathfindFlags = Stable | IgnoreFlow
-m_IgnoredRules  = HasBlockage | ForbidCombustionEngines | ForbidHeavyTraffic
-                | ForbidPrivateTraffic | ForbidSlowTraffic | AvoidBicycles
-                (+ ForbidTransitTraffic unless the route is a Car road route)
+m_IgnoredRules  = HasBlockage | ForbidCombustionEngines | ForbidHeavyTraffic | ForbidPrivateTraffic | ForbidSlowTraffic | AvoidBicycles (+ ForbidTransitTraffic unless the route is a Car road route)
 m_Methods       = RouteUtils.GetPathMethods over the route's RouteConnectionData
 ```
 
@@ -47,9 +45,7 @@ Three things a reader acts on: the expected wait has a floor of half the headway
 m_Length   = routeInfo.m_Distance
 m_MaxSpeed = max(1, routeInfo.m_Distance) / max(1, routeInfo.m_Duration)
 Forward    only when distance and duration are both positive
-methods    = on a m_PassengerTransport line: PublicTransportDay and Night, each
-             dropped by its own inactive flag; on a m_CargoTransport line:
-             CargoTransport, dropped only when both inactive flags are set
+methods    = on a m_PassengerTransport line: PublicTransportDay and Night, each dropped by its own inactive flag; on a m_CargoTransport line: CargoTransport, dropped only when both inactive flags are set
 costs     += m_TravelCost * routeInfo.m_Distance
 ```
 

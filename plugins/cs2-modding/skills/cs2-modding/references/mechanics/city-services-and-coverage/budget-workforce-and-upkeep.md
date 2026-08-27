@@ -17,22 +17,15 @@ Source: `src/Game/Game.Simulation/ServiceBudgetData.cs`, `src/Game/Game.Simulati
 Source: `src/Game/Game.Simulation/CityServiceBudgetSystem.cs`, `src/Game/Game.Simulation/CityServiceUpkeepSystem.cs`.
 
 ```
-CityServiceBudgetSystem.CityServiceBudgetJob, per building, per upkeep line
-    (prefab lines plus installed upgrades'; a line flagged m_ScaleWithUsage is multiplied
-     by ServiceUsage.m_Usage — a prefab line by the building's, an upgrade line by the
-     upgrade's own; an inactive upgrade under an active building keeps a tenth of its
-     Money line and drops its other lines):
+CityServiceBudgetSystem.CityServiceBudgetJob, per building, per upkeep line (prefab lines plus installed upgrades'; a line flagged m_ScaleWithUsage is multiplied by ServiceUsage.m_Usage — a prefab line by the building's, an upgrade line by the upgrade's own; an inactive upgrade under an active building keeps a tenth of its Money line and drops its other lines):
   value = amount * marketPrice(resource), skipped when amount <= 0
   cost  = value                             // a non-money line is never budget-scaled
   on the Resource.Money line only:
-    value  = ApplyModifier(value, CityServiceBuildingBaseUpkeepCost)  // += delta.x,
-                                                                      // then += value*delta.y
-    value += GetUpkeepOfEmployeeWage(...)   // 0 outright when the building is Inactive;
-                                            // wages join after the city modifier
+    value  = ApplyModifier(value, CityServiceBuildingBaseUpkeepCost)  // += delta.x, then += value*delta.y
+    value += GetUpkeepOfEmployeeWage(...)   // 0 outright when the building is Inactive; wages join after the city modifier
     value *= 0.1                            when the building is Inactive
     cost   = value * (budget / 100)
-  accumulate rounded cost into m_Cost and rounded value into m_FullCost
-      on CollectedCityServiceUpkeepData
+  accumulate rounded cost into m_Cost and rounded value into m_FullCost on CollectedCityServiceUpkeepData
 ```
 
 **The slider cuts the wage bill along with the maintenance bill** — wages join the money line above before the budget multiply.
@@ -59,11 +52,8 @@ GetEfficiency(buffer)   = product of max(0, value) over the buffer's entries
                           = max(0.01, round(100 * product) / 100)   otherwise
 SetEfficiencyFactor     = writes the entry, or REMOVES it when |value - 1| <= 0.001
 GetEfficiencyFactor     = returns 1 for a missing entry            // the correct read
-GetImmediateEfficiency  = the same product over ONLY Destroyed, Abandoned, Disabled
-                          and ServiceBudget — the dispatchers' fast read; dispatch.md
-                          has the fleet consequence
-ApproximateEfficiencyFactors = the inverse: splits one target efficiency across two
-                          weighted factors in closed form, or four by 16-step bisection
+GetImmediateEfficiency  = the same product over ONLY Destroyed, Abandoned, Disabled and ServiceBudget — the dispatchers' fast read; dispatch.md has the fleet consequence
+ApproximateEfficiencyFactors = the inverse: splits one target efficiency across two weighted factors in closed form, or four by 16-step bisection
 ```
 
 Three consequences a reader gets wrong from the field names alone:
@@ -95,11 +85,9 @@ CalculateNumberOfWorkplaces(totalWorkers, complexity, buildingLevel):
     weight  = max(0, 8 - |centre - 4i|)
     weight += max(0, 8 - |centre + 4|)   at i == 0    // the ends absorb the tails
     weight += max(0, 8 - |centre - 20|)  at i == 4
-    workplaces[i] = totalWorkers * weight / 16        // rounding remainder carried forward,
-                                                      // capped by what is left
+    workplaces[i] = totalWorkers * weight / 16        // rounding remainder carried forward, capped by what is left
 
-GetWorkerWorkforce(happiness, level) = ((level == 0 ? 2 : 1) + 2.5 * level)
-                                     * (0.75 + happiness / 200)
+GetWorkerWorkforce(happiness, level) = ((level == 0 ? 2 : 1) + 2.5 * level) * (0.75 + happiness / 200)
 ```
 
 Complexity slides a width-16 triangle across the five education levels in steps of four.
@@ -114,16 +102,12 @@ average  = Σ workplaces[i] * GetWorkerWorkforce(50, i)              // the idea
 when average <= 0: the cooldown zeroes and all three factors are written as 1
 CalculateCurrentWorkforce -> currentWorkforce, employedAverage, sickWorkforce
 missing  = average - employedAverage - sickWorkforce
-UpdateCooldown runs on the RAW missing figure, climbing 1 per update while short,
-    before the ramp below reads it; full staffing zeroes only a POSITIVE cooldown,
-    so the grace period's negative balance survives
+UpdateCooldown runs on the RAW missing figure, climbing 1 per update while short, before the ramp below reads it; full staffing zeroes only a POSITIVE cooldown, so the grace period's negative balance survives
 missing *= saturate(m_EfficiencyCooldown / m_MissingEmployeesEfficiencyDelay)  // the ramp
 missing *= m_MissingEmployeesEfficiencyPenalty
 sick    *= m_SickEmployeesEfficiencyPenalty
-(NotEnoughEmployees, SickEmployees) =
-    ApproximateEfficiencyFactors((average - missing - sick) / average, (missing, sick))
-EmployeeHappiness = (employedAverage > 0 ? currentWorkforce / employedAverage : 1)
-                  + workConditions * 0.01
+(NotEnoughEmployees, SickEmployees) = ApproximateEfficiencyFactors((average - missing - sick) / average, (missing, sick))
+EmployeeHappiness = (employedAverage > 0 ? currentWorkforce / employedAverage : 1) + workConditions * 0.01
 ```
 
 **The two hiring notifications use their own thresholds, and the educated one truncates before it compares.**

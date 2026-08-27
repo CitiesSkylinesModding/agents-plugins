@@ -20,10 +20,8 @@ handshake: buffer = IconCommandSystem.CreateCommandBuffer()      // a fresh Nati
            IconCommandSystem.AddCommandBufferWriter(jobHandle)
            the queues are cleared every update and in OnStopRunning: obtain, fill and register within one frame
 
-Add(owner, prefab, priority = Info, clusterLayer = Default, flags = 0, target = default,
-    isTemp = false, isHidden = false, disallowCluster = false, delay = 0)     // strips IconFlags.CustomLocation
-Add(owner, prefab, float3 location, priority = Info, clusterLayer = Default,
-    flags = IgnoreTarget, ...)                                                // adds IconFlags.CustomLocation
+Add(owner, prefab, priority = Info, clusterLayer = Default, flags = 0, target = default, isTemp = false, isHidden = false, disallowCluster = false, delay = 0)     // strips IconFlags.CustomLocation
+Add(owner, prefab, float3 location, priority = Info, clusterLayer = Default, flags = IgnoreTarget, ...)                                                // adds IconFlags.CustomLocation
 Remove(owner, prefab, target = default, flags = 0)
 Remove(owner, IconPriority priority)                 // CommandFlags.Remove | All: every icon on the owner at that priority
 Update(owner)                                        // re-evaluates positions

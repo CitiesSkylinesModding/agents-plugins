@@ -23,16 +23,12 @@ The search's only tuning input is the prefab's `CoverageData.m_Range`, which the
 ```
 m_MinDistance = m_Range * float4(0,   0.6, 0,   0.6)     // x/z: path cost, y/w: raw distance
 m_MaxDistance = m_Range * float4(2,   1.2, 2,   1.2)
-cost accumulates as  length * PathSpecification.m_Density * |Δ|    (PathUtils.CalculateCost;
-                                    m_Density is sqrt(density) on car lanes, 1 on pedestrian)
+cost accumulates as  length * PathSpecification.m_Density * |Δ|    (PathUtils.CalculateCost; m_Density is sqrt(density) on car lanes, 1 on pedestrian)
 distance as          length * |Δ|
 expansion stops once a node's distance reaches m_MaxDistance.y, and a result is emitted
 per direction only while the nearer end's distance is under m_MaxDistance.y
-per edge end:  normalised = saturate(max((cost - min) / (max - min),
-                                         (distance - min) / (max - min)))
-ProcessResultsJob then keeps the minimum cost per owning edge, oriented per end to the
-edge's own direction (an end whose lane does not span the edge reads float.MaxValue), and
-rebuilds the building's CoverageElement buffer
+per edge end:  normalised = saturate(max((cost - min) / (max - min), (distance - min) / (max - min)))
+ProcessResultsJob then keeps the minimum cost per owning edge, oriented per end to the edge's own direction (an end whose lane does not span the edge reads float.MaxValue), and rebuilds the building's CoverageElement buffer
 ```
 
 So `m_Range` is a cost budget of `2 × m_Range` and a distance budget of `1.2 × m_Range` with the first `0.6 × m_Range` free, and whichever lane runs out first decides the result: **a car-travelling service reaches further along low-density stretches for the same metres, while the distance lane caps the reach absolutely** — for the five services that travel on foot, cost is distance itself and only the budgets differ.
@@ -50,22 +46,16 @@ Source: `src/Game/Game.Simulation/ServiceCoverageSystem.cs`.
 
 ```
 ProcessCoverageJob, per building:
-  the CoverageElement buffer and the prefab's CoverageData are read off the entity as-is;
-      a Temp building then redirects to its m_Original for ONLY what follows —
-      ModifiedServiceCoverage, the Owner walk, districts, efficiency
-      (the simulation query excludes Temp; CoveragePreviewSystem runs this job on Temps)
+  the CoverageElement buffer and the prefab's CoverageData are read off the entity as-is; a Temp building then redirects to its m_Original for ONLY what follows — ModifiedServiceCoverage, the Owner walk, districts, efficiency (the simulation query excludes Temp; CoveragePreviewSystem runs this job on Temps)
   CoverageData taken from the prefab; a park's ModifiedServiceCoverage replaces it
   efficiency = GetEfficiency(top-level Owner, walked up until it stops resolving)
-             = 0   when the walk or the Temp redirect moved off the chunk's own entity
-                   and that entity is itself Inactive or Destroyed
+             = 0   when the walk or the Temp redirect moved off the chunk's own entity and that entity is itself Inactive or Destroyed
   districts  = the top-level owner's ServiceDistrict buffer as a set; empty set = everywhere
-  per CoverageElement (skipping edges whose buffer is missing;
-                       district filtering runs only where the edge carries BorderDistrict):
+  per CoverageElement (skipping edges whose buffer is missing; district filtering runs only where the edge carries BorderDistrict):
     an edge inside one district        -> skipped unless that district is in the set
     an edge straddling two districts   -> skipped unless a side matches;
                                           densityFactor = 0.5 with one side, 1 with both
-    coverage      = max(0, 1 - cost * cost) * m_Magnitude * efficiency    // cost is float2,
-                                                                          // one lane per end
+    coverage      = max(0, 1 - cost * cost) * m_Magnitude * efficiency    // cost is float2, one lane per end
     lengthFactor  = edge length * sqrt(max(0.01, Game.Net.Density.m_Density))
   the building's elements are sorted best-first; total = remaining = m_Capacity
 
