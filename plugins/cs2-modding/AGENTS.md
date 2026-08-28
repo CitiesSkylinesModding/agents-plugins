@@ -114,6 +114,7 @@ Deferring the correction to a follow-up drops it.
 A rewritten passage is new prose, and the round that fixes the most is the round that introduces the most.
 Derive a correction from the source, never from the sentence it replaces: reading the shipped line to write its fix reproduces whatever that line got wrong, now wearing a correction's authority.
 Over-correction is how the round goes wrong — a vague rule rewritten into a precise one that is wrong, a permission narrowed to a whitelist tighter than what was ruled, a mechanism invented to justify a rule that was already justified — so prefer scoping or restoring the sentence you have over generalising it, and where a fix needs a claim the sources do not carry, drop the claim rather than the fix.
+An absolute is most often corrected into the opposite absolute, and the exception that indicted _always_ indicts _never_ just as fast: write the exception space into the replacement, or retreat to the weaker claim the sources carry rather than sharpen a third time.
 The shape of a fix predicts whether it holds: one that takes something away survives its own review — except a cut of a trap's consequence clause, which reads as narration to a deletion pass and is the half a reader acts on — and so does a mechanical one applied uniformly across a file, while one that adds precision — a count, a mechanism, a rationale, a worked example — is what the next round finds wrong, so give those the scrutiny of the prose they replace.
 A recipe stated twice takes a fix only when both copies change: a reference explains a search where the topic owns it and prescribes it again in the summary a reader executes from, so fixing the explanation alone leaves the file carrying its own counterexample.
 
@@ -121,6 +122,10 @@ A recipe stated twice takes a fix only when both copies change: a reference expl
 Each round fixes the number and leaves the sentence, because the sentence reads as the thing the passage needs.
 Ask what the surrounding prose loses if the claim simply goes; where the answer is nothing, that is the fix.
 Where the answer is something, count the complement instead: a count that keeps coming back wrong usually counts a set with a contested edge, so every pass draws the boundary somewhere new, and the stable form is the other side of the same fact — a container tally that ran five, then three, then six settled as _exactly two of that library's types carry an asynchronous dispose_.
+
+**A passage that draws a different finding every round needs a diagnosis, not another rewrite.**
+The rule above governs one claim wrong the same way twice; here each round names a new defect, so the recurrence is the finding — task a pass with asking why it keeps coming back rather than with fixing what the last one returned.
+Two passages that had survived five rewrites each settled on the first structural cause named that way, and neither cause had appeared in any individual finding.
 
 ## Reference families
 
