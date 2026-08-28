@@ -494,6 +494,7 @@ function checkMechanicsProseBudget(files: readonly string[]): void {
     warnAt: 60,
     failAt: 100,
     isInFamily: isMechanicsReference,
+    excludeAnchors: false,
     failAdvice:
       `A mechanics reference maps and routes: disclose a section into a sibling rather than ` +
       `growing it.`,
@@ -510,6 +511,7 @@ function checkTechniqueProseBudget(files: readonly string[]): void {
     warnAt: 300,
     failAt: 400,
     isInFamily: isTechniqueReference,
+    excludeAnchors: true,
     failAdvice:
       `A technique file this long is carrying a self-contained account a reader consults rather ` +
       `than reads through: disclose it into a sibling.`,
@@ -526,7 +528,7 @@ function checkTechniqueProseBudget(files: readonly string[]): void {
 // budget says so in the check output, while one over the ceiling has stopped doing its family's
 // job.
 function checkProseBudget(files: readonly string[], budget: ProseBudget): void {
-  const { warnAt, failAt, isInFamily, failAdvice, warnQuestion } = budget;
+  const { warnAt, failAt, isInFamily, excludeAnchors, failAdvice, warnQuestion } = budget;
   const questions: string[] = [];
 
   let violation: string | undefined;
@@ -536,7 +538,7 @@ function checkProseBudget(files: readonly string[], budget: ProseBudget): void {
       continue;
     }
 
-    const prose = countProseLines(readShippedFile(file));
+    const prose = countProseLines(readShippedFile(file), excludeAnchors);
 
     if (prose == null) {
       violation ??=
@@ -568,6 +570,7 @@ interface ProseBudget {
   readonly warnAt: number;
   readonly failAt: number;
   readonly isInFamily: (file: string) => boolean;
+  readonly excludeAnchors: boolean;
   readonly failAdvice: string;
   readonly warnQuestion: string;
 }
@@ -577,7 +580,14 @@ interface ProseBudget {
 // lines would otherwise count against a budget the listing is exempt from -- which is also why an
 // unclosed fence returns undefined rather than a count: it exempts the whole tail of the file, so
 // the cheapest way to silence this budget is a typo the author never sees.
-function countProseLines(content: string): number | undefined {
+//
+// `excludeAnchors` drops `Source:` lines too, for the reason headings and table rows are dropped:
+// prose is the part that over-produces, and an anchor is mandated one-per-trap rather than written
+// at an author's discretion. It is the technique family's setting alone: that family's thresholds
+// were measured before any anchor existed in it, so counting anchors measured them against the
+// wrong baseline. The mechanics thresholds were asserted rather than measured, so there is nothing
+// there to correct and excluding anchors would only loosen a number nobody derived.
+function countProseLines(content: string, excludeAnchors: boolean): number | undefined {
   const { lines, hasUnclosedFence } = stripFencedBlocks(content);
 
   if (hasUnclosedFence) {
@@ -587,7 +597,12 @@ function countProseLines(content: string): number | undefined {
   return lines.filter(line => {
     const trimmed = line.trim();
 
-    return trimmed.length > 0 && !trimmed.startsWith('#') && !trimmed.startsWith('|');
+    return (
+      trimmed.length > 0 &&
+      !trimmed.startsWith('#') &&
+      !trimmed.startsWith('|') &&
+      !(excludeAnchors && trimmed.startsWith('Source:'))
+    );
   }).length;
 }
 
