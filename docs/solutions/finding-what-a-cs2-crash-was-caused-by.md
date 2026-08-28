@@ -36,8 +36,15 @@ The two log sets answer different questions and age differently.
 
 `<userdata>` is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`.
 
-**Some crashes to desktop write nothing usable to either.** A hard native fault can take the process
-before anything is flushed, so an absent log is not evidence that nothing was logged.
+**Some crashes to desktop write nothing usable to either.** A `Logs/<Name>.log` is created lazily, by
+the first message that reaches its logger — `Open()` is called only from `Internal_WriteStream`
+(`src/Colossal.Logging/Colossal.Logging/UnityLogger.cs:312-314`, creating at `:375`) — so **an absent
+file is not evidence that the mod logged nothing.** Three things keep the file from ever being
+opened while messages still flow: the mod logging through `UnityEngine.Debug` instead of a logger, a
+logger with `redirectToDefault` set (`CustomLogHandler.cs:88-91` returns before the write), and an
+open that failed and was swallowed by an untyped `catch` around an unvalidated path (`:374-386`) —
+the last of which also NREs on the writer that was never built, once per message. Read `Player.log`
+before concluding a mod was silent. `Player.log` itself is native and none of this applies to it.
 
 ## Fix
 

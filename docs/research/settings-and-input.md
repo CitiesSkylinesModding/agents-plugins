@@ -10,7 +10,7 @@ The 2026-08-25 re-sweep (ticket 36) below reads one additional repository, Scene
 ### The class a mod subclasses, and where its identity comes from
 
 `public abstract class ModSetting : Setting` (`src/Game/Game.Modding/ModSetting.cs:13`), and `public abstract class Setting : IEquatable<Setting>` (`src/Game/Game.Settings/Setting.cs:15`).
-The mod-facing half is `ModSetting`; the half that drives the options screen and the save file is `Setting`, which the game's own eleven settings classes share (`SharedSettings.general/audio/gameplay/radio/graphics/editor/userInterface/input/keybinding/benchmark/modding`, `src/Game/Game.Settings/SharedSettings.cs:18-38`).
+The mod-facing half is `ModSetting`; the half that drives the options screen and the save file is `Setting`, which the game's own twelve settings classes share (`SharedSettings.general/audio/gameplay/radio/graphics/editor/userInterface/input/userState/keybinding/benchmark/modding`, `src/Game/Game.Settings/SharedSettings.cs:44-55`).
 
 **The constructor takes the `IMod` and derives two strings from it** (`ModSetting.cs:36-44`):
 
