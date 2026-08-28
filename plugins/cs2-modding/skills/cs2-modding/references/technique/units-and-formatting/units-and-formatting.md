@@ -22,7 +22,8 @@ This reference owns how a quantity is **rendered** to a player, and nothing abou
 
 **C# offers exactly four localized element types**: `LocalizedString`, `LocalizedNumber<T>`, `LocalizedFraction<T>` and `LocalizedBounds<T>`, all implementing an empty `ILocElement` that extends `IJsonWritable`.
 There is **no C# percentage, date, duration or time element, and no C# formatting function of any kind**.
-Each numeric element writes its raw value, an optional unit **string** and one flag; the frontend does all the work.
+Each numeric element writes raw values and an optional unit **string** — `LocalizedNumber` one value plus a signed flag, `LocalizedFraction` value and total, `LocalizedBounds` min and max; the frontend does all the work.
+Source: `src/Game/Game.UI.Localization/ILocElement.cs`, `src/Game/Game.UI.Localization/LocalizedString.cs`, `src/Game/Game.UI.Localization/LocalizedNumber.cs`, `src/Game/Game.UI.Localization/LocalizedFraction.cs`, `src/Game/Game.UI.Localization/LocalizedBounds.cs`.
 
 So constructing one is the value and the unit, and nothing else:
 
@@ -36,49 +37,60 @@ new LocalizedNumber<int>(n, Unit.kInteger)
 The frontend's own `Unit` enum carries **38**: those 33 plus `PercentagePrecise`, `BodiesPerMonth`, `TemperaturePrecise`, `Height` and `DurationSeconds`.
 Those five have no C# constant, so reaching them from C# means writing the literal string.
 
-(VOLATILE: the unit constant list on both sides — the UI unit static class, and the frontend's own unit enum.)
+(VOLATILE: the unit constant list on both sides — `Game.UI.Unit`, and the frontend's `Unit` enum in `game-ui/common/localization/unit.ts` (`Cities2_Data/Content/Game/UI/index.js`).)
 
 **The frontend's number formatter is a lookup table with a visible fallback.**
 An unrecognised unit renders the number followed by the unit name in angle brackets — `1234 <myUnit>` — which is the symptom of a typo'd unit string and the reason a mis-spelled unit never throws.
+Source: the formatter's dispatch and fallback in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 The table is where the player's preferences bite:
 
 - `Integer` renders plain and thousands-separated; `IntegerRounded` switches to a thousand-suffixed key above 1,000 and a million-suffixed one above 1,000,000.
 - `Length` renders metres below 1,000 and kilometres above for a metric player, yards below 1,609 and miles above for a freedom-units player.
-- `Area`, `Volume`, `Weight`, `WeightPerCell`, `WeightPerMonth`, `Height`, `NetElevation`, `MoneyPerDistance` and `MoneyPerDistancePerMonth` all branch on the unit system the same way.
+- `Area`, `Volume`, `VolumePerMonth`, `Weight`, `WeightPerCell`, `WeightPerMonth`, `Height`, `NetElevation`, `MoneyPerDistance` and `MoneyPerDistancePerMonth` all branch on the unit system the same way.
 - `Temperature` branches on the temperature preference across Celsius, Fahrenheit and Kelvin.
 - The two `*Precise` units render as `PercentageSingleFraction` and `Temperature` do — same key, and `TemperaturePrecise` branches on the temperature preference exactly as `Temperature` does — and differ only in precision, at two fraction digits against one for `PercentageSingleFraction` and none for `Temperature`.
 - `Power` divides the raw value by 10 and renders kilowatts below 10,000, and divides by 10,000 for megawatts above it — so **the value C# passes is in units of 100 W**.
 - `Money` has no unit-system branch at all.
 
+Source: the unit table in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
+
 Most branches render through a `Common.VALUE_*` key, and the separators come from the dictionary too — a thousands-separator key and a decimal-separator key, applied per call.
 The sign prefix is `-` for a negative value always, and `+` for a positive one or `±` for zero **only when the signed flag is set**; otherwise both are empty.
+Source: the separator and sign helpers in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **Fractions and bounds support far fewer units than numbers, and fail ugly outside them.**
 `LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else; its `Energy` entry divides by `10` into kilowatt-hours while the total is under `1e4`, a branch the number table lacks (VOLATILE: that divisor and threshold — the frontend's fraction formatter table.)
 `LocalizedBounds` handles three — `Power`, `PercentageSingleFraction`, `Temperature` — renders `${min}–${max} <${unit}>` otherwise, and short-circuits to a plain number when min equals max.
 Both default to `Integer` when no unit is given.
+Source: `game-ui/common/localization/localized-fraction.tsx` and `localized-bounds.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **`BodiesPerMonth` is the one unit with a fraction entry and no number entry** — `LocalizedFraction` renders it, `LocalizedNumber` prints the angle-bracket fallback.
+Source: the two tables in `game-ui/common/localization/localized-number.tsx` and `localized-fraction.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 ## Percentage, date and duration exist only on the frontend
 
 `LocalizedPercentage(value, max)` computes `100 * value / max` and renders it as a percentage-unit number — but **clamps any positive result to a minimum of 1**, so 0.2% displays as 1%, and a value or max at or below zero renders 0.
+Source: `game-ui/common/localization/localized-percentage.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 `LocalizedDate({ year, month })` renders a medium-date-format key with the month resolved through the indexed key `Common.MONTH_SHORT:<month>`.
 The month is **zero-based**, and a game year is `daysPerYear` days, so a day _is_ a month — the game's own producer passes `dayOfYear - 1` as the month.
+Source: the indexed month key in `game-ui/common/localization/localized-date.tsx` (`Cities2_Data/Content/Game/UI/index.js`); `src/Game/Game.UI.Menu/MenuUISystem.cs` and `src/Game/Game.Assets/SimulationDateTime.cs` (the producer passing `DayOfYear - 1` into `month`).
 
 `LocalizedDuration({ value, daysPerYear, maxMonths })` takes a value **in days** and picks a years key at or above `maxMonths` (defaulting to `daysPerYear`), a months key above one, a month key above 23.5/24 of a day, and otherwise falls through to a time-format key with hours and minutes derived from the fraction.
+Source: `game-ui/common/localization/localized-duration.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **There is no exported way to display a time of day, and the reason is an export list rather than a missing feature.**
 The game has `LocalizedTime`, `LocalizedDateTime` and `LocalizedTimestamp`, plus time-format, date-format and number-formatting hooks, and the time component already branches on the player's 12/24-hour preference.
 The public l10n module exports **eleven names and no more**: `Localized`, `LocalizedBounds`, `LocalizedDate`, `LocalizedDuration`, `LocalizedEntityName`, `LocalizedFraction`, `LocalizedNumber`, `LocalizedPercentage`, `LocalizedString`, `Unit` and `useLocalization`.
 So formatting a time by hand from the player's preference is the answer for the public module, and reaching the real component is the same errand as reaching any other unexported one, which is `frontend-and-injection`'s material.
+Source: the `cs2/l10n` export object, `game-ui/common/localization/localized-date.tsx` and `localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **One enum is exported and three are not.**
 `Unit` **is** exported and its members are real string values, so `Unit.Money` works at runtime.
 The time-format, temperature-unit and unit-system enums are **not** on that list even though the type declaration declares all three, so from the public module their values are written as literals: 24-hour `0` / 12-hour `1`, Celsius `0` / Fahrenheit `1` / Kelvin `2`, metric `0` / freedom `1`.
 All three are registered in the frontend's module registry, so a mod already reaching in there gets the live enums instead — `frontend-and-injection` owns that route.
+Source: the `cs2/l10n` export object, `game-ui/common/localization/unit.ts` and `game-ui/menu/data-binding/options-bindings.ts` (`Cities2_Data/Content/Game/UI/index.js`); `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/template/types/l10n.d.ts` (the declaration carrying all three).
 
 ## The player's unit and format preferences
 
@@ -92,9 +104,11 @@ with defaults `TwentyFourHours`, `Celsius` and `Metric`.
 
 **From C#**, read them off `SharedSettings.instance.userInterface`.
 **From the frontend**, they arrive as one unit-settings struct on the options binding group, and `useLocalization()` returns `{ translate, unitSettings }` — so a component has them without declaring a binding of its own.
+Source: `src/Game/Game.Settings/InterfaceSettings.cs` and `src/Game/Game.UI.Menu/OptionsUISystem.cs` (the enums, the group and the binding); the localization hook in `game-ui/common/localization/localization.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 The practical answer is that **a mod formatting through `LocalizedNumber` with the right unit never reads them at all**: the formatter branches on them itself.
 Read them directly only for the cases the unit table does not cover — a time of day, most of all.
+Source: the unit table in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 (VOLATILE: the three preference enums and their member order — the interface settings class.)
 

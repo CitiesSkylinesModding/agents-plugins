@@ -29,6 +29,7 @@ The manager allocates a fresh list, passes it, and logs whatever comes back — 
 `indexCounts` is the live per-locale index table described under the key grammar below; a source shipping no indexed keys ignores it.
 **Pass real instances when you call `ReadEntries` yourself**, rather than `null` for either.
 A source you wrote may ignore both, but the game's own do not: the locale-asset source throws on a null error list, and `MemorySource` writes into `indexCounts` for every indexed key it sees.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/LocaleAsset.cs`, `src/Colossal.Localization/Colossal.Localization/MemorySource.cs`.
 
 The whole implementation is usually this small.
 
@@ -49,6 +50,7 @@ public class MyLocaleSource : IDictionarySource
 
 **Override `ToString()`.**
 It is the only identifier in the single log line that reports a failed import, so a source that does not override it reports itself as a bare type name shared with every other mod that copied the same shape.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 `MemorySource` ships in the game and wraps a dictionary you already have, which is the same thing without the class — but it declares no `ToString` override of its own, so an import failure in one reports the bare shared type name that the rule above exists to avoid.
 Reach for it where the diagnostic does not matter, and for your own class wherever it does.
@@ -57,6 +59,7 @@ Reach for it where the diagnostic does not matter, and for your own class wherev
 It is constructed during boot with `en-US` as the hard-coded fallback locale, and `LoadAvailableLocales` then enumerates every locale asset in the global asset database, ordering the fallback first and registering each one as a locale **and** as a source.
 All of that happens before the ECS world is created, and the world already exists when `OnLoad` runs (`mod-lifecycle-and-ordering` owns that frame), so by the time a mod loads, every shipped locale is registered and `GetSupportedLocales()` can be trusted.
 That is what makes the standard loader shape — loop over `GetSupportedLocales()`, look for a translation of that name, add it — correct rather than merely lucky.
+Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 ## Three ways a source gets in
 
@@ -72,6 +75,7 @@ It throws on a null argument, records the `(localeId, source)` pair, and then:
 That last branch is the whole fallback story.
 The merge uses `TryAdd`, so an entry already present in the active locale wins and only genuinely missing keys are filled from `en-US`, flagged as fallback entries.
 **A mod that registers an `en-US` source gets English fallback in every other language for free; a mod that registers none shows raw keys wherever a translation is missing.**
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`.
 
 **`AddLocale(...)`** registers a _locale_, not a source: it adds an empty locale entry plus its display name and raises `onSupportedLocalesChanged`.
 It is what makes `AddSource` for a locale the game does not ship stop being a no-op, and it is the only way to introduce one.
@@ -79,6 +83,7 @@ It is what makes `AddSource` for a locale the game does not ship stop being a no
 **A locale asset in the asset database registers itself.**
 The manager subscribes to the global asset database's change event for locale assets, and re-adds each one as a source on any change; a bulk change reloads every locale from scratch.
 `LocaleAsset` implements `IDictionarySource` itself, so writing one into a database is the third way in and needs no `AddSource` call at all.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/LocaleAsset.cs`.
 
 ### `RemoveSource` and `AddSource` are not inverses
 
@@ -87,12 +92,16 @@ Two consequences follow from that one omission, and they point in opposite direc
 
 **A removed pair cannot be re-added.**
 `AddSource` does its work only when the `(localeId, source)` pair is not already recorded, so a second call with the same locale and the same source **instance** is a complete no-op — the pair is still recorded from the first call, and the source stays absent from the locale.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 **And a removed pair comes back anyway, later.**
 `LoadAvailableLocales` replays every recorded pair after reloading the locale assets, and any bulk asset-database change reaches it.
 The replay path has no such guard, so every pair ever added is restored — including the ones a mod removed on purpose.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 The rule for a mod that wants to swap a source out and back in: **construct a new source instance for the second `AddSource`**, or accept that the removal is permanent until the next bulk asset change silently undoes it.
+**"New instance" means new to the guard, which compares with `Equals` rather than by reference.** A source type that overrides `Equals` — `LocaleAsset` does, on asset id — is refused however many instances you build, so for those the second add needs a source the comparison genuinely distinguishes.
+**And test the removal itself before trusting it.** `RemoveSource` rebuilds one dictionary, chosen by which of the two the locale is: the active one, or — when the locale is only the fallback — the fallback one. Removing a fallback-locale source while the player is on another language therefore rebuilds a dictionary nobody is reading, and the entries it contributed stay in the active one, where they arrived by the fallback fill. Test a withdrawal in a language other than the one you registered under.
 
 (VOLATILE: the re-add guard on the recorded pair list, and that removal never prunes it — the localization manager's add-source and remove-source methods.)
 
@@ -105,20 +114,24 @@ The dictionary's `Add` throws on a null-or-whitespace key and on a null value.
 Because the catch sits around the whole loop rather than around one pair, the source is abandoned at the first bad entry and everything later in the enumeration is lost.
 The survivors are exactly the entries the enumeration produced before the bad one, which for a lazily-yielding source is an order you wrote and for a stored dictionary is one you do not control.
 The only trace is a single `Error` line naming the source's `ToString()`.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`.
 
 **Later sources overwrite earlier ones.**
 `Add` assigns through the indexer, so there is no duplicate-key error and the last source added wins.
 Locale assets load first and mod sources arrive during `OnLoad`, so **a mod can override any vanilla string simply by shipping the same key**, and two mods claiming one key resolve by mod load order and by nothing else.
 Guard against doing it by accident by testing `activeDictionary.ContainsID(key)` before adding a generated key into a vanilla namespace.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 **`ReadEntries` is a pull, re-run on every locale change.**
 Switching to any locale other than the fallback builds a brand-new dictionary and calls `ReadEntries` on every source registered for it; reloading the active locale additionally calls `Unload()` on each source first.
 So a source may compute its entries at read time and stay current.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 **The fallback locale is the exception, and it is the one most players are on.**
 Switching _to_ it re-points the active dictionary at the retained fallback dictionary instead, calling no source at all — so a compute-at-read-time source never refreshes while the fallback locale is active, and a reader who tests only in that language will not see it.
 Reload the active locale when your computed entries have changed, rather than relying on a locale switch.
 Register one instance under every supported locale and have its `ReadEntries` walk the mod's live objects, yielding a name and a description per object, and everything the player creates after registration localizes with no further calls.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 ## The key grammar
 
@@ -132,15 +145,18 @@ A localization identifier is parsed by four regexes and nothing else.
 | `HashedIndexed` | `^(?!\d)([\w$]+)\.(?!\d)([\w$]+)\[([-a-zA-Z0-9+/*._&<> ]+)\]:([0-9]+)$` | `Group.ID[hash]:0` |
 
 Read off the regexes: **exactly one dot separates group from id**, neither part may start with a digit, both are `\w`-or-`$`, and the hash body accepts a far wider set — letters, digits, `-+/*._&<>` and the space — which is why a generated key can carry a whole dotted type name or a slashed path inside the brackets.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationValidation.cs`.
 
 Those four shapes account for **every one of the 22,120 keys the game itself ships**, with nothing left over: 16,627 hashed, 3,715 indexed, 1,656 single, 122 hashed-and-indexed.
 So the one-dot grammar is not merely what the compiler enforces, it is what the shipped data obeys.
+Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok`.
 
 (VOLATILE: the four identifier regexes — the localization validation type.)
 
 **Nothing on the mod path validates a key.**
 An in-memory source parses only to maintain the index counts and returns its raw dictionary regardless; a locale asset yields stored entries with no parsing at all; the dictionary accepts any non-empty key; and the frontend's `translate` is a plain map lookup.
 The only validating path is the build-time compiler that turns raw CSV into a locale asset, and no mod-facing API reaches it.
+Source: `src/Colossal.Localization/Colossal.Localization/MemorySource.cs`, `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/LocaleAsset.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`, `src/Game/Game.UI.Localization/UILocalizationManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationCompiler.cs`.
 
 So a key with four dots works, and keys of that shape are widespread.
 What an invalid identifier actually forfeits is **index support**: a key that does not parse never contributes to the index counts, so `Group.ID:0`-style random variants only work on a well-formed identifier.
@@ -170,7 +186,7 @@ An entity carries a buffer of chosen indices, one per localization slot, generat
 The counts reach the frontend as the index-counts binding, answered from the active dictionary.
 
 The game leans on it heavily: the shipped English data declares **260 indexed keys totalling 3,837 variants**, and that total accounts for every indexed entry in the file exactly.
-The largest pools are the generated district names at 1,015 variants and city names at 501, then five road-name keys at 210 each.
+The largest pools are the generated district names at 1,015 variants and city names at 501, then five network-name keys at 210 each.
 A mod that wants one name out of a pool writes `Group.ID:0` through `Group.ID:n` and lets the mechanism pick.
 
 ## The keys the options screen expects
@@ -257,6 +273,7 @@ Marshal both calls onto the main thread if the import runs on a worker.
 **There is no folder convention in the engine.**
 Nothing in the localization or asset-database code knows any directory name: locale loading reads whatever locale assets the database holds, and every other route is a mod calling `AddSource` with a dictionary it built itself.
 A `lang/` or `l10n/` directory in a mod repository is a translation-platform source directory or a build-time convention, never a runtime path.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
 All six strategies above are reachable with the game's own types alone, so what a localization dependency buys is a parser somebody else maintains and a single agreed place for the `AddLocale` call that makes an unshipped locale addressable — not a capability a mod lacks.
 
@@ -267,7 +284,11 @@ Twelve are complete at 22,120-odd entries; `uk-UA` ships separately and is about
 No content pack adds a locale of its own — a pack's strings live in these same files.
 
 Three locales mod translations commonly carry — `nl-NL`, `pt-PT` and `ar-SA` — are **not** among them.
-A source added for any of the three is a silent no-op until something calls `AddLocale`, which is the mechanism behind mods whose store page says a given language needs a companion mod installed.
+**A source added for one of them is a silent no-op, and a later `AddLocale` does not replay it.**
+`AddSource` records the pair before checking whether the locale exists, and returns quietly when it does not; `AddLocale` only creates the locale. So `AddLocale` has to have run first — and since mod order is uncontrolled, a mod that needs a companion to register the locale cannot assume it did.
+**Retry on the locale signal, but test the locale before you spend a source.** `AddLocale` raises the public supported-locales-changed event, which is the cue to add the source again; the retry is subject to the same `Equals`-keyed re-add guard as the swap case above, so it needs a source that guard tells apart from the one your first attempt recorded.
+**Test `SupportsLocale` on that event, and re-run `AddLocale` when it comes back false.** A bulk asset change raises the same signal, and it raises it having just cleared the locale table and rebuilt it from the `.loc` assets in the database — every database, so a `.loc` your mod wrote survives, and a locale you introduced with the string overload and no asset does not. Nothing records or replays an `AddLocale`, so that locale stays gone for the session unless you add it again: adding a source blind on that firing records another dead pair and logs nothing, and testing without re-adding leaves the language silently missing.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs` (the re-add guard, the silent return when the locale is absent, the event `AddLocale` raises, and that only a bulk locale reload replays recorded sources).
 
 (VOLATILE: the shipped locale set and the per-locale entry counts — the game's own locale assets.)
 
@@ -283,7 +304,7 @@ manager.AddSource(gameLocale, sources[chosenLanguage]);      // the language the
 ```
 
 Subscribe to `onActiveDictionaryChanged` to repeat the swap whenever the player changes the game's language, and carry a re-entrancy flag so the swap's own `AddSource` does not retrigger it.
-This is the design most exposed to the re-add guard above: every one of those calls is a remove-then-add on one pair, so the sources must be fresh instances or the swap works exactly once.
+This is the design most exposed to the re-add guard above: every one of those calls is a remove-then-add on one pair, so each add needs a source the guard's `Equals` comparison tells apart from the one it recorded, or the swap works exactly once.
 It also costs a few hundred lines of state machine, so build it only where the mod's translations genuinely outrun the game's.
 
 ## The active language, and changing it
@@ -292,6 +313,7 @@ It also costs a few hundred lines of state machine, so build it only where the m
 The persisted `locale` is a hidden string defaulting to the literal `"os"`, which the manager resolves to the system language.
 The visible dropdown is a separate, unserialized property that resolves `"os"` to the live active id on read, and its item list pairs each supported locale id with a **literal** display name taken from the locale asset's own header rather than with a key.
 Applying the interface settings calls `SetActiveLocale`, and the frontend's own locale-selection trigger does both halves — switch the manager and write the setting back.
+Source: `src/Game/Game.Settings/InterfaceSettings.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Game/Game.UI.Localization/LocalizationBindings.cs`.
 
 ## Handing a key to the UI: `LocalizedString`
 
@@ -301,6 +323,7 @@ Applying the interface settings calls `SetActiveLocale`, and the frontend's own 
 **There is an implicit conversion from `string`, and it produces `Id(...)` rather than `Value(...)`.**
 A bare string literal handed anywhere a `LocalizedString` is expected is treated as a **key**, so text meant to be shown as written is looked up, misses, and renders as itself.
 That is the single most likely way to put a raw string on screen where a translation belonged, and the fix is to write `LocalizedString.Value(...)` whenever the text is already final.
+Source: `src/Game/Game.UI.Localization/LocalizedString.cs`.
 
 Substitution reads as:
 
@@ -318,6 +341,7 @@ The game's own strings occupy **75 groups** — the segment before the first dot
 A group is a naming convention the panels agree on rather than a registered thing, so a mod can write a key into any of them — and whether that key is ever displayed depends on a panel asking for it, which is what the reuse section below governs.
 
 **Only 21 of the 75 groups are named as string literals anywhere in the game's C#**, and the other 54 are built entirely in the frontend, so grepping the decompile for a namespace and finding nothing proves nothing about whether it exists.
+Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok` (every group that exists), against `src/` (the 21 that appear there as string literals).
 
 Read [the vanilla key namespaces](vanilla-namespaces.md) for the whole group set with an id count, an entry count and a coverage note per group, which is how you find the group a string you want to reuse or override already lives in, and which 21 those are.
 
@@ -341,10 +365,12 @@ So naming a prefab is not a free choice: the mod ships the key the system will a
 `prefabs-and-assets` owns the registration on the other side of that seam.
 
 (VOLATILE: the branch that picks a prefab's name and description keys — the prefab UI system's title-and-description lookup.)
+Source: `src/Game/Game.UI.InGame/PrefabUISystem.cs`.
 
 **An invented namespace is where mods collide with each other.**
 A group that is not a vanilla one works fine, because nothing validates it — and nothing reserves it either, so an obvious name is one any other mod may reach for at the same time.
 Put the mod id inside the brackets of every key you invent, so a shared group still cannot produce a shared key.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`.
 
 ## Writing a name straight into the live dictionary
 
@@ -359,6 +385,7 @@ The cost is that the entry is **not in any source**, so an active-locale reload 
 A locale change drops it too — unless it was written while the fallback locale was active, in which case it went into the fallback dictionary, which a locale switch never clears.
 That exception is a trap rather than a reprieve: it means the technique appears to work when tested in the fallback language and fails for everyone else.
 Prefer a source whose `ReadEntries` computes the same entries, which survives all three.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`.
 
 ## Exporting a key dump for translators
 
@@ -390,6 +417,7 @@ File.WriteAllText(Path.Combine(Application.persistentDataPath, "locale-dictionar
 
 `entries` is a lazy projection that drops the fallback flag, so the dump cannot distinguish a real translation from an English fallback.
 **Placement decides the contents**: run it after the mod's own `AddSource` calls and the dump carries the mod's keys too, run it before and it is vanilla only.
+Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationDictionary.cs`.
 
 ## Diagnosing a key that renders as itself
 

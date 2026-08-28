@@ -52,6 +52,7 @@ updateSystem.UpdateBefore<MySubstituteSystem, Game.Simulation.SomeVanillaSystem>
 **Anchor the fork against the system it replaces, rather than with `UpdateAt`.**
 Position within a phase is registration order and every mod registers after all of vanilla, so `UpdateAt` puts the fork at the end of the phase instead of in the slot the original held — where it reads state the systems that used to follow it have not produced yet.
 `GetOrCreateSystemManaged` also creates the system when the world does not already have it, rather than failing, so naming a type the game no longer registers disables nothing and reports nothing; `mod-lifecycle-and-ordering` owns both rules.
+Source: `src/Game/Game/UpdateSystem.cs`, `src/Unity.Entities/Unity.Entities/World.cs`.
 
 Whole mods are built this way — a substitute zoning check behind its own tagging systems, a substitute lane system registered ahead of the vanilla one, a substituted geometry system — with no patches anywhere.
 Substitution and patching are not alternatives at the level of a mod, only at the level of a behaviour: one mod disables roughly a dozen simulation and UI systems and still carries the widest patch set of any read.
@@ -65,6 +66,7 @@ The shape is fixed:
 3. Call `EntityQuery.GetEntityQueryDescs()`, and append your own `ComponentType` to each desc's `None`, skipping descs that already carry it — to `Absent` instead where your marker is enableable **and** the exclusion is permanent, since an entity `Absent` rejects is never re-admitted by flipping the bit back.
 4. Reflect `ComponentSystemBase.GetEntityQuery(params EntityQueryDesc[])` — it is `protected internal`, so a system can call it on itself but not on another system's instance — and **invoke it on the target system**, so the new query is owned by the right system.
 5. Write the result back into the field, and call the public `RequireForUpdate(query)`.
+   Source: `src/Unity.Entities/Unity.Entities/EntityQuery.cs`, `src/Unity.Entities/Unity.Entities/ComponentSystemBase.cs`, `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities/EntityQueryManager.cs` (`Absent` matched without the enableable-ignore `None` gets).
 
 `ecs-in-this-game` owns `EntityQueryDesc` and what `None` means to a query.
 
@@ -79,6 +81,7 @@ Four idioms exist and they differ in what each access costs:
 | The `___fieldName` injected parameter | Nothing extra | Inside a patch body only |
 
 **`AccessTools.Field` walks base types**, so a lookup naming a derived class still resolves a field the base declares — which is why an accessor built against the wrong class works, and why a miss means the field is nowhere in the hierarchy rather than merely on the wrong type.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.AccessTools.Field`.
 
 `performance-and-memory` owns what these cost in a hot path.
 
@@ -88,8 +91,10 @@ The patch targets read fall into four groups, and the groups are about **what ki
 They describe what was found rather than what exists, so a target fitting none of them tells you nothing either way — check it rather than concluding the game left a seam there.
 
 - **A tool's per-frame raycast and snap configuration.** The reason this group exists is structural: the raycast system calls `InitializeRaycast()` on the _active tool only_, so a mod widening what a vanilla tool can hit has nowhere else to stand.
+  Source: `src/Game/Game.Tools/ToolRaycastSystem.cs`.
 - **A value the game publishes to its own UI.** Most of these producers are private and reached only through a delegate the system captured in its own `OnCreate`, so there is no seam by construction: the binding is registered, the system is a concrete type, and the producer is not virtual.
   Some are neither private nor non-virtual, so check yours before concluding a patch was the only route.
+  Source: `src/Game/Game.UI.InGame/ToolUISystem.cs`, `src/Game/Game.UI.InGame/TimeUISystem.cs`, `src/Game/Game.UI.InGame/ActionsSection.cs`.
 - **A value the game asks for and then acts on.** Consumed immediately and rewritten through `ref __result` — usually a boolean forced the other way, sometimes a returned object.
 - **A simulation value, or the managed method that schedules a job.** Time, climate, upkeep, wind, prefab refresh.
 
@@ -103,17 +108,21 @@ The surfaces recorded in each group, and what to make of your own target's absen
 **A prefix returns `void` or `bool`, and nothing else.**
 Any other return type fails at patch time, not at call time.
 Returning `false` means "do not run the original".
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.AddPrefixes`.
 
-**A prefix returning `false` also skips later prefixes — but only those that could have skipped it themselves.**
-A prefix is wrapped in the skip check only when it could affect the original, which is true when it returns `bool`, or takes any parameter that is `out`, `ref`, or a reference type; `__instance`, `__originalMethod` and `__state` are exempt from that test.
+**A prefix returning `false` also skips later prefixes — including ones that could never have skipped anything themselves.**
+A prefix is wrapped in the skip check whenever it could _affect_ the original, which is true when it returns `bool`, or takes any parameter that is `out`, `ref`, or a reference type; `__instance`, `__originalMethod` and `__state` are exempt from that test.
 So a void prefix taking only value-type arguments always runs, and a void prefix taking `ref Something` stops running once someone ahead of it returned `false`.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.PrefixAffectsOriginal`.
 
 **Postfixes are never guarded.**
 A postfix runs even when a prefix suppressed the original, including a prefix from a mod that has never heard of yours.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.AddPostfixes`.
 
 **Ordering is priority descending, then registration order.**
 Priority attributes and explicit before/after attributes exist in Harmony.
 Nothing in this ecosystem uses them, and mod load order is dictionary iteration order, so **cross-mod patch order on a shared target is unspecified** — the discipline below is what mods rely on instead.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.PatchInfoSerialization.PriorityComparer` and `HarmonyLib.Priority`; `src/Game/Game.Modding/ModManager.cs` (mod load order).
 
 ### The injected parameters
 
@@ -134,13 +143,17 @@ Declare a parameter with one of these names in your patch method and the patcher
 Three of them carry traps.
 
 - **`__instance` on a static original is `null`, silently.** Nothing at patch time warns; a body that dereferences it throws at call time.
+  Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.EmitCallParameter`.
 - **`__result` is type-checked at patch time**, both ways — asking for one on a `void` method fails, and so does declaring the wrong type.
   Taking it `ref` in a **postfix** rewrites the return value; taking it `ref` in a **prefix that returns `false`** is how you supply a return value without running the original.
+  Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.EmitCallParameter`.
 - **`___field` resolves against the original's declaring type and does walk base types**, and throws at patch time when it misses.
   It is the cheapest way to reach a private field from inside a patch, because there is no accessor to build.
   Two traps ride with it, neither reported at patch time: **writing through it needs a `ref` parameter**, since a by-value declaration reads the field and discards the assignment; and on a **static** original the instance load is emitted anyway, so it reaches for argument zero as though that were the instance — the `__instance` trap above, except that it corrupts rather than nulls.
+  Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.EmitCallParameter`.
 
 **`__state` is keyed by your patch class**, not by the patched method, so a prefix and a postfix share state only when they live in the same class.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.EmitCallParameter`.
 
 ### Two prefix shapes, and only one of them composes
 
@@ -149,6 +162,7 @@ Total control, and it takes the method away from every prefix behind you.
 
 **Rewrite and continue:** take the parameter `ref`, mutate it, return `true`.
 Two independent prefixes written this way on the same method both run, in either order, and neither can suppress the other — which is why this is the shape to reach for when the change can be expressed as an argument edit.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.PrefixAffectsOriginal`.
 
 Transpilers, finalizers and reverse patches exist in Harmony and nothing in this ecosystem uses them; the practice is prefixes and postfixes.
 
@@ -159,6 +173,7 @@ Transpilers, finalizers and reverse patches exist in Harmony and nothing in this
 **`ArgumentType.Ref` and `ArgumentType.Out` are the same case** — both produce `type.MakeByRefType()` — so the two spellings are interchangeable and either matches an `out` parameter.
 `ArgumentType.Pointer` produces a pointer type and `Normal` leaves the type alone.
 This also covers `in`, which is a by-ref parameter in metadata; `typeof(T).MakeByRefType()` in the `Type[]` does the same job by hand, and the patch body receives such a parameter as `ref`.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.HarmonyPatch.ParseSpecialArguments`.
 
 ```csharp
 [HarmonyPatch(
@@ -174,48 +189,58 @@ Stacking one attribute per facet — type, then name, then the two arrays — re
 Do not scope the check by accessibility: the pair is sometimes a public override against a private or protected overload carrying the logic, and sometimes two public overloads.
 Where a name carries more than one signature at all, the `Type[]` is load-bearing: without it the lookup asks for the name alone, which is ambiguous across overloads and throws at patch time rather than picking one.
 That failure is loud, which makes it the good case — the quiet one is a `Type[]` that matches a real overload other than the one you meant.
+Source: `src/Game/Game.Simulation/TimeSystem.cs`, `src/Game/Game.Tools/AreaToolSystem.cs`, `src/Game/Game.Tools/ObjectToolSystem.cs` (the overload pairs); `0Harmony.dll` decompiled — `HarmonyLib.PatchTools.GetOriginalMethod` (the ambiguous-match throw).
 
 **Name the target with a string literal unless a public member of that exact name exists.**
 Most of the methods worth patching are `protected` or `private`, so `nameof(SomeSystem.SomeMethod)` will not compile from your mod's assembly, while a string literal binds because the patcher looks the name up with non-public binding flags.
 A literal is not free: misspell it and the lookup returns nothing and Harmony throws at patch time, which is exactly the failure `nameof` exists to prevent.
 So prefer `nameof` wherever a public member of that name exists, and check the spelling wherever you cannot.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.AccessTools.DeclaredMethod`.
 
 **Name the type that declares the method, not a subclass that inherits it.**
 The attribute's own lookup is declared-only, so a method inherited and not overridden is not found on the derived type — patching `GetActualSnap` through `[HarmonyPatch]` means naming the tool base class, even when the tool you care about is a subclass of it.
 This is the opposite of the field lookups above, which do walk base types, and the asymmetry is easy to generalise the wrong way.
 Resolving the target yourself escapes it, which is one more reason to reach for `TargetMethod()` or an imperative patch when the declaring type is awkward to name.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.AccessTools.DeclaredMethod`; `src/Game/Game.Tools/ToolBaseSystem.cs` (where `GetActualSnap` is declared).
 
 **A property is patched through its accessor, never through the property name**, since `nameof(SomeType.Thing)` names the property and there is no method by that name.
 Two spellings reach the accessor.
 The metadata name as a literal — for a property `Thing` that is `"get_Thing"` or `"set_Thing"`, a lowercase accessor prefix followed by the property's own casing.
 The lookup is case-sensitive, so that spelling has to be exact.
 Or the attribute's own `MethodType.Getter` or `MethodType.Setter` alongside the property name, which is rename-safe where the property is public.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.PatchTools.GetOriginalMethod`, `HarmonyLib.AccessTools.DeclaredProperty`.
 
 **A prefix mirroring an `out` parameter must assign it on every branch**, and which spelling you chose decides whether the compiler will remind you.
 Mirror it as `out` and C# forces the assignment; mirror it as `ref`, which the patcher accepts identically, and nothing is forced — so an early-out branch that assigns nothing compiles, and on a `return false` path the caller reads whatever the slot already held.
 Assign on every branch either way: `entity = Entity.Null; hit = default; return true;` or its equivalent.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.MethodPatcher.EmitCallParameter`.
 
 ## A Burst-compiled job is not what you patch
 
 **A `[BurstCompile]` method still takes a patch, but the patch wraps a trampoline.**
 The managed body of such a method is one line dispatching to a generated invoker, which fetches a native function pointer and calls it, falling through to the real managed body when Burst is disabled **or when that method has no compiled native body**.
 So a prefix or postfix on it runs, and **while the native body is in play you can read and rewrite the arguments and the result but you cannot change the logic**, because the logic is in the native image the fallback path never reaches.
+Source: `src/Game/Game.Rendering/WaterRenderSystem.cs`, `src/Game/-BurstDirectCallInitializer.cs`.
 
 For a Burst-compiled **job**, the substitution point is not in C# at all: a job's entry is registered through an `extern` reflection-data call, and the point where Burst swaps in the compiled body is native.
 So a patch on that `Execute` never runs while Burst is enabled: it rewrites the managed body, and the managed body is exactly what the native compilation replaces.
 Check the attribute before you conclude that — and know it settles only one direction, because it is a request rather than a record.
 A job struct without it takes a patch like any other, and so does one that carries it and was never compiled: Burst declines a generic job whose concrete type is closed only at runtime, which is how the serializers build theirs.
 `performance-and-memory` settles the same fact from the other side — a breakpoint set in that body binds and never fires — and owns the launch switch that turns Burst off for a session, which is how you tell a patch that never runs from one that never bound; a patch that fires with Burst still on is proof that job was never compiled.
+Source: `src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs` and `src/UnityEngine.CoreModule/Unity.Jobs.LowLevel.Unsafe/JobsUtility.cs` (`CreateJobReflectionData` is an `extern`, so the swap is native), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (a marked job whose concrete type is closed at runtime).
 
 **So the rule is: replace the job, not its body.**
 Patch the managed method that _schedules_ the job — the last managed instruction before the schedule — and schedule your own job instead.
 A `public static` helper whose every call site is inside such a job is the same case: Burst compiles the job's whole reachable call graph, so a prefix on the helper applies cleanly and never runs, and the schedule is still the seam.
+Source: `src/Unity.Burst/Unity.Burst/BurstCompileAttribute.cs` (the marking the compiler acts on), https://docs.unity3d.com/Packages/com.unity.burst@1.8/manual/compilation-burstcompile.html (the compilation itself is native, so what a marked entry point pulls in with it is the compiler's own to state).
+
 The worked shape, from the two mods that do it:
 
 - Resolve the private target by explicit signature, through `TargetMethod()` when an attribute cannot express it.
 - Return `true` immediately for every case you are not replacing, so the vanilla path is untouched for everything else.
 - **Rebuild every component type handle and lookup by hand off `__instance`**, because those are per-system state the vanilla method would have refreshed.
 - Reach protected base members through a `MethodInfo` cached in a static field, since a static patch method in another assembly cannot touch them — but look for a public equivalent first. `SystemBase.Dependency` is a pass-through to the public `SystemState.Dependency`, and `__instance.CheckedStateRef` is public on the instance you already hold, handing you that `SystemState` by `ref` in one hop.
+  Source: `src/Unity.Entities/Unity.Entities/SystemBase.cs`, `src/Unity.Entities/Unity.Entities/SystemState.cs`.
 - **Assign the scheduled handle to `ref __result` and return `false`, rather than completing the job**, so the caller's temporary allocations still outlive the work.
 
 `ecs-in-this-game` owns jobs, handles and the Burst story itself.
@@ -225,47 +250,56 @@ The worked shape, from the two mods that do it:
 **Apply from `IMod.OnLoad`.**
 The mod object is constructed without running any constructor, so field initialisers on the mod class never run and a Harmony instance cannot be built there.
 Every referenced assembly is loaded before the mod's own type is touched, so Harmony is in the process by the time `OnLoad` runs — and a mod whose reference to it cannot be resolved never reaches `OnLoad` at all, failing with a missed-dependency state naming what was unresolved.
+Source: `src/Game/Game.Modding/ModManager.cs`, `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs`.
 
 **Prefer `PatchAll(typeof(MyMod).Assembly)` over `PatchAll()`.**
 The parameterless form reads the _calling frame's_ assembly off a stack trace, so it patches whatever assembly the call happens to sit in rather than the one you meant — a helper class works only because it is in the same assembly, and a shared bootstrap in another one patches nothing of yours.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.Harmony.PatchAll`.
 
 **Imperative patching is the escape hatch for a generic patch body.**
 Resolve the method yourself and apply it with `harmony.Patch(methodInfo, postfix: new HarmonyMethod(...))`, throwing when the resolution misses.
 Reach for it when one patch body has to serve several types, since an attribute cannot name a generic parameter — though a declarative patch can also reach a closed generic by returning it from `TargetMethod()`, which is the lighter option when the set of types is fixed and small.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.Harmony.Patch`, `HarmonyLib.PatchClassProcessor`.
 
 **Removal filters by patch id, and the filter has a hole at its default.**
 `UnpatchAll(harmonyID)` walks every patched method and removes only the patches whose owner matches, so **passing a wrong id removes nothing and reports nothing** — a published mod ships this exact bug, having passed the literal name of its id field instead of the field.
 **Passing no id is the opposite and far worse.**
 The parameter defaults to null and the owner test returns true for every patch when it is, so `harmony.UnpatchAll()` strips every installed mod's patches from the process, not just yours.
 That is the shortest spelling and the one the API invites; always pass your own id.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.Harmony.UnpatchAll`.
 
 **`OnDispose` runs in exactly two situations**, and neither is the one authors expect.
 It runs at process shutdown, where the AppDomain is going away regardless.
 And it runs for one mod when that mod's own load throws — which is the case where unpatching genuinely buys something, since a mod that patched and then failed halfway through `OnLoad` would otherwise leave live patches behind a mod that is not there.
 It does **not** run when a code mod is disabled mid-session: that path requires a restart and leaves the mod loaded, and re-initialisation skips any mod not in the initial state, so a mod is never unloaded and re-patched inside one run.
+Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Game/Game.Modding/ModManager.cs`.
 
 **The game's own patch inventory always finds nothing under the built-in modding runtime.**
 It runs inside engine initialisation _before_ the mod manager is constructed, so no mod assembly — and therefore no copy of the patching library — is in the process when it looks, and it returns after its first line.
 It does print that line: a modding-runtime line goes to the log unconditionally, before it goes looking, so finding it tells you the inventory ran rather than that nothing is patched.
 A third-party loader is the case it was written for, since that loader is in the process before the game is.
 (UNVERIFIED: whether such a loader has finished applying its plugins' patches by the time the inventory runs — nobody here has run that configuration, so an empty census under one proves no more than under the built-in runtime.)
+Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 
 **Logging your own inventory is this reference's habit, and the two calls are not interchangeable.**
 `harmony.GetPatchedMethods()` on your own instance returns only the patches that instance applied.
 The static `Harmony.GetAllPatchedMethods()` returns every patched method in the process, which is the one that answers "is another mod already on this method" — call it after mods have loaded.
+Source: `0Harmony.dll` decompiled — `HarmonyLib.Harmony.GetPatchedMethods`, `HarmonyLib.Harmony.GetAllPatchedMethods`.
 
 ## Composing with another mod's patch
 
-**Exactly one copy of Harmony is loaded per process, and it is not the one you pinned.**
-The asset loader deduplicates executable assets by simple assembly name across every installed mod and loads one winner per group, so the copy every mod patches through may be one nobody compiled against — and it is not simply the highest version.
+**Exactly one copy of Harmony is loaded per process, and nothing guarantees it is the one you pinned.**
+The asset loader deduplicates executable assets by simple assembly name across every installed mod and loads one winner per group, ordered by already-loaded, then local, then version descending, then asset id — so the copy every mod patches through may be one nobody compiled against, and it is not simply the highest version.
 Nothing here is strong-named, so version binding is not enforced and nothing objects at load.
 A member the loaded copy no longer has throws instead when the method calling it is first compiled, which is what a missing-member exception out of a patching call means.
 `mod-compatibility` owns that rule, the order it resolves in, and what it means for any library a mod ships; `cs2-mod-project` owns the pin every mod agrees to.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs`.
 
 **Widen a shared flags field with `|=`, and treat a plain `=` as a bug.**
 The case that makes this concrete is a postfix widening a vanilla tool's raycast masks: the vanilla method has already cleared that field for the frame, so every widening postfix is competing to put its own bits back.
 `flags |= ...` composes; `flags = ...` discards whatever every other mod set that frame.
 The choice is per branch rather than per mod — one published patch method does both, in different branches — so it is each assignment that has to be justified, not the file.
+Source: `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 **Record whether _you_ were the one that set the flag, and filter only in that case.**
 
@@ -297,6 +331,19 @@ The same guard is what makes the unguarded-postfix rule harmless: when another m
 
 The `[ThreadStatic]` costs nothing at 1.6.0f1 because both ends of that pair run on the main thread, and it is not free to copy: it makes same-thread execution a _requirement_, so the same shape around a pairing whose halves are not on one thread reads back the per-thread default and silently never filters.
 What the pairing does require is that the set and the read happen in the same frame on the same call chain.
+Source: `src/Game/Game.Tools/ToolRaycastSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 **One mod in twenty-two does this**, and it is the discipline to copy rather than the norm to expect.
-`custom-tools` states the same rule for the raycast case specifically, where it bites most often.
+
+## What this reference hands to others
+
+`mod-lifecycle-and-ordering` is the boundary partner and the first alternative: it owns inserting a system, and it owns the anchoring that puts a fork in the dead original's slot rather than at the end of the phase.
+`ecs-in-this-game` owns the query vocabulary the rewrite alternative is written in, and owns the jobs and Burst material this file borrows one rule from.
+`performance-and-memory` owns what the four accessor idioms cost in a hot path, and owns the launch switch that turns Burst off for a session — the other side of this file's Burst rule.
+
+`custom-tools` owns the raycast and snap surface the largest patch group targets, and states the flag-ownership discipline for that case specifically; this file owns the discipline as a general rule.
+`prefabs-and-assets` owns the prefab-refresh question, whose "**Harmony-patch the copy** where no reachable hook exists" remedy is this file's technique.
+`mod-compatibility` owns which copy of Harmony a process ends up on, and what a shared library means for anything a mod ships.
+`cs2-mod-project` owns the package id and the pinned version.
+
+A reader leaves knowing patching comes after four alternatives rather than first, that the shapes that compose are a prefix rewriting an argument and a patch owning both halves of what it widens, and that a Burst-compiled job is replaced at its schedule rather than in its body.

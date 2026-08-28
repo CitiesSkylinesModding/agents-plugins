@@ -14,6 +14,7 @@ None of them arbitrates, and only the prefab-id collision leaves so much as a lo
 A prefab's id is its type name, its name, and a hash taken from the prefab's **asset** — the publishing mod's platform id where it has one, otherwise the asset guid.
 A prefab a code mod builds at runtime through `PrefabBase.Create<T>(name)` has no asset, so its hash is the default and its identity is nothing but the type name and the name.
 **Asset-mod prefabs are namespaced by the mod that published them and a code mod's runtime prefabs are not**, and that asymmetry is the whole exposure.
+Source: `src/Game/Game.Prefabs/PrefabID.cs` (the three parts of an id and where the hash comes from), `src/Game/Game.Prefabs/PrefabBase.cs` (the runtime creation that leaves no asset behind).
 
 On a collision `PrefabSystem.AddPrefab` keeps the first registrant's index, logs a duplicate-id line and reports success either way.
 The second prefab's entity is still created and appended, so it exists and is simply unreachable by id — the symptom is a prefab nothing can look up, with one log line to say why.
@@ -34,6 +35,7 @@ Keep that shape.
 Your own build config is the fix: emit those assets under a subdirectory named after your mod, which the registered host resolves just the same.
 **Unregister with the two-argument form, naming the host and the path**: the single-argument overload drops the whole host and every path any mod registered under it.
 `prefabs-and-assets` owns host registration and resolution.
+Source: `src/Game/Game.Modding/ModManager.cs` (the whole module directory registered under the one host), `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/template/webpack.config.js` (the image output path the scaffold emits), `src/Colossal.UI/Colossal.UI/UISystem.cs` (the two unregister overloads).
 
 ## Notification identifiers
 

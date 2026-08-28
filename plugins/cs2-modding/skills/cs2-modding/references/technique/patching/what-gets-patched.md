@@ -38,6 +38,7 @@ So the useful reading runs one way only.
 Most producers here are private and reached only through a delegate the system captured in its own `OnCreate`, and for those there is no seam by construction: the binding is already registered, the system is registered as a concrete type, and the producer is not virtual.
 Not all of them are, so check yours before assuming a patch was the only route: two of the time producers are public, and one of the actions-section pair overrides an abstract method its base class calls, which a derived section reaches without patching.
 The other half of that pair is a private callback bound as a trigger, which nothing overrides.
+Source: `src/Game/Game.UI.InGame/ToolUISystem.cs`, `src/Game/Game.UI.InGame/TimeUISystem.cs`, `src/Game/Game.UI.InGame/ActionsSection.cs`, `src/Game/Game.UI.InGame/InfoSectionBase.cs`.
 
 | Target | Type |
 | --- | --- |
@@ -51,6 +52,7 @@ The other half of that pair is a private callback bound as a trigger, which noth
 
 A value the game consumes immediately, rewritten through `ref __result`.
 Most are booleans forced the other way; `GetObjectPrefab` is not, and returns a prefab.
+Source: `src/Game/Game.Tools/ObjectToolSystem.cs`.
 
 | Target | Type |
 | --- | --- |
@@ -61,6 +63,7 @@ Most are booleans forced the other way; `GetObjectPrefab` is not, and returns a 
 
 The outlier that belongs here is **neutralising a system from inside its own constructor**: a postfix on `UniqueAssetTrackingSystem.OnCreate` setting `Enabled = false` on it.
 The ordinary route is `World.GetOrCreateSystemManaged<T>().Enabled = false` from `OnLoad` (`mod-lifecycle-and-ordering`), and it is what to reach for.
+Source: `src/Game/Game.UI.InGame/UniqueAssetTrackingSystem.cs`.
 
 ## A simulation value, or the managed method that schedules a job
 
@@ -80,3 +83,4 @@ The last one and `ObjectToolSystem.SnapControlPoint` are the two job-substitutio
 
 `TimeSystem` is where the overload hazard `patching` describes bites hardest: `GetTimeOfDay` and `GetTimeOfYear` each split a public overload from a protected one on a single `double renderingFrame` parameter, and `GetYear`'s two overloads split the same way while both being public.
 All of them need an explicit `Type[]`.
+Source: `src/Game/Game.Simulation/TimeSystem.cs`.

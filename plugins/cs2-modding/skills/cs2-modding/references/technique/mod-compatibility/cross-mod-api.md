@@ -22,6 +22,7 @@ Two moves complete that surface without leaking your types.
 Walk the mod manager, take each mod's `IMod`-derived type, look for a `public static` method of an agreed name, and accept it only when the signature matches exactly.
 The provider then needs to know nothing about you beyond a method name and a signature — no attribute, no interface, no reference.
 Call the method you found from the deferred callback rather than from `OnLoad`: the mod-manager walk is correct there, but the mod whose static you are calling may not have loaded yet.
+Source: `src/Game/Game.Modding/ModManager.cs` (the enumeration, the derived-type walk it does itself, and the registration that precedes every load).
 
 **Make a compile-time reference impossible rather than asking for it.**
 `[Obsolete("...", true)]` on every bridge member turns any compile-time use into a hard compiler error, while leaving reflection untouched: the attribute is the compiler's and is never consulted at runtime.

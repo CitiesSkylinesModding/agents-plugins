@@ -15,6 +15,7 @@ A tool's own apply, secondary apply and cancel need none of this; the entry file
 Declaratively, mimicking is `[SettingsUIBindingMimic(string map, string action)]` on a `ProxyBinding` property.
 The resolver looks the named action up, **requires it to be built-in**, then requires a composite for the property's device and a binding for its component; any of those four failing returns false and the property silently falls back to its declared default key.
 When it succeeds, the binding is created with the vanilla binding's path, original path and modifiers copied in, and registration additionally attaches a watcher on the **source** binding that re-copies path and modifiers into the mod's binding every time the player rebinds the vanilla one.
+Source: `src/Game/Game.Settings/SettingsUIBindingMimicAttribute.cs`, `src/Game/Game.Modding/ModSetting.cs` (the resolver, the copy and the watcher).
 
 That watcher is the whole value of the technique: a plain default key goes stale the moment the player rebinds.
 The map name comes from the input manager's constants, of which the tool map and the shortcuts map are the two a mod normally wants.
@@ -23,6 +24,7 @@ The map name comes from the input manager's constants, of which the tool map and
 
 **Pair every mimic with `[SettingsUIHidden]`.**
 A mimicked binding must not be offered for rebinding, because the next watcher callback overwrites whatever the player set.
+Source: `src/Game/Game.Modding/ModSetting.cs`.
 
 An axis is mimicked with two properties sharing one action name, one carrying the positive component and one the negative, each with its own mimic attribute — the same grouping rule that builds an axis out of two bindings applies unchanged.
 
@@ -32,6 +34,7 @@ An axis is mimicked with two properties sharing one action name, one carrying th
 `ProxyBinding.Watcher` has a public constructor taking a binding and a change callback, so a mod can build the watcher itself, apply the copy once immediately, and dispose it later.
 The helper the settings class uses internally is not reachable, but that constructor is.
 The one-shot variant — look the vanilla action up, copy its path and modifiers onto your own binding, set the binding back, and stop there — is simpler and does **not** follow later rebinds, which is the difference that matters.
+Source: `src/Game/Game.Input/ProxyBinding.cs` (the public watcher constructor against the internal helper), `src/Game/Game.Input/InputManager.cs` (the binding write).
 
 The imperative form is what lets mimicking be a _player setting_: a bool with a `[SettingsUISetter]` that registers or disposes the watchers, and `[SettingsUIDisableByCondition]` on the mod's own binding properties against the same flag, so those rows grey out while the mimic is on.
 
@@ -41,6 +44,7 @@ The imperative form is what lets mimicking be a _player setting_: a bool with a 
 The route is to clone the vanilla composite that already has the shape you need, flip its built-in flag to false, replace its modifiers, and register the result through the input manager's action-adding entry point, which is internal and therefore reached by reflection.
 Pass the mod's own `id` as the map name and the resulting actions are reachable through `settings.GetAction(...)` exactly like a declared one, and their locale keys sit under the mod's own map alongside the rest.
 The case that forces this is a scroll-wheel action, since no mouse binding enum member names the wheel.
+Source: `src/Game/Game.Input/CompositeInstance.cs` (the built-in flag), `src/Game/Game.Input/InputManager.cs` (the internal action-adding entry point), `src/Game/Game.Input/BindingMouse.cs` (the members that exist), `src/Game/Game.Modding/ModSetting.cs` (`id` as the map name `GetAction` looks up).
 
 ## Diagnosing a mimic that did nothing
 
@@ -48,3 +52,4 @@ The case that forces this is a scroll-wheel action, since no mouse binding enum 
 The flag is declared in code with a default of true, and the only thing that can clear it on a vanilla composite is the input asset the game deserializes — which is data rather than C#, so no grep of the source settles it either way.
 The one site in the game that clears it is a mod's own key-binding registration, and that bounds the code path rather than the asset.
 Reach for the mimic attribute's other three failure modes first: a map or action name that resolves to nothing, no composite for the property's device, and no binding for its component.
+Source: `src/Game/Game.Input/CompositeInstance.cs` (the flag's declared default and the asset entry that carries it), `src/Game/Game.Modding/ModSetting.cs` (the one site that clears it, and the resolver's four conditions).

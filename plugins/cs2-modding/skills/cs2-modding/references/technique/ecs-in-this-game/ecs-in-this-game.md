@@ -26,18 +26,21 @@ Both take their declaration rules from here.
 **A shared component's value lives once per chunk, not once per entity**, so every distinct value is a distinct set of chunks.
 That is the whole reason to declare one and the whole reason to be careful: a shared component with many values shatters an archetype into many part-full chunks.
 The game takes that trade sparingly.
+Source: `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (the value read once per chunk).
 
 **A cleanup component survives `DestroyEntity`.**
 The entity moves into a residue archetype holding only the cleanup components and an internal marker, and dies for real only once you remove the cleanup component.
 That is the one correct way for a component to own a handle — an unmanaged allocation, or a managed mesh or material pinned inside an otherwise blittable struct — because it guarantees a disposal system gets to see the entity after deletion.
 Forget the removal and you leak entities silently, with nothing in the log.
 `performance-and-memory` owns the pattern itself — the disposal system's shape, and what a save and load do to a residue entity.
+Source: `src/Unity.Entities/Unity.Entities/EntityComponentStore.cs` (the residue archetype, and the entity dying only once the component is removed).
 
 The game's own answer to "clean up after me" is not a cleanup component at all: it is the `Deleted` tag plus a frame of grace, and the tag section below is where that lives.
 
-**Every component the game declares also implements `IQueryTypeParameter`**, an empty marker with no members.
-It is the constraint on the `SystemAPI.Query<T>()` foreach and on nothing else, so it buys the game nothing and is pure house style — but a mod component without it cannot be used in that foreach, and adding it costs nothing.
-Declare it.
+**`IQueryTypeParameter` on a component declaration is a decompiler artifact, not house style and not something to copy.**
+`IComponentData` already derives from it, so the `SystemAPI.Query<T>()` constraint — the only thing constrained on it — is satisfied without naming it, and a mod component never needs to.
+The decompiler prints the transitive interface closure, which is why every `IComponentData` struct under `src/Game/` lists it and no `IBufferElementData` struct does: that interface does not derive from it.
+Source: `src/Unity.Entities/Unity.Entities/IComponentData.cs` (the derivation), `src/Unity.Entities/Unity.Entities/IBufferElementData.cs` (the one that does not), `src/Unity.Entities/Unity.Entities/SystemAPI.cs` (the `Query<T>` constraint).
 
 ## Archetypes come from prefabs; `CreateArchetype` is for events
 
@@ -63,6 +66,7 @@ Neither needs a system.
 Archetypes built this way are cached on the prefab-data components and read from inside a job through a `ComponentLookup`, which is how a job spawns a fully-formed instance without touching the `EntityManager`.
 
 (VOLATILE: the two contribution signatures and the seeded components above — `ComponentBase` and `PrefabBase`; the unconditional `Created`/`Updated` pair — the vanilla prefab system; the instance-archetype refresh — the `RefreshArchetype` overrides, `ArchetypePrefab` and `ObjectPrefab` among them.)
+Source: `src/Game/Game.Prefabs/ComponentBase.cs` and `src/Game/Game.Prefabs/PrefabBase.cs` (the two members and the seeded components), `src/Game/Game.Prefabs/PrefabSystem.cs` (the prefab entity's creation), `src/Game/Game.Prefabs/ArchetypePrefab.cs` (the instance-archetype refresh and where it caches the result).
 
 **`EntityManager.CreateArchetype` called directly** is, in the overwhelming majority of the game's several hundred call sites, a one-shot **event archetype**: two or three types, built in `OnCreate`, stashed in an `EntityArchetype` field, and spawned from inside a job through a command buffer.
 
@@ -73,12 +77,14 @@ m_CommandBuffer.SetComponent(unfilteredChunkIndex, entity, new Unlock(prefab));
 
 **Build archetypes in `OnCreate`, never in `OnUpdate`.**
 The call takes the managed `EntityManager` and cannot run inside a job at all, so an archetype needed by a job is a field the job reads.
+Source: `src/Unity.Entities/Unity.Entities/EntityManager.cs` (`CreateArchetype` on the managed type), `src/Game/Game.Prefabs/ProcessingRequirementSystem.cs` (the `OnCreate` build and the in-job spawn).
 
 ## Chunks: what a mod actually touches
 
 A chunk is a 16 KB block holding parallel arrays of components for entities sharing one archetype.
 Sixty-four bytes of that are header, leaving 16320 usable, and **a chunk holds at most 128 entities however small the archetype is**.
 That 128 is why the per-chunk enabled mask is a `v128` — two 64-bit words, one bit per entity.
+Source: `src/Unity.Entities/Unity.Entities/Chunk.cs` (the size, header and entity-count constants), `src/Unity.Entities/Unity.Entities/ChunkEntityEnumerator.cs` (the two 64-bit mask words).
 
 Three chunk operations show up in code a mod writes:
 
@@ -90,10 +96,14 @@ Three chunk operations show up in code a mod writes:
   It answers archetype membership only: for an enableable component it is true even where every entity in the chunk has it disabled, and `chunk.IsComponentEnabled(ref handle, i)` is the per-entity question.
 - **`chunk.GetSharedComponent(handle)`** — reads the chunk's single shared value.
 
+Source: `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (all three operations), `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs` (the unchecked indexer).
+
 **The shared component a mod meets is `UpdateFrame`**, a single `uint` index that partitions simulated entities into buckets so each pass touches a fraction of them.
 **The bucket count is per-family rather than a constant**, and the index has an authored path and an assigned one.
 A prefab that declares `UpdateFrameData` — on the prefab class, or through a component type attached under its component menu — pins its instances' index outright; everything else `UpdateGroupSystem` load-balances into the least-loaded bucket of its family, with further writers assigning one at request creation and when an old save is migrated.
 **A prefab you add that declares no `UpdateFrameData`, and inherits none from the base you derived from, therefore takes a load-balanced index**, which is how a new prefab lands outside the buckets a gated vanilla system actually visits, so it is never served and nothing is logged.
+Source: `src/Game/Game.Simulation/UpdateFrame.cs` and `src/Game/Game.Prefabs/UpdateFrameData.cs` (the shared component and the authored pin), `src/Game/Game.Simulation/UpdateGroupSystem.cs` (the pin-then-load-balance assignment and the per-family group arrays), `src/Game/Game.Simulation/SimulationUtils.cs` (the per-family counts).
+
 Two ways to skip on it, and both appear in vanilla:
 
 ```csharp
@@ -108,6 +118,8 @@ if (chunk.GetSharedComponent(m_UpdateFrameType).m_Index != m_UpdateFrameIndex)
 ```
 
 **Neither form says where the index or the bucket count comes from, and a fork that guesses either runs at a fraction of the vanilla rate or never runs at all, with nothing logged.**
+Source: `src/Game/Game.Simulation/BuildingUpkeepSystem.cs` (the filtered query) and `src/Game/Game.Simulation/AgingSystem.cs` (the in-job test).
+
 Read [update-frame-buckets.md](update-frame-buckets.md) before forking a system that partitions on it, or before adding a prefab to a family a gated vanilla system serves — it carries both the read and the gated-bucket failure above.
 What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
 
@@ -125,8 +137,10 @@ Several query forms exist in the package, and the game reaches for them unevenly
 | `SystemAPI.Query<T>()`, `Entities.ForEach` | iteration, not a query object | **yes** |
 
 **Every iteration query in the game is hand-built with `GetEntityQuery`.**
-The game's use of `SystemAPI` is singleton access and nothing else: `GetSingleton<T>`, `TryGetSingleton<T>`, `GetSingletonEntity<T>`, `GetSingletonBuffer<T>`, `HasSingleton<T>`.
+In query position the game's use of `SystemAPI` is singleton access and nothing else: `GetSingleton<T>`, `TryGetSingleton<T>`, `GetSingletonEntity<T>`, `GetSingletonBuffer<T>`, `HasSingleton<T>`.
+Outside it the game leans on `SystemAPI` heavily — every vanilla `__TypeHandle` field is a `SystemAPI` handle or lookup call the generator rewrote, entity, buffer and shared-component handles included, which is the mechanism the type-handle section below turns on.
 The builder is equally correct in a mod, and needs no more than the generators the toolchain already wires in, so the choice between the two is made per system rather than per project.
+Source: `src/Game/Game.Simulation/AdjustElectricityConsumptionSystem.cs` (the generated `__query_` fields and the singleton reads they serve).
 
 **The mechanism behind that choice is the one thing to internalise.**
 Every `SystemAPI` member in the shipped assembly is a body that throws.
@@ -137,6 +151,8 @@ Three consequences:
 2. **A `SystemAPI` call the generator did not rewrite throws at runtime**, since the shipped body is a throw. There is no graceful degradation.
 3. **The generators only run inside a mod project.** The official toolchain wires them in as analyzers and hard-errors at build time if the package they come from is missing, so a project built through it has them and a project assembled by hand may not.
 
+Source: `src/Unity.Entities/Unity.Entities/SystemAPI.cs` (the throwing bodies), `src/Game/Game.Simulation/AdjustElectricityConsumptionSystem.cs` (a rewritten call site), `%CSII_TOOLPATH%/Mod.props` and `%CSII_TOOLPATH%/Mod.targets` (the generators wired as analyzers, and the build error when they are absent).
+
 The generation happens during the C# compile.
 The post-processing step the toolchain runs _after_ the build is the Burst and IL pass; it generates no queries, and the two fail differently — a missing generator is a compile error, a missing post-processor costs Burst.
 
@@ -145,8 +161,10 @@ Then the small rules:
 - **Build queries in `OnCreate`.** Universal in the game, and the generated form does the same thing from `OnCreateForCompiler`.
   The mechanism is ownership: `GetEntityQuery` compares the requested shape against every query the system already holds, appends a new one to a list that lives as long as the system, and joins it to the system's job-dependency tracking — so repeated identical calls are cheap, and a query built per call from a **runtime-chosen** type set grows that list for the world's lifetime, with nothing logged.
   For a type set decided at runtime — a user choice, another mod's components — build with `EntityQueryBuilder.Build(EntityManager)`, which returns a query the caller owns and disposes after the read; the system-taking overloads — `Build(SystemBase)`, `Build(ref SystemState)` — route back into the system's cache.
+  Source: `src/Unity.Entities/Unity.Entities/SystemState.cs` (the comparison, the append and the dependency join), `src/Unity.Entities/Unity.Entities/EntityQueryBuilder.cs` (which `Build` overload owns the result).
 - **Mark components read-only unless you write them.** The generated handle names encode the mode, so a decompiled system tells you its intent at a glance.
 - **The varargs form cannot express `Any`.** It has `ReadOnly`, `ReadWrite` and `Exclude`, which map to `All` and `None` and nothing else; reach for `EntityQueryDesc`, or construct `EntityQueryBuilder` by hand, which takes an allocator and needs no generator.
+  Source: `src/Unity.Entities/Unity.Entities/ComponentType.cs` (the three access modes), `src/Unity.Entities/Unity.Entities/EntityQueryManager.cs` (`Exclude` routed into `None` and everything else into `All`).
 - **A fork of a vanilla system inherits the vanilla form**, because the starting point is decompiled source.
 
 ### The gates, and the one that ignores your filter
@@ -158,12 +176,14 @@ Then the small rules:
 A query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set, so a system gated on a per-bucket query runs on every pass and does nothing on all but one bucket's worth of them.
 A query naming an enableable component gates on the entities that carry it, enabled or not, so a gate over `Locked` stays open once everything is unlocked.
 That is by design and the game relies on it; it is only a surprise if you expected the gate to save the update.
+Source: `src/Unity.Entities/Unity.Entities/SystemState.cs` (`ShouldRunSystem` and the two require calls), `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs` (`IsEmptyIgnoreFilter` beside the `IsEmpty` that does branch on the filter and the bits).
 
 ## Jobs: write per-entity, read per-chunk
 
 **Write new jobs as `IJobEntity`.**
 It is the modern replacement for `IJobChunk` and it drops the whole fetch-array-and-index preamble: the parameter list _is_ the query, and `Execute` is called once per entity.
 The source generators it needs are wired in as analyzers by the official toolchain, so it compiles and runs in a mod project today.
+Source: `src/Unity.Entities/Unity.Entities/IJobEntity.cs` (the empty marker the generator fills in), `%CSII_TOOLPATH%/Mod.props` (the generator wired as an analyzer).
 
 ```csharp
 [BurstCompile]
@@ -181,15 +201,18 @@ private partial struct AgeCitizensJob : IJobEntity
 `ref` for write, `in` for read-only, `Entity` for the entity itself.
 **Both the job struct and the system that schedules it must be `partial`**, because the generator emits the `Execute` plumbing and the schedule extension into the other half.
 That is the first thing an agent hits, and its absence is a compile error rather than a runtime one, which is the good case.
+Source: `%CSII_UNITYMODPROJECTPATH%/Library/PackageCache/com.unity.entities@%CSII_ENTITIESVERSION%/Unity.Entities/SourceGenerators/Source~/JobEntityGenerator/JobEntitySyntaxReceiver.cs` (the job struct's `partial` test) and `%CSII_UNITYMODPROJECTPATH%/Library/PackageCache/com.unity.entities@%CSII_ENTITIESVERSION%/Unity.Entities/SourceGenerators/Source~/SystemGenerator.Common/PartialSystemTypeGenerator.cs` (the system half).
 
 **That same generator mishandles a file-scoped namespace, so both files take a block namespace.**
 It emits its half into the global namespace instead, making the generated type a different type from yours, and the build fails inside generated code on members you never wrote — `cs2-mod-project` carries the cause and a lint that catches it while the file still compiles.
 Declaring the job is enough to trigger it; the system half waits until something schedules or a `SystemAPI` call appears.
+Source: `%CSII_UNITYMODPROJECTPATH%/Library/PackageCache/com.unity.entities@%CSII_ENTITIESVERSION%/Unity.Entities/SourceGenerators/Source~/Common/TypeCreationHelpers.cs` (the ancestor walk that tests each parent for `SyntaxKind.NamespaceDeclaration`).
 
 **Hold the discrepancy in mind before you open vanilla source.**
 The game contains not one `IJobEntity`: every jobified system in it — several hundred — is `IJobChunk`.
 That is a fact about the codebase's age rather than about what works, so it is not a reason to follow it; what it decides is what you read and what you fork.
 **A fork of a vanilla job starts from decompiled source and therefore arrives as `IJobChunk` before you have written a line of it.**
+Source: `src/Game/Game.Simulation/AgingSystem.cs` (the vanilla job form a fork starts from).
 
 ### `IJobChunk`: what you read, and what a fork starts as
 
@@ -211,6 +234,8 @@ Schedule it with `JobChunkExtensions.Schedule` or `JobChunkExtensions.SchedulePa
 - **The chunk-scoped accessors** — `chunk.GetSharedComponent`, `chunk.GetBufferAccessor`, `chunk.DidChange`, `chunk.Has`. All four are questions about a chunk.
 - **`unfilteredChunkIndex`.** It is handed to `Execute` and is exactly the stable sort key a parallel command buffer wants.
 
+Source: `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (the chunk-scoped accessors), `src/Unity.Entities/Unity.Entities/IJobChunk.cs` (the `Execute` signature that hands over the chunk and the index), `src/Game/Game.Simulation/AgingSystem.cs` (the chunk-level early exit).
+
 A per-entity `Execute` never holds the chunk, so it has none of the three: no per-chunk early exit — the same test would run up to 128 times more often — no shared-component read, and a parallel-writer sort key it generates for itself rather than the vanilla number.
 Where a fork needs none of the three, converting it to a per-entity job is mechanical.
 Where it needs one, keep the chunk form for that job rather than emulating the chunk from inside a per-entity `Execute`.
@@ -231,19 +256,23 @@ A `ComponentTypeHandle<T>` caches the type index, the component's size in a chun
 Read-write chunk access stamps the chunk with the handle's version.
 A stale handle stamps a stale version, and every change filter downstream — `chunk.DidChange(ref handle, version)`, `SetChangedVersionFilter` — then reports "unchanged" for a chunk you just wrote.
 Nothing throws, nothing logs, and the symptom is a system further down the frame that quietly stops seeing your writes.
+Source: `src/Unity.Entities/Unity.Entities/ComponentTypeHandle.cs` (the cached fields, and the one `Update` refreshes), `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (the read-write stamp and `DidChange`).
 
 **Nothing throws because this build has no safety system.**
 Handles, lookups and `ArchetypeChunk` carry no safety field, and the bounds and aliasing assertions are all conditional on a collections-checks define that is compiled out of the shipped assembly.
 A stale handle, an out-of-bounds chunk index, or two jobs writing the same component in parallel produce wrong data or a crash, never a diagnostic.
 `performance-and-memory` owns what that means for scheduling; here it means the handle discipline has no backstop.
 The same absence covers what a structural change does to data you are already holding: adding or removing a component, destroying an entity or assigning a shared component value can move the entity to another chunk, so a `DynamicBuffer`, a chunk `NativeArray` or a component pointer taken before the change points at the old storage afterwards — reacquire it, because nothing here invalidates it for you: the engine call that would have, in an editor build, has that half compiled out.
+Source: `src/Unity.Entities/Unity.Entities/ComponentTypeHandle.cs` and `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (no safety field, and the conditional assertions), `src/Unity.Entities/Unity.Entities/EntityDataAccess.cs` and `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs` (the call a structural change routes through, and the body it has left).
 
 **With the generator, the discipline is free.**
 `SystemAPI.GetComponentTypeHandle<T>()`, `GetComponentLookup<T>()`, `GetBufferTypeHandle<T>()` and their siblings are rewritten into a generated nested `TypeHandle` struct — one field per handle, assigned once from `OnCreateForCompiler`, and refreshed at the point of use every update.
 Skipping the refresh is not something you can do by accident when you use those calls.
+Source: `src/Game/Game.Simulation/AgingSystem.cs` (the generated struct, assigned from `OnCreateForCompiler` and refreshed at use), `src/Unity.Entities/Unity.Entities.Internal/InternalCompilerInterface.cs` (the refresh those calls compile into).
 
 **Two hand-rolled idioms exist, and you need one whenever the generator is not writing that code for you** — which is exactly the case in a fork built from decompiled source.
 Either way acquire in `OnCreate`: the first `GetComponentLookup` or `GetComponentTypeHandle` call for a type completes the system's tracked jobs on the spot — `performance-and-memory` owns that sync — and the generated struct's create-time assignment is what dodges it.
+Source: `src/Unity.Entities/Unity.Entities/SystemState.cs` (the acquisition, and the completion it triggers on a type the system has not read before).
 
 - **Carry the generated struct into the fork and refresh it yourself.**
   The pasted struct is now ordinary source; the generator will not regenerate it, and nothing will refresh its fields.
@@ -279,6 +308,7 @@ The game only bothers where the query names an enableable component; everywhere 
 **The trap is the parameterless constructor.**
 `new ChunkEntityEnumerator()` leaves the entity count at zero, so `NextEntityIndex` returns false on the very first call and the loop body never runs — no exception, no warning, just a job that silently does nothing.
 Always pass all three arguments.
+Source: `src/Unity.Entities/Unity.Entities/ChunkEntityEnumerator.cs`.
 
 ## Enableable components: a bit flip, and a filter you did not write
 
@@ -301,7 +331,9 @@ A buffer element can carry `IEnableableComponent` the same way, which is what th
 Some enableable components carry a disabled state a reader would never guess from the name:
 
 - **`PrefabData` disabled means "obsolete prefab".** The loader disables it on prefabs a save references but the current install no longer has, and the prefab system uses its enabled state as the "does this prefab still exist" test when writing a save. So `WithAll<PrefabData>()` gives you live prefabs only — almost always what you want, but it is a filter you did not write, and it explains a prefab count that does not match the installed mod list.
+  Source: `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the loader's disables) and `src/Game/Game.Prefabs/PrefabSystem.cs` (the enabled state read as the existence test).
 - **`Locked` disabled means "unlocked".** So a progression query on `WithAll<Locked>()` silently returns only what is _still_ locked, and unlocking is not the bit flip that implies. `city-state-and-progression` depends on this.
+  Source: `src/Game/Game.Prefabs/UnlockSystem.cs`.
 
 Toggle from a job through the command buffer, as the vanilla aging system does at the child-to-teen transition:
 
@@ -321,6 +353,7 @@ So unlock by creating an event entity on the archetype the game builds — `Crea
 An event created from the archetype alone carries `Entity.Null` as its prefab, which the unlock system skips without a log line.
 **`Game.Common.Event` is what puts the entity in the destroy set**, so one carrying `Unlock` alone is processed and then never destroyed, re-matching every consumer's query for the rest of the session.
 Flipping the bit yourself leaves all of them unnotified, with nothing logged.
+Source: `src/Game/Game.Prefabs/UnlockSystem.cs` (the main-thread flip, the event archetype, and a null prefab skipped without a log line), `src/Game/Game.Common/PrepareCleanUpSystem.cs` (`Event` in the destroy query).
 
 (VOLATILE: what a disabled `PrefabData` and a disabled `Locked` mean — the prefab system and the loader for the first, the unlock system for the second.)
 
@@ -357,6 +390,8 @@ Reach for one of the twelve instead.
 2. **`AddJobHandleForProducer(handle)` after scheduling.** Without it the barrier plays back while your job is still writing into the buffer.
 3. **Playback runs in list order and then rewinds the allocator**, so a buffer is single-playback and the handle you got is dead after the barrier updates. Recording into a dead one is unguarded here: the engine refuses it in an editor build and that refusal is compiled out with the rest of the safety system, so a cached buffer field records into rewound memory and nothing objects. (UNVERIFIED: whether such a write is a silent no-op, a corruption of whatever the allocator has since handed out, or a fault — one run with a barrier's buffer held in a field across two updates settles it.)
 
+Source: `src/Unity.Entities/Unity.Entities/EntityCommandBufferSystem.cs` (the pending list, the producer handle, and the playback that rewinds the allocator), `src/Unity.Entities/Unity.Entities/EntityCommandBuffer.cs` (the single-playback policy, and the emptied recording guard).
+
 The vanilla shape, worth copying exactly:
 
 ```csharp
@@ -369,17 +404,20 @@ m_EndFrameBarrier.AddJobHandleForProducer(Dependency);
 Every `ParallelWriter` method takes an `int sortKey` first, and playback merges the per-thread command chains in ascending sort-key order.
 Passing `unfilteredChunkIndex` — the parameter `IJobChunk.Execute` already hands you — makes recording order deterministic across runs regardless of how threads happened to be scheduled.
 A constant or a thread index there makes your mod's structural changes order-dependent on the scheduler, which is a bug that reproduces once a week.
+Source: `src/Unity.Entities/Unity.Entities/EntityCommandBuffer.cs` (the `sortKey` parameter, and the ascending chain merge at playback).
 
 **Writing to a barrier outside its window throws, loudly.**
 Each barrier closes itself immediately before playing back, and a companion system re-opens it; creating a buffer while it is closed raises `Trying to create EntityCommandBuffer when it's not allowed!`.
 This is one of the few places in this ECS where the failure is an exception rather than silence, so trust it.
 The other on this surface is calling `Playback` on a buffer twice, which throws here for real.
+Source: `src/Game/Game/SafeCommandBufferSystem.cs` and `src/Game/Game/AllowBarrier.cs` (the close, the message and the re-open), `src/Unity.Entities/Unity.Entities/EntityCommandBuffer.cs` (the second-playback throw).
 
 **Write only to the barrier belonging to the phase you are running in.**
 That is the general rule, and it falls out of where each barrier's opener sits.
-Eleven of the twelve open at the start of their own phase and play back at the end of it, so each is open for the duration of that one phase and shut from the end of it until its phase runs again.
+Eleven of the twelve open at the start of their own phase and play back in its closing band — the deserialization barrier ahead of the post-load wrappers that follow it — so each is open for the duration of that one phase and shut from its playback until the phase runs again.
 For most of the eleven that means the next frame; for the deserialization barrier it means the next load, since its phase fires once per load rather than every frame.
 Where the opener and the playback sit within the phase, and what that costs a system registered beside them, is `mod-lifecycle-and-ordering`.
+Source: `src/Game/Game.Common/SystemOrder.cs` (each barrier's opener and playback registrations).
 
 **`EndFrameBarrier` is the exception, and its window is the widest rather than the narrowest.**
 Its opener and its playback sit far apart inside the main loop rather than bracketing one phase, so it is open from partway through the frame, across the phases that run after that, and on to the next frame.
@@ -387,58 +425,37 @@ Simulation systems use it freely and that is where nearly all of vanilla's use o
 What it does not cover is the front of the frame: **an `OnUpdate` body running before the opener — the modification, tool, raycast, prefab-update and deserialize phases — cannot create an `EndFrameBarrier` command buffer**, and uses its own phase's barrier instead.
 This rule is about `OnUpdate` bodies, and a lifecycle hook such as `OnGameLoadingComplete` fires outside the frame's phase walk entirely.
 (UNVERIFIED: whether a buffer created from a lifecycle hook lands inside the open window or throws against a closed barrier — the hook's invocation site in `GameSystemBase` read against the barrier's opener and playback registrations in the vanilla system-order class, or one run of the game with a buffer created there.)
+Source: `src/Game/Game.Common/SystemOrder.cs` (the opener's position in the main loop, against the systems that drive the earlier phases).
 
 **One crack in the gate, and it is in the type system.**
 The safety check lives on a method that _shadows_ the base `EntityCommandBufferSystem.CreateCommandBuffer()` rather than overriding it, and the base method is not virtual.
 A call through a variable typed as the base class therefore binds to the base method and skips the check entirely — no exception, and a buffer that flushes at an unpredictable time instead.
 So a mod that stores barriers in an `EntityCommandBufferSystem`-typed dictionary, or hands one to a generic helper, has traded a loud failure for a silent one.
 Hold the concrete barrier type everywhere.
+Source: `src/Game/Game/SafeCommandBufferSystem.cs` (the shadowing `new` method) and `src/Unity.Entities/Unity.Entities/EntityCommandBufferSystem.cs` (the non-virtual base method).
 
 (VOLATILE: the twelve barrier type names and the exception message string — the vanilla system-order class, and the safe command buffer base.)
 
 ## The universal tags, and the protocol they carry
 
-Six zero-field components form a frame-scoped change protocol: `Created`, `Updated`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated`.
-`Created` and `Updated` are added to every prefab-instance archetype at birth, so a freshly spawned entity carries both and a system querying `WithAll<Created>()` sees it exactly once.
+Six zero-field components form a frame-scoped change protocol — `Created`, `Updated`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated` — added and stripped inside a frame by a preparation-and-cleanup pair at the end of the main loop.
+Three of the rules they carry are ones a mod is wrong without.
 
-They are removed by a pair of systems.
-A preparation system at the very end of the main loop snapshots two sets: everything carrying `Deleted` or `Event`, and everything carrying one of the six tags but _not_ `Deleted`.
-A cleanup system at the end of the frame then destroys the first set and strips the six tags from the second.
+**Tag the graphics, or your change is invisible.**
+If you change anything visible on an entity and do not add `BatchesUpdated`, the renderer keeps drawing the old batch, with no error anywhere — and tag the sub-objects too, since a building tagged alone renders with stale props.
+Source: `src/Game/Game.Rendering/PreCullingSystem.cs` (the read), `src/Game/Game.Simulation/CityServiceUpkeepSystem.cs` (a sub-object tagged on its own).
 
-Three consequences a mod needs:
+**Exclude the preview, or you will count it as real.**
+`Temp` is the tool-preview tag and nearly every game query excludes it; `None = { Deleted, Temp }` is the canonical pair, and a query that forgets it sees the player's uncommitted hover preview as a building that exists.
+Source: `src/Game/Game.Tools/Temp.cs`, `src/Game/Game.Simulation/AgingSystem.cs` (the canonical `None` pair).
 
-1. **`Deleted` means the entity dies later in the frame, not now.**
-   That gap is the point: every system holding a reference gets a window to query `WithAll<Deleted>()` and unhook.
-   This is why the game deletes by adding `Deleted` far more often than it calls `DestroyEntity` — do the same, and reserve `DestroyEntity` for entities nothing else can be holding.
-2. **An `Event` entity lives exactly one frame.**
-   It is in the destroy set with no exclusion, so an event entity spawned during a frame is gone by the end of it.
-   Consume it in the same frame or not at all.
-3. **A tag written after the snapshot survives an extra frame.**
-   A tag added from a simulation system misses that frame's snapshot, is picked up at the end of the _next_ frame's main loop and removed at the end of that frame — which is precisely what makes it visible to the next frame's modification, tool, UI and rendering work.
-   `mod-lifecycle-and-ordering` has the frame structure this rests on.
+**Delete by tag, not by `DestroyEntity`.**
+`Deleted` means the entity dies later in the frame, and that gap is the point: every system holding a reference gets a window to query `WithAll<Deleted>()` and unhook. Reserve `DestroyEntity` for entities nothing else can be holding.
+Source: `src/Game/Game.Common/PrepareCleanUpSystem.cs`, `src/Game/Game.Common/CleanUpSystem.cs`.
 
-**What each tag asks for:**
+(VOLATILE: the six frame-scoped tag names, `Deleted` and `Temp` above — each tag's own declaration, and the cleanup system's query for the frame-scoped set.)
 
-- `Created` — this entity is new.
-- `Updated` — something non-visual changed; re-run the modification pipeline over me. The general-purpose "I touched this" tag.
-- `BatchesUpdated` — **the graphics for this entity need rebuilding, and this is the tag a mod forgets.** The culling system reads it, the batch instance and batch data systems branch on it, and the culling completion clears it. If you change anything visible on an entity and do not add `BatchesUpdated`, the renderer keeps drawing the old batch and your change is invisible with no error anywhere. Tag the sub-objects too, not only the parent: vanilla adds it to sub-objects and upgrades separately, and a building tagged alone renders with stale props.
-- `Applied` — added by the tool apply systems when a preview becomes real.
-- `EffectsUpdated` and `PathfindUpdated` — narrow, for visual effects and for lane pathfinding parameters respectively.
-
-**These tags are not frame-scoped and never pass through the cleanup pair:**
-
-- `Overridden` — this object conflicts with another object or network but is not deleted. Persists across a save; raycasting and lane generation both skip overridden geometry.
-- `Native` — marks map-native content. Persists.
-- `Owner` — a single `Entity m_Owner`, the standard back-reference from a sub-object to its parent, and the shape to copy when attaching your own entity to a game entity. Networks are dense graphs reached through it, which is why `roads-and-traffic` leans on it hardest.
-- `PseudoRandomSeed` — a `ushort` seed plus `GetRandom(uint reason)`, which derives an independent stream per reason from the one stored seed. This is how the game gets stable per-entity randomness that survives a save without storing a stream, and a mod wanting reproducible per-entity variation should use it rather than seeding its own. It also forces the seed non-zero before constructing the generator, which a hand-rolled seed has to do for itself.
-
-**`Temp` is the tool-preview tag, and it is the one to exclude.**
-It lives in the tools namespace, is not serialized, and carries `m_Original` — the real entity this preview stands for — plus a curve position, a value, a cost and flags.
-The tool pipeline works entirely on `Temp` copies, and the apply systems read `m_Original` to write back onto the real entity.
-**Nearly every game query excludes it**, and `None = { Deleted, Temp }` is the canonical pair: a query that forgets it will see the player's uncommitted hover preview as a real building.
-`Hidden` is its sibling for the same reason.
-
-(VOLATILE: the type set the cleanup system strips — that system's own query. The tag type names above and `Temp`'s field names — each tag's own declaration.)
+[The universal tags, one by one](universal-tags.md) is the catalogue — reach for it when you need to know what a specific tag asks for, which tags survive a frame and which a save, or why a tag you added took an extra frame to be seen.
 
 ## Declaring components of your own
 
@@ -454,6 +471,8 @@ Two consequences:
   ```csharp
   [assembly: RegisterGenericComponentType(typeof(MyMarker<Citizen>))]
   ```
+
+Source: `src/Game/Game.Modding/ModManager.cs` (the reflection pass after a mod assembly loads) and `src/Unity.Entities/Unity.Entities/TypeManager.cs` (what it accepts, the double-registration throw, and the generic attribute).
 
 **A name matching a vanilla component is a different type and does not clash**, since the namespace is part of the identity.
 It is still expensive: the game absorbs mod concepts across versions, so a name that was unique when a mod shipped can collide with a vanilla type a later patch introduces, and every touch of either then needs full namespace qualification to stay readable.
@@ -474,9 +493,11 @@ Prefix your components rather than naming them after the concept alone.
 Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
 Pick a capacity the buffer will not exceed rather than a typical one: shrinking the length leaves the payload on the heap, so a buffer that overflows once pays the heap allocation and the reserved inline bytes together until something asks for it back.
 `performance-and-memory` owns that trade and the call that asks.
+Source: `src/Unity.Entities/Unity.Entities/TypeManager.cs` (the default capacity, and the reservation paid per entity slot), `src/Unity.Entities/Unity.Entities/BufferHeader.cs` (growth that never takes the inline arm) and `src/Unity.Entities/Unity.Entities/DynamicBuffer.cs` (`Clear` against `TrimExcess`).
 
 **Save cost is decided by one interface and nothing else.**
 The serializer library walks every type the type manager knows and registers a serializer for each that implements one of two interfaces; a component implementing neither is simply not written.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the walk, and the branch that picks each serializer).
 
 | Declares | Result |
 | --- | --- |
@@ -489,12 +510,13 @@ The serializer library walks every type the type manager knows and registers a s
 So a persisted tag is one line:
 
 ```csharp
-public struct MyPloppedMarker : IComponentData, IQueryTypeParameter, IEmptySerializable { }
+public struct MyPloppedMarker : IComponentData, IEmptySerializable { }
 ```
 
 **The library rebuilds after a mod assembly loads**, in the same step that registers the types, so a mod component becomes saveable purely by implementing the interface.
 Implementing neither and rebuilding the component on load is the cheaper and safer default: a component in a save is a compatibility obligation forever.
 The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to `save-serialization`, and you want it before the first release, not after.
+Source: `src/Game/Game.Modding/ModManager.cs` (the dirty flag set beside the type registration) and `src/Game/Game.Serialization/SerializerSystem.cs` (the re-initialize it triggers).
 
 (VOLATILE: the serializer selection above — the component serializer library.)
 
@@ -512,6 +534,7 @@ if (EntityManager.TryGetComponent(entity, out PrefabRef prefabRef))
 ```
 
 The `Enabled` half of that list is not a convenience variant: `TryGetComponent` and `TryGetBuffer` test archetype membership alone and succeed on a disabled component, handing back its stored value, while `HasEnabledComponent`, `HasEnabledBuffer`, `TryGetEnabledComponent` and `TryGetEnabledBuffer` are the four that consult the bit — so pick by whether the component is enableable.
+Source: `src/Colossal.Core/Colossal.Entities/EntitiesExtensions.cs`.
 
 These ship with the game rather than coming from anywhere else, so they cost a mod no dependency at all.
 Reach for them before writing your own.

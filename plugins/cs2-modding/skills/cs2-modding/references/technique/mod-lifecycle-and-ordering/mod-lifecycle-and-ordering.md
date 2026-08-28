@@ -21,6 +21,7 @@ void OnDispose();
 The whole interface file is eight lines.
 There is no `OnCreateWorld`, no `OnGameLoad`, and no initialisation callback of any other name.
 A class that declares a method by one of those names compiles, ships, and is never called, with no error and no log line — the failure looks exactly like a mod that does nothing.
+Source: `src/Game/Game.Modding/IMod.cs` (the two members), `src/Game/Game.Modding/ModManager.cs` (the only calls into them).
 
 `OnLoad`'s parameter is the entire ordering API.
 Everything below that schedules a system goes through that object.
@@ -41,31 +42,37 @@ Three rules follow.
 
 - **Declare `IMod` explicitly in the base list of a top-level class**, even when a base class already implements it.
   The redundant redeclaration is what the metadata scan requires, and it is the reason detection succeeds for a mod built on a shared base class.
+  Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs`.
 - **Every `IMod` implementation in the assembly is instantiated**, and `OnLoad` is called on each in turn.
   A second implementation left behind from a refactor is a second mod entry point running in the same session.
+  Source: `src/Game/Game.Modding/ModManager.cs`, `src/Colossal.Core/Colossal.Reflection/ReflectionUtils.cs`.
 - **Keep every `IMod` implementation in the assembly concrete.**
   Nothing filters an abstract one out before construction, and the loader constructs each implementation it finds without calling a constructor, so a shared base is safer expressed as a plain class the mod entry point holds than as a base the entry point derives from.
+  Source: `src/Colossal.Core/Colossal.Reflection/ReflectionUtils.cs` (the missing abstract filter), `src/Game/Game.Modding/ModManager.cs` (the constructorless allocation).
 
-Other gates the asset passes before `OnLoad` is reached, each failing to a distinct state on the mod's record:
+Other gates the asset passes before `OnLoad` is reached — the middle two land a distinct state on the mod's record, the outer two do not:
 
-- the assembly must be marked required, and must be either a mod or a reference;
+- the assembly must be marked required, and must be either a mod or a reference — but "required" is defined as that same disjunction, so the second half can never fail on its own and the state stays `Unknown`;
 - same-named assemblies are resolved to a single winner, ordered by already-loaded — which nothing is at boot — then local, then version descending, then asset id, so a second copy of the same assembly name simply loses;
 - every assembly reference must resolve, or the mod is refused with a missed-dependencies state;
-- an asset that ships a copy of a game assembly beside itself is **skipped** with a warning reading `Assembly "{0}" is in-game assembly and it should NOT be shipped with mod "{1}"`.
+- an asset that ships a copy of a game assembly beside itself is **skipped** with a warning reading `Assembly "{0}" is in-game assembly and it should NOT be shipped with mod "{1}"` — dropped before any record exists, so there is no state to read afterwards.
 
 (VOLATILE: the mod-state names — `Unknown`, `Loaded`, `Disposed`, `IsNotModWarning`, `IsNotUniqueWarning`, `GeneralError`, `MissedDependenciesError`, `LoadAssemblyError`, `LoadAssemblyReferenceError` — `ModInfo.State`; they are also the localisation keys the failure dialog interpolates.)
+Source: `src/Game/Game.Modding/ModManager.cs` (the gate order and the state each failure lands in), `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (the uniqueness ordering and the shipped-game-assembly warning).
 
 ## The mod class is never constructed; its systems are
 
 The loader allocates the mod instance without running any constructor.
 **Instance field initialisers therefore never run either**, because the compiler folds them into the constructor.
 A field declared `private readonly List<X> m_Things = new();` is `null` for the whole life of the mod, and the first use is a null reference inside `OnLoad`.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 
 Static fields are unaffected: the static constructor still runs on first access.
 So mod-level state goes in a static field, or is assigned inside `OnLoad`.
 
 Systems are the exact opposite case.
 The ECS creates a system through ordinary activation, so a mod's own system **does** get its parameterless constructor and its field initialisers — and a system type with no parameterless constructor throws at creation.
+Source: `src/Unity.Entities/Unity.Entities/TypeManager.cs`.
 
 That contrast is worth holding as one fact: the mod object is a hollow shell with two methods on it, and everything with real construction semantics is a system.
 
@@ -86,14 +93,18 @@ The last three describe the boot path alone, and the mid-session-enable path bel
 - **The world exists and all of vanilla is already registered.**
   A mod cannot change how the world is built, cannot get in front of the vanilla registration pass, and cannot pre-empt a vanilla registration.
   It can only append — which is why the band rules below are the whole of a mod's leverage over ordering.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **Nothing has updated yet.**
   The world does not tick until step 6, so no phase has run once when `OnLoad` executes.
   Reading simulation state, querying for populated entities, or assuming any vanilla system has done its work is guaranteed to be wrong at that point.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **Prefabs are not loaded yet.**
   Anything needing the prefab database waits — see the deferral section, and `prefabs-and-assets` for what to do once it is there.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **The world-ready event has not fired.**
   A system created during `OnLoad` receives `OnWorldReady`, because the system base subscribes to that event in its own `OnCreate`.
   A system created after step 6 misses it permanently, which is the one lifecycle hook late creation silently costs.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs` (the event's single raise), `src/Game/Game/GameSystemBase.cs` (the subscription).
 
 The world keeps updating during a save load, so phases continue to run while the loading screen is up.
 
@@ -101,9 +112,11 @@ The world keeps updating during a save load, so phases continue to run while the
 The game empties it before each load, but only of its own types.
 Anything a mod leaves on an entity the game does not recognise therefore survives into the next city, and clearing it is the mod's job.
 `save-serialization` carries what that costs.
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the world's one creation and its destruction), `src/Game/Game.Serialization/ClearSystem.cs` (the fixed component list the pre-load clear matches on).
 
 **`GameSystemBase.OnCreate` also subscribes the system to the save-loaded callback**, `OnGameLoaded(Context)`, which fires once after the whole `Deserialize` phase has run and carries the load context.
-Like `OnWorldReady` it needs no phase registration — and like it, both guards apply: the subscription happens only for the default world, and only if `base.OnCreate()` is called.
+Like `OnWorldReady` it needs no phase registration — and unlike it, both guards apply: the subscription happens only for the default world, and only if `base.OnCreate()` is called, where the world-ready subscription carries the `base.OnCreate()` guard alone.
+Source: `src/Game/Game/GameSystemBase.cs` (the guarded subscription), `src/Game/Game.Serialization/LoadGameSystem.cs` (the single raise after the phase).
 
 **A playset or mod-status change re-runs the registration and load pass mid-session, and that pass only ever adds.**
 A mod is loaded only while its state is still unknown, so one already loaded is skipped rather than disposed and loaded again: enabling a mod mid-session runs its `OnLoad` for the first time without a restart, while disabling one leaves it loaded and pushes the "restart required" notification instead.
@@ -112,6 +125,7 @@ What varies is where in the boot sequence it lands, and on that path it lands pa
 The first consequence still holds — vanilla is registered either way, and a mod can still only append.
 **A system created on that path misses `OnWorldReady` permanently**, because the event is raised once at boot and never again, so a mod that puts one-shot setup there does nothing at all when the player enables it without restarting.
 Put that setup somewhere that fires per load instead.
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the re-initialisation trigger and the restart path), `src/Game/Game.Modding/ModManager.cs` (the state transfer that skips an already-loaded mod).
 
 ## Ordering is imperative, and the stock ECS ordering attributes do nothing here
 
@@ -122,6 +136,7 @@ The reason is structural rather than a matter of policy.
 Those attributes are consumed by the sorter that orders the members of a component system group, and this game creates no system group.
 It does not run the default world initialisation that would build them; it constructs a bare world and adds four systems to it by hand, then registers every other system imperatively.
 The clearest demonstration is in the game's own code: a stock ECS system that carries `[UpdateInGroup(typeof(InitializationSystemGroup))]` is registered by the game with an explicit `UpdateBefore` call into a phase, and the attribute on it changes nothing.
+Source: `src/Unity.Entities.Hybrid/Unity.Entities/UpdateWorldTimeSystem.cs` (the attribute), `src/Game/Game.Common/SystemOrder.cs` (the registration that overrides it).
 
 So an attribute on a mod's system is silent decoration at best.
 At worst it is a lie in the source: an attribute can state a relation that the imperative registration inverts, and the registration wins every time.
@@ -129,10 +144,12 @@ An agent arriving from stock ECS should read those three as inert and reach for 
 `[RequireMatchingQueriesForUpdate]` is read off the system type when the system is created and still gates `OnUpdate` — for a system that requires no query of its own, since an explicit `RequireForUpdate` is answered first and the attribute never consulted.
 Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`.
 
-## The five registration methods and the three bands
+## The registration methods and the three bands
 
-`UpdateSystem` exposes exactly five registration methods, and nothing else registers a system for updating.
+`UpdateSystem` exposes five phase-registration methods, and nothing else registers a system into a phase.
 There is no unregister method; registration is one-way for the session.
+**A GPU system takes a sixth call _as well as_ one of the five, not instead of one.** `RegisterGPUSystem` — a generic overload and one taking the instance — drives `IGPUSystem.OnSimulateGPU` off the render pipeline's begin-frame event, which no phase method reaches; and it registers nothing into a phase, so a system that takes only it never gets an `OnUpdate`. Either omission is silent. The game's one GPU system, its water simulation, takes both: the phase registration for its CPU half and the GPU one for its compute pass.
+Source: `src/Game/Game/UpdateSystem.cs` (the two overloads and the begin-frame drive), `src/Game/Game.Common/SystemOrder.cs` (the water system's two registrations).
 
 | Method | Effect |
 | --- | --- |
@@ -152,15 +169,19 @@ Three rules follow, and they are the ones to act on.
    The offsets are far larger than the registration counter ever reaches — vanilla makes on the order of a thousand registrations in total — so the bands never interleave: every `UpdateBefore` in a phase runs before every `UpdateAt`, and every `UpdateAt` before every `UpdateAfter`.
    Choosing among the three chooses a band within one phase, and only that.
    (VOLATILE: the ±1,000,000 band offset, and the `AllowBarrier` and `ModificationBarrierN` type names below — `UpdateSystem`'s registration methods, and the vanilla system-order class.)
+   Source: `src/Game/Game/UpdateSystem.cs`.
 2. **Within a band, registration order is execution order.**
    The index is a plain counter and is the only tiebreak after phase, so two systems a mod registers with `UpdateAt` into the same phase run in the order the `OnLoad` body calls them.
+   Source: `src/Game/Game/UpdateSystem.cs`.
 3. **A mod always registers after all of vanilla**, because the vanilla registration pass is step 3 of boot and `OnLoad` is step 4.
    So a mod's `UpdateAt` lands after every vanilla `UpdateAt` in that phase; its `UpdateBefore` lands after every vanilla `UpdateBefore` but ahead of all vanilla `UpdateAt`; its `UpdateAfter` lands after everything.
    Short of anchoring, that is the entire lever.
+   Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 
 Two vanilla arrangements make rule 3 concrete.
 Each modification phase is bracketed by an allow-barrier registration in the front band and the matching barrier in the back band, so a mod's `UpdateBefore` there sits between the allow-barrier and vanilla's first `UpdateAt`, and its `UpdateAfter` sits after the barrier has played back its command buffer.
 The `Deserialize` phase uses all three bands as a designed sandwich: pre-deserialize wrappers in front, readers and migrations in the middle, post-deserialize wrappers behind.
+Source: `src/Game/Game.Common/SystemOrder.cs`.
 The barriers and the command-buffer contract belong to `ecs-in-this-game`.
 
 ## Anchoring to a named system
@@ -175,6 +196,7 @@ Past a hundred levels of nesting the rebuild throws `Too deep system order`.
 The splice is conditional on a phase match: the anchored system is only consumed when the anchor turns out to be registered in the phase that was passed.
 The rebuild walks the registered systems and never enumerates the pending anchors on their own, so if the anchor is not registered in that phase — wrong phase, or a type nothing ever registers — the system goes into a dictionary and **never runs**.
 No exception, no log line, no symptom other than absence.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 So the anchor's phase is not optional context: pass the phase the vanilla system is actually registered in.
 Anchoring's failure is the hardest one in this reference to diagnose from a log, because there is nothing in the log.
@@ -183,6 +205,7 @@ Anchoring's failure is the hardest one in this reference to diagnose from a log,
 
 There are 32 update phases.
 Their declaration order in the enum is **not** their execution order — the ordinal is used only to index the update system's per-phase ranges and carries no timing meaning.
+Source: `src/Game/Game/SystemUpdatePhase.cs` (the declaration), `src/Game/Game/UpdateSystem.cs` (the only use the ordinal is put to).
 
 The real structure is a tree.
 Only the game manager sits on the engine's own update callbacks; every other phase is driven from inside some system's `OnUpdate`, which is what makes the nesting.
@@ -245,21 +268,26 @@ engine LateUpdate()  →  GameManager.LateUpdate()
 ```
 
 (VOLATILE: the driver system names in this tree — the vanilla system-order class, and the systems that drive a phase from their own `OnUpdate`.)
+Source: `src/Game/Game.Common/SystemOrder.cs` (where each driver itself runs), `src/Game/Game.SceneFlow/GameManager.cs` (the four drives nested inside no system's update).
 
 Four consequences a reader needs before choosing a phase:
 
 - **Everything in `MainLoop` — modification, tools, UI, rendering — runs before the simulation for that frame**, because the simulation phases hang off a system in `LateUpdate`.
   A `GameSimulation` system therefore sees the world as the modification phases left it, and its own output is first observed by the _next_ frame's modification phases.
   A mod that writes in `GameSimulation` and reads in `Modification4` is reading data one frame old, by design and unavoidably.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs` (the two engine callbacks), `src/Game/Game.Simulation/SimulationSystem.cs` (the simulation drives hanging off the later one).
 - **`GameSimulation` runs a variable number of times per rendered frame, including zero.**
   The step count is clamped to 0–8 from the selected game speed; `PreSimulation` and `PostSimulation` still run exactly once per frame even at zero steps.
   `GameSimulation` and `EditorSimulation` are each gated on the current action mode, and both can be skipped entirely.
   What a simulation step is worth in game time belongs to `simulation-time-and-units`.
+  Source: `src/Game/Game.Simulation/SimulationSystem.cs`.
 - **`Deserialize` and `Serialize` fire once per load and once per save, not per frame.**
   Their driving systems are disabled by default and flipped on for a single run.
   Several other phases are conditional on their driver's own state as well — the two simulation phases on the action mode, `LoadSimulation` on a loading counter, and `ClearTool` and `ApplyTool` on the tool system's apply mode, which selects at most one of the two.
   A phase whose driver runs is not thereby a phase that runs, so check the driver before sizing per-update work.
+  Source: `src/Game/Game.Serialization/LoadGameSystem.cs` and `src/Game/Game.Serialization/SaveGameSystem.cs` (the default-disabled drivers), `src/Game/Game.Simulation/SimulationSystem.cs` and `src/Game/Game.Tools/ToolOutputSystem.cs` (the other conditional drives).
 - **`PrefabReferences` is reached from two different parents**, inside `Deserialize` and inside `Serialize`, so a system registered there runs in both directions of the save pipeline.
+  Source: `src/Game/Game.Serialization/ResolvePrefabsSystem.cs`, `src/Game/Game.Serialization/BeginPrefabSerializationSystem.cs`.
 
 ## Choosing a phase
 
@@ -278,6 +306,7 @@ Read [the phase catalogue](phase-catalogue.md) for what characterises each of th
 **There is no window between two phases**, whatever a placement written as "after `PrefabUpdate` and before `PrefabReferences`" suggests.
 The five methods above each name exactly one phase, and `PrefabReferences` is reached only from inside `Deserialize` and `Serialize`, so it bounds nothing during play.
 Registering one system into both phases with two calls is a real technique, but it is two registrations rather than a span.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 ## The update interval, and the two halves of the rule
 
@@ -288,12 +317,14 @@ Both halves of the following matter, and either alone is unusable.
 The update system throws `System update interval not power of 2` while registering the system — that is, inside the `UpdateAt<T>` call in `OnLoad`.
 The exception propagates out of `OnLoad` and is caught by the mod manager, which fails the **entire mod** rather than the offending system.
 A returned interval of 10 is therefore not a slow system; it is a mod that does not load.
+Source: `src/Game/Game/UpdateSystem.cs` (the check inside the registration call), `src/Game/Game.Modding/ModManager.cs` (the catch that fails the mod).
 
 **The interval itself is consulted in only three phases.**
 Only `UpdateSystem.Update(phase, updateIndex, iterationIndex)` gates on the interval and offset, and it reads them from the values cached at registration rather than by calling `GetUpdateInterval` again.
 `SimulationSystem` is that overload's only caller, at three sites — `LoadSimulation` from its loading-progress step, `EditorSimulation` and `GameSimulation` from its own update.
 A `GetUpdateInterval` override on a system registered in any other phase — `UIUpdate`, `Cleanup`, a modification phase — **has no effect at all**, and the system runs every time its phase runs.
 The game itself ships such a dead override, and this is a common mistake: a mod that "throttles" a UI system with an interval has throttled nothing.
+Source: `src/Game/Game/UpdateSystem.cs` (the gate and the cached values), `src/Game/Game.Simulation/SimulationSystem.cs` (its only three calls), `src/Game/Game.Audio/WeatherAudioSystem.cs` (the shipped dead override).
 
 Where a system is registered into more than one phase, branch the override on the `phase` argument rather than returning one constant.
 That follows from the gate above rather than from vanilla practice, which is not consistent here.
@@ -304,15 +335,18 @@ Returning an explicit offset opts out of that spreading, and out of the inherita
 **In the three phases that honour an interval, an explicit offset must fall inside `[0, interval)`.**
 The gate compares it against the frame index masked by the interval, so a value at or above the interval can never match and the system never runs at all, with nothing logged — which is what a fork does to itself by shortening its interval and keeping an offset copied from the original.
 Elsewhere the offset is never consulted, so an out-of-range one there is inert rather than fatal, and a system that does not run has some other cause.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 The vanilla idiom, and the one to copy: declare `public static readonly int kUpdatesPerDay = <n>` and return `262144 / kUpdatesPerDay`, where 262144 is the number of simulation frames in an in-game day.
 That 262144 is declared as `TimeSystem.kTicksPerDay`, and `navigating-the-decompile` uses this very constant to show why searching for the name finds none of its uses.
 A system that splits its entity set across sub-frames returns `262144 / (kUpdatesPerDay * groupCount)` and pairs it with `SimulationUtils.GetUpdateFrame(frameIndex, updatesPerDay, groupCount)`, which computes the sub-frame the current frame belongs to.
 **Take that group count off the system you are forking**, which varies by family; assuming a value is how a fork silently mis-covers its set, and `ecs-in-this-game`'s bucketing sibling owns where to read it and what makes it hard to see.
 What that cadence is worth in simulated time is `simulation-time-and-units`.
+Source: `src/Game/Game.Simulation/TimeSystem.cs` (the frames-per-day constant), `src/Game/Game.Simulation/SimulationUtils.cs` (the sub-frame helper's signature).
 
 A system the interval gate lets run has its job dependency reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a system the gate skips is not reset that iteration.
 This is where the interval interacts with `performance-and-memory`.
+Source: `src/Game/Game/UpdateSystem.cs` (the reset's gate and its position), `src/Game/Game/GameSystemBase.cs` (what the reset does).
 
 (VOLATILE: the gate's mask arithmetic — `UpdateSystem`. Which phases honour an interval — `SimulationSystem`, whose calls into that gate are the whole list. The frames-per-day constant — `TimeSystem`. The interval and offset defaults — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The sub-frame helper's signature — `SimulationUtils`.)
 
@@ -329,21 +363,28 @@ This is where the interval interacts with `performance-and-memory`.
 | `OnGameLoadingComplete(Purpose, GameMode)` | `<TypeName>: Error on state change, disabling system...` | **no** |
 | `OnFocusChanged(bool)` | `<TypeName>: Error on Focus change` | no |
 
+Source: `src/Game/Game/GameSystemBase.cs`.
+
 Two things in that table are the payload.
 
 - **`OnGameLoadingComplete` says "disabling system..." and does not disable the system.**
   A reader diagnosing from the log message alone draws the wrong conclusion: the system is still running, and whatever it left half-initialised is still running with it.
+  Source: `src/Game/Game/GameSystemBase.cs`.
 - **`OnWorldReady` and `OnGamePreload` emit the identical message**, both reading "Error on game preload".
   The log cannot distinguish which of the two threw; the stack trace in the logged exception is the only way to tell them apart.
+  Source: `src/Game/Game/GameSystemBase.cs`.
 
 All five log through the system base's own logger, named `SceneFlow` — **not** the mod's logger, which is where a mod author looks first and finds nothing.
+Source: `src/Colossal.Core/Colossal.Entities/COSystemBase.cs`.
 
 `OnCreate` and `OnUpdate` are covered by neither mechanism, and each fails a third way.
 
 - **A throw out of a system's `OnCreate` kills the whole mod.**
   The ECS catches it, removes the half-built system from the world, and rethrows; the throw propagates out of the system-creation call inside `UpdateAt<T>`, out of `OnLoad`, and into the mod manager, which disposes the mod and logs `Error initializing mod {0} ({1})`.
+  Source: `src/Unity.Entities/Unity.Entities/World.cs` (the removal and the rethrow), `src/Game/Game.Modding/ModManager.cs` (the catch, the dispose and the message).
 - **A throw out of `OnUpdate` disables nothing and repeats forever.**
   The update system wraps each system's update and logs `System update error during {0}->{1}:` with the phase and the system type at `Critical`, then continues to the next system; the throwing system runs again next frame, and logs again, every frame.
+  Source: `src/Game/Game/UpdateSystem.cs`.
 
 So there are four distinct failure surfaces, and the disable is exactly one of them:
 
@@ -359,6 +400,7 @@ The loader's own logger has its errors suppressed from the UI, and the mod's sta
 The five hook wrappers log through the `SceneFlow` logger instead, whose errors are not suppressed, so each of them pops the game's modal error dialog and pauses the simulation.
 `OnUpdate` does the same every frame in a normal game session.
 The one exception is the game's own map and asset editor, where the update wrapper suppresses the flag around that call.
+Source: `src/Game/Game.Modding/ModManager.cs` (the suppressed loader logger and the overwritten state), `src/Colossal.Core/Colossal.Entities/COSystemBase.cs` (the logger the hook wrappers use instead), `src/Game/Game/UpdateSystem.cs` (the editor-only suppression).
 
 Reading those log files, and what reaches the player, is `diagnostics`.
 
@@ -369,6 +411,7 @@ Reading those log files, and what reaches the player, is `diagnostics`.
 Setting `Enabled = false` on a system does not unregister it.
 The update still runs, skips `OnUpdate`, and the system stays in the phase's run.
 **That is what makes the substitution pattern work: a disabled system is still a valid anchor.**
+Source: `src/Unity.Entities/Unity.Entities/SystemBase.cs` (the skipped update), `src/Game/Game/UpdateSystem.cs` (the system staying in the phase's run).
 
 **`OnStopRunning` is a transition rather than a consequence of the flag**, so disabling a vanilla system does not reliably run its teardown.
 It fires on the next update and only if the system had already run once, which on the boot path it has not: `OnLoad` is step 4 and nothing has ticked yet, so the hook never runs.
@@ -388,23 +431,28 @@ public void OnLoad(UpdateSystem updateSystem)
 
 The fork lands in the dead original's exact slot, and stays there if a game update moves the original within the phase.
 Pass the phase the original is registered in, and note what a mismatch costs here: an anchored system reaches the update list only through its anchor, so naming the wrong phase leaves the fork created, enabled and never updated at all — worse than a wrong frame, and just as quiet.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 **To run on the frames the original ran on: match its interval, anchor the registration, and leave the offset alone.**
 The anchoring is what earns the third: a system registered with the two-type overload takes its anchor's **resolved** offset, which works whether the original declares one or was handed one by the spreading.
 Overriding `GetUpdateOffset` cancels that copy — any value at or above zero does, including zero — and so does returning an interval that differs from the original's.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 Details that bite:
 
 - `GetOrCreateSystemManaged` **creates** the system when it is missing, so a mistyped or never-registered type yields a live-but-never-updated system rather than an error.
   Reaching it through the `World` on the `OnLoad` parameter needs no extra import; the default injection world is the same object.
+  Source: `src/Unity.Entities/Unity.Entities/World.cs` (the create-if-missing fallback), `src/Game/Game.SceneFlow/GameManager.cs` (the world it assigns as the default injection world).
 - **Which anchoring overload you pick is only about position.**
   `UpdateAfter<Fork, Original>` inherits the offset identically; the choice between the two is only about which side of the original the fork sits on.
   Register with the single-type `UpdateAt<Fork>` instead and there is no anchor: the fork is queued for the spreading and gets an arbitrary frame, unless its interval is 1, where the offset is forced to zero and it simply runs every frame.
   The spreading is computed per phase, so what moves that frame is another system registering into the fork's own phase, not any registration anywhere.
   The offset the spreading actually assigned lives in the update system's own table, which nothing public reads, so an unanchored fork's frame cannot be recovered at all.
+  Source: `src/Game/Game/UpdateSystem.cs`.
 - **Read the original's declared numbers through `UpdateSystem.GetInterval(system, phase, out interval, out offset)`**, which is public, static, and takes any `ComponentSystemBase` — where `GetUpdateOffset` is declared on `GameSystemBase` alone and does not compile against the rest.
   **It reports what the system declares, and an offset the system never declared comes back as `-1`** — the interval defaults to 1 instead, so the two have different tells.
   It also runs the power-of-two check, so calling it on a system with a bad interval throws in your frame rather than reporting.
+  Source: `src/Game/Game/UpdateSystem.cs` (the method and its defaults), `src/Game/Game/GameSystemBase.cs` (where the two overridables are declared).
 
 (VOLATILE: `GetInterval`'s signature, the five registration methods and which of them take an anchor — `UpdateSystem`.)
 
@@ -414,6 +462,7 @@ Where the change is a behaviour inside a method rather than a whole system, `pat
 **Registration is not confined to `OnLoad`.**
 Calling any of the five methods later — from a deferred callback, or from a system's own `OnCreate` — works: registration marks the update system dirty and the next update of that phase rebuilds every phase's ranges from scratch.
 That is the escape hatch for anything that cannot be decided during `OnLoad`, including anything conditional on another mod being present; `mod-compatibility` owns the detection side.
+Source: `src/Game/Game/UpdateSystem.cs`.
 
 ## Deferring work until the mod manager has settled
 
@@ -427,10 +476,12 @@ The main-thread dispatcher is the mechanism, and it has four shapes with differe
 | `WaitXFrames(int)` | returns a task completing after N ticks |
 
 The tick sits in the frame update **outside** the guard that stops the world, so deferred work runs even while the world is not updating.
+Source: `src/Colossal.Core/Colossal.Core/MainThreadDispatcher.cs` (the four shapes), `src/Game/Game.SceneFlow/GameManager.cs` (where the tick sits relative to the guard).
 
 Reach for it when the work needs a world that `OnLoad` has not finished building.
 Adding a UI module through the mod manager is the hard case: the call is gated on the manager having finished initialising, and that gate is a **silent no-op rather than a throw**, so a call from inside `OnLoad` registers nothing and reports nothing.
 It has to be deferred.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 The same applies to reflecting over a vanilla system's private state, to registering with another mod's API, and to marshalling prefab registration back to the main thread from a background import.
 
 ## The pre-deserialize hook and its siblings
@@ -442,6 +493,7 @@ Three generic wrapper systems exist, each forwarding to one method on the wrappe
 - `PreSerialize<T>`, with `IPreSerialize`.
 
 There is no `PostSerialize<T>`: the far side of the writer is reached by an ordinary `UpdateAfter` registration in the `Serialize` phase instead.
+Source: `src/Game/Game.Serialization/PreDeserialize.cs` and its siblings in that directory.
 
 **The wrapper is what gets registered, not the wrapped system:**
 
@@ -452,6 +504,7 @@ updateSystem.UpdateBefore<PreDeserialize<MySystem>>(SystemUpdatePhase.Deserializ
 Vanilla registers 57 `PreDeserialize<T>` in the front band of `Deserialize`, and the first nine state the pattern's purpose plainly — the six spatial search systems, the instance counter and two pathfinding systems: **clear a mod's own index, cache or spatial tree before the loader starts writing entities into it.**
 Any mod holding a quadtree or a lookup keyed by entity wants this, and wants it in the front band so it runs before the readers.
 (VOLATILE: the count of vanilla `PreDeserialize<T>` registrations — the vanilla system-order class.)
+Source: `src/Game/Game.Common/SystemOrder.cs`.
 
 The `Deserialize` phase cannot host everything that looks like it belongs there.
 A migration that needs data another phase produces — network compositions, for instance — has to be registered into the modification phase that produces it instead, anchored before whichever system consumes it.
@@ -463,15 +516,18 @@ What goes inside any of those methods is `save-serialization`.
 A system that lands in a vanilla collection which is itself pumped does not get registered with the update system at all.
 The info-section base classes are the case in point: create the system with `GetOrCreateSystemManaged` and then call the selected-info UI system's public add-section method yourself, after which that system drives your section from its own update and the phase question does not arise.
 The base class does not do this for you — its `OnCreate` caches the UI system and registers nothing, and the vanilla sections reach the panel through a hard-coded list your section is not on.
+Source: `src/Game/Game.UI.InGame/InfoSectionBase.cs` (what the base's `OnCreate` does), `src/Game/Game.UI.InGame/SelectedInfoUISystem.cs` (the add method, the vanilla list and the pumping).
 
 **Ask what kind of collection the base joins, not merely whether it joins one.**
 A collection that is pumped replaces a phase registration; a collection that is only a lookup does not.
 The tool base class is the trap here: it appends every tool to the tool system's list from `OnCreate`, but that list decides prefab claim order alone, so a tool still has to be registered into `ToolUpdate` or its `OnUpdate` never runs.
+Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the append), `src/Game/Game.Tools/ToolSystem.cs` (the list's only reader).
 
 ## `OnDispose` hygiene
 
 `OnDispose` is called on every `IMod` instance at shutdown, **and on a mod whose `OnLoad` threw**, at whatever point it got to.
 So every null guard in an `OnDispose` body is load-bearing rather than defensive style: the fields it reaches for may never have been assigned.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 
 What belongs there:
 
@@ -485,7 +541,7 @@ What belongs there:
 - **Undo anything registered outside the mod's own world** — a UI host location, a temporary directory, an entry in another mod's registry.
 
 What does not belong there: unregistering systems.
-Neither `IMod` nor the update system offers a way to, and the five registration methods are the complete surface.
+Neither `IMod` nor the update system offers a way to, and registration — the five phase methods plus the GPU pair — is one-way.
 A mod's systems live until the world does, and the world outlives `OnDispose`: the mod manager disposes every mod before the world is destroyed, so whatever an `OnDispose` body reaches for is still there.
 The systems then come down in reverse creation order, so a mod's — created in `OnLoad`, after the vanilla registration pass — come down ahead of every vanilla system that pass created; the few the game creates lazily afterwards, from a camera `MonoBehaviour` or on the first save load, are already gone by then.
 The system lookup does not say so: it is cleared only after every `OnDestroy` has run, so an existing-only lookup during teardown still hands back a system whose own teardown is finished.

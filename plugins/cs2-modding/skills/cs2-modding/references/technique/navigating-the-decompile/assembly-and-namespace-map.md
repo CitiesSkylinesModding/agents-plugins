@@ -36,6 +36,7 @@ The rest is a grab-bag — a vendored shell-exec library, a command-line option 
 
 **Too big to read whole — search inside them.**
 `Game.Prefabs` by a wide margin, then `Game.Simulation`, `Game.UI.InGame`, `Game.Rendering`, `Game.Net`, `Game.UI.Widgets`, `Game.Buildings`, `Game.UI.Editor` and `Game.Tools`.
+Source: `src/Game/`.
 
 **Every other directory here you can list and skim**, from `Game.Vehicles` and `Game.Citizens` down to the single-file ones.
 `navigating-the-decompile` owns the non-`Game` namespaces that also live in this assembly, and the codegen files worth excluding from a search.
@@ -43,6 +44,8 @@ The rest is a grab-bag — a vendored shell-exec library, a command-line option 
 **A subject that sounds like a sub-area usually has its own directory, dots and all.**
 `Game.Simulation.Flow`, `Game.Serialization.DataMigration`, `Game.Prefabs.Effects` and `Game.Rendering.Utilities` are siblings of their parents rather than folders inside them, and each is small.
 So run `ls src/Game` before searching one of the nine: the directory that owns your subject may be a hundredth of the size of the one you were about to grep.
+Source: `src/Game/Game.Simulation.Flow/`, `src/Game/Game.Serialization.DataMigration/`, `src/Game/Game.Prefabs.Effects/`, `src/Game/Game.Rendering.Utilities/`.
 
 **Ten files sit at the assembly root**, in `src/Game/*.cs` with no namespace directory: three codegen artifacts, plus `DayNightCycleData.cs`, `DebugCamera.cs`, `DepthFadePass.cs`, `GameModeSettingData.cs`, `ShowIfAttribute.cs`, `UberZOrdererTest.cs` and `VTTestGameManager.cs`.
 A `src/*/*/…` glob never sees them.
+Source: `src/Game/`.

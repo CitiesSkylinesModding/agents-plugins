@@ -24,8 +24,10 @@ Where a system overrides the offset and its family's prefabs pin one index, that
 Not every member of a pinned family overrides it, so a pin does not promise an offset.
 An absent offset override is -1, which resolves to 0 at interval 1 and to an arbitrary slot above it, so a fork declaring neither override runs every frame rather than landing anywhere in particular.
 The bucket itself is read from whatever declares the pin — the prefab class, or one of the component types offered under its component menu — and never from the offset.
+Source: `src/Game/Game/GameSystemBase.cs` (the two virtuals, their phase argument and their defaults), `src/Game/Game/UpdateSystem.cs` (the gate, and where an absent offset resolves), `src/Game/Game.Prefabs/UpdateFrameData.cs` (the pin the bucket is read from).
 
 **Where none of the three fits and the system writes no index either, the interval and offset are the whole answer**: the system is not bucketed at all, it simply runs on the frames the gate selects, and neither step below applies to it.
+Source: `src/Game/Game/UpdateSystem.cs` (the gate that selects those frames).
 
 ## Then check which clock feeds it
 
@@ -42,6 +44,7 @@ Service requests are not one of those: `ServiceRequestSystem` stamps a request w
 The dispatch systems then read that same shared component and gate on the matching modulus, so **for a request family the dispatch count _is_ the bucket count**.
 Carrying sixteen over to a fork of a four- or eight-count family visits each request a quarter or a half as often; carrying it to a fork of a thirty-two-count family leaves buckets sixteen through thirty-one matching nothing, so half that family's requests are never served at all.
 Neither is logged.
+Source: `src/Game/Game.Simulation/SimulationUtils.cs` (the two constant families), `src/Game/Game.Simulation/UpdateGroupSystem.cs` (the nine group arrays), `src/Game/Game.Simulation/ServiceRequestSystem.cs` (the bucket drawn against the request group's own count field).
 
 A search for either constant's name finds none of its consumers — a compile-time constant is inlined at every use, which `navigating-the-decompile` explains — and at the request write the count arrives through the component field, so even a value search lands on the `new RequestGroup(…)` construction sites rather than the write.
 
@@ -50,6 +53,7 @@ An `&` mask is one less than the count and a `%` modulus is the count itself, bu
 The moving-object systems compute a four-entry interpolation ring slot from the same frame index in the same shapes, and `CarMoveSystem` puts a bucket and a ring slot on adjacent lines.
 Where the masked value is a frame index minus a bucket index rather than a bucket index, it is neither.
 `SimulationUtils` keeps the interpolation, dispatch and update constants side by side, so a literal matches the wrong entry readily.
+Source: `src/Game/Game.Simulation/CarMoveSystem.cs` (a bucket and a ring slot on adjacent lines) and `src/Game/Game.Simulation/SimulationUtils.cs` (the three constant families in one block).
 
 Where a system calls `SimulationUtils.GetUpdateFrameWithInterval(frameIndex, interval, groupCount)` the count is an argument you can read; `GetUpdateFrame(frameIndex, updatesPerDay, groupCount)` substitutes `262144 / (updatesPerDay * groupCount)` for the interval and is otherwise the same function, so which of the two a system calls says nothing about its behaviour.
 That `interval` argument is commonly the system's own `GetUpdateInterval`, so a fork that copies the job without the override runs many times too often, with nothing logged.
@@ -57,10 +61,12 @@ That `interval` argument is commonly the system's own `GetUpdateInterval`, so a 
 ## Two things bite after that
 
 - **The shift or divisor beside the mask is the cadence, and it is a separate number.** `frameIndex & 0xF` and `(frameIndex >> 2) % 16` both partition into sixteen, over periods of sixteen frames and sixty-four.
+  Source: `src/Game/Game.Simulation/SimulationUtils.cs` (`GetUpdateFrameWithInterval`, where the divisor and the mask are separate arguments).
 - **A system may visit only some of its buckets, and what it serves pins itself to those.**
   `AnimalMoveSystem` computes an index over sixteen and acts on three, and the pin is not on the prefab class at all: the animal prefab adds no `UpdateFrameData`, and the `Pet`, `Domesticated` and `Wildlife` component types offered under its component menu each supply one naming one of the three gated buckets.
   Attach none and the instance takes a load-balanced index the gate never selects, so it never moves, with nothing logged.
   Dropping the gate instead costs little, since the buckets it skips are empty within that query — but the same gate repeats in the systems that navigate that family, and one copy of it guards a call rather than a query, so dropping it in one place leaves the entity served by some of its systems and not the others.
+  Source: `src/Game/Game.Simulation/AnimalMoveSystem.cs` and `src/Game/Game.Simulation/AnimalNavigationSystem.cs` (the gate, and the copies that guard a call), `src/Game/Game.Prefabs/Pet.cs`, `src/Game/Game.Prefabs/Domesticated.cs` and `src/Game/Game.Prefabs/Wildlife.cs` (the three pins), `src/Game/Game.Prefabs/AnimalPrefab.cs` (which declares none).
 
 Copy the original's form rather than converting between the two, and carry the index and the count these steps established across with it — the form is the only part a fork inherits for free.
 What a bucket is worth in simulated time belongs to `simulation-time-and-units`.

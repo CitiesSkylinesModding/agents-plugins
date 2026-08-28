@@ -10,6 +10,7 @@ What a mod does about the other mods loaded beside it: surviving what it shares 
 Helping a player pick or troubleshoot their own mod list is not this plugin's subject; everything below is code a mod ships.
 
 One structural fact sits under all of it: **a compile-time reference on another mod makes your own mod refuse to load whenever that mod is absent**, so every technique here is a way to get the benefit of one without the coupling.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (an unresolved reference), `src/Game/Game.Modding/ModManager.cs` (the state that stops the load).
 
 Where mod-to-mod interaction shows up in the simulation itself:
 `roads-and-traffic` — several mods write the same network components, and more than one takes over the vanilla lane system, so "which vanilla system does this mod replace" is the question that decides whether two of them can be loaded together at all.
@@ -40,8 +41,9 @@ It bites on a mid-session re-initialization, where a copy already in the process
 
 **For a library your mod ships, this is silent.**
 Reference resolution looks in your own mod folder first and then loads whichever copy of that name won globally anyway, so your code runs against a copy you may not have compiled against.
-Nothing is logged, no state is set, and the player sees nothing.
+No warning state is set and no notification fires — the loser is rebound to the winner and records `Loaded`, and the one log line each copy writes carries the winner's name, so nothing anywhere names the duplication.
 Nothing here is strong-named either, so the version is no part of what binds: the simple name matches, and the copy that won is the one your call sites resolve against.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (the grouping, the winner, and the reference resolved from your own folder), `src/Game/Game.Modding/ModManager.cs` (the states a duplicated library never reaches).
 
 **From there it is ordinary .NET, and the failure is legible in one direction only.**
 A member that moved or went away throws a missing-member exception naming it — when the calling method is first invoked, before that method's first statement, so a `try`/`catch` written around the call never gets the chance to run.
@@ -55,6 +57,7 @@ Harmony is the case that matters most, since exactly one copy is in the process 
 **For a mod assembly it is loud instead.**
 The losing mod never loads at all — the loader returns before the assembly is loaded, before the `IMod` is instantiated and before `OnLoad` — and the player gets a notification and a dialog.
 A mod whose references cannot all be resolved never loads either, with the unresolved reference names carried into the error the player sees.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 
 ## Detecting another mod at runtime
 
@@ -76,6 +79,7 @@ Registration populates it before any mod's `OnLoad` runs, so enumerating it ther
 It walks every IL assembly in the database, so the enumeration also holds the libraries mods ship, the losing copy of a duplicated name and a mod whose references did not resolve.
 `state` stays `Unknown` until that entry's own load runs, so it tells you nothing from `OnLoad`.
 Test `modInfo.isValid` — a mod that won its name — together with `asset.canBeLoaded`, one whose references all resolved.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 
 `ListModsEnabled()` filters on mods that have already loaded, and mod initialization order is the iteration order of the dictionary the manager keeps them in — so called from `OnLoad` it returns a _prefix_ of the mod set, and a mod later in that order is invisible.
 That list is two halves concatenated: every loaded assembly by its full name, and every UI module by its manifest id, which is where a UI module appears at all.
@@ -86,11 +90,13 @@ A one-shot main-thread callback registered from `OnLoad` runs on the next frame,
 The deferral is not politeness: every other route reads something another mod's load created, and from `OnLoad` that thing may not exist yet.
 It is enough for what that mod's load itself creates — its assets, its assembly, its types.
 It is not enough for a system or a registry entry, which that mod's own deferred registration may create after yours has already run, so resolve those where they are used rather than probing once and caching.
+Source: `src/Colossal.Core/Colossal.Core/MainThreadDispatcher.cs` (the one-shot), `src/Game/Game.SceneFlow/GameManager.cs` (the tick it runs on, after mod initialization).
 
 **Match the whole name, with its delimiter.**
 A full-name prefix test written without the trailing `", "` or `", Version"` also matches a mod whose name merely starts with the one you meant.
 The asset database is worse: its search filter's implicit conversion from `string` is a **case-insensitive substring** match, so asking it for `"SomeMod"` also returns `SomeModExtras`.
 Build the filter by condition with an explicit `Equals` instead.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/SearchFilter.cs`.
 
 **An assembly name is not a stable identifier.**
 It is whatever that mod's author last called the project, and a republished mod can change it, which is why a detector that has to survive a rename tries several candidate names before giving up.
@@ -98,6 +104,7 @@ Probe for the _type_ you actually need where you can, wrap the probe so a miss r
 
 **Reach another mod's type and a static, not its live `IMod` instance.**
 The manager exposes each mod's instances publicly, but a mod object is constructed without running any constructor, so no field is guaranteed set beyond what `OnLoad` wrote.
+Source: `src/Game/Game.Modding/ModManager.cs`.
 
 **Cache the answer, and know which answers are safe to cache.**
 A `static bool?` filled on first ask is the shape, so a probe that answers no is not re-run on every call.
@@ -123,6 +130,7 @@ The callback runs once, after your own load, at boot or the moment the player en
 Guard it so the registration happens once however it is reached: there is no unregister, and a second call runs the system twice in the phase.
 Let nothing throw out of the callback or out of that event handler, since neither is guarded — a throw in the dispatcher tick strands an arbitrary set of other mods' deferred work for the rest of the session and stops the game's own platform update with it.
 `mod-lifecycle-and-ordering` owns the dispatcher, that anchoring silence, and the phase bands.
+Source: `src/Game/Game/UpdateSystem.cs` (the registration forms, and where a two-type anchor is filed), `src/Colossal.Core/Colossal.Core/MainThreadDispatcher.cs` (the one-shot and the unguarded tick).
 
 ## Offering something other mods can call
 
@@ -146,10 +154,12 @@ Your assembly's own simple name is a claim in the same sense and the only one th
 `frontend-and-injection` owns the UI module registry.
 The compatibility half is one property: **`extend` and `append` wrap whatever is already at the path and therefore chain across mods, while `override` replaces an export outright and `reset` restores every override it recorded — never an added path, an SCSS class map, or an object mutated in place — stripping every other mod's recorded overrides with it.**
 `add` is not in that company: it registers a path that does not exist yet and throws when one does, so it can never take another mod's module, and it is the only call that puts a path in the registry for anything else to extend.
+Source: `Cities2_Data/Content/Game/UI/index.js` (the registry object literal, and the backup map `reset` replays).
 
 **Chaining is not composing.**
 `extend` hands your callback the current value but cannot make you render it, so a wrapper that returns an empty fragment under some condition drops vanilla and every earlier mod's wrapper on that path with it.
 Render what you were handed on every branch, and put your own condition inside that component rather than around it.
+Source: `Cities2_Data/Content/Game/UI/index.js` (`extend`'s delegation to `override`, which installs whatever the callback returned).
 
 Whenever the mod set changes the reset runs and every registrar runs again, restoring every overridden export but leaving every added path in place.
 So a registrar that calls `add` throws the second time through, and the registrars are one unguarded loop, so that throw takes every later mod's registration with it — unless the body is wrapped in its own `try`/`catch`, which confines the loss to that mod's remaining calls.
@@ -177,6 +187,7 @@ Another mod's components are in the world as soon as its assembly loaded, and a 
 The Entities package has runtime-typed reads that do, and each gives something up.
 `ArchetypeChunk.GetDynamicComponentDataArrayReinterpret<T>`, off a `DynamicComponentTypeHandle`, lets a job read the chunk — but `T` is your own mirror of the foreign struct, so you are asserting a layout you do not own, and a change to it misreads rather than throws.
 `EntityManager.Debug.GetComponentBoxed` needs no layout and costs a boxed copy per entity on the main thread: it allocates an empty instance, pins it, and copies the chunk bytes into the pinned address.
+Source: `src/Unity.Entities/Unity.Entities/EntityManager.cs` (both entry points), `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (the reinterpret, and the size checks its emitted body does not call), `src/Unity.Entities/Unity.Entities/TypeManager.cs` (the allocate-pin-copy the boxed route reaches).
 
 **Where the other mod wrote its effect into vanilla components, re-derive from those instead.**
 That is the migration a change to the foreign struct cannot break, and it holds the foreign type to what its name reliably buys.
@@ -217,39 +228,62 @@ What there is: the playset-change handler's own effects, a restart-required flag
 - **UI modules are handled live in both directions**, added and removed as the player toggles them.
 - **Prefab assets are added and removed in batches**, spread across frames.
 
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the playset-change handler), `src/Game/Game.Modding/ModManager.cs` (the re-initialization, the early return on an already-loaded mod, and the restart flag).
+
 **The event is `ParadoxModsDataSource.onAfterActivePlaysetOrModStatusChanged`**, a public `Action` raised on a playset change and a mod-status change alike; reach the data source by casting `AssetDatabase<ParadoxMods>.instance.dataSource`, which is how the game's own prefab prerequisite gets there.
 It fires after the playset handler it follows has been awaited, so a mod enabled mid-session has already run its `OnLoad` by the time your callback sees the change.
 Clear your cached answer there — but **only the mod manager and an assembly scan are safe to refill from it.**
 Those two are populated before your callback runs, and both still report a mod the player disabled but whose code is still running, which is the question a compatibility system is asking.
 A route that reads the other mod's systems or its registry entries can answer no purely because that mod's own deferred registration has not run yet — resolve those on each ask rather than caching them.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ParadoxModsDataSource.cs` (the event and where it is raised), `src/Game/Game.Prefabs/ModRequirement.cs` (the cast the game's own prefab prerequisite uses).
 
 **A disable is not a departure, and the detection routes disagree about it.**
 The mod's assets are deleted from the database before the event fires, while its assembly stays loaded and its systems keep running — so the asset-database route answers absent for a mod that is still writing components, and the mod manager, an assembly scan and a query over its own data all still answer present.
 Ask the question you mean: a compatibility system wants to know whether the other mod's code is running, not whether the player still has it ticked.
+Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ParadoxModsDataSource.cs` (the entry removal that precedes the event).
 
 The restart-required flag is the other half: `GameManager.instance.modManager.restartRequired` rises only when a loaded mod leaves the playset, never when one is enabled underneath you, so read it to know a disable the player asked for has not taken effect.
 A mod whose disabling has to have an effect has nowhere to put it, which is why the restart prompt exists.
 
 The design consequence is on the other side: **your `OnLoad` runs either at boot or the moment the player enables your mod, which can be inside a loaded city**, so detection and registration written for boot have to be correct there too.
 `mod-lifecycle-and-ordering` owns `OnLoad` and phase registration.
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the mid-session re-initialization that runs a newly enabled mod's load).
 
 ## Composing a patch with another mod's
 
 **Cross-mod patch order on a shared target is unspecified in practice.**
 Harmony sorts by priority descending and then by registration order, and registration order follows mod initialization order, which is dictionary iteration order and nobody's to control.
+Source: `src/Game/Game.Modding/ModManager.cs` (the dictionary the mods are held in, and the loop that loads them from it).
 
 **A patch that widens something and then narrows the results owns both halves or neither.**
 Record whether _you_ were the one that set the flag, and run your narrowing only in that case: a filter that runs unconditionally vetoes hits belonging to somebody else, and the symptom lands in the other mod where nobody can diagnose it.
-
-`patching` owns Harmony's vocabulary, the priority comparer and the worked ownership-flag code.
-`custom-tools` owns the raycast case, which is where this rule was learned.
+Source: `src/Game/Game.Tools/ToolRaycastSystem.cs` (the shared mask and flags both mods write), `src/Game/Game.Tools/ToolBaseSystem.cs` (the result accessors a narrowing patch vetoes through).
 
 ## Telling the player
 
 **Copy the shape the game uses for a mod that failed to load**: a notification keyed to the thing that failed, carrying a failed progress state and an `onClicked`, whose click opens a message dialog and pops the notification it came from.
 `diagnostics` owns both surfaces, what the game puts in each, and their traps — above all that a bare string reaching a dialog or a notification is read as a localization key rather than as text.
+Source: `src/Game/Game.Modding/ModManager.cs` (the notification the game pushes per failing mod, and the dialog its click opens).
 
 **A milder problem belongs on your own settings page instead**, as a warning with a button that does something about it.
 It costs the player no interruption, and it is where they are already looking when they wonder about a mod.
 
 The frontend contributes nothing here: the whole mod-loading conflict path is C#, so there is no conflict UI for a mod to extend or intercept.
+
+## What this reference hands to others
+
+`mod-lifecycle-and-ordering` owns `OnLoad`, phase registration, the deferred main-thread callback every route here waits for, and the silence a two-type anchor registers into.
+`patching` owns Harmony's vocabulary, the priority comparer and the worked ownership-flag code; this file keeps only what a shared target does to two mods at once.
+`custom-tools` owns the tool list, the procedure for taking a position in it, and the raycast case; `localization` owns the vanilla key a mod overrides for everyone.
+`save-serialization` owns the format, the interfaces and the migration machinery, and `ecs-in-this-game` the queries and component types a resolved foreign type is turned into.
+`prefabs-and-assets` owns prefab registration, and `settings-and-input` the settings mechanism — the two collisions [the namespaces nobody arbitrates](shared-namespaces.md) states from this side, beside the resource host and the notification identifier.
+`diagnostics` owns the notification and the dialog a mod reports through; `city-state-and-progression` owns `usedMods`, the only durable in-save trace of the mod set.
+`cs2-mod-project` owns the publish-time dependency declaration and the agreed Harmony version.
+`frontend-and-injection`, in the UI skill, owns the module registry this file takes only the composition property from.
+`roads-and-traffic` and `zoning-buildings-and-land-value` are where these collisions land in the simulation itself.
+
+What a reader leaves with:
+No declared dependency binds a code mod, so detection is theirs to do at runtime, every run — through the mod manager from `OnLoad`, and through everything else a frame later.
+Every global name is first-come or last-write, and the only loud one is the assembly's own, where the loser does not load at all.
+Another mod's data is reachable from a type resolved off its loaded assembly, and which posture to take toward it — replace, cooperate, coexist — is their own design decision, while the consequences are not a matter of taste.
+The mod set can change under a running process, and a disable leaves the other mod's code running while the detection routes disagree about it.

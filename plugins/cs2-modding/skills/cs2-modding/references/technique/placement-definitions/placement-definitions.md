@@ -50,10 +50,12 @@ commandBuffer.AddComponent(definition, default(Updated));
 ```
 
 No tool anywhere in the game declares a definition archetype; the only two `CreateArchetype` calls for a definition are in the simulation, and they exist for a reason covered below.
+Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`, `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Simulation/AreaSpawnSystem.cs`.
 
 **`Updated` is load-bearing and not decoration.**
 Every consumer's query requires it, and the game's cleanup system strips it from every tagged entity in the `Cleanup` phase at the end of the frame, as it does every frame-scoped tag — `ecs-in-this-game` owns that protocol and its timing.
 So a definition is visible to its consumer for exactly the frame it was created in, and a definition emitted without `Updated` is invisible to every consumer while still matching the sweep that destroys stale definitions.
+Source: `src/Game/Game.Common/CleanUpSystem.cs`, `src/Game/Game.Tools/GenerateObjectsSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 ## The kind component decides the consumer, and there are nine of them
 
@@ -83,10 +85,13 @@ Two more components ride along rather than selecting a consumer.
 **`NetCourse` is the richest kind**: two `CoursePos` endpoints plus `Bezier4x3 m_Curve`, `float2 m_Elevation`, `float m_Length` and `int m_FixedIndex`.
 `CoursePos` carries `m_Entity`, `m_Position`, `m_Rotation`, `m_Elevation`, `m_CourseDelta`, `m_SplitPosition`, `CoursePosFlags m_Flags` and `m_ParentMesh`.
 `CoursePosFlags : uint` has fifteen members — `IsFirst = 1`, `IsLast = 2`, `HalfAlign = 4`, `IsParallel = 8`, `IsRight = 0x10`, `IsLeft = 0x20`, `IsFixed = 0x40`, `FreeHeight = 0x80`, `LeftTransition = 0x100`, `RightTransition = 0x200`, `ForceElevatedNode = 0x400`, `ForceElevatedEdge = 0x800`, `DisableMerge = 0x1000`, `IsGrid = 0x2000`, `DontCreate = 0x4000`.
+Source: `src/Game/Game.Tools/NetCourse.cs`, `src/Game/Game.Tools/CoursePos.cs`, `src/Game/Game.Tools/CoursePosFlags.cs`.
 
 **`ObjectDefinition` has thirteen fields**: `m_Position`, `m_LocalPosition`, `m_Scale`, `m_Rotation`, `m_LocalRotation`, `m_Elevation`, `m_Intensity`, `m_Age`, `m_IsDecoration`, `m_ParentMesh`, `m_GroupIndex`, `m_Probability`, `m_PrefabSubIndex`.
 A hand-built one has to reproduce the non-zero defaults the vanilla producer seeds for a free-standing object: `m_Probability = 100`, `m_PrefabSubIndex = -1`, `m_Scale = 1f`, `m_Intensity = 1f`, `m_ParentMesh = -1`.
-A zeroed `m_Scale` places an object of size zero, and a zeroed `m_Probability` places nothing at all.
+A zeroed `m_Scale` places an object of size zero.
+`m_Probability` is the one to seed on faith rather than on consequence: nothing reads it off the definition on the free-standing path — the sub-object draw tests the value on the transform cache instead, and the definition's copy reaches that cache in editor mode only — so seed the vanilla `100` and do not reason from it.
+Source: `src/Game/Game.Tools/ObjectDefinition.cs`, `src/Game/Game.Tools/ObjectToolBaseSystem.cs` (the field set, and the defaults the vanilla producer seeds); `src/Game/Game.Tools/GenerateObjectsSystem.cs` (the editor-mode-only copy into the cache), `src/Game/Game.Objects/SubObjectSystem.cs` (the draw, and the cache field it reads).
 
 `ZoningFlags : uint` — `FloodFill = 1`, `Marquee = 2`, `Zone = 4`, `Dezone = 8`, `Paint = 0x10`, `Overwrite = 0x20`.
 
@@ -100,6 +105,7 @@ A zeroed `m_Scale` places an object of size zero, and a zeroed `m_Probability` p
 The consumer builds a `Temp` component for the entity it is about to create and attaches it only when the flag is absent.
 A definition without `Permanent` becomes a `Temp` preview waiting for `ApplyTool`; a definition **with** `Permanent` becomes a real, committed entity in the same pass, with no preview, no validation icon and no apply step.
 That is the flag the simulation uses, and a tool that sets it has skipped the entire tool lifecycle its user expects.
+Source: `src/Game/Game.Tools/GenerateObjectsSystem.cs`.
 
 The rest of the flags are translated by the consumer into `TempFlags` and into components on the created entity:
 
@@ -122,6 +128,7 @@ The rest of the flags are translated by the consumer into `TempFlags` and into c
 **`m_RandomSeed` outlives the definition.**
 The consumer writes `new PseudoRandomSeed((ushort)definition.m_RandomSeed)` onto the created entity whenever the original had none, so the definition's seed becomes that entity's permanent variation seed.
 Rewriting `m_RandomSeed` therefore changes what the placed thing looks like forever, not just for this frame — and reading it back is how a rewriter that substitutes prefabs keeps its own choice stable across the frames a preview survives.
+Source: `src/Game/Game.Tools/GenerateObjectsSystem.cs`.
 
 (VOLATILE: the `CreationFlags` member set and its mapping onto `TempFlags`, and the component set a consumer stacks onto the entity it creates — the creation-flags enum, and the object generation system.)
 
@@ -136,6 +143,7 @@ On the **revive** path — where the previous frame's preview entity is reused r
 When `m_Original` is non-null, the first thing the consumer does is add `Hidden` and `BatchesUpdated` to it.
 `Hidden` is a zero-size tag; the apply systems remove it on commit and the clear system removes it on discard, which `custom-tools` records from the tool side.
 So the visual illusion of moving something is a hidden original standing behind a `Temp` that stands in front of it, and both halves are decided by one `Entity` field on the definition.
+Source: `src/Game/Game.Tools/GenerateObjectsSystem.cs`, `src/Game/Game.Tools/Hidden.cs`.
 
 ## The window: emitted at `ToolUpdate`, consumed at `Modification1`
 
@@ -164,20 +172,24 @@ The rewrite window is everything between the `ToolOutputBarrier` playback and th
 **Put a definition rewriter in the front band of `Modification1`**, registered `UpdateBefore<MySystem>(SystemUpdatePhase.Modification1)`, which lands after the phase's own barrier and ahead of every vanilla `UpdateAt` in it.
 Where the rewrite concerns one kind only, splice it against that kind's consumer instead — `UpdateBefore<MySystem, GenerateZonesSystem>(SystemUpdatePhase.Modification1)` — which survives a vanilla reordering inside the phase.
 A rewriter that needs the vanilla `Temp` entities to already exist goes in a later modification phase, and reads them rather than the definitions.
+Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **The band matters more than the phase, and this is the mistake that costs a day.**
 `UpdateAt<MySystem>(SystemUpdatePhase.Modification1)` places the system after every vanilla `UpdateAt` in that phase, which means after `GenerateObjectsSystem` has already consumed everything.
 The system runs, the query matches, the writes land, and nothing changes — `mod-lifecycle-and-ordering` owns the banding rule that explains why.
+Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **Write synchronously.**
 `ModificationBarrier1` is registered `UpdateAfter` the phase, so it plays back at the **end** of `Modification1`, after every consumer has read.
 A rewrite queued into that barrier lands after the thing it meant to change was already built, so the write goes through `EntityManager` directly, or through an `EntityCommandBuffer(Allocator.Temp)` the system allocates, fills and plays back itself before returning.
 This is a hard requirement of the window rather than a stylistic preference, and it is the single fact a definition-rewriting mod most needs.
+Source: `src/Game/Game.Common/SystemOrder.cs`.
 
 **`PostTool` is the window the game's own definition rewriter uses.**
 The vanilla course-splitting system queries `{CreationDefinition, NetCourse, Updated}` at `PostTool` and rewrites those definitions through `ToolReadyBarrier`, splitting one drawn course wherever it crosses an existing node; at over four thousand lines it is the largest piece of definition-rewriting code in the game.
 The property that makes the window worth knowing is that `ToolReadyBarrier` plays back **before** the modification phases, so a rewrite queued into it lands in time — which means the rewrite can be a scheduled job rather than a main-thread loop, the one thing the `Modification1` window cannot offer.
 So a rewriter heavy enough to want a job goes here, and `Modification1` stays the default for everything else.
+Source: `src/Game/Game.Tools/CourseSplitSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 (UNVERIFIED: whether a mod system registered at `PostTool` sees the frame's definitions at all — registering one in a running game and watching its query match would settle it, and until somebody has, this window is architecture rather than a walked path.)
 
 (VOLATILE: that the `PostTool` window is still open — the game's own course-splitting system, and the tool-ready barrier's phase registration.)
@@ -203,6 +215,7 @@ Excluding `Deleted` is therefore a real decision: it leaves the simulation's own
 `Overridden` is **not** reachable on a definition entity.
 Eight sites across the tools, net, objects and areas namespaces add it, and every one of them targets a real instance or a `Temp` clone rather than a definition.
 The exclusion is inert; it is worth keeping only as documentation that the author knew the difference between a definition and a `Temp`.
+Source: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Simulation/AreaSpawnSystem.cs` (the archetypes that bake `Deleted` in); `src/Game/Game.Tools/ToolApplySystem.cs`, `src/Game/Game.Objects/OverrideSystem.cs`, `src/Game/Game.Objects/SubObjectSystem.cs`, `src/Game/Game.Net/OverrideSystem.cs`, `src/Game/Game.Net/LaneSystem.cs`, `src/Game/Game.Areas/AreaConnectionSystem.cs` (every writer of `Overridden`).
 
 The vanilla side keeps the **complement** of this query for a different purpose: `ToolBaseSystem.GetDefinitionQuery()` is `{CreationDefinition}` with `Exclude<Updated>`, matching only the stale definitions of a previous frame, which is what the sweep below consumes.
 
@@ -221,9 +234,11 @@ Read the definitions of the frame, decide, write back, in ascending order of how
 - **`CreationDefinition.m_Prefab`** changes what is built.
   Pick a different prefab per definition, seed a `Unity.Mathematics.Random` from that definition's own `m_RandomSeed` so the substitution survives the frames the preview is rebuilt across, write the definition back, and adjust the kind component to match — `ObjectDefinition.m_Age` for a tree, for instance, since the age the tool chose belonged to the prefab it thought it was placing.
   Force that seed non-zero before you construct the generator: a `Unity.Mathematics.Random` built on zero stays on zero and returns the same value from every draw for the rest of its life, and the check that would have thrown on it is compiled out of this build.
+  Source: `src/Unity.Mathematics/Unity.Mathematics/Random.cs`, `src/Game/Game.Common/RandomSeed.cs`.
 
 **Gate the rewriter on the active tool.**
 A system whose query is `{CreationDefinition, Updated}` matches every definition in the world, including the ones the simulation emits and the ones other tools draw, so the first lines of the update should return early unless the tool system's active tool is the one this rewrite is meant for, and unless that tool is in a mode that places rather than selects.
+Source: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Simulation/BuildingConstructionSystem.cs`.
 
 ## Suppressing a placement: destroy the definition, or take its `CreationDefinition` away
 
@@ -236,6 +251,7 @@ Cache the prefab entities to compare against rather than resolving them per defi
 **Strip the `CreationDefinition` and keep the rest.**
 `RemoveComponent<CreationDefinition>(definition)` leaves the kind component and its data in place while the vanilla consumer stops matching the entity, so a mod that has read what it needs out of a `Zoning` or a `NetCourse` can go on to handle the placement itself.
 Do it from a system spliced immediately before the consumer, and only on the definitions your mod actually claims, so everything else still goes down the vanilla path.
+Source: `src/Game/Game.Tools/GenerateZonesSystem.cs` (the consumer query that stops matching).
 
 Both forms depend on the synchronous-playback rule above: a removal or a destruction queued into `ModificationBarrier1` lands after the consumer has already acted on the entity.
 
@@ -243,6 +259,7 @@ Both forms depend on the synchronous-playback rule above: a removal or a destruc
 
 A tool's definition is a preview that the player may still cancel; a `Permanent` one is a commitment the emitter has already made, and the flag is what separates them.
 **Test `CreationFlags.Permanent` rather than the producing namespace**, which discriminates nothing: the simulation emits `Permanent` definitions and so does at least one system in the tools namespace, the one handling upgrades on deleted buildings.
+Source: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Tools/UpgradeDeletedSystem.cs`.
 
 Producers worth knowing, because each shows a different shape:
 
@@ -253,6 +270,7 @@ Producers worth knowing, because each shows a different shape:
 **A producer in the simulation phases gets the one-frame lifetime for free**, which is the other half of why `Permanent` is worth recognising.
 `GameSimulation` is driven from `LateUpdate`, after the frame's modification phases have already run, so a definition the simulation emits in frame _N_ is consumed at `Modification1` of frame _N+1_, still carrying `Updated`.
 The `Deleted` baked into its spawn archetype then has the cleanup system destroy it at the end of that frame: exactly one consumption, and no sweep needed.
+Source: `src/Game/Game.Common/SystemOrder.cs`, `src/Game/Game.Common/CleanUpSystem.cs`, `src/Game/Game.Simulation/ZoneSpawnSystem.cs`.
 
 So a mod that wants to change what **grows** on a lot has a seam here that has nothing to do with any tool, and a definition rewriter that does not exclude `Deleted` will find these definitions in its query.
 
@@ -277,6 +295,7 @@ Every vanilla tool does it, and `custom-tools` records where in the tool's own s
 **The default tool sweeps too, and its query is global.**
 Its definition update opens with the same `DestroyDefinitions` call against a query filtered on nothing but `CreationDefinition` and the absence of `Updated`, so the fallback tool cleans up any stale definition in the world, including one a mod left behind.
 It is the only garbage collector this mechanism has, and it only runs when the player has no other tool active.
+Source: `src/Game/Game.Tools/DefaultToolSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 The default tool is also a definition **producer**, for a purpose that is easy to miss: it emits a `CreationDefinition` carrying only `m_Original` plus `CreationFlags.Select`, or `Parent | Duplicate` for a parent, and attaches an `IconDefinition` or an `AggregateElement` buffer where the selected entity calls for one.
 That is how the selection highlight works — a `Select` definition becomes a `Temp` with `TempFlags.Select` standing in for the real entity — and it is the vanilla template for any mod that wants a temporary copy of a live entity to edit.
@@ -289,15 +308,18 @@ That is how the selection highlight works — a `Select` definition becomes a `T
 **The job's job is composition.**
 It resolves the control points into a placement, emits the definition for the object itself, and then recurses through the prefab's structure — sub-objects, sub-nets, sub-lanes, sub-areas — threading an `OwnerDefinition` down so every sub-element points at its not-yet-created parent.
 Around that walk it does placeholder resolution, attachment resolution, the lowered-parent test, the lot-clearing triangles, spreading along a bezier for line and curve modes, and brush scattering that iterates the object search tree to avoid what is already there.
+Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`.
 
 **So "vanilla-quality preview" is not about rendering — no tool renders anything.**
 It means a definition tree complete enough that the generation system produces the same `Temp` entities the vanilla tool would, which is what makes a placed building bring its own driveway, lawn and lamp posts along with it.
+Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`, `src/Game/Game.Tools/GenerateObjectsSystem.cs` (the definition tree the job emits, and the `Temp` entities the generator builds from it).
 
 A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled, after completing the handles it takes per `performance-and-memory`'s schedule-form rule — keeps and drops along a clean line.
 
 **What has to be kept** is everything driven by prefab structure: the recursive walk over sub-objects, sub-nets and sub-areas, the `OwnerDefinition` threading, placeholder variation resolution, the attached-parent resolution, the lowered-parent test, the parent-prefab check and the clear-area plumbing.
 **What can be dropped** is everything driven by tool state: brush scattering and with it the object search tree, snapping and distance, the frame delta, removal and stamping, decoration mode, the lane editor, the transform prefab — and dropping that last one means the fork never sets `CreationDefinition.m_SubPrefab` — and the attachment and service-upgrade data.
 Collapsing the vanilla `NativeList<ControlPoint>` to a single `ControlPoint` and calling the whole thing once per placed object rather than once per gesture is the other half of that trade, and the residue is a create-only, single-point, no-brush, no-snap definition producer: exactly the shape a mod needs when it owns the spacing itself.
+Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs` (the vanilla job's own members, on both sides of the line).
 
 `ControlPoint` is the input side of the seam — `m_Position`, `m_HitPosition`, `m_Direction`, `m_HitDirection`, `m_Rotation`, `m_OriginalEntity`, `m_SnapPriority`, `m_ElementIndex`, `m_CurvePosition`, `m_Elevation`, plus an `EqualsIgnoreHit` that compares with a 0.001 tolerance.
 `LocalTransformCache` is how an existing entity's `m_Probability` and `m_PrefabSubIndex` survive a rebuild, read back off the original before the new definition overwrites them.
@@ -332,6 +354,7 @@ A generator that needs the vanilla `Temp` entities to exist runs later than `Mod
 
 **Feed your validation back into the vanilla error protocol rather than replacing it**: add `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity _and_ to the `Temp`'s `m_Original`, so the vanilla apply gate blocks on your error too.
 Where the mod also wants its own feedback buffer, override `GetAllowApply()` to test that buffer's query alongside the vanilla error query — `custom-tools` owns that override from the tool side.
+Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the apply gate and the error query behind it).
 
 ## Mod-created entities need a prefab reference the load pass can resolve
 
@@ -340,20 +363,26 @@ An entity that carries a `PrefabRef` must point at a prefab entity registered th
 Every entity carrying a `PrefabRef` and not `Temp` or `Deleted` is matched by the serialization pass that remaps prefab references, and its job indexes the prefab-data lookup with the referenced entity directly — no `TryGetComponent`, no null guard, and the lookup's own has-this-component assertion compiled out of this build.
 A reference to a destroyed entity faults inside that Burst job; a reference to a live entity of your own that carries no `PrefabData` does not — it reads the head of that entity's chunk as a prefab index and carries the garbage into the load's arrays, which is the worse of the two.
 The pre-deserialize hook is the last place a mod can register a prefab before that pass runs, which is why registration goes there and not in `OnLoad` or in a system's `OnCreate`.
+Source: `src/Game/Game.Serialization/PrimaryPrefabReferencesSystem.cs`, `src/Game/Game.Serialization/PrefabReferences.cs`; `src/Unity.Entities/Unity.Entities/ComponentLookup.cs`, `src/Unity.Entities/Unity.Entities/LookupCache.cs` (the assertion this build compiles out, and what the read returns instead).
 
 **The practice built on it.**
 A mod whose own entities have no natural prefab gives them one: an empty `PrefabBase` subclass with no fields and no behaviour, whose two archetype hooks add a single marker component of the mod's own to the prefab entity and to the instance archetype.
 It is instantiated with `ScriptableObject.CreateInstance<T>()` in the pre-deserialize hook, named with the mod's own prefix, marked active, handed to `PrefabSystem.AddPrefab`, and its entity cached in a static field; that entity is then stamped as `PrefabRef` onto every entity the mod creates — at generate time, at apply time, and again in a load-time repair pass that adds one to any entity found without it and corrects any that points elsewhere.
+Source: `src/Game/Game.Prefabs/PrefabBase.cs` (the two hooks a content-free subclass overrides), `src/Game/Game.Prefabs/PrefabSystem.cs`.
 
 The practice reaches further than the rule, and it earns the reach: the rule binds an entity that already carries a `PrefabRef`, and the practice gives one to entities that might have gone without.
 
-**An entity with no `PrefabRef` costs nothing while the game runs and kills the process at the next world transition.**
+**An entity carrying no `PrefabRef` — and nothing else the world teardown looks for — costs nothing while the game runs and outlives the next world transition, which is where it goes wrong.**
 Stripping the component off a live sub-object disturbs nothing at runtime — no exception, no stall, the simulation ticks on and the entity keeps working — and the save writes normally.
 That silence is the trap: nothing connects the failure to the thing that caused it.
 
 The bill comes due whenever the game tears the world down and rebuilds it — reloading a save, or merely returning to the main menu.
-The serialization pass that rebuilds each owner's `SubObject` buffer from its members' `Owner` back-references logs `Owner has no SubObject: <index>:<version>`, naming the offending entity, and the process dies on that line.
-So a mod that leaves its own entities without a prefab does not crash the session that creates them; it crashes the player who quits to the menu.
+**The teardown is what `PrefabRef` gets the entity past.** The clear that runs before the deserialize phase destroys everything matching a nineteen-component `Any` query headed by `PrefabRef`; an entity carrying none of the nineteen is simply not destroyed, and survives into the next world holding a stale `Owner`.
+The pass that then rebuilds each owner's `SubObject` buffer from those back-references logs `Owner has no SubObject: <index>:<version>`, naming the survivor.
+That line is a plain `Debug.Log` in a loop that carries on, so it is the symptom rather than the failure: what it records is a sub-object that did not make it back into its owner's buffer.
+So a mod that leaves its own entities without a prefab does not fail the session that creates them; the damage lands on the teardown.
+Source: `src/Game/Game.Serialization/ClearSystem.cs` (the `Any` query and the `DestroyEntity` over it), `src/Game/Game.Common/SystemOrder.cs` (its registration before the deserialize phase), `src/Game/Game.Serialization/SubObjectSystem.cs` (the message and the else-branch it sits in).
+(UNVERIFIED: what a player experiences beyond those log lines — the pass only logs and continues, so whether anything actually dies would take reproducing it against a running game.)
 
 **Give every entity you create a `PrefabRef`**, and where the entity has no natural prefab, mint the empty one above rather than leaving the component off.
 
@@ -366,6 +395,7 @@ The distinction is worth the extra sentence because what you are deciding is an 
 ## A tool error is a prefab, an enum member and three tag components
 
 The question "how do I suppress the error blocking my apply" cannot be answered without this, and a sweep confined to the tools namespace misses half of it: **a tool error is authored as a prefab**, and the prefab type lives in `Game.Prefabs`.
+Source: `src/Game/Game.Prefabs/ToolError.cs`.
 
 `ToolError : ComponentBase` is a prefab component bound by a `ComponentMenu` to `NotificationIconPrefab`.
 It carries an `ErrorType m_Error` and three booleans — `m_TemporaryOnly`, `m_DisableInGame`, `m_DisableInEditor` — and its `Initialize` folds them into the runtime component `ToolErrorData { ErrorType m_Error; ToolErrorFlags m_Flags; }` on the prefab entity.
@@ -384,6 +414,8 @@ It updates only when a `Temp` set exists — its guard query is `{Temp, Updated}
    Otherwise a severity at or above `Cancel` cancels the `Temp` entity, and anything below it adds a temporary icon through the icon command buffer and records the entity in a map of entity to severity.
 4. `ValidationSystem.Components` — a **separate** system, registered immediately after — turns that map into components, removing stale `Error`, `Warning` and `Override` tags and adding the current ones through `ModificationEndBarrier`, tagging everything it touches `BatchesUpdated`.
 
+Source: `src/Game/Game.Tools/ValidationSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
+
 The three tags are zero-size.
 The apply dispatcher reads two of them at `ApplyTool`: a chunk carrying `Warning` gets `Deleted`, a chunk carrying `Override` gets `Updated` and `Overridden`.
 `ToolBaseSystem.GetAllowApply()` reads only `Error`, through its own error query.
@@ -391,6 +423,7 @@ The apply dispatcher reads two of them at `ApplyTool`: a chunk carrying `Warning
 **The nesting matters exactly once, and it is the case a mod hits.**
 `ValidationSystem` itself tags nothing, so a mod system spliced `UpdateAfter<Mine, ValidationSystem>(ModificationEnd)` still runs after `ValidationSystem.Components` has added and removed this frame's tags — two systems anchored on the same target splice in registration order and vanilla registered first.
 That is the position from which a mod adds `Error` tags of its own and expects them to survive the frame.
+Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`, `src/Game/Game.Tools/ValidationSystem.cs`.
 
 (VOLATILE: the `ErrorType`, `ErrorSeverity` and `ToolErrorFlags` member sets, the error-prefab array sized to the `ErrorType` count, and the `{NotificationIconData, ToolErrorData}` prefab query — the tools and prefabs namespaces, and the validation system.)
 
@@ -399,11 +432,14 @@ That is the position from which a mod adds `Error` tags of its own and expects t
 Step 1 above is the lever.
 **An error type whose prefab was skipped there produces no icon, no cancel, no `Error` tag and therefore no apply block**, because step 3 returns on the null slot.
 So setting `ToolErrorFlags.DisableInGame` on the prefab's `ToolErrorData` is the entire suppression mechanism: no patching, no forked validation system, and no other system involved.
+Source: `src/Game/Game.Tools/ValidationSystem.cs`, `src/Game/Game.Prefabs/ToolErrorFlags.cs`.
 
 It ships as a pair, and both phases are load-bearing:
 
 - **Disable at `Modification5`**, writing the ORed flags back through `ModificationBarrier5`, which plays back at the end of that phase — so the edit is committed before `ModificationEnd` reads the prefabs.
 - **Restore at `ModificationEnd`**, clearing the flags through `ModificationEndBarrier`, which plays back at the end of that phase — so the restore lands after `ValidationSystem` has read them.
+
+Source: `src/Game/Game.Common/SystemOrder.cs`.
 
 Either half in the wrong phase silently does nothing, or leaves the errors off permanently.
 Have the restore system start disabled, set `Enabled = false` on itself at the end of its update so it runs exactly once per disable, and have the disable system re-arm it; the prefabs are then untouched outside a single phase gap, which is what makes the technique safe to leave installed.
@@ -413,6 +449,7 @@ Bail out of the disable system while no tool is active, so the flags are only ev
 **These prefabs are ordinary named assets**, so the one you want can also be fetched by identity — `new PrefabID("NotificationIconPrefab", "Already Exists")` resolves the already-exists error — which is the fallback when a `ToolErrorData` query cannot distinguish two of them.
 Some of them ship with a disable bit already set — which ones is authored prefab data rather than code, and cannot be read out of the game's source — so a restore pass that blindly clears both flags re-enables errors the game itself had switched off.
 Keep an exclusion list for the ones you find that way, and re-enable nothing your own pass did not disable.
+Source: `src/Game/Game.Prefabs/PrefabID.cs`; `Cities2_Data/Content/Game/Locale.cok` (its `Notifications.TITLE[Already Exists]` key carries that prefab's own name).
 
 The complementary move is to **reuse** a vanilla error prefab rather than suppress it: scan the same `{NotificationIconData, ToolErrorData}` query for the `ErrorType` whose icon and description fit what your own validation wants to say, cache the entity, and raise your icons with it instead of authoring a notification icon prefab of your own.
 

@@ -12,9 +12,12 @@ Writing the job itself belongs to `ecs-in-this-game`; this reference owns what t
 Everything here rests on one property: **this build has no collections safety system**, so almost every mistake below is silent.
 An out-of-bounds native read, two jobs writing one container, a container disposed while a job still holds it — none of the three throws, and each surfaces later as a crash somewhere else or as wrong numbers.
 The guards that would catch them are compiled out of the assemblies a mod links against, and a mod's own compile cannot put them back.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs` (the guards and the symbol they are conditional on), `%CSII_TOOLPATH%/Mod.props`, `%CSII_TOOLPATH%/Mod.targets` (the mod compile defining no symbols).
 
 [`data-providers.md`](data-providers.md) enumerates the vanilla systems that publish data through the reader/writer handle protocol.
 [`colossal-collections.md`](colossal-collections.md) describes the game's own container library, which a fork of a vanilla job meets immediately.
+[`cleanup-components.md`](cleanup-components.md) carries the pattern for an entity that owns a managed engine resource, whose destruction frees nothing without it.
+[`burst-at-debug-time.md`](burst-at-debug-time.md) carries what Burst costs a debugger and the two ways to turn it off, since a breakpoint in a Burst-compiled job binds and never fires.
 
 ## The world outlives every city, so `OnDestroy` is a process-exit hook
 
@@ -27,11 +30,14 @@ Three consequences a mod designs around:
 - **`OnCreate` runs once per process and `OnDestroy` runs once per process**, nothing in the supported lifecycle destroying a system mid-session.
   An `Allocator.Persistent` container allocated in `OnCreate` and disposed in `OnDestroy` is correct and costs one allocation for the whole session.
   A container allocated per loaded city and disposed in `OnDestroy` leaks once per city the player opens, and the player sees only memory climbing across a long session.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **Per-city state is cleared, not recreated.**
   The vanilla spatial indices show the shape: they allocate their trees in `OnCreate`, and in the pre-deserialize hook they complete their outstanding handles and call `Clear()` rather than disposing and reallocating.
+  Source: `src/Game/Game.Objects/SearchSystem.cs`.
 - **`OnDestroy` is not where you observe a leak.**
   By the time it runs the process is exiting and nothing reports what was still allocated.
   The load-boundary hooks are where a mod can see its own accumulation.
+  Source: `src/Game/Game.SceneFlow/GameManager.cs` (the world's teardown at process exit, and the boot call that disables leak detection).
 
 `mod-lifecycle-and-ordering` owns the hooks themselves; `save-serialization` owns the load boundary this makes load-bearing.
 
@@ -42,24 +48,29 @@ Four places, and only one is garbage-collected.
 **ECS component data is unmanaged, always.**
 The game declares no managed components, and every component in it is a struct in chunk memory.
 A native container refuses a managed element type outright, and even that refusal is a compiled-out check.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs` (the refusal, and that it is compiled out).
 
 **Chunk memory is unmanaged and owned by the entity store.**
 A mod declaring a component pays for it in chunk space and pays nothing to manage it.
 What that costs per entity is `ecs-in-this-game`'s chunk geometry.
+Source: `src/Unity.Entities/Unity.Entities/Chunk.cs`, `src/Unity.Entities/Unity.Entities/EntityComponentStore.cs` (the store that allocates the chunk).
 
 **Native containers a mod allocates are unmanaged, untracked and invisible.**
 A `NativeArray<T>` here is three fields — a raw buffer pointer, a length and an allocator label — and allocates through the native tracked-malloc path.
 Nothing about it is reachable from the GC, so a leaked one never appears in a managed heap dump, and for the reason below it appears nowhere else either.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs`.
 
 **A mod's managed objects are collected normally, with one permanent exception.**
 Systems, the `IMod` implementation, settings objects and anything hanging off them are ordinary managed objects.
 Prefabs are not: a prefab derives from `ScriptableObject`, and the prefab system holds every registered prefab in a list and in dictionaries keyed by the object itself.
 A prefab a mod synthesises is therefore rooted for as long as it stays registered, and the game's own unused-asset sweeps cannot collect it while it is.
 Unregistering it through the prefab system's own removal method is what releases those roots, and that method is not bookkeeping: it marks the prefab's entity deleted and reindexes another prefab's, so it is a structural change against a live city rather than a memory-hygiene call.
+Source: `src/Game/Game.Prefabs/PrefabSystem.cs`, `src/Game/Game.Prefabs/PrefabBase.cs`, `src/Game/Game.Prefabs/ComponentBase.cs`.
 
 **Where an entity needs a managed thing, the game stores an integer and not a reference.**
 The shared component carries an index; a managed system owns the table it indexes into.
-Copy that shape before reaching for the cleanup-component pattern below, which is the heavier answer and exists for the case where the entity genuinely owns the resource's lifetime.
+Copy that shape before reaching for the cleanup-component pattern in [`cleanup-components.md`](cleanup-components.md), which is the heavier answer and exists for the case where the entity genuinely owns the resource's lifetime.
+Source: `src/Game/Game.Net/ArrowMaterial.cs`, `src/Game/Game.Rendering/AggregateMeshSystem.cs`.
 
 ## Four allocators, and each one's lifetime
 
@@ -79,6 +90,7 @@ The allocation lives in the allocating thread's own temp region, so a worker thr
 `Allocator.TempJob` is the default for a container that a scheduled job reads and that you dispose against that job's handle.
 What that four-frame limit costs you when it is missed is the leak section's, below.
 `Allocator.Persistent` is for state a system owns across the session, allocated in `OnCreate`.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/Allocator.cs`, `src/UnityEngine.CoreModule/Unity.Collections.LowLevel.Unsafe/UnsafeUtility.cs` (the allocation is an `extern`; the lifetimes and the ban on passing a `Temp` container into a job field are the engine's own, per https://docs.unity3d.com/2022.3/Documentation/Manual/JobSystemNativeContainer.html).
 
 **The fourth is the one to reach for when gathering query results to feed a job.**
 It is a double-buffered rewindable allocator, reached as `base.World.UpdateAllocator.ToAllocator`, and the rewind swaps between two buffers so the one being reset is never the one in use.
@@ -91,6 +103,7 @@ NativeList<Entity> entities = m_Query.ToEntityListAsync(
 
 **The list comes back empty**: the gather runs as a scheduled job, and `outJobHandle` is what says it has finished.
 Combine that handle into every schedule that reads the list, as the canonical shape below does — dropping it and iterating the list is a read of a buffer a worker thread is still filling.
+Source: `src/Unity.Collections/Unity.Collections/DoubleRewindableAllocators.cs`, `src/Game/Game.SceneFlow/GameManager.cs` (the double buffering and the per-tick rewind), `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs` (the asynchronous gather and the handle it hands back).
 
 Two further constraints on it.
 The rewind happens only on a frame where the world actually ticks, so on a frame the world is not updating the allocator is not rewound and its contents persist.
@@ -136,10 +149,12 @@ Two mechanisms, and the type forces the choice rather than taste deciding it.
 It builds a dispose job carrying the raw buffer pointer and the allocator label, schedules it on the handle you pass, and returns a new handle.
 The free happens on a worker thread after the reading job finishes.
 Every stock container has this overload.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs`.
 
 **Most of the game's own containers do not have it**, and for those the discipline is complete-then-dispose; [`colossal-collections.md`](colossal-collections.md) names the two that do.
 `Complete()` is a main-thread stall until the job and every job upstream of its handle finish — the dependency-graph section above owns why that chain can be a slice of the frame.
 Complete **every** outstanding handle before disposing or clearing while the world is live: the vanilla search systems take each tree `readOnly: false` and complete the one combined handle it returns before the load-boundary `Clear()`.
+Source: `src/Colossal.Collections/Colossal.Collections/NativeAccumulator.cs`, `src/Colossal.Collections/Colossal.Collections/NativeParallelQueue.cs` (the two asynchronous disposes the rest of that library lacks), `src/Game/Game.Objects/SearchSystem.cs`, `src/Game/Game.Net/SearchSystem.cs`, `src/Game/Game.Zones/SearchSystem.cs`, `src/Game/Game.Areas/SearchSystem.cs`, `src/Game/Game.Routes/SearchSystem.cs`, `src/Game/Game.Effects/SearchSystem.cs` (the complete-then-clear at the load boundary).
 
 `OnDestroy` is the exception, and vanilla's own teardowns split exactly there — some search systems complete first, the rest dispose bare, and both forms are safe.
 By the time `OnDestroy` runs on the world's own teardown — the only path this game takes to it — every published job is complete: `World.Dispose` completes all tracked jobs before it destroys the first system.
@@ -173,14 +188,17 @@ Five things happen and each is load-bearing: the gather is asynchronous and hand
 
 1. **Combine, never replace, when consuming someone else's handle.**
    `JobHandle.CombineDependencies` takes at most three handles, or a `NativeArray<JobHandle>`; past three the game usually calls `Colossal.Entities.JobUtils.CombineDependencies`, whose overloads take more, though it also nests the three-argument form. Either is idiomatic.
+   Source: `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs`, `src/Colossal.Core/Colossal.Entities/JobUtils.cs`.
 2. **Assign `base.Dependency` after scheduling.**
    Nothing downstream waits for a job whose handle was never published.
+   Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs`.
 3. **Register with every provider whose data you took**, using the handle you got back from scheduling.
    The protocol is below.
 4. **Register with the barrier if you wrote through its command buffer.**
    `AddJobHandleForProducer`, and the contract is `ecs-in-this-game`'s.
 5. **Complete only where something outside the chained graph forces it: a genuine main-thread readback, the conflicting work before a `Run`, an unregistered provider's next write, or a container without `Dispose(JobHandle)` before a live-world dispose or clear.**
    Every `Complete()` is a main-thread stall until the job and its whole upstream chain finish; at teardown the world has already completed everything, per the disposal section.
+   Source: `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs` (the stall; `Complete` is an `extern` and the chain is the engine's own, per https://docs.unity3d.com/2022.3/Documentation/Manual/JobSystemJobDependencies.html), `src/Unity.Entities/Unity.Entities/World.cs` (the teardown completion).
 6. **Do not read a handle back out of `base.Dependency` across simulation iterations.**
    A simulation phase runs up to eight times in one frame, and a system the interval gate lets run has `base.Dependency` reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below.
    That reset pre-empts the completion stock `SystemBase.Update` would have performed, so last iteration's handle is not completed for you before the next one runs — while `base.Dependency` still comes back derived from the graph, carrying nothing for a container the graph does not track.
@@ -196,6 +214,7 @@ Source: `src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs`.
 
 **`Schedule()` followed immediately by `Complete()` adds only a scheduling round trip to `Run`: complete the same conflicting work and write `Run` instead.**
 The scheduler attempts a completed job on the completing thread itself, so the pairing buys a scheduling round trip and nothing else — it does not even reliably buy a worker.
+Source: `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs` (`Complete` is an `extern`; the completing thread's participation is the engine's own, per https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Unity.Jobs.JobHandle.Complete.html).
 
 ## The reader/writer protocol
 
@@ -230,6 +249,7 @@ A writer needs the readers' and the writer's, because it conflicts with everythi
 `AddReader` combines; `AddWriter` assigns.
 Assignment is safe only when there is exactly one writer, and in the vanilla systems the owner is it — the owning system calls its own `AddWriter(base.Dependency)` right after scheduling.
 Combining is the form that survives a second writer, so combine in a mod-owned provider.
+Source: `src/Game/Game.Objects/SearchSystem.cs`.
 
 ### Consuming a provider: four steps, in order
 
@@ -257,98 +277,24 @@ Source: `src/Game/Game.Tools/NetToolSystem.cs`, `src/Game/Game.Rendering/GuideLi
 A job field or an iterator written against a provider has to match that provider's pair, not a single assumed one; [`data-providers.md`](data-providers.md) tables them per system.
 Its constructor takes a minimum item size — a tuning choice scaled to the items it will hold rather than a constant to copy — and an allocator; the vanilla trees pass `1f`.
 Its surface is `Add`/`TryAdd`, `Update`/`TryUpdate`, `AddOrUpdate`, `Remove`/`TryRemove`, `Get`/`TryGet`, `Clear`, four `Iterate` overloads and `Select`, driven by the iterator and selector interfaces beside it.
+Source: `src/Colossal.Collections/Colossal.Collections/NativeQuadTree.cs`, `src/Game/Game.Objects/SearchSystem.cs`, `src/Game/Game.Net/SearchSystem.cs` (the `1f` the vanilla trees pass).
 
 **Four of the non-`Try` forms throw a bare `System.Exception`, and those throws are not conditional** — unlike almost everything else in this collections stack, they will fire in a player's game.
 `Update`, `Remove` and `Get` throw on a **miss**; `Add` throws on a **hit**, when the item is already in the tree.
 `AddOrUpdate` has no hit-or-miss guard at all, which is what makes it the form to reach for on a re-registration.
 Use the `Try` forms unless the outcome is genuinely impossible.
+Source: `src/Colossal.Collections/Colossal.Collections/NativeQuadTree.cs`.
 
 What a mod-owned index needs, beyond the container:
 
 - **Allocation in `OnCreate` from `Allocator.Persistent`**, because the world spans the session.
 - **A `Clear()` from the pre-deserialize hook**, not a dispose-and-reallocate, so the tree survives city changes.
   Take the tree with `readOnly: false`, complete the handle it returns, and only then clear — the vanilla systems all complete before clearing, and clearing under a running reader is an unsynchronised structural mutation with no diagnostic.
+  Source: `src/Game/Game.Objects/SearchSystem.cs`, `src/Game/Game.Net/SearchSystem.cs`, `src/Game/Game.Zones/SearchSystem.cs`, `src/Game/Game.Areas/SearchSystem.cs`, `src/Game/Game.Routes/SearchSystem.cs`, `src/Game/Game.Effects/SearchSystem.cs`.
 - **The three-method protocol above**, with the writer combining rather than assigning.
 - **A `Dispose()` in `OnDestroy`, which may be bare** once every job that touched the tree published through `base.Dependency` — the disposal section owns the gaps.
 
 (VOLATILE: the vanilla accessor names — `GetStaticSearchTree`, `AddStaticSearchTreeReader` and their siblings across the search systems in the objects, net, zones, areas, routes and effects namespaces.)
-
-## The cleanup-component pattern, for a component owning a managed resource
-
-Native containers are the easy half of disposal.
-The hard half is an entity that owns a `Material`, a `Mesh` or any other managed object with an engine resource behind it: `Dispose(JobHandle)` is no help, because the thing to free is not in a container and freeing it is a main-thread call.
-
-The engine's answer is `ICleanupComponentData`, and all it does is delay the entity's destruction.
-
-**What the entity store does with one:**
-
-1. Any archetype containing a cleanup component is flagged.
-2. Each such archetype gets a **residue archetype**, built as the entity plus an internal marker plus every cleanup component and nothing else.
-3. `DestroyEntity` **moves** the entity into that residue archetype instead of freeing it.
-   After the destroy, the entity handle is still live and still carries your cleanup component; every ordinary component is gone.
-4. The entity is freed for real when the last cleanup component is removed.
-
-Removing one is a deliberate `RemoveComponent`, and that is the point.
-The engine's guard against stripping a cleanup component through `SetArchetype` is compiled out of this build, so `SetArchetype` drops one silently instead of throwing: the entity carries on without it, the resource is orphaned, and the eventual `DestroyEntity` frees the entity outright.
-So the contract is: **the entity outlives its own destruction until you say otherwise, and if you never say otherwise it never goes away.**
-
-**The component holds a `GCHandle`, not a reference.**
-A `GCHandle` is an unmanaged 8-byte token, so the struct stays blittable and lives in a chunk, while the managed object is reachable through `Target`.
-The handle kind is the design decision:
-
-- **Strong** (`GCHandle.Alloc(obj)`) when the component owns the object's lifetime.
-  Its `Dispose()` then does two frees, and they are different things: destroy the engine resource, _then_ `Free()` the handle.
-  Skipping the second leaks the handle-table entry and roots the object for the life of the process.
-- **Weak** (`GCHandle.Alloc(obj, GCHandleType.Weak)`) when a cache owns the object and the component is only a reference.
-  The target can then be collected out from under you, so every use re-checks `Target` for null and rebuilds when it has gone, and `Dispose()` is just `Free()`.
-
-Both cases guard on `IsAllocated` and end by resetting the field to `default`.
-`Free()` throws `InvalidOperationException` on a handle that was never allocated or already freed, and so does `Target` — one such element aborts the whole drain below and abandons every handle still queued behind it.
-A component added at entity creation and populated on first use carries an unallocated handle until then, which is the ordinary way an entity reaches disposal with one.
-
-**The disposal system, and why it is shaped the way it is.**
-Register it in the `Cleanup` phase: that phase runs after the whole main loop, so the modification phases, the tools, the UI and rendering have all already run and nothing will ask for the resource again this frame.
-
-- **Query for the doomed entities as "has the cleanup component, lacks the ordinary component that always accompanies it"** — which is exactly the residue archetype's shape, and is what makes an entity somebody else destroyed reachable at all.
-- **Gate with `RequireAnyForUpdate` on that query**, so `OnUpdate` is never entered while nothing is pending.
-  An update interval will not help you here: only the three simulation phases consult one, and `Cleanup` is not among them.
-- **The job enqueues; it does not dispose.**
-  `GameObject.Destroy` needs the main thread.
-  Read each doomed entity through a lookup, `Enqueue` the component _value_ into a `NativeQueue<T>`, and issue `RemoveComponent<T>` plus `DestroyEntity` into an `EndFrameBarrier` command buffer.
-  **`EndFrameBarrier` is the one to use, and the choice is forced**: no barrier belongs to the `Cleanup` phase, so the ordinary rule of writing to your own phase's barrier has nothing to name here, and a phase-local barrier taken from `Cleanup` throws.
-  Issuing both the removal and the destroy is correct rather than redundant — the removal is what frees an entity already sitting in residue, and the destroy is what kills one still live; on an entity the removal already freed, the destroy is a silent no-op.
-  Enqueuing the value is what makes this work: the handle travels out of the job as plain unmanaged data, so the main thread can still reach the managed object after the component is gone.
-- **`OnUpdate` completes the job and drains the queue on the main thread**, calling `Dispose()` per element.
-  That `Complete()` is the genuine main-thread readback the handle discipline allows, and the find belongs in a parallel schedule — a sequential `Schedule` completed immediately is the `Run` shape the schedule-form rule retires, and `Run` itself would put the whole find on the main thread.
-  If you schedule it parallel, the queue needs its `ParallelWriter` and so does the command buffer — on this build neither omission throws.
-
-**Neither guard catches the handle free.**
-With `[BurstCompile]` on the job the build fails at the read of the handle's `Target`: fetching the managed object is an unsupported call and it is the one a real body reaches first, with `Object.Destroy` unsupported behind it.
-Take the attribute off and it builds, and the destroy throws on the worker thread instead — `Destroy can only be called from the main thread.`
-Taking it off is the only route to that second case: a body that will not compile has no artifact for the launch switch below to unburst.
-`Free()` is rejected by neither.
-
-**Two failure modes, neither of them visible:**
-
-- **The component is an ordinary `IComponentData` instead of a cleanup one.**
-  `DestroyEntity` deallocates the chunk data immediately, the `GCHandle` goes with it and is never freed.
-  Strong: a permanent managed root plus an undestroyed engine resource.
-  Weak: a leaked handle-table slot.
-  This is not native-container leakage, so even the leak-detection switch below would not see it.
-- **Nothing ever removes the cleanup component.**
-  The entity stays in the residue archetype forever — still live, still occupying a chunk slot, still matching any query over the cleanup component alone.
-  The symptom is entity and chunk counts that climb and never fall, which reads as an entity leak rather than a resource one.
-
-The game declares no cleanup components of its own, so there is no vanilla example to read this against; the engine half above is read from the entity store rather than inferred.
-**A residue entity survives a save and a load**, and that is the case to design for.
-The clear that empties the world before a load selects on a fixed list of vanilla components, and `DestroyEntity` has already stripped every one of them, so a residue entity matches nothing and is never destroyed — it persists into whatever city loads next, handle still live.
-Your disposal system does still match it there, so the teardown is delayed rather than lost.
-A cleanup component that is itself serializable is written into the save on top of that, because the save query gains every serializable component declared outside the game assembly.
-The load then deserializes a fresh copy beside the residue that already survived, carrying whatever your own `Serialize` wrote where a live handle used to be.
-So keep the cleanup component out of the save entirely: declare neither `ISerializable` nor `IEmptySerializable` on it, and nothing of it is ever written.
-`IEmptySerializable` is the one to watch — it looks like a tag marker rather than a serialization interface, and it is what `ecs-in-this-game` teaches for a tag that must survive a save.
-`save-serialization` owns both queries and the asymmetry between them.
-(VOLATILE: the interface name and the cleanup-flag logic — `ICleanupComponentData` is the renamed form of `ISystemStateComponentData` and the obsolete spelling survives as an upgrade alias; both live in the entities package's component-type and entity-component-store types.)
 
 ## Throttling: run less often, and enter `OnUpdate` less often
 
@@ -358,14 +304,17 @@ Three mechanisms, in increasing order of what they let you skip.
 Your `GetUpdateInterval` override is called **once, at registration**, and the value is cached; the dispatch loop then tests the cached mask _before_ `Update()` is called, so a skipped frame costs one bitwise-and and one comparison, and the query gate, `OnUpdate`, the handle refresh and the schedule are all skipped whole.
 Because the override runs once, an interval computed from mutable state — a settings slider, a load-time flag — is frozen at whatever it returned during registration, and nothing reports that it never changes again.
 The mechanism, its power-of-two requirement and the three phases that honour it belong to `mod-lifecycle-and-ordering`.
+Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game/GameSystemBase.cs`.
 
 - **Only the simulation phases consult it.**
   An interval on a system registered anywhere else is dead code that reads like a throttle, and the game itself ships one such system.
   Check the phase before you write the override.
+  Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Simulation/SimulationSystem.cs` (the only caller that passes an update index), `src/Game/Game.Audio/WeatherAudioSystem.cs`, `src/Game/Game.Common/SystemOrder.cs` (the shipped interval nothing reads).
 - **Let the offset be auto-assigned.**
   The default is negative, which the dispatcher reads as "spread me": it hands out offsets so that systems sharing an interval land on different frames instead of piling onto one.
   Do not predict which frame you land on relative to another system — the assignment order is not something to build a producer/consumer handoff on.
   Returning an explicit offset opts out of that.
+  Source: `src/Game/Game/GameSystemBase.cs`, `src/Game/Game/UpdateSystem.cs`.
 
 The shape to copy is an interval **plus** a relevance gate — a system feeding an on-screen panel returns a large interval and opens `OnUpdate` with an early return while the panel is hidden.
 
@@ -374,56 +323,19 @@ The check is a length read on a cached chunk list: no chunk walk, no dependency 
 It tests the query **ignoring your filter and its enableable components' state**, so a query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set — a filter is not a throttle, and neither is a disabled marker.
 `IsEmptyIgnoreFilter` is the same free check spelled by hand, and is what to use inside `OnUpdate` when one system schedules several independent jobs each needing its own gate — with the same blind spot, so a gate over an enableable marker never closes.
 `ecs-in-this-game` owns what the gate does and does not see.
+Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs`.
 
 **The chunk-level early exit inside the job body is the finest-grained form**, and is what the simulation actually runs on: one shared-component read rejects a whole chunk's worth of entities.
 A per-entity job cannot express it — that is one of the three things holding the chunk buys you, per `ecs-in-this-game` — so a per-entity job wanting the same throttle pushes the test into the query as a shared-component filter before scheduling instead.
 `ecs-in-this-game`'s bucketing sibling owns which index and which count to filter on — guessing either runs the job at the wrong cadence or on nothing, with nothing logged; what that cadence is worth in simulated time is `simulation-time-and-units`.
-
-## Burst: what it costs at debug time, and how to gate it
-
-**The post-processor runs on every build and Burst-compiles for Windows, macOS and Linux.**
-It is invoked from an after-build target with no configuration condition — Debug and Release alike, with a debug flag passed in both — and there is no toolchain switch that turns the pass off.
-So Burst output ships as three native libraries beside the managed assembly, and is produced whether or not the mod has any Burst jobs.
-The one thing that skips it is the publisher's update command, which turns off the toolchain's own targets — the output clear, the post-processing pass and the deploy — while the ordinary compile still runs, so an update can ship a freshly compiled assembly beside native libraries left from the previous build.
-`cs2-mod-project` owns the build pipeline itself.
-
-**The cost is that a Burst-compiled job cannot be stepped.**
-The managed body is still in the assembly and a breakpoint in it still binds; the native compilation runs instead, so the breakpoint never fires.
-
-**Reach for the runtime switch first.**
-Burst compilation is disabled at launch, with no rebuild and no change to the mod:
-
-```
---burst-disable-compilation
-```
-
-or the environment variable `UNITY_BURST_DISABLE_COMPILATION`, set to anything other than empty or `0`.
-The managed body is always in the assembly, so it runs instead of the native one.
-It is read from the game process's own command line, which is the route to reach for; the environment variable is the fallback for a launcher that will not pass an argument through.
-
-**Reach for a compile-time gate only if you will do this often enough that a launch argument becomes tiresome**, and then treat it as the more dangerous of the two.
-The form is `[BurstCompile]` wrapped in `#if`, with the symbol defined in the Release configuration only:
-
-```csharp
-#if USE_BURST
-[BurstCompile]
-#endif
-private partial struct MyJob : IJobEntity { }
-```
-
-The hazard is plain C#: **a preprocessor symbol defined nowhere produces no warning, no error and a build indistinguishable from a working one.**
-The `#if` compiles, the attribute vanishes, and the mod ships unbursted with nothing to tell you.
-If you write one, verify the symbol reaches the compiler in the configuration you meant.
-The attribute belongs on the job struct: on a system class whose only Burst code is its nested jobs it is legal and inert, so an audit that counts attributes to check the gate has to count the ones on jobs.
-Source: `src/Unity.Burst/Unity.Burst/BurstCompileAttribute.cs`.
-
-(VOLATILE: the `[BurstCompile]` attribute's spelling, the launch argument and the environment variable name — the Burst package's attribute declarations and `BurstCompilerOptions`.)
+Source: `src/Game/Game.Simulation/AgingSystem.cs` (the in-job test), `src/Game/Game.Simulation/BuildingUpkeepSystem.cs` (the query-filter form).
 
 ## A log call is a synchronous file write, so logging is a per-frame cost like any other
 
 **A message that passes the level filter opens the log file, writes, flushes, and closes it again**, under a lock.
 Nothing batches and nothing buffers across messages: the stream is held open only if the logger's `keepStreamOpen` is set, which defaults off and which nothing in the game turns on.
 So a log call that gets written is not a cheap side effect that disappears in a release build — it is a file-system round trip on the calling thread, serialised against every other logger in the process.
+Source: `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs`, `src/Colossal.Logging/Colossal.Logging/ILog.cs`.
 
 That makes the cost scale with the thing a mod is tempted to log from.
 Once per load is free.
@@ -433,6 +345,7 @@ Once per entity in a system's update is a file open and close per entity per fra
 **The level filter is the cheap gate, and it runs first.**
 Every level-specific method tests the logger's `effectivenessLevel` before doing any of the above, so a line below the shipped level is neither formatted nor written — though its arguments are evaluated before the test runs.
 That is the first lever to reach for.
+Source: `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs`.
 
 The rest follow, in the order to reach for them.
 
@@ -447,7 +360,7 @@ The rest follow, in the order to reach for them.
   A logging method marked `[Conditional("SYMBOL")]` has its **call sites removed entirely** when the symbol is undefined — arguments included — so an interpolated message is never built and the runtime level check never runs.
   The removal reaches nothing above the call: a costly expression hoisted into a named local survives the stripping and runs for a value nothing reads.
   One method per category, each with its own symbol, gives per-category logging that costs a release build nothing.
-  An undefined symbol is as silent here as it is on the Burst gate above, and it resolves differently: `[Conditional]` is applied where the call is compiled, not where the method is declared.
+  An undefined symbol is as silent here as it is on the Burst gate in [`burst-at-debug-time.md`](burst-at-debug-time.md), and it resolves differently: `[Conditional]` is applied where the call is compiled, not where the method is declared.
   So the symbol goes in the project holding the call sites: a logging helper living in a shared assembly is stripped or kept by the _calling_ mod's configuration, never by the shared assembly's.
 - **Where the line must survive into a shipped build, throttle it like any other periodic work** — the update-interval and change-detection mechanisms above apply unchanged to a logging system.
 
@@ -466,6 +379,7 @@ Four rungs, and a mod's per-frame code should stay on the first two.
 
 **The async list forms are the pairing to copy.**
 `ToEntityListAsync` and `ToComponentDataListAsync` take an `out JobHandle` and _combine_ the dependency instead of completing it; the game calls those and never the async array forms.
+Source: `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs`.
 
 The synchronous forms are not forbidden, and the game's own load and editor paths use them heavily; the rule is that each one is a stall, so a system calling `ToEntityArray` every frame stalls every frame.
 `debug-menu` inherits this directly: a widget getter runs every frame its tab is open, so a getter doing a count is rung 3 and one doing a `ToEntityArray` is rung 4.
@@ -480,6 +394,7 @@ This is the heaviest sync point available and it is one line of mod code.
 Every `EntityManager` method marked `[StructuralChangeMethod]` — adding a component, removing one, creating or destroying an entity, and assigning a shared component value — routes through a call that completes **every job the dependency graph knows**, not just the ones touching your components — a handle you kept in a field and never published through `Dependency` is not one of them, and survives the drain still running.
 Chained structural calls pay the drain once — the first completes everything in flight and the rest find nothing — but each add is still its own archetype move, so build with `CreateEntity` plus an archetype rather than as a create followed by adds.
 `EntityManager.SetComponentData` and the read-write data path are cheaper but not free: each completes the read and write dependency for that one type.
+Source: `src/Unity.Entities/Unity.Entities/EntityDataAccess.cs`, `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs`.
 
 **A barrier's command buffer is the alternative to completing, not only to `EntityManager`.**
 Where the reason to complete is to act on a job's output — add a component from a result, destroy what a scan found, write a computed value back — the job records the action into the buffer instead, component writes included, and the barrier completes its own producers at its own phase before playing back.
@@ -507,6 +422,7 @@ A dynamic buffer costs its header plus its internal capacity in **every** entity
 That trades chunk density for one heap allocation per non-empty buffer, which is the right trade when most entities have none.
 **The spill does not undo itself.** A buffer that outgrows its internal capacity moves to the heap and stays there until something asks for it back, paying the allocation and the reserved inline bytes together however short it later gets.
 So size for the maximum a buffer will reach rather than for its typical length, or call `TrimExcess()` once the spike is over: it reallocates to the length you are actually holding, and returns the payload to the chunk when that length fits the internal capacity.
+Source: `src/Unity.Entities/Unity.Entities/DynamicBuffer.cs`, `src/Unity.Entities/Unity.Entities/BufferHeader.cs`.
 
 ## The game's three forced garbage collections
 
@@ -521,12 +437,14 @@ That makes them the cheap place to do expensive managed setup — and the wrong 
 Native leak detection is **switched off**, from a method in the boot sequence whose name says the opposite.
 (VOLATILE: the method name and its call site — `GameManager` in the scene-flow namespace.)
 Leak tracking is a native facility rather than a compiled-out one, so it is present in the shipped build and simply disabled.
+Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/UnityEngine.CoreModule/Unity.Collections/NativeLeakDetection.cs`, `src/UnityEngine.CoreModule/Unity.Collections.LowLevel.Unsafe/UnsafeUtility.cs`.
 
 **So a leaked `TempJob` or `Persistent` allocation produces no warning, no log line and no console output while it stays off.**
-Turn it on and a `TempJob` allocation older than four frames logs a leak line per allocation, each with a callstack.
+Every output shape in this section is read off captured runs rather than from the decompile: the emitter is native, so no string of it exists in C# and a run with the mode on is what confirms the format.
+Set the mode to `EnabledWithStackTrace` and a `TempJob` allocation older than four frames logs a leak line per allocation, each with a callstack — which is what separates "something is leaking" from "this is leaking".
 A leaked `Persistent` one is never named individually, at runtime or at exit.
 What exit produces instead is a single `MemoryLeaks` summary line keyed by memory label — `NativeArray`, `JobScheduler`, `Manager` and the rest, each with a byte total — so a `Persistent` leak tells you that something went and roughly what kind, never where.
-That asymmetry decides which allocator to reach for while you are hunting one: a `TempJob` container you deliberately leave undisposed for a frame will name its own allocation site, and a `Persistent` one will not.
+That asymmetry decides which allocator to reach for while you are hunting one: a `TempJob` container you deliberately leave undisposed past the threshold will name its own allocation site, and a `Persistent` one will not.
 
 A mod can switch it back on from anywhere, and the boot sequence has long finished by the time a mod loads, so the setting sticks for the session:
 
@@ -534,13 +452,23 @@ A mod can switch it back on from anywhere, and the boot sequence has long finish
 NativeLeakDetection.Mode = NativeLeakDetectionMode.EnabledWithStackTrace;
 ```
 
-`EnabledWithStackTrace` prints a callstack per leaked allocation, which is what separates "something is leaking" from "this is leaking".
 **A leak from ordinary mod code names that code.**
 The frames above the allocation are the mod's own methods as Mono JIT frames, and the stack turns native only below the game's own — `(UnityPlayer)`, `(mono-2.0-bdwgc)` and address-only entries.
+(VOLATILE: the `MemoryLeaks` summary line, its label roster and the native frame spellings above — a run with the mode on, which is where this output exists and nowhere in C#.)
 
 **Bind it to a condition, and never let it reach a shipped default path.**
 Set it from a debug configuration, or behind a mod setting that is off unless the player turns it on.
 The reason is that the cost is not paid by the mod that opts in: the mode is a property of the native allocator rather than of the calling assembly, so stack-trace capture lands on every native allocation the game makes and on every other mod in the player's load order.
+Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeLeakDetection.cs` and `src/UnityEngine.CoreModule/Unity.Collections.LowLevel.Unsafe/UnsafeUtility.cs` (the mode is a native, process-global setting — both are thin wrappers over `extern`s, which is what makes it one).
 
-The shape of the failures the rest of this reference produces belongs here rather than to a log-reading pass: an out-of-bounds native read or a use-after-free is a process death with no managed exception, so "the game crashed and there is no stack trace" starts in this reference and not in `diagnostics`, whose order assumes a live process still writing lines.
-What `diagnostics` does own for a dead process is the evidence rule: the crashed run's logs are copied before anything is relaunched.
+## What this reference hands to others
+
+A reader leaves with what a job's memory costs and what its scheduling has to respect: which of the four allocators a container belongs in, the handle discipline that keeps one alive until every reader is done with it, the three throttles, and the fact that on this build almost every mistake in that area is silent.
+
+- `ecs-in-this-game` owns writing the job itself, the chunk geometry a mod sizes its data against and the barrier contract; what travels the other way is what the chunk, the buffer and the barrier cost, and what a mod may not do to a container a job still holds.
+- `mod-lifecycle-and-ordering` owns the update-interval mechanism and the system hooks; this reference owns what an interval buys, and that a world spanning the whole session makes `OnCreate` the place to allocate and the load boundary the place to clear.
+- `save-serialization` owns the load boundary that same lifetime makes load-bearing.
+- `custom-tools` and `placement-definitions` take the reader half of the provider protocol and the register-the-scheduled-handle rule, and `roads-and-traffic` is the heaviest area to query.
+- `debug-menu` takes the cost ladder, applied to a widget getter that runs every frame its tab is open.
+- `simulation-time-and-units` says what a throttled cadence is worth in simulated time, and `patching` takes from [`burst-at-debug-time.md`](burst-at-debug-time.md) the launch switch that turns Burst off for a session.
+- `diagnostics` assumes a live process still writing lines, so the failures this reference produces do not start there: an out-of-bounds native read or a use-after-free is a process death with no managed exception, and "the game crashed and there is no stack trace" belongs here. What `diagnostics` does own for a dead process is the evidence rule — the crashed run's logs are copied before anything is relaunched.

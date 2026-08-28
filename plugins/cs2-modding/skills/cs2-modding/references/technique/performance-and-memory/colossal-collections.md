@@ -29,6 +29,7 @@ The ones a fork meets first:
 Every other one that owns memory has to be completed before a live-world dispose or clear: complete every handle still covering the container, then dispose or clear — at world teardown every published job is already complete, per [`performance-and-memory.md`](performance-and-memory.md)'s disposal section.
 The stack-allocated and inline types own none and declare no `Dispose` at all, so calling one is a compile error rather than a leak.
 That is the inverse of stock Unity, where the container types carry the overload, subject to the custom-allocator carve-out [`performance-and-memory.md`](performance-and-memory.md) states with the allocators — so the library you are in decides which discipline applies.
+Source: `src/Colossal.Collections/Colossal.Collections/NativeAccumulator.cs`, `src/Colossal.Collections/Colossal.Collections/NativeParallelQueue.cs` (the two declarations), `src/Colossal.Collections/Colossal.Collections/NativeQuadTree.cs`, `src/Colossal.Collections/Colossal.Collections/NativeValue.cs` (the synchronous-only form), `src/Colossal.Collections/Colossal.Collections/StackList.cs` (the form that declares none), `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs` (the stock inverse).
 
 `Colossal.Collections.Generic` is a different thing and not job-facing: bidirectional dictionaries, ordered dictionaries and keyed collections, all ordinary managed types with nothing native in them.
 

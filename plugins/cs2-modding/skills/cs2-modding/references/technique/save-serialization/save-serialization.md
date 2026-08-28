@@ -15,6 +15,7 @@ A mod joins that stream by implementing an interface on a component, on a buffer
 **Nothing is registered and there is no opt-in list.**
 The serializer library reflects over every type the type manager knows and builds a serializer for each one implementing a serialization interface; after a mod assembly loads, the mod manager registers its types and marks the library dirty, and the serializer system rebuilds both libraries on its next update.
 No mod code participates.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the reflection walk), `src/Game/Game.Modding/ModManager.cs` (the dirty mark) and `src/Game/Game.Serialization/SerializerSystem.cs` (the rebuild).
 
 Settings are not this: they live in their own files with their own lifetime, and belong to `settings-and-input`.
 
@@ -37,6 +38,7 @@ Out-of-band files are not a fifth option but a companion to any of them: the sav
 It has seven values — `SaveGame`, `NewGame`, `LoadGame`, `SaveMap`, `NewMap`, `LoadMap`, `Cleanup` — and arrives through `Context.purpose` in every `SetDefaults`, `PreDeserialize`, `PostDeserialize` and `OnGameLoaded`, and through `OnGamePreload(Purpose, GameMode)`.
 The game branches on it inside its own serializers, writing camera state differently for a map save and writing the used-mods list only for a game save.
 (VOLATILE: the seven purpose names and the hooks carrying the context — the `Purpose` enum and `Context`.)
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/Purpose.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/Context.cs` and `src/Game/Game.City/CityConfigurationSystem.cs` (the two purpose branches inside a vanilla serializer).
 
 ## The mechanisms, and what the library does with them
 
@@ -57,6 +59,7 @@ The serializer library walks every known type and picks one serializer per type 
 Never hand-write it into your own `Serialize`: the engine already writes it, and a second copy is a format field you must version forever.
 **A disabled entity's payload is not written**, and comes back as the component's default rather than what it held.
 So an enableable component is the wrong home for state that has to survive while the component is off.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EnableableComponentDataSerializer.cs`.
 
 An empty serializer schedules no job at all: presence is carried entirely by the archetype's serializer-index list.
 
@@ -66,11 +69,13 @@ Two modifiers ride on top:
   The type serializes as if it were not enableable and comes back enabled.
   Vanilla declares it on very few types, `PrefabData` among them — so before assuming a vanilla component's disabled state survives a save, read that component's own interface list.
   (VOLATILE: this modifier's effect on the written bit — the component serializer library.)
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the branch routing the marker to the non-enableable serializer), `src/Game/Game.Prefabs/PrefabData.cs`.
 - **`IStrideSerializable`** adds `int GetStride(Context)`.
   A non-zero stride declares the fixed byte size of one element and switches the writer into byte-plane column filtering before compression.
   What it buys is compression ratio; returning 0 disables it.
   **It is not write-only.**
   `GetStride` is called again on load, with the _load_ context, and the value de-interleaves the byte planes before a single element is read — so a stride that no longer matches what wrote the save silently yields garbage, with no exception.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs`.
 
 A flag set travelling beside each type name in the save records which of these applies: `Empty | ComponentData | BufferElementData | SharedComponentData | Enableable | Filtered`.
 
@@ -78,13 +83,14 @@ A flag set travelling beside each type name in the save records which of these a
 The serializer only visits archetype members it has a serializer index for, so such a component simply does not exist after a reload.
 The one thing that fails loudly instead is a _managed_ component — a `class` rather than a `struct` — that implements one of them: the two `ISerializable` serializers above are generic over an unmanaged struct, so declaring one takes the whole serializer library down rather than dropping just that type.
 The one exception is a plain `IEmptySerializable` that is not enableable, whose serializer is not generic and takes the type at runtime; add `IEnableableComponent` and it goes back through a generic constrained the same way.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the reflection loop and the non-generic empty serializer), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/EnableableComponentDataSerializer.cs` (the unmanaged constraint on each).
 
 (VOLATILE: the interface names, the serializer type names and the flag set above — the `Colossal.Serialization.Entities` namespace, the component serializer library.)
 
 ### The cheapest durable per-entity flag costs nothing
 
 ```csharp
-public struct MyLevelLocked : IComponentData, IQueryTypeParameter, IEmptySerializable { }
+public struct MyLevelLocked : IComponentData, IEmptySerializable { }
 ```
 
 That is the whole declaration.
@@ -110,6 +116,7 @@ Two consequences:
     Both are excluded because they are already on their way out: `Deleted` is the game's destroy request, not an exclusion flag.
     A cleanup pass queries it every frame with no further filter and destroys every match, so adding `Deleted` to a live entity to keep it out of one save destroys that entity instead.
     To exclude an entity you intend to keep, give it no serializable component and no vanilla anchor.
+    Source: `src/Game/Game.Serialization/SerializerSystem.cs` (the query's `None` list), `src/Game/Game.Common/PrepareCleanUpSystem.cs` and `src/Game/Game.Common/CleanUpSystem.cs` (the destroy pass).
 
 **The clear query does not know your types.**
 The world outlives a load — `mod-lifecycle-and-ordering` has why — and the system that empties it beforehand destroys entities matching a query whose `Any` list is nineteen fixed vanilla types and nothing else.
@@ -117,6 +124,7 @@ It does not gain the mod types the save query gains.
 So an entity carrying only mod components and no vanilla anchor is written to the save, is not destroyed before the next load, and is recreated from the save on top of the copy that survived.
 Both halves have been observed on a running game: the save query matches such an entity and the clear query does not, and one created by hand survived a load into an unrelated city intact.
 Delete your own marker entities yourself, from a main-loop system that runs after the one which wrote them, rather than relying on the clear.
+Source: `src/Game/Game.Serialization/ClearSystem.cs` and `src/Game/Game.Serialization/SerializerSystem.cs` (the two queries' `Any` lists).
 
 (VOLATILE: the eighteen save anchors and the nineteen clear types — the serializer system's query construction and the clear system's own.)
 
@@ -137,32 +145,40 @@ Two gaps in that surface bite at the call site:
 - **There is no enum overload on either side.**
   An enum field is cast to its underlying type to write, and read into that type and cast home.
   Nothing warns you; the code simply does not compile until you do it.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/IWriter.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/IReader.cs`.
 - **The nested-serializable overloads are not symmetric.**
   The writer takes any `ISerializable`.
   The reader splits: a struct comes back through `Read(out T)`, while a **class is passed in already allocated** and filled in place.
   So a persisted class graph is constructed before it is read, not returned by the read.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/IWriter.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/IReader.cs` (the one writer overload against the reader's two), `src/Colossal.Core/Colossal.Serialization.Entities/BinaryReader.cs` (the class overload calling `Deserialize` on the instance handed in).
 
 Five rules the format enforces or exposes:
 
 - **One length-prefixed block per component per archetype.**
   `Begin` reads a four-byte size, `End` compares the position against it and resyncs on a mismatch; the caller turns that into a data-size-mismatch exception.
   **A byte-count mismatch is therefore detected only at the end of the whole block**, after every entity of that archetype has already been read past the end of its own record.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/BinaryReader.cs` (`Begin` and `End`), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` (the exception).
 - **Read and write must be exactly symmetric per entity.**
   There is no per-entity framing.
   A read indexes the buffer directly and advances, so a read past your own record silently returns the next entity's bytes — they are inside the same buffer, so no bounds check anywhere would object.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/BinaryReader.cs`.
 - **A buffer writes its length first, then its elements**, and the deserializer resizes the `DynamicBuffer` to the stored length before reading.
   Your element's `Serialize` is called per element, never per buffer.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs`.
 - **A `Serialize` that writes nothing throws.**
   The plain component, shared-component and system serializers fire on any zero-byte block; the buffer and enableable ones fire only once some entity actually had something to write, so a test save taken while every buffer is empty or every instance disabled passes and the throw arrives later on a player's city.
   A system section that conditionally writes nothing is the easiest way to meet this, and its message names the system rather than offering the `IEmptySerializable` advice a component gets.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/SharedComponentDataSerializer.cs` (the unconditional throws), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/EnableableComponentDataSerializer.cs` (the guarded ones), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSystemSerializer.cs` (the system message).
 - **A stride and a version-branching `Deserialize` interact.**
   The game's answer is a version-aware stride: its ground-pollution cell returns 4 for saves older than a named constant and 2 after, matching a `Deserialize` that skips a retired field on old saves.
   A mod using both must do the same, or return 0.
   Do not lean on the write-side check to catch a wrong stride: on a buffer element it is an exact-size test, but on a component it only asks whether the payload divides evenly by the entity count times the stride, so a stride declared at an exact fraction of the true element size passes silently.
+  Source: `src/Game/Game.Simulation/GroundPollution.cs` (the version-aware stride beside its matching `Deserialize`), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the two write-side checks).
 
 **Entity references are remapped, and a reference to an unsaved entity becomes `Entity.Null`.**
 Writing an `Entity` writes its index in the writer's entity table, or `-1` when it is absent or its version does not match; reading maps the index back or yields `Entity.Null`.
 There is no dangling-reference failure mode, and no way to persist a reference to an entity the save did not include.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/BinaryWriter.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/BinaryReader.cs`.
 
 ## Whole-system state
 
@@ -171,6 +187,7 @@ The system serializer library walks the world's systems and wraps each one imple
 
 - **Implement `IDefaultSerializable`.**
   It extends `ISerializable` with `void SetDefaults(Context)`, which **is called for every registered system serializer whose type was absent from the save** — exactly the case of a save written before your mod existed.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/SystemSerializerLibrary.cs` (the three-way priority), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the unmarked serializers `SetDefaults` runs over).
 - A system implementing plain `ISerializable` works but logs an error at library build time telling you to use one of the other two.
 - `IJobSerializable` is the job-scheduling variant, for state large enough to want off-thread work.
 
@@ -183,6 +200,7 @@ Put the work in `OnGameLoaded` and a later `OnUpdate`, as the migration split be
 The library scans the world's systems once and rebuilds only when marked dirty, and the game marks it dirty when a mod assembly loads — before `OnLoad` runs.
 So a system created from `OnLoad` gets its save section whether or not it is given a phase, while one created lazily later — from a load callback, a UI action, or first use — has none: `Serialize` is never called on it, `SetDefaults` is never called, and its state silently never reaches a save.
 Create it during `OnLoad`, or mark the library dirty yourself afterwards through the serializer system's own public call.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/SystemSerializerLibrary.cs` (the one-shot scan), `src/Game/Game.Serialization/SerializerSystem.cs` (the dirty gate and the public call), `src/Game/Game.Modding/ModManager.cs` (the mark, issued before `OnLoad`).
 
 ## Writing a version int first
 
@@ -231,11 +249,13 @@ It is the obvious defence against a player downgrading your mod, and on a compon
 A component simply has no forward compatibility to offer — an old build cannot know how long a new record is.
 If you need it, write your own size ahead of your payload and `Skip` the remainder you do not understand.
 **A system's save section is the exception**, because its block is framed per section: bailing there costs only that section.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` (one block for the whole archetype), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSystemSerializer.cs` (the per-section block), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the per-section catch).
 
 **Where the int rides matters.**
 On a buffer element it costs four bytes per _element_, not per entity, so a version on a long buffer is worth hoisting to the owning component or to a system's save section.
 A component's version describes its own byte layout; a system section's version describes the repairs a format change implies across the city.
 A mod that changes both keeps two numbers.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs`.
 
 **What it buys is the ability to add a field later.**
 Without it, the only way to change a component's layout is to break every existing save.
@@ -251,21 +271,25 @@ Without it, the only way to change a component's layout is to break every existi
 The city loads fully populated, every other component reads correctly, and the damage is confined to your own component's values being garbage on every entity that carries it.
 Do not expect the phase driver's `System update error during Deserialize->...` line: that catch is for a system's own `Update`, and this throw does not travel through it.
 (UNVERIFIED: which message the job's exception reaches the log under, or whether it reaches it at all — settling it needs a mod built to read its own component wrongly, since the throw cannot be provoked from outside.)
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` (the block-end check and the throw), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (every archetype's job completing before the system sections), `src/Game/Game/UpdateSystem.cs` (the catch that wraps a system's own `Update`).
 
 Note the asymmetry the load does give you: a **system** section is deserialized on the main thread inside a per-section catch, so one bad system section is logged and the others still load.
 
 **A `try`/`catch` inside `Deserialize` is false comfort.**
 It cannot fire on a size mismatch, because the mismatch is detected by the caller after `Deserialize` has already returned.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs`.
 
 ## The game's own version constants, and what a format break looks like
 
 `Game.Version` is nothing but named build stamps — **273 of them** in 1.6.0f1, ending in `current`.
 Each packs its fields so that `>=` is a chronological test, which is what the comparisons below rely on.
+Source: `src/Game/Game/Version.cs`, `src/Colossal.Core/Colossal/Version.cs` (the packing).
 
 **Beside them sits a coarser mechanism the game uses for two thirds of its own migrations: format tags.**
 `Game.FormatTags` is a flat enum — **42 members** in 1.6.0f1 — each naming one format change.
 On save, every name in the writing build's enum is written as a string.
 On load, each name is looked up in the loading build's enum and the matching bit set in `context.format`.
+Source: `src/Game/Game/FormatTags.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/EntitySerializer.cs` (the names written into the header buffer), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the lookup), `src/Game/Game.Serialization.DataMigration/` (the tag gate on the migrations that use one).
 
 That gives the two directions their shapes:
 
@@ -277,6 +301,7 @@ That gives the two directions their shapes:
   The serializer system then rewrites the context purpose — `LoadGame` becomes `NewGame`, `LoadMap` becomes `NewMap` — with a fresh current-version context.
   **A save from a newer build does not error out; it comes up as a new game.**
   That is what a save-format break looks like from inside.
+  Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the unknown-tag path) and `src/Game/Game.Serialization/SerializerSystem.cs` (the purpose rewrite).
 
 `context.format.Has` is generic over the tag enum, and C# infers that argument from the value you pass, so source reads `Has(FormatTags.X)`.
 Anywhere inference is unavailable — evaluating an expression against a running game, for one — spell it `Has<FormatTags>(FormatTags.X)`, because there is no non-generic overload to fall back on.
@@ -285,6 +310,7 @@ Anywhere inference is unavailable — evaluating an expression against a running
 The serializer system closes the generic over the game's own enum at both call sites, so the tag table is the game's alone.
 Your equivalent is your own version int.
 Reading a _game_ tag from inside your own `Deserialize` is legitimate — the tag says something true about the save — but it couples your format to a vanilla one.
+Source: `src/Game/Game.Serialization/SerializerSystem.cs`.
 
 (VOLATILE: the 273 constant names, the 42 tag names, and the count of both — `Game.Version` and `Game.FormatTags`.)
 
@@ -307,11 +333,13 @@ if (!m_BuildingEfficiencyQuery.IsEmptyIgnoreFilter)
 ```
 
 It needs no version and no tag, because the query itself is the test.
-That is how the game backfills a component added to an existing archetype, and it is exactly a mod's problem when its component must appear on entities from a save written before the mod existed.
+That is the game's usual way of backfilling a component added to an existing archetype — of that system's ~129 backfills, 83 are gated on the query alone and 46 add a version or format test — and it is exactly a mod's problem when its component must appear on entities from a save written before the mod existed.
+Source: `src/Game/Game.Serialization/RequiredComponentSystem.cs`.
 
 **Why a mod migration sometimes cannot run in the deserialize phase.**
 That phase's middle band runs while the world is only half rebuilt: net compositions, lane geometry and most derived state are produced _after_ it, in the modification phases of the first simulation frames.
 A migration that reads derived state therefore cannot sit in the phase built for migrations, and moves to a modification phase instead.
+Source: `src/Game/Game.Common/SystemOrder.cs`.
 
 The split that makes that work is three parts, and all three are needed:
 
@@ -324,6 +352,7 @@ The split that makes that work is three parts, and all three are needed:
 **The purpose check in step 3 is not optional.**
 The deserialize phase runs on a brand-new city too, and with no save to read, `SetDefaults` sets your version field to zero and `OnGameLoaded` still fires — so a migration written for legacy data runs against a freshly generated map unless it tests for `Purpose.LoadGame` first.
 Version zero means _this save predates the mod_, and only the purpose distinguishes that from _there was no save at all_.
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the load that proceeds with no descriptor for a new game), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`SetDefaults` over every unmarked serializer).
 
 ## Type identity, renames and uninstalls
 
@@ -331,27 +360,34 @@ Both type tables store the **assembly-qualified name**.
 On load, resolution is three stages:
 
 1.  `Type.GetType(storedName)`.
-    **The runtime binds this by simple assembly name**, ignoring the version and public-key-token fields the stored name carries, so bumping your assembly version does not by itself strand a save.
+    **A bind that fails on the version and public-key-token fields is retried on the simple name**, because the engine registers a blanket `AssemblyResolve` handler at startup that re-loads on `AssemblyName.Name` alone — so bumping your assembly version does not by itself strand a save.
+    Source: `src/UnityEngine.CoreModule/UnityEngine/ClassLibraryInitializer.cs` (the redirect the engine installs before any managed code runs).
 2.  Failing that, the stored name is looked up in a table built from `[FormerlySerializedAs]` attributes, **progressively trimming from the last comma** — `Ns.Type, Asm, Version=…, Culture=…, PublicKeyToken=…` is retried as `Ns.Type, Asm, Version=…`, then `Ns.Type, Asm`, then `Ns.Type`.
     The trimming only widens what matches an attribute, so the attribute may name the old type at whatever precision is convenient; it does nothing for a type that carries no attribute.
 3.  Failing both — or if the resolved type implements neither serialization interface — the loader logs a not-serializable line and treats the entry as obsolete.
 
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializer.cs` (the name written, the three stages and the trimming loop).
+
 **An obsolete type is skipped, not fatal.**
 Its serializer reads the block's size prefix and jumps to the end, and each archetype is rebuilt from only the types that resolved.
 So **uninstalling a mod loses that mod's components and keeps the city**, with one log line per lost type.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/ObsoleteComponentSerializer.cs` (the skip), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the archetype rebuilt from what resolved).
 
 One further guard: where the resolved type's serializer kind disagrees with the kind recorded in the save — a component that became a shared component, say — the loader logs a type mismatch and falls back to the obsolete serializer, discarding the data rather than misreading it.
 Two crossings escape it deliberately.
 A type recorded as a component and now declared as a buffer is handed to the buffer serializer, which recognises the saved kind and reads each old record into a one-element buffer — so promoting a component to a buffer element migrates every existing save cleanly, with no rename and no version gate.
 And the check is skipped whenever either side is the empty kind, so an `IEmptySerializable` tag that gains a payload, or loses one, is resolved by the save's own recorded kind instead — which is why neither of those directions misreads.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the kind check and its two skips), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the one-element read).
 
 **Rename the type that owns a save section and you owe it a `[FormerlySerializedAs]`.**
 This is the serialization library's own attribute, not the Unity attribute of the same name.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/FormerlySerializedAsAttribute.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/SystemSerializerLibrary.cs` (the table it builds).
 
 **Prefabs are a separate identity space with the same story.**
 The prefab system writes an ordered list of prefab ids and entities reference prefabs by index into it.
 An id that no longer resolves becomes an obsolete prefab entity: it gets a negative prefab index, its `PrefabData` is disabled, the missing id is registered and logged, and a further system fills in placeholder data for the object, net, lane and area families.
 So a mod that adds prefabs leaves standing placeholders in the city when it is removed, not a failed load.
+Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the id list), `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the negative index and the disabled `PrefabData`), `src/Game/Game.Serialization/InitializeObsoleteSystem.cs` (the four families it fills).
 
 (VOLATILE: `[FormerlySerializedAs]`'s namespace — `Colossal.Serialization.Entities`, distinct from Unity's own attribute of the same name.)
 
@@ -368,12 +404,16 @@ Inside it:
   The prefab system copies the current climate prefab and the water and terrain render settings into the save database and remaps each prefab entity's guid to the packaged asset's, so the stored prefab id carries the packaged guid instead of the runtime one.
   **That is the game's own mechanism for shipping an asset inside a save and having the load find it.**
 
+Source: `src/Game/Game.SceneFlow/GameManager.cs` (the transient database and the package), `src/Game/Game.Prefabs/PrefabSystem.cs` (the cloned prefab assets and the guid remap).
+
 The three lists:
 
 - **Content prerequisites** — the DLC and content packs, checked before the load starts.
 - **Mods enabled** — loaded from the save and then **unioned** with the currently enabled mods before being written back.
   It is cumulative: every mod the city has _ever_ been saved with, not the set it currently needs.
 - **Prefab references** — the packaged prefab assets, kept so a later save knows which ones it already carried.
+
+Source: `src/Game/Game.Assets/SaveInfo.cs` (the three lists), `src/Game/Game.City/CityConfigurationSystem.cs` (the union), `src/Game/Game.SceneFlow/GameManager.cs` (the prerequisite check).
 
 **A mod's own files have no such index.**
 A file written under the user data path is per-installation, not per-city, and nothing in the save points at it.
@@ -382,6 +422,7 @@ If a city needs to know which of your files it depends on, put the answer inside
 Write one bare marker entity per item from a system registered **`UpdateBefore` in `Serialize`**, each carrying a component holding that item's id, and have that component's `Serialize` write the item's whole configuration into the stream as well — so the save is self-sufficient even when the on-disk file is gone.
 The band is the whole of it: the serializer and the writer both sit in `UpdateAt`, and a mod's `UpdateAt` sorts after them, so markers created there are built after the save has been written and never reach it.
 Then delete the markers from a system on the main loop, which runs later in the same frame and is also the answer to the clear-query trap above.
+Source: `src/Game/Game.Assets/SaveInfo.cs` (the only lists a save records), `src/Game/Game.Common/SystemOrder.cs` and `src/Game/Game/UpdateSystem.cs` (the serialize band's registrations and the order key that puts a mod's `UpdateAt` after them).
 
 ## Persisting nothing at all
 

@@ -20,6 +20,7 @@ The `Serialize` phase's own bands are `mod-lifecycle-and-ordering`'s.
   It is the band's first registration and order within a band is registration order, so by the time any other back-band system runs the deserialization barrier has already played back and closed itself — it reopens only in the front band of the next load.
   A system that asks it for a command buffer here throws, the phase driver swallows and logs the throw, and the work silently never happens.
   Use a different barrier, or structural changes applied directly.
+  Source: `src/Game/Game.Common/SystemOrder.cs` (every registration counted above, and the barrier's two), `src/Game/Game/SafeCommandBufferSystem.cs` (the throw once it has played back), `src/Game/Game/UpdateSystem.cs` (the phase driver's catch).
 
 ## The twelve shipped migration systems
 
@@ -30,7 +31,7 @@ Eleven register `UpdateAt` as one contiguous block in the vanilla system-order c
 They all gate before repairing, and most also skip when their own query is empty, but what splits them is what the gate tests.
 
 **Eight test a format tag.**
-The household pet limit system is the compact form, forty lines with the gate as an early return; most of the other seven invert it into a positive condition around the repair instead, and two test no query at all:
+The household pet limit system is the compact form, a few dozen lines with the gate as an early return; most of the other seven invert it into a positive condition around the repair instead, and one tests no query at all:
 
 ```csharp
 if (m_LoadGameSystem.context.format.Has(FormatTags.HouseholdPetLimit) || m_HouseholdQuery.IsEmptyIgnoreFilter)
@@ -40,6 +41,8 @@ if (m_LoadGameSystem.context.format.Has(FormatTags.HouseholdPetLimit) || m_House
 // trim every animal buffer to the limit, Deleted-tag the surplus,
 // remove the buffer from households left with none
 ```
+
+Source: `src/Game/Game.Serialization.DataMigration/HouseholdPetLimitSystem.cs` (the quoted gate), `src/Game/Game.Serialization.DataMigration/` (the eight).
 
 **Four compare the save's version against a named constant instead** — the lane-direction, placeholder-cleanup, quantity-object and resident-pseudo-random systems:
 
@@ -51,6 +54,7 @@ if (!(m_LoadGameSystem.context.version >= Version.laneDirectionNetObject) && !m_
 ```
 
 **Those four are the shape a mod copies**, since a mod cannot add a format tag: its own version int stands where the `Version` constant does.
-What they repair _with_ does not follow from the gate — both groups contain systems that repair on the main thread through `EntityManager` and systems that schedule Burst jobs writing to a command buffer.
+All four version-gated ones schedule a Burst job.
+Source: `src/Game/Game.Serialization.DataMigration/LaneDirectionNetObjectSystem.cs` (the quoted gate), `src/Game/Game.Serialization.DataMigration/` (the twelve repair paths).
 
 (VOLATILE: the system names, the band counts and the registrations above — the vanilla system-order class's deserialize-phase registrations.)
