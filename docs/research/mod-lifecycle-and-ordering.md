@@ -318,7 +318,7 @@ Several corpus overrides are dead by the rule above: `CS2-WriteEverywhere/Belzon
 
 ### The silent disable: which hooks, which message, which do not
 
-`GameSystemBase` subscribes four lifecycle hooks in `OnCreate` (`src/Game/Game/GameSystemBase.cs:17-31`) and wraps each in try/catch. **They do not behave the same way.**
+`GameSystemBase` subscribes five lifecycle hooks in `OnCreate` (`src/Game/Game/GameSystemBase.cs:17-31`) and wraps each in try/catch. **They do not behave the same way.**
 
 | Wrapper | Hook | Log message | Sets `Enabled = false`? |
 | --- | --- | --- | --- |
@@ -340,7 +340,7 @@ All five log through `COSystemBase.baseLog`, which is `LogManager.GetLogger("Sce
 - **`OnCreate` throwing kills the whole mod.** Unity's `AddSystem_OnCreate_Internal` catches, removes the half-built system from the world, and **rethrows** (`src/Unity.Entities/Unity.Entities/World.cs:303-316`). The throw propagates out of `GetOrCreateSystemManaged` inside `UpdateAt<T>` (`UpdateSystem.cs:143`), out of `OnLoad`, and into `ModManager.InitializeMods`'s catch — which disposes the mod and logs `"Error initializing mod {0} ({1})"` (`ModManager.cs:451-455`).
 - **`OnUpdate` throwing disables nothing and repeats forever.** `UpdateSystem.Update` wraps each system's `Update()` and logs `"System update error during {0}->{1}:"` with the phase name and the system's type name (`:188-197`, and identically in the three-argument overload at `:236-245`). The loop continues to the next system; the throwing one runs again next frame. Errors are suppressed from the UI only in editor mode (`:191-193`).
 
-So there are three distinct failure surfaces for a mod, and the "silent disable" belongs to exactly one of them:
+So there are four distinct failure surfaces for a mod, and the disable belongs to exactly one of them:
 
 | Where it throws | Outcome |
 | --- | --- |

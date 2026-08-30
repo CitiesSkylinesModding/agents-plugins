@@ -34,7 +34,7 @@ The entry file carries these sections after its warning, in this order:
   Where a prefab's values form a designed sequence, its shape is the values in other words: direction ships — a requirement that rises with index — while endpoints and a characterisation like _powers of two_ do not (ruled in `docs/research/conflicts.md`; a formula's shape is code and unaffected).
   The access-shape cell carries the read, never a writer roster.
   A compact validity qualifier (stale, unclamped, sentinel) may ride beside the read; the full rule lives in a trap or the owning sibling.
-  A row whose value another topic owns carries "belongs to `<topic>`" in that cell, in place of the read or beside it where only part of the row routes — that fixed phrase is the only routing the column admits, so a lint or reader can tell the two apart.
+  A row whose value another topic owns carries "belongs to [`<topic>`](…)" — the topic name linked to its entry file — in that cell, in place of the read or beside it where only part of the row routes; that fixed phrase is the only routing the column admits, so a lint or reader can tell the two apart.
 - **`## Traps`** — what a reader gets wrong by opening the file the map sends them to.
 - **`## Formulas`** — the expressions, transcribed from the C#. A topic whose expressions all live in siblings omits the section rather than duplicating one.
 - **`## Mechanisms`** — the vanilla system owning each, and a link to the sibling holding its listing, or "below" where the entry file itself carries it.

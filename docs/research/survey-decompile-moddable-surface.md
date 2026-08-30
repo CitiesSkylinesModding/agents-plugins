@@ -384,7 +384,7 @@ GetUpdateInterval(SystemUpdatePhase) → 1        GameSystemBase.cs:131
 GetUpdateOffset(SystemUpdatePhase) → -1         GameSystemBase.cs:136
 ```
 
-All of these are exception-wrapped and will **silently disable your system** (`base.Enabled = false`) on throw — `GameSystemBase.cs:81, 94, 107`. That is a critical debugging gotcha to teach.
+All of these are exception-wrapped, but the outcomes differ by hook: `OnWorldReady`/`OnGamePreload`/`OnGameLoaded` disable the system (`base.Enabled = false` — `GameSystemBase.cs:81, 94, 107`), while `OnGameLoadingComplete`/`OnFocusChanged` log and keep it running. Every wrapped failure logs through `SceneFlow` (`src/Colossal.Core/Colossal.Entities/COSystemBase.cs`), whose errors pop the game's modal dialog. A throw during `OnLoad` or a system's `OnCreate` instead kills the whole mod, with `Modding.log` as the only record (`src/Unity.Entities/Unity.Entities/World.cs`, `src/Game/Game.Modding/ModManager.cs`). That is a critical debugging gotcha to teach.
 
 ### 4.2 Component data
 

@@ -1,6 +1,6 @@
 # The technique reference shape
 
-The form every reference under `plugins/cs2-modding/skills/cs2-modding/references/technique/` takes, and every one under the UI skill's flat `cs2-modding-ui/references/`, which the content lint holds to the same budget.
+The form every reference under `plugins/cs2-modding/skills/cs2-modding/references/technique/` takes, and every one under the UI skill's `cs2-modding-ui/references/`, which the content lint holds to the same budget.
 Read it before authoring or editing one; [ADR 0007](../adr/0007-the-technique-family-takes-a-light-shape.md) is why this family's shape is not the mechanics one, and the plugin's `AGENTS.md` carries the rules this one sits under.
 
 A technique reference **teaches mechanism the game's own files never state**: the procedure, the order to try alternatives in, the contract a mod's code must satisfy, the trap that makes the obvious move wrong.

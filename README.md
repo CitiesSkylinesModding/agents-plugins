@@ -26,7 +26,7 @@ Encourage my work by putting a star ⭐ if it has been useful to you!
 | --- | --- | --- | --- |
 | 🔬 **[unity-devtools](plugins/unity-devtools/README.md)** | A live line into a **Unity Mono dev build** over the Mono Soft Debugger: reflect types, evaluate C# expressions, read & write ECS state. No code injection. Plus a driving skill. | .NET 10 SDK (Windows) | [README](plugins/unity-devtools/README.md) · [Tools reference](plugins/unity-devtools/README.md#tools) · [NuGet](https://www.nuget.org/packages/UnityDevtools.Mcp) |
 | 🖼️ **[coherent-gameface](plugins/coherent-gameface/README.md)** | Eyes and hands in any **Coherent Gameface** (Cohtml) game UI over CDP: evaluate JS, screenshot, drive the DOM, console, JS breakpoints. Plus an engine skill and a driving skill. | Node 22.4+ | [README](plugins/coherent-gameface/README.md) · [Why](plugins/coherent-gameface/WHY.md) · [Tools reference](plugins/coherent-gameface/mcp/README.md) · [npm](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp) |
-| 📚 **[cs2-modding](plugins/cs2-modding)** (*work in progress*) | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim deep-verified against multiple sources, including the decompile and the live game. Knowledge only — skills and references, no MCP server. | N/A | [Sources](plugins/cs2-modding) |
+| 📚 **[cs2-modding](plugins/cs2-modding/README.md)** | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim checked against the game itself, with unconfirmed claims marked. Knowledge only — skills and references, no MCP server. | N/A | [README](plugins/cs2-modding/README.md) |
 
 The two toolkit plugins are **generic**: they target any game or application embedding the
 technology, with Cities: Skylines II as the reference target where everything is field-verified.
@@ -71,11 +71,6 @@ codex plugin add cs2-modding@csmodding
 
 Then run `/mcp` to confirm the servers connected. Each plugin's README covers its requirements,
 configuration and troubleshooting.
-
-> [!NOTE]
-> `cs2-modding` is still being written: not all of its references are published yet, some will be
-> partly rewritten, and it ships no README so far. What is there is safe to use and already
-> useful — install it if you want it now, and expect it to grow.
 
 ## Development
 
