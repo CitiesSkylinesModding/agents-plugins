@@ -9,7 +9,7 @@ The technique holds without one, but every game symbol named below is checkable 
 How to find, edit, clone, synthesise and register the game's data-driven content from code, and how to get your own files in front of the game.
 
 Authoring the content itself — meshes, textures, surfaces, maps, editor scenes — is out of scope; the database calls that _store and retrieve_ that content are in.
-`ecs-in-this-game` owns the component model everything below sits on, and `mod-lifecycle-and-ordering` owns which phase a system runs in.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the component model everything below sits on, and [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns which phase a system runs in.
 
 ## The word "prefab" names three different things
 
@@ -95,7 +95,7 @@ Source: `src/Game/Game.Prefabs/IServiceUpgrade.cs`, `src/Game/Game.Prefabs/Workp
 
 **4. `IZoneBuildingComponent` adds a zone-and-level-parameterised pair**, `GetBuildingPrefabComponents(HashSet<ComponentType>, BuildingPrefab, byte level)` and its archetype twin.
 The prefab machinery never calls these: the spawnable- and signature-building components call them from inside their own two hooks, forwarding to the zone prefab, which fans out to every `IZoneBuildingComponent` it carries.
-**So a growable building's archetype is partly decided by the zone prefab it belongs to and by its level**, not only by its own components — see `zoning-buildings-and-land-value`.
+**So a growable building's archetype is partly decided by the zone prefab it belongs to and by its level**, not only by its own components — see [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md).
 Source: `src/Game/Game.Prefabs/IZoneBuildingComponent.cs`, `src/Game/Game.Prefabs/SpawnableBuilding.cs`, `src/Game/Game.Prefabs/ZonePrefab.cs`.
 
 Overriding either of the first two is the whole mechanism for putting a component of your own on every prefab entity or on every instance, and it needs no system.
@@ -139,7 +139,7 @@ Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the unchecked cast and the miss
 
 **By query singleton.**
 `GetSingletonPrefab<T>(EntityQuery)` and `TryGetSingletonPrefab<T>` exist; the `Try` form gates on the query ignoring its filter, so a shared-component filter does not narrow the gate.
-That is the same trap `ecs-in-this-game` records for `RequireForUpdate`.
+That is the same trap [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) records for `RequireForUpdate`.
 Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the guard the `Try` form tests), `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs` (that the property it tests skips the filter `IsEmpty` consults).
 
 **Authoring object to prefab entity.**
@@ -288,7 +288,7 @@ Source: `src/Game/Game.Simulation/WorkProviderSystem.cs`.
 2. **Find the vanilla job that does the copy and run it yourself** when you want, from an options control or a hotkey.
    The cost is finding it; the query shapes above are how you recognise the right one.
 3. **Harmony-patch the copy** where no reachable hook exists.
-   Cheaper to write than finding and running the vanilla job yourself, and brittle on patch days; `patching` owns the technique.
+   Cheaper to write than finding and running the vanilla job yourself, and brittle on patch days; [`patching`](../patching/patching.md) owns the technique.
 4. **Tag the prefab entity `Updated`.**
    `EntityManager.AddComponent<Updated>(prefabEntity)` is a one-liner, and it re-derives vehicle capacity, because the vehicle capacity system queries `{VehicleData, PrefabData}` with `Any = {Updated, Deleted}`.
    **Exactly three systems in the prefab namespace query for `Updated` at all** — vehicle capacity, area initialize and unlock — so it is not a general "recompute everything downstream" signal, and reaching for it as one produces a partial refresh that looks like a bug somewhere else.
@@ -362,7 +362,7 @@ The workable timings, in rough order of how much control they give:
 | The game manager's loading-complete event | nothing in the load path depends on the prefab |
 | The main-thread dispatcher, from a background import | the prefab is built off-thread and only registration must be on the main thread |
 
-Creating a system without giving it a phase is a real option, not a workaround: `mod-lifecycle-and-ordering` records the same shape under "Not every mod system needs a phase".
+Creating a system without giving it a phase is a real option, not a workaround: [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) records the same shape under "Not every mod system needs a phase".
 
 **Every one of those paths can run more than once**, and each for its own reason.
 The prefab-update phase is driven from a system that updates every frame, so a routine registered there re-runs continuously rather than once.
@@ -459,11 +459,11 @@ Source: `src/Game/Game.Prefabs/ObsoleteIdentifiers.cs`, `src/Game/Game.Prefabs/P
 
 ### How that identity survives a save
 
-The prefab system writes **a list of `PrefabID`s, not entities**: live prefabs first, then obsolete ones, each guarded by the enabled state of `PrefabData` — the flag `ecs-in-this-game` records as meaning "this prefab still exists".
+The prefab system writes **a list of `PrefabID`s, not entities**: live prefabs first, then obsolete ones, each guarded by the enabled state of `PrefabData` — the flag [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) records as meaning "this prefab still exists".
 On load each id is looked up; ids that resolve become index pairs, and ids that do not are kept as obsolete entries keyed by their save index.
 Every prefab entity's `LoadedIndex` buffer is then cleared and refilled, so it ends up holding **every save-file index that resolves to that prefab** — which is how a prefab that absorbed two obsolete ids owns several.
 Prefabs a save references and the install no longer has get a negative index and a placeholder name for display.
-The format itself is `save-serialization`.
+The format itself is [`save-serialization`](../save-serialization/save-serialization.md).
 Source: `src/Game/Game.Prefabs/PrefabSystem.cs`.
 
 (VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — the prefab id type, and the prefab system's serialization region.)
@@ -476,18 +476,18 @@ The frontend reaches a mod's own files — the icons it ships, the thumbnails it
 
 ## What this reference hands to others
 
-`zoning-buildings-and-land-value` needs the most from here, because growable buildings are the one place where the instance archetype is decided by a _second_ prefab: the spawnable- and signature-building components forward both hooks to the zone prefab, parameterised by building level.
+[`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) needs the most from here, because growable buildings are the one place where the instance archetype is decided by a _second_ prefab: the spawnable- and signature-building components forward both hooks to the zone prefab, parameterised by building level.
 It also owns the worked example of the stale-instance problem, `WorkplaceData.m_MaxWorkers` against `WorkProvider.m_MaxWorkers`, and the building prefab's conditional archetype, whose three extra types appear only when the prefab entity already carries an upgrade-element buffer.
 
-`roads-and-traffic` needs the twin-archetype case, since a network prefab produces two instance archetypes from one component set, and it needs the prefab-side and net-side `SubNet` and `SubLane` pairs more than any other area — a network prefab's sub-net buffer is curves and prefab references while the instance's is spawned entities, and both bind in a query.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) needs the twin-archetype case, since a network prefab produces two instance archetypes from one component set, and it needs the prefab-side and net-side `SubNet` and `SubLane` pairs more than any other area — a network prefab's sub-net buffer is curves and prefab references while the instance's is spawned entities, and both bind in a query.
 A mod letting the player build networks at runtime lands on the regeneration section whole.
 
-`transportation-and-vehicles` needs the one place where tagging a prefab entity `Updated` genuinely re-derives something, and the two vehicle-specific archetype refresh overrides, since a vehicle's instance archetype is not built by the plain object path.
+[`transportation-and-vehicles`](../../mechanics/transportation-and-vehicles/transportation-and-vehicles.md) needs the one place where tagging a prefab entity `Updated` genuinely re-derives something, and the two vehicle-specific archetype refresh overrides, since a vehicle's instance archetype is not built by the plain object path.
 
-`placement-definitions` is the seam where a prefab becomes an instance: a creation definition holds prefab **entities**, and the archetype the resulting instance gets is the one cached on that prefab entity.
+[`placement-definitions`](../placement-definitions/placement-definitions.md) is the seam where a prefab becomes an instance: a creation definition holds prefab **entities**, and the archetype the resulting instance gets is the one cached on that prefab entity.
 Everything a definition-rewriting mod does depends on knowing the definition carries the middle layer, not the authoring object and not the placed entity, and `PlaceableObjectData` and `ObjectGeometryData` are the two prefab-entity components that pipeline reads.
 
-`mod-lifecycle-and-ordering` owns when a system runs; the registration timings above are choices within what it establishes.
-`save-serialization` owns the save format that the identity section touches.
-`frontend-and-injection` owns the frontend that consumes the host locations.
-`patching` owns the "**Harmony-patch the copy**" remedy.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns when a system runs; the registration timings above are choices within what it establishes.
+[`save-serialization`](../save-serialization/save-serialization.md) owns the save format that the identity section touches.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns the frontend that consumes the host locations.
+[`patching`](../patching/patching.md) owns the "**Harmony-patch the copy**" remedy.

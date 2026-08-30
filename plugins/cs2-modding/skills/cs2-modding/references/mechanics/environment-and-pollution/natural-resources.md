@@ -9,7 +9,7 @@ Without one you cannot check anything below.
 `NaturalResourceCell { m_Fertility, m_Ore, m_Oil, m_Fish }`, each a `NaturalResourceAmount { ushort m_Base, ushort m_Used }` (`src/Game/Game.Simulation/NaturalResourceCell.cs`).
 Available is `m_Base − m_Used` everywhere the game reads it; the regeneration job writes `m_Base` only for fish, capped at the literal `10000` — the land resources' bases are map data a game-mode boost can push far higher, clamped at 65535.
 `MapFeature` (`src/Game/Game.Areas/MapFeature.cs`) is the enum naming the layers and is wider than the cell: `Forest` is derived from placed trees, `GroundWater` from its own map, `SurfaceWater` from the GPU depths, `Area` and `BuildableLand` from geometry.
-An area entity carries the per-district results as a `MapFeatureElement { m_Amount, m_RenewalRate }` buffer, one slot per enum member — the specialised-industry gate `economy-and-companies` reads.
+An area entity carries the per-district results as a `MapFeatureElement { m_Amount, m_RenewalRate }` buffer, one slot per enum member — the specialised-industry gate [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) reads.
 
 ## Regeneration and scarring
 
@@ -37,7 +37,7 @@ Water depth sets the fish stock, and water pollution plus traffic noise sets fis
 
 Source: `src/Game/Game.Simulation/AreaLotSimulationSystem.cs`, `src/Game/Game.Prefabs/ExtractorParameterData.cs`.
 
-How much an extractor wants (`Extractor.m_ExtractedAmount`) belongs to `economy-and-companies`; this layer turns it into `m_Used`:
+How much an extractor wants (`Extractor.m_ExtractedAmount`) belongs to [`economy-and-companies`](../economy-and-companies/economy-and-companies.md); this layer turns it into `m_Used`:
 
 ```
 pick the best cell under the extractor's triangles

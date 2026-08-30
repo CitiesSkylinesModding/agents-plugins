@@ -103,14 +103,14 @@ BatteryAISystem, per battery:
     chargeEdge.m_Capacity    = min(round(efficiency * m_PowerOutput), capacityTicks - m_StoredEnergy)
 ```
 
-`Battery.storedEnergyHours => m_StoredEnergy / 85` and `BatteryData.capacityTicks => 85 * m_Capacity` are the unit conversion: the literal `85` both properties write matches `ElectricityFlowSystem.kUpdatesPerHour`, so stored energy is flow-units times solver ticks, and those two properties are the whole power-to-energy story (`simulation-time-and-units`).
+`Battery.storedEnergyHours => m_StoredEnergy / 85` and `BatteryData.capacityTicks => 85 * m_Capacity` are the unit conversion: the literal `85` both properties write matches `ElectricityFlowSystem.kUpdatesPerHour`, so stored energy is flow-units times solver ticks, and those two properties are the whole power-to-energy story ([`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md)).
 
 ## Groundwater and pipe pollution
 
 Sources: `src/Game/Game.Simulation/GroundWaterSystem.cs`, `src/Game/Game.Simulation/GroundWater.cs`, `src/Game/Game.Simulation/GroundWaterPollutionSystem.cs`, `src/Game/Game.Simulation/WaterPipePollutionSystem.cs`, `src/Game/Game.Simulation/CellMapSystem.cs`.
 
 The aquifer is a `CellMapSystem<GroundWater>` of `kTextureSize = 256` cells per side over the map's `kMapSize = 14336` metres; each cell is three `short`s — `m_Amount`, `m_Polluted`, `m_Max` — and `Consume` keeps the pollution ratio constant.
-The map layer itself belongs to `environment-and-pollution` with the rest of the cell maps; here it constrains what a pump or a `GroundWaterPoweredData` plant can produce, never who a pipe can reach.
+The map layer itself belongs to [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) with the rest of the cell maps; here it constrains what a pump or a `GroundWaterPoweredData` plant can produce, never who a pipe can reach.
 
 ```
 GroundWaterSystem, per update, over right and down neighbour pairs:

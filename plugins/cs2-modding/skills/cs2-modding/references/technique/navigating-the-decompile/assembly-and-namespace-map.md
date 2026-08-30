@@ -39,7 +39,7 @@ The rest is a grab-bag — a vendored shell-exec library, a command-line option 
 Source: `src/Game/`.
 
 **Every other directory here you can list and skim**, from `Game.Vehicles` and `Game.Citizens` down to the single-file ones.
-`navigating-the-decompile` owns the non-`Game` namespaces that also live in this assembly, and the codegen files worth excluding from a search.
+[`navigating-the-decompile`](navigating-the-decompile.md) owns the non-`Game` namespaces that also live in this assembly, and the codegen files worth excluding from a search.
 
 **A subject that sounds like a sub-area usually has its own directory, dots and all.**
 `Game.Simulation.Flow`, `Game.Serialization.DataMigration`, `Game.Prefabs.Effects` and `Game.Rendering.Utilities` are siblings of their parents rather than folders inside them, and each is small.

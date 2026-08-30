@@ -53,7 +53,7 @@ Source: `src/Game/Game.Pathfind/LaneDataSystem.cs`, `src/Game/Game.Net/CarLane.c
 
 Wear accrues only on lanes whose prefab carries `LaneDeteriorationData { m_TrafficFactor, m_TimeFactor }`, each accrual capping itself at 10: traffic through `m_TrafficFactor` — the loop above for cars, and the train navigation running the same accrual on track lanes — and `NetDeteriorationSystem` adding `m_TimeFactor` per day in sixteen traffic-independent steps, so a mod silencing one writer alone leaves wear climbing (`src/Game/Game.Simulation/TrainNavigationSystem.cs`, `src/Game/Game.Simulation/NetDeteriorationSystem.cs`); `LaneDeterioration.GetArchetypeComponents` adds `LaneCondition` to every non-master lane of such a prefab (`src/Game/Game.Prefabs/LaneDeterioration.cs`).
 `NetCondition { m_Wear }` is the edge-level `float2`, and wear's one routing consequence is the accident-safety term ([accidents.md](accidents.md)); the repair side belongs to the maintenance service.
-The `sideEffects` rate is quadratic in the achieved-over-maximum speed ratio, lerped between the vehicle prefab's own min and max, and the emitted `yz` scale by time spent on the lane — what those components become is `environment-and-pollution`'s.
+The `sideEffects` rate is quadratic in the achieved-over-maximum speed ratio, lerped between the vehicle prefab's own min and max, and the emitted `yz` scale by time spent on the lane — what those components become is [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md)'s.
 
 ## Deadlock and bottleneck detection
 

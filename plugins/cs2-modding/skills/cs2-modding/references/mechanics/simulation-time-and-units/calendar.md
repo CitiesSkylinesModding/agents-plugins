@@ -84,7 +84,7 @@ LightingState enum: Dawn 0, Sunrise 1, Day 2, Sunset 3, Dusk 4, Night 5   // C# 
 `182.04445f` is `262144 / 1440` as a literal unrelated to `kTicksPerDay` in the source; a mod reproducing the quantization uses the same literal, or its minute boundaries drift from the vanilla clock's.
 
 **A duration crossing to the frontend for display is a day count.**
-`LocalizedDuration` takes `value` in days; its thresholds belong to `units-and-formatting`.
+`LocalizedDuration` takes `value` in days; its thresholds belong to [`units-and-formatting`](../../technique/units-and-formatting/units-and-formatting.md).
 Source: the shipped UI bundle's `game-ui/common/localization/localized-duration.tsx`.
 
 **The `simulationTime` chart scale defaults `ticksPerDay` to `1 << 17`, half a day.**

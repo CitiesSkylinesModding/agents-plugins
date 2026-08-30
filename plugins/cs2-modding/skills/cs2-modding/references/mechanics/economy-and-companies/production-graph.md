@@ -105,7 +105,7 @@ IndustrialSpawnSystem (same gate on another frame, against the industrial + stor
 
 Both spawn gates also test an empty-signature-building count that nothing in `src/` ever assigns, so that bypass cannot fire — a reader tracing a signature building's company should look at the demand systems instead.
 
-In-city demand here is not consumption: `CountCompanyDataSystem` publishes, per resource, the input requirement implied by each *housed* producer's current production rate — a propertyless producer contributes nothing to it — beside production, sales capacity and the propertyless counts the demand systems read (`src/Game/Game.Simulation/CountCompanyDataSystem.cs`); the zone-level arithmetic on top is `zoning-buildings-and-land-value`.
+In-city demand here is not consumption: `CountCompanyDataSystem` publishes, per resource, the input requirement implied by each *housed* producer's current production rate — a propertyless producer contributes nothing to it — beside production, sales capacity and the propertyless counts the demand systems read (`src/Game/Game.Simulation/CountCompanyDataSystem.cs`); the zone-level arithmetic on top is [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md).
 
 ## Traps
 

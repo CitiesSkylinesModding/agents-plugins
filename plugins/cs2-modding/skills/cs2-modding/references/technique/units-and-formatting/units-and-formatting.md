@@ -11,11 +11,11 @@ Rendering a quantity in the player's own units: the unit string a value carries,
 The ground truth here is the game's own frontend bundle rather than the localization manager, and the reader need not be shipping translations at all.
 A panel that renders a number, a tooltip that renders a duration and a stat row that renders a fraction all reach everything on this page without registering a dictionary source of their own, because the keys and separators a formatter reaches for are the game's and are already in the active dictionary.
 
-`localization` owns producing the text the game will display — the dictionary source, the keys and the strings behind them; this reference owns the number that goes inside one.
-`settings-and-input` owns the page a mod adds to the options screen; the three preferences below are the game's own, on the game's own interface page.
-`binding-layer`, in the UI skill, owns the wire that carries a localized element from C# to the frontend; this reference owns what the far end does with one when it arrives.
+[`localization`](../localization/localization.md) owns producing the text the game will display — the dictionary source, the keys and the strings behind them; this reference owns the number that goes inside one.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns the page a mod adds to the options screen; the three preferences below are the game's own, on the game's own interface page.
+[`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md), in the UI skill, owns the wire that carries a localized element from C# to the frontend; this reference owns what the far end does with one when it arrives.
 
-`simulation-time-and-units`, in the mechanics family, owns what a unit **means** and how fast the clock runs.
+[`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md), in the mechanics family, owns what a unit **means** and how fast the clock runs.
 This reference owns how a quantity is **rendered** to a player, and nothing about what the quantity is worth in the simulation.
 
 ## The elements C# has, and what they leave to the frontend
@@ -83,13 +83,13 @@ Source: `game-ui/common/localization/localized-duration.tsx` (`Cities2_Data/Cont
 **There is no exported way to display a time of day, and the reason is an export list rather than a missing feature.**
 The game has `LocalizedTime`, `LocalizedDateTime` and `LocalizedTimestamp`, plus time-format, date-format and number-formatting hooks, and the time component already branches on the player's 12/24-hour preference.
 The public l10n module exports **eleven names and no more**: `Localized`, `LocalizedBounds`, `LocalizedDate`, `LocalizedDuration`, `LocalizedEntityName`, `LocalizedFraction`, `LocalizedNumber`, `LocalizedPercentage`, `LocalizedString`, `Unit` and `useLocalization`.
-So formatting a time by hand from the player's preference is the answer for the public module, and reaching the real component is the same errand as reaching any other unexported one, which is `frontend-and-injection`'s material.
+So formatting a time by hand from the player's preference is the answer for the public module, and reaching the real component is the same errand as reaching any other unexported one, which is [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md)'s material.
 Source: the `cs2/l10n` export object, `game-ui/common/localization/localized-date.tsx` and `localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **One enum is exported and three are not.**
 `Unit` **is** exported and its members are real string values, so `Unit.Money` works at runtime.
 The time-format, temperature-unit and unit-system enums are **not** on that list even though the type declaration declares all three, so from the public module their values are written as literals: 24-hour `0` / 12-hour `1`, Celsius `0` / Fahrenheit `1` / Kelvin `2`, metric `0` / freedom `1`.
-All three are registered in the frontend's module registry, so a mod already reaching in there gets the live enums instead — `frontend-and-injection` owns that route.
+All three are registered in the frontend's module registry, so a mod already reaching in there gets the live enums instead — [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns that route.
 Source: the `cs2/l10n` export object, `game-ui/common/localization/unit.ts` and `game-ui/menu/data-binding/options-bindings.ts` (`Cities2_Data/Content/Game/UI/index.js`); `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/template/types/l10n.d.ts` (the declaration carrying all three).
 
 ## The player's unit and format preferences
@@ -114,16 +114,16 @@ Source: the unit table in `game-ui/common/localization/localized-number.tsx` (`C
 
 ## What this reference hands to others
 
-`localization` owns the string a formatted number lands inside, and the seam is the unit string: a `LocalizedNumber` carries a raw value and a unit, and the key it substitutes into is that reference's material.
-It also owns the inline format spec, which is the shortest route across the seam — a placeholder written `{AMOUNT:Money}` in a translation formats through the table above with no C# formatting code at all, and `localization`'s argument-placeholder section is where its syntax, including the `signed` suffix, is written down.
+[`localization`](../localization/localization.md) owns the string a formatted number lands inside, and the seam is the unit string: a `LocalizedNumber` carries a raw value and a unit, and the key it substitutes into is that reference's material.
+It also owns the inline format spec, which is the shortest route across the seam — a placeholder written `{AMOUNT:Money}` in a translation formats through the table above with no C# formatting code at all, and [`localization`](../localization/localization.md)'s argument-placeholder section is where its syntax, including the `signed` suffix, is written down.
 
-`settings-and-input` owns the mod's own options page, which reaches this reference twice: a slider declares a `unit` from the same list, and the custom-format attribute replaces it with `"custom"` and hands the numeric formatting to the frontend.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns the mod's own options page, which reaches this reference twice: a slider declares a `unit` from the same list, and the custom-format attribute replaces it with `"custom"` and hands the numeric formatting to the frontend.
 
-`simulation-time-and-units` is the mechanics topic this surface feeds most directly, and the seam is the unit table: a unit string decides whether a quantity is converted for a freedom-units player, and what that quantity was worth before it reached a formatter is that reference's material.
+[`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md) is the mechanics topic this surface feeds most directly, and the seam is the unit table: a unit string decides whether a quantity is converted for a freedom-units player, and what that quantity was worth before it reached a formatter is that reference's material.
 The calendar crosses on a binding rather than on an element — the frontend derives a date from the time binding group rather than from anything a localized element carries.
 
 Every other mechanics reference bridges here through the same door: a number it teaches a mod to change is a number a panel eventually renders, and the unit string is what decides how.
 
-`binding-layer`, in the UI skill, carries every localized element across the wire — the four element types are `IJsonWritable` structs whose type names are what the frontend switches on.
+[`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md), in the UI skill, carries every localized element across the wire — the four element types are `IJsonWritable` structs whose type names are what the frontend switches on.
 
-`frontend-and-injection`, in the UI skill, owns the two errands this topic generates: the time and date formatters the public l10n module does not export, and the module registry entry that hands a mod the three live preference enums instead of their literal values.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md), in the UI skill, owns the two errands this topic generates: the time and date formatters the public l10n module does not export, and the module registry entry that hands a mod the three live preference enums instead of their literal values.

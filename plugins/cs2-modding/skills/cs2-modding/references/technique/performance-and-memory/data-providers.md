@@ -6,7 +6,7 @@ Verified against game version 1.6.0f1.
 The technique holds without one, but every game symbol named below is checkable only there.
 `cs2-modding-setup` provisions it.
 
-The systems a mod's job is most likely to take data from, most of them following the reader/writer handle protocol in `performance-and-memory` — the tool systems' work lists are the second shape, a single getter with no register-back, whose discipline that reference states.
+The systems a mod's job is most likely to take data from, most of them following the reader/writer handle protocol in [`performance-and-memory`](performance-and-memory.md) — the tool systems' work lists are the second shape, a single getter with no register-back, whose discipline that reference states.
 Take the data with the right `readOnly` flag, combine the returned handle into your schedule, and register the **scheduled** handle back with every provider you took from.
 
 The protocol is used throughout the game assembly; the ones below are what a mod actually meets.
@@ -28,7 +28,7 @@ Each owns one or two `NativeQuadTree` instances.
 Each accessor has a matching `Add…Reader` and `Add…Writer` named after the same tree.
 Source: `src/Game/Game.Objects/SearchSystem.cs`, `src/Game/Game.Net/SearchSystem.cs`, `src/Game/Game.Zones/SearchSystem.cs`, `src/Game/Game.Areas/SearchSystem.cs`, `src/Game/Game.Routes/SearchSystem.cs`, `src/Game/Game.Effects/SearchSystem.cs`.
 
-**The net tree covers nodes as well as edges, and the lane tree only the lanes that carry geometry or parking data** — the net query is `Any = {Edge, Node}`, so an intersection is in the tree beside the segments meeting at it, while a lane with neither component is absent — which is why `roads-and-traffic` is the heaviest area to query.
+**The net tree covers nodes as well as edges, and the lane tree only the lanes that carry geometry or parking data** — the net query is `Any = {Edge, Node}`, so an intersection is in the tree beside the segments meeting at it, while a lane with neither component is absent — which is why [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) is the heaviest area to query.
 Source: `src/Game/Game.Net/SearchSystem.cs`.
 
 **They assign in their writer method rather than combining**, the areas system alone excepted.
@@ -40,13 +40,13 @@ A seventh queryable tree sits outside the `SearchSystem` naming: the buildings n
 
 - `TerrainSystem.AddCPUHeightReader`, `AddCPUDownsampleHeightReader`.
 - `WaterSystem.AddSurfaceReader`, `AddVelocitySurfaceReader`, `AddMaxHeightSurfaceReader`, `AddActiveReader`.
-- `CellMapSystem.AddReader`, for the cell maps `utilities-and-flow-networks` and `environment-and-pollution` read.
+- `CellMapSystem.AddReader`, for the cell maps [`utilities-and-flow-networks`](../../mechanics/utilities-and-flow-networks/utilities-and-flow-networks.md) and [`environment-and-pollution`](../../mechanics/environment-and-pollution/environment-and-pollution.md) read.
 
 ## The demand and counting singletons
 
 `CommercialDemandSystem.AddReader`, `IndustrialDemandSystem.AddReader`, `ResidentialDemandSystem.AddReader`, `CountHouseholdDataSystem.AddHouseholdDataReader`, `CountCompanyDataSystem.AddReader`, `CountVehicleDataSystem.AddVehicleDataReader`, `TaxSystem.AddReader`, `ResourceSystem.AddPrefabsReader`, `ZoneSystem.AddPrefabsReader`.
 
-`economy-and-companies`, `zoning-buildings-and-land-value` and `citizens-and-households` are the mechanics topics that need these.
+[`economy-and-companies`](../../mechanics/economy-and-companies/economy-and-companies.md), [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md), [`citizens-and-households`](../../mechanics/citizens-and-households/citizens-and-households.md) and [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) are the mechanics topics that need these.
 
 ## The rest
 
@@ -56,7 +56,7 @@ A seventh queryable tree sits outside the `SearchSystem` naming: the buildings n
   **Those workers come out of the same shared job pool as everything else**, so a mod scheduling a parallel job competes with them rather than against a reserved set of threads.
   Source: `src/Game/Game.Pathfind/PathfindQueueSystem.cs`.
 - **Budget and fees.** `CityServiceBudgetSystem.GetIncomeArray`/`GetExpenseArray` + `AddArrayReader`, and `ServiceFeeSystem.GetFeeQueue` + `AddQueueWriter` — the queue is handed out to be written into, so the registration is a writer's.
-- **City state.** The same handed-out-queue shape twice more, `XPSystem.GetQueue` + `AddQueueWriter` and `CityStatisticsSystem.GetStatisticsEventQueue` + `AddWriter`, and one without a handle: `IconCommandSystem.CreateCommandBuffer` returns a fresh buffer and no dependency, registered back with `AddCommandBufferWriter`, and the buffers are cleared every update, so obtain, fill and register within one frame; `city-state-and-progression` owns what each carries.
+- **City state.** The same handed-out-queue shape twice more, `XPSystem.GetQueue` + `AddQueueWriter` and `CityStatisticsSystem.GetStatisticsEventQueue` + `AddWriter`, and one without a handle: `IconCommandSystem.CreateCommandBuffer` returns a fresh buffer and no dependency, registered back with `AddCommandBufferWriter`, and the buffers are cleared every update, so obtain, fill and register within one frame; [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) owns what each carries.
 - **Rendering.** `PreCullingSystem.AddCullingDataReader`, and three on `BatchManagerSystem`.
 
 ## The producer side, when a mod owns the data

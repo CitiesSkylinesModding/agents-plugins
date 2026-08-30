@@ -7,7 +7,7 @@ The technique holds without one, but every game symbol named below is checkable 
 `cs2-modding-setup` provisions it.
 
 Read this when your tool must claim a prefab kind a vanilla tool already claims.
-A tool reached from a mod's own UI or a hotkey needs none of it: `custom-tools` states the walk and the `null`/`false` answer that keeps such a tool out of the contest.
+A tool reached from a mod's own UI or a hotkey needs none of it: [`custom-tools`](custom-tools.md) states the walk and the `null`/`false` answer that keeps such a tool out of the contest.
 
 The list is built by append, not by registration: the tool base class adds each tool to `ToolSystem.tools` from its own `OnCreate`, and it resolves the systems it needs before it appends.
 Creating a system runs that system's `OnCreate` synchronously, inside the caller's, so a tool pulled in by another tool's `OnCreate` is appended first — the default tool ahead of every other, since the tool base resolves the tool system and the tool system creates the default tool from its own `OnCreate`.
@@ -35,7 +35,7 @@ protected override void OnCreate()
 A position stated relative to another tool needs no race to win, and that is why `OnCreate` is the right hook: another mod inserting itself at index 0 later does not stop you preceding the object tool.
 `GetOrCreateSystemManaged` rather than an existing-only lookup is what makes the index safe: every vanilla tool is constructed before any mod's `OnLoad`, but another mod's tool is constructed when that mod loads, which may be after you — and an existing-only lookup on one that has not been constructed yet hands back a `null`, `IndexOf` a `-1`, `Insert` an out-of-range index, and `OnCreate` an exception that fails the whole mod.
 That guard does not extend to a type that may not exist at all: naming one in a generic call is a compile-time reference, so a game version that removed it fails your `OnCreate` before either lookup runs, and a `try`/`catch` around the call never gets to run either.
-Reach it by name instead — `Type.GetType` into the non-generic `GetOrCreateSystemManaged(Type)` — and `mod-compatibility` owns the isolation that makes the failure catchable.
+Reach it by name instead — `Type.GetType` into the non-generic `GetOrCreateSystemManaged(Type)` — and [`mod-compatibility`](../mod-compatibility/mod-compatibility.md) owns the isolation that makes the failure catchable.
 Source: `src/Unity.Entities/Unity.Entities/World.cs` (the creating lookup, its non-generic overload, and the existing-only one that returns `null`).
 
 **Index 0 is the answer to one question, and it ships bound to its condition.**
@@ -53,4 +53,4 @@ The walk reaches your tool first, it declines every prefab it was not already ha
 A tool at index 0 that returns `true` for prefabs it does not own hijacks the toolbar for every other tool in the game.
 Source: `src/Game/Game.Tools/ToolSystem.cs` (the walk that stops at the first tool to claim).
 
-Negotiating a list position with another mod that wants the same one is `mod-compatibility`.
+Negotiating a list position with another mod that wants the same one is [`mod-compatibility`](../mod-compatibility/mod-compatibility.md).

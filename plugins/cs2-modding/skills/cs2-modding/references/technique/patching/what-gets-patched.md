@@ -7,7 +7,7 @@ The technique holds without one, but every game symbol named below is checkable 
 `cs2-modding-setup` provisions it.
 
 The vanilla surfaces mods were found patching, grouped by the kind of seam that is missing.
-`patching` owns the discipline; this file is the lookup.
+[`patching`](patching.md) owns the discipline; this file is the lookup.
 
 Every target below was read at 1.6.0f1 and carries the signature its patch claims.
 
@@ -22,7 +22,7 @@ So the useful reading runs one way only.
 
 ## A tool's per-frame raycast and snap configuration
 
-`custom-tools` owns the enums and contracts behind this group, and `patching` says why the game leaves no seam here.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the enums and contracts behind this group, and [`patching`](patching.md) says why the game leaves no seam here.
 
 | Target | Type |
 | --- | --- |
@@ -62,7 +62,7 @@ Source: `src/Game/Game.Tools/ObjectToolSystem.cs`.
 | `GetObjectPrefab()` — private, returns `ObjectPrefab`, no parameters | `ObjectToolSystem` |
 
 The outlier that belongs here is **neutralising a system from inside its own constructor**: a postfix on `UniqueAssetTrackingSystem.OnCreate` setting `Enabled = false` on it.
-The ordinary route is `World.GetOrCreateSystemManaged<T>().Enabled = false` from `OnLoad` (`mod-lifecycle-and-ordering`), and it is what to reach for.
+The ordinary route is `World.GetOrCreateSystemManaged<T>().Enabled = false` from `OnLoad` ([`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md)), and it is what to reach for.
 Source: `src/Game/Game.UI.InGame/UniqueAssetTrackingSystem.cs`.
 
 ## A simulation value, or the managed method that schedules a job
@@ -79,8 +79,8 @@ Source: `src/Game/Game.UI.InGame/UniqueAssetTrackingSystem.cs`.
 | `FindTargets(SetupTargetType, in SetupData)` — private | `PathfindSetupSystem` |
 
 The last one and `ObjectToolSystem.SnapControlPoint` are the two job-substitution patches: a prefix that schedules its own job and returns the handle through `ref __result`.
-`patching` states that shape in full.
+[`patching`](patching.md) states that shape in full.
 
-`TimeSystem` is where the overload hazard `patching` describes bites hardest: `GetTimeOfDay` and `GetTimeOfYear` each split a public overload from a protected one on a single `double renderingFrame` parameter, and `GetYear`'s two overloads split the same way while both being public.
+`TimeSystem` is where the overload hazard [`patching`](patching.md) describes bites hardest: `GetTimeOfDay` and `GetTimeOfYear` each split a public overload from a protected one on a single `double renderingFrame` parameter, and `GetYear`'s two overloads split the same way while both being public.
 All of them need an explicit `Type[]`.
 Source: `src/Game/Game.Simulation/TimeSystem.cs`.

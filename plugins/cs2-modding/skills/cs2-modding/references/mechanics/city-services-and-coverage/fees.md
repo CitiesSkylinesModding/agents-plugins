@@ -19,7 +19,7 @@ Source: `src/Game/Game.Simulation/ServiceFeeSystem.cs`, `src/Game/Game.Prefabs/S
 
 `ServiceFeeSystem.PayFeeJob` walks each `Game.City.ServiceFeeCollector` building's `Patient` and `Student` buffers and bills the occupant's household `(int)round(GetFee(resource, fees) / 128)` per update, queueing a `FeeEvent`; against the system's 2048-frame interval the divisor turns a per-day price into a per-charge amount.
 **The debit is the rounded integer while the fee income the city books is the nominal fee times charges, unrounded** — a fee small enough to round to a zero debit charges nothing and still shows up as income.
-The education resource is picked from the student's level (`GetEducationResource`); utility and garbage fees are billed elsewhere, by `UtilityFeeSystem` (`economy-and-companies` owns the fee machinery's money half).
+The education resource is picked from the student's level (`GetEducationResource`); utility and garbage fees are billed elsewhere, by `UtilityFeeSystem` ([`economy-and-companies`](../economy-and-companies/economy-and-companies.md) owns the fee machinery's money half).
 Source: `src/Game/Game.Simulation/ServiceFeeSystem.cs`.
 
 ## Direction two: the behaviour

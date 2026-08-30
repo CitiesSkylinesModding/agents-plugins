@@ -99,7 +99,7 @@ The last three describe the boot path alone, and the mid-session-enable path bel
   Reading simulation state, querying for populated entities, or assuming any vanilla system has done its work is guaranteed to be wrong at that point.
   Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **Prefabs are not loaded yet.**
-  Anything needing the prefab database waits — see the deferral section, and `prefabs-and-assets` for what to do once it is there.
+  Anything needing the prefab database waits — see the deferral section, and [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) for what to do once it is there.
   Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 - **The world-ready event has not fired.**
   A system created during `OnLoad` receives `OnWorldReady`, because the system base subscribes to that event in its own `OnCreate`.
@@ -111,7 +111,7 @@ The world keeps updating during a save load, so phases continue to run while the
 **The world is created once at boot and destroyed only at shutdown**, so loading a second city runs against the world the first one left behind.
 The game empties it before each load, but only of its own types.
 Anything a mod leaves on an entity the game does not recognise therefore survives into the next city, and clearing it is the mod's job.
-`save-serialization` carries what that costs.
+[`save-serialization`](../save-serialization/save-serialization.md) carries what that costs.
 Source: `src/Game/Game.SceneFlow/GameManager.cs` (the world's one creation and its destruction), `src/Game/Game.Serialization/ClearSystem.cs` (the fixed component list the pre-load clear matches on).
 
 **`GameSystemBase.OnCreate` also subscribes the system to the save-loaded callback**, `OnGameLoaded(Context)`, which fires once after the whole `Deserialize` phase has run and carries the load context.
@@ -182,7 +182,7 @@ Two vanilla arrangements make rule 3 concrete.
 Each modification phase is bracketed by an allow-barrier registration in the front band and the matching barrier in the back band, so a mod's `UpdateBefore` there sits between the allow-barrier and vanilla's first `UpdateAt`, and its `UpdateAfter` sits after the barrier has played back its command buffer.
 The `Deserialize` phase uses all three bands as a designed sandwich: pre-deserialize wrappers in front, readers and migrations in the middle, post-deserialize wrappers behind.
 Source: `src/Game/Game.Common/SystemOrder.cs`.
-The barriers and the command-buffer contract belong to `ecs-in-this-game`.
+The barriers and the command-buffer contract belong to [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md).
 
 ## Anchoring to a named system
 
@@ -279,7 +279,7 @@ Four consequences a reader needs before choosing a phase:
 - **`GameSimulation` runs a variable number of times per rendered frame, including zero.**
   The step count is clamped to 0–8 from the selected game speed; `PreSimulation` and `PostSimulation` still run exactly once per frame even at zero steps.
   `GameSimulation` and `EditorSimulation` are each gated on the current action mode, and both can be skipped entirely.
-  What a simulation step is worth in game time belongs to `simulation-time-and-units`.
+  What a simulation step is worth in game time belongs to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
   Source: `src/Game/Game.Simulation/SimulationSystem.cs`.
 - **`Deserialize` and `Serialize` fire once per load and once per save, not per frame.**
   Their driving systems are disabled by default and flipped on for a single run.
@@ -296,7 +296,7 @@ Six choices cover almost every mod, and each is a position in the tree above rat
 - **Simulation work on the city** goes in `GameSimulation`, which is where the whole vanilla simulation lives, and which runs zero to eight times per frame.
   The editor drives `EditorSimulation` instead, so a system that must also run in the editor is registered into both phases; registering into `GameSimulation` alone leaves it silently dead there.
 - **Anything the player looks at in the UI** goes in `UIUpdate`, which holds every vanilla UI system.
-- **A tooltip system** goes in `UITooltip` and nowhere else; that one is a hard requirement rather than a convention, and `custom-tools` owns the mechanism behind it.
+- **A tooltip system** goes in `UITooltip` and nowhere else; that one is a hard requirement rather than a convention, and [`custom-tools`](../custom-tools/custom-tools.md) owns the mechanism behind it.
 - **A tool** goes in `ToolUpdate`, because the tool system enables the active tool immediately before driving that phase.
 - **Changing entities while the frame is still building them** goes in one of the eight modification phases, anchored beside the vanilla system whose output you need or whose input you are supplying.
 - **Anything that must read or write a save** goes in `Deserialize` or `Serialize`, both of which fire once per load or save rather than per frame.
@@ -338,14 +338,14 @@ Elsewhere the offset is never consulted, so an out-of-range one there is inert r
 Source: `src/Game/Game/UpdateSystem.cs`.
 
 The vanilla idiom, and the one to copy: declare `public static readonly int kUpdatesPerDay = <n>` and return `262144 / kUpdatesPerDay`, where 262144 is the number of simulation frames in an in-game day.
-That 262144 is declared as `TimeSystem.kTicksPerDay`, and `navigating-the-decompile` uses this very constant to show why searching for the name finds none of its uses.
+That 262144 is declared as `TimeSystem.kTicksPerDay`, and [`navigating-the-decompile`](../navigating-the-decompile/navigating-the-decompile.md) uses this very constant to show why searching for the name finds none of its uses.
 A system that splits its entity set across sub-frames returns `262144 / (kUpdatesPerDay * groupCount)` and pairs it with `SimulationUtils.GetUpdateFrame(frameIndex, updatesPerDay, groupCount)`, which computes the sub-frame the current frame belongs to.
-**Take that group count off the system you are forking**, which varies by family; assuming a value is how a fork silently mis-covers its set, and `ecs-in-this-game`'s bucketing sibling owns where to read it and what makes it hard to see.
-What that cadence is worth in simulated time is `simulation-time-and-units`.
+**Take that group count off the system you are forking**, which varies by family; assuming a value is how a fork silently mis-covers its set, and [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)'s bucketing sibling owns where to read it and what makes it hard to see.
+What that cadence is worth in simulated time is [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 Source: `src/Game/Game.Simulation/TimeSystem.cs` (the frames-per-day constant), `src/Game/Game.Simulation/SimulationUtils.cs` (the sub-frame helper's signature).
 
 A system the interval gate lets run has its job dependency reset to `default` immediately before its own `Update`, on every iteration whose index its interval is at or below — so a system the gate skips is not reset that iteration.
-This is where the interval interacts with `performance-and-memory`.
+This is where the interval interacts with [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 Source: `src/Game/Game/UpdateSystem.cs` (the reset's gate and its position), `src/Game/Game/GameSystemBase.cs` (what the reset does).
 
 (VOLATILE: the gate's mask arithmetic — `UpdateSystem`. Which phases honour an interval — `SimulationSystem`, whose calls into that gate are the whole list. The frames-per-day constant — `TimeSystem`. The interval and offset defaults — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The sub-frame helper's signature — `SimulationUtils`.)
@@ -402,7 +402,7 @@ The five hook wrappers log through the `SceneFlow` logger instead, whose errors 
 The one exception is the game's own map and asset editor, where the update wrapper suppresses the flag around that call.
 Source: `src/Game/Game.Modding/ModManager.cs` (the suppressed loader logger and the overwritten state), `src/Colossal.Core/Colossal.Entities/COSystemBase.cs` (the logger the hook wrappers use instead), `src/Game/Game/UpdateSystem.cs` (the editor-only suppression).
 
-Reading those log files, and what reaches the player, is `diagnostics`.
+Reading those log files, and what reaches the player, is [`diagnostics`](../diagnostics/diagnostics.md).
 
 (VOLATILE: all five log-message strings above, the mod-initialisation error string, the per-frame update error string, and the `SceneFlow` logger name — `GameSystemBase`'s hook wrappers, `UpdateSystem.Update`, and the mod manager.)
 
@@ -456,12 +456,12 @@ Details that bite:
 
 (VOLATILE: `GetInterval`'s signature, the five registration methods and which of them take an anchor — `UpdateSystem`.)
 
-Where a fork is the realistic change — the large simulation areas, `citizens-and-households`, `economy-and-companies`, `city-services-and-coverage` — this is the recipe those references assume.
-Where the change is a behaviour inside a method rather than a whole system, `patching` is the cheaper tool.
+Where a fork is the realistic change — the large simulation areas, [`citizens-and-households`](../../mechanics/citizens-and-households/citizens-and-households.md), [`economy-and-companies`](../../mechanics/economy-and-companies/economy-and-companies.md), [`city-services-and-coverage`](../../mechanics/city-services-and-coverage/city-services-and-coverage.md) — this is the recipe those references assume.
+Where the change is a behaviour inside a method rather than a whole system, [`patching`](../patching/patching.md) is the cheaper tool.
 
 **Registration is not confined to `OnLoad`.**
 Calling any of the five methods later — from a deferred callback, or from a system's own `OnCreate` — works: registration marks the update system dirty and the next update of that phase rebuilds every phase's ranges from scratch.
-That is the escape hatch for anything that cannot be decided during `OnLoad`, including anything conditional on another mod being present; `mod-compatibility` owns the detection side.
+That is the escape hatch for anything that cannot be decided during `OnLoad`, including anything conditional on another mod being present; [`mod-compatibility`](../mod-compatibility/mod-compatibility.md) owns the detection side.
 Source: `src/Game/Game/UpdateSystem.cs`.
 
 ## Deferring work until the mod manager has settled
@@ -509,7 +509,7 @@ Source: `src/Game/Game.Common/SystemOrder.cs`.
 The `Deserialize` phase cannot host everything that looks like it belongs there.
 A migration that needs data another phase produces — network compositions, for instance — has to be registered into the modification phase that produces it instead, anchored before whichever system consumes it.
 The alternative shape, for save rather than load, is bands rather than wrappers: an `UpdateBefore` in `Serialize` collapses mod state into vanilla fields and one or more `UpdateAfter` registrations restore it once the writer has run.
-What goes inside any of those methods is `save-serialization`.
+What goes inside any of those methods is [`save-serialization`](../save-serialization/save-serialization.md).
 
 ## Not every mod system needs a phase
 
@@ -534,9 +534,9 @@ What belongs there:
 - **Undo the mod's Harmony patches.**
   A patch outlives the mod object that applied it, so a mod that patched and then threw halfway through `OnLoad` leaves live patches behind for a mod the game has given up on.
   That is the case the undo is for; at shutdown the process is going away regardless.
-  `patching` owns the call and the identity it keys on.
+  [`patching`](../patching/patching.md) owns the call and the identity it keys on.
 - **Unregister the settings from the options UI**, and null the field, in the shape `if (Settings != null) { Settings.UnregisterInOptionsUI(); Settings = null; }`.
-  See `settings-and-input`.
+  See [`settings-and-input`](../settings-and-input/settings-and-input.md).
 - **Null the mod's own static instance and any other static state**, since statics outlive the mod object and a failed load otherwise leaves them pointing at a half-built one for the rest of the session.
 - **Undo anything registered outside the mod's own world** — a UI host location, a temporary directory, an entry in another mod's registry.
 
@@ -549,5 +549,5 @@ Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Unity.Entities/Unity.Enti
 
 ## What this reference hands to others
 
-`ecs-in-this-game` for what goes inside a system; `save-serialization` for the contents of the two save phases, whose position in the tree and once-per-load firing come from here; `diagnostics` for reading the log files these failures write into; `performance-and-memory` for what the update interval buys; `patching` for changing behaviour without owning the system, and for the patch lifecycle a dispose has to close; `mod-compatibility` for deciding at load time what another mod has already done.
-Every mechanics reference needs a phase for its change, and the modification-phase decomposition in the phase catalogue is the part `roads-and-traffic` and `zoning-buildings-and-land-value` lean on hardest.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) for what goes inside a system; [`save-serialization`](../save-serialization/save-serialization.md) for the contents of the two save phases, whose position in the tree and once-per-load firing come from here; [`diagnostics`](../diagnostics/diagnostics.md) for reading the log files these failures write into; [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) for what the update interval buys; [`patching`](../patching/patching.md) for changing behaviour without owning the system, and for the patch lifecycle a dispose has to close; [`mod-compatibility`](../mod-compatibility/mod-compatibility.md) for deciding at load time what another mod has already done.
+Every mechanics reference needs a phase for its change, and the modification-phase decomposition in the phase catalogue is the part [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) and [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) lean on hardest.

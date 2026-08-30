@@ -46,7 +46,7 @@ Source: `src/Game/Game.Areas/AreaUtils.cs`.
 `CheckOption(BorderDistrict, ...)` requires a side with the option set and no side with it unset — the opposite grain from service scoping, where a road passes on either side.
 Source: `src/Game/Game.Areas/AreaUtils.cs`.
 
-Policies supply both halves: `DistrictModifiers` and `DistrictOptions` on a `PolicyPrefab` produce a `DistrictModifierData` buffer and a `DistrictOptionData` mask, which is `city-state-and-progression`'s machinery landing in this topic's components (`src/Game/Game.Prefabs/DistrictModifiers.cs`, `DistrictOptions.cs`).
+Policies supply both halves: `DistrictModifiers` and `DistrictOptions` on a `PolicyPrefab` produce a `DistrictModifierData` buffer and a `DistrictOptionData` mask, which is [`city-state-and-progression`](../city-state-and-progression/city-state-and-progression.md)'s machinery landing in this topic's components (`src/Game/Game.Prefabs/DistrictModifiers.cs`, `DistrictOptions.cs`).
 
 ## Themes
 
@@ -55,7 +55,7 @@ Sources: `src/Game/Game.Prefabs/ThemePrefab.cs`, `src/Game/Game.Prefabs/ThemeObj
 A theme is a `ThemePrefab` — an `assetPrefix` string plus the zero-size `ThemeData` marker — and the whole binding mechanism is one buffer element: `ThemeObject` on a prefab adds a single `ObjectRequirementElement(theme, group, ObjectRequirementType.IgnoreExplicit)` to that prefab's requirement buffer, in a group of its own.
 Its `[ComponentMenu]` admits it on `ZonePrefab`, `ObjectPrefab`, `NetPrefab`, `AreaPrefab`, `RoutePrefab` and `NetLanePrefab`.
 The city's chosen theme is `CityConfigurationSystem.defaultTheme`, resolved on load: null falls back to the first `ThemeData` entity that is not `Locked`, and an `overrideThemeName` string can name one by prefab name.
-A zone prefab's requirement element has one simulation consumer — the theme branch of `ZoneBuiltRequirementSystem` below — while the UI layer reads it wherever themes surface, the toolbar's zone list first; the variation draw that themes object prefabs is `placement-definitions`' machinery.
+A zone prefab's requirement element has one simulation consumer — the theme branch of `ZoneBuiltRequirementSystem` below — while the UI layer reads it wherever themes surface, the toolbar's zone list first; the variation draw that themes object prefabs is [`placement-definitions`](../../technique/placement-definitions/placement-definitions.md)' machinery.
 
 **Themed and unthemed are not two systems.**
 A zone prefab is themed iff it carries a `ThemeObject`; there is no flag and no enum, so the presence of that requirement element is the whole difference, and which shipped zone types are themed is asset data — read it off the prefabs, not off any code.
@@ -79,6 +79,6 @@ ZoneBuiltRequirementSystem (Modification5), three mutually exclusive branches:
   tallies: a map of ZoneBuiltDataKey { m_Zone, m_Level } -> ZoneBuiltDataValue { m_Squares, m_Count }, fed primarily by a building create-and-delete chunk pass, with the ZoneBuiltLevelUpdate records level-up emits (level-up-loop.md) covering only level transitions -- so bulldozing moves the tally too
 ```
 
-The unlock it drives belongs to `city-state-and-progression`.
+The unlock it drives belongs to [`city-state-and-progression`](../city-state-and-progression/city-state-and-progression.md).
 
 (VOLATILE: every component, field, enum, system and `Source:` path this file names, the truth table and the modifier arithmetic included — their declarations in `Game.Areas`, `Game.Zones`, `Game.Prefabs`, `Game.Simulation`, `Game.UI.InGame`, `Game.Common`, `Game.Policies` and `Game.City` under `src/Game/`, at the files the section sources cite.)

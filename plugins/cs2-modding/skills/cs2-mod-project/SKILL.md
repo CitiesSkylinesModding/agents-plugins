@@ -7,6 +7,8 @@ description: 'The official Cities: Skylines II modding toolchain. Use when the u
 
 Verified against game version 1.6.0f1.
 Paths and commands throughout are Windows.
+A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
+**IMPORTANT: follow this skill's sections and references on anything they own — or at the very least grep them before writing a familiar csproj or build shape, because the toolchain inverts several standard .NET idioms and the familiar one builds cleanly, then fails inside the game.**
 
 The official toolchain creates mod projects, builds them, installs them locally and publishes them.
 Drive it rather than reproducing it: a hand-written project drifts from the shared build the first time the toolchain moves, and the build does work no csproj can carry on its own.
@@ -53,7 +55,7 @@ Both halves deploy by that name into one folder — the C# build to `%CSII_LOCAL
 `npm run build` builds once and `npm run dev` watches.
 To make one `dotnet build` do both, run the UI build from an `Exec` target hooked `AfterTargets="DeployWIP"`: the deploy stage empties that shared folder before refilling it from the C# output, so a UI bundle written any earlier is deleted rather than installed.
 
-Everything past the project layout — the binding between C# and the frontend, and the frontend itself — is a separate discipline; the sibling `coherent-gameface` plugin drives the UI engine underneath it, for anyone who has it installed.
+Everything past the project layout — the binding between C# and the frontend, and the frontend itself — is the `cs2-modding-ui` skill's discipline; the sibling `coherent-gameface` plugin drives the UI engine underneath it, for anyone who has it installed.
 
 ## Project settings that are not obvious
 
@@ -103,6 +105,7 @@ Declaring a job or an aspect is enough to trigger it with nothing scheduling the
 
 Building installs the mod into `%CSII_LOCALMODSPATH%\<assembly name>`, so there is no separate install step.
 The game reads that folder at startup and lists what it finds there as local mods.
+A mod deployed there yet missing from that list, or listed but doing nothing, is a loader question: [diagnostics](../cs2-modding/references/technique/diagnostics/diagnostics.md) owns which log to open first and what each line proves.
 
 To disable one without deleting it, rename its folder so the name starts with `.` or `~`.
 The game's asset scan skips every file and folder whose name begins with either character, so the mod stops existing as far as the game is concerned, and renaming it back brings it right back.

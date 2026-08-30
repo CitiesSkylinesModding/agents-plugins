@@ -19,9 +19,9 @@ m_IgnoredRules  = HasBlockage | ForbidCombustionEngines | ForbidHeavyTraffic | F
 m_Methods       = RouteUtils.GetPathMethods over the route's RouteConnectionData
 ```
 
-Three consequences: `Stable` removes the per-edge random multiplier `roads-and-traffic` records, so two identical lines take the same path; `IgnoreFlow` makes the planned duration a free-flow duration; and the rule union means a line's route ignores blockages, the combustion-engine and heavy-traffic district options, and the private-traffic, slow-traffic and bicycle-avoidance lane rules — while a bus line, the Car road case the listing carves out, still pays a district's transit-traffic ban.
+Three consequences: `Stable` removes the per-edge random multiplier [`roads-and-traffic`](../roads-and-traffic/roads-and-traffic.md) records, so two identical lines take the same path; `IgnoreFlow` makes the planned duration a free-flow duration; and the rule union means a line's route ignores blockages, the combustion-engine and heavy-traffic district options, and the private-traffic, slow-traffic and bicycle-avoidance lane rules — while a bus line, the Car road case the listing carves out, still pays a district's transit-traffic ban.
 A mod that wants transit to route around congestion changes these flags, not the weights — measured congestion reaches transit only through `VehicleTiming.m_AverageTravelTime` and the `RouteInfo` scaling below.
-`RoutePathSystem.SetupPathfind` is private, so reaching this decision is `patching`'s — and the edge builders below, though `public static` and pure, are called only from `[BurstCompile]` jobs in `RoutesModifiedSystem` and `LanesModifiedSystem`, so a patch on one is inert with Burst on and the seam is the managed schedule in those two systems.
+`RoutePathSystem.SetupPathfind` is private, so reaching this decision is [`patching`](../../technique/patching/patching.md)'s — and the edge builders below, though `public static` and pure, are called only from `[BurstCompile]` jobs in `RoutesModifiedSystem` and `LanesModifiedSystem`, so a patch on one is inert with Burst on and the seam is the managed schedule in those two systems.
 
 ## What a transit leg costs
 
@@ -79,7 +79,7 @@ Some transport buildings own routes carrying `VerifiedPath`, planned with forced
 `RoutePathReadySystem` (`SystemUpdatePhase.Modification1`) reads the results: a resolved path whose origin or destination building shares the route's top owner gets the gate-bypass warning icon, and the owning building's `EfficiencyFactor.GateBypass` is set to `1 + RouteConfigurationData.m_GateBypassEfficiency` whenever any segment of the route resolved a path at all, back to `1` when none did (`src/Game/Game.Routes/RoutePathReadySystem.cs`).
 
 **A verified route that resolves a path is the failure case: the penalty lands when the bypass exists, and a route none of whose segments resolved is the clean state.**
-That clean state also adds `HiddenRoute`, which hides the route from rendering, raycasts and the transit UI and nothing more; `city-services-and-coverage` owns the efficiency machinery, and `RouteConfigurationData` carries the magnitude as a singleton field.
+That clean state also adds `HiddenRoute`, which hides the route from rendering, raycasts and the transit UI and nothing more; [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) owns the efficiency machinery, and `RouteConfigurationData` carries the magnitude as a singleton field.
 Source: `src/Game/Game.Routes/RoutePathReadySystem.cs`, `src/Game/Game.Routes/HiddenRoute.cs`, `src/Game/Game.Prefabs/RouteConfigurationData.cs`.
 
 (VOLATILE: every component, field, enum, system, method, constant and `Source:` path this file names — their declarations under `src/Game/` in `Game.Routes`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Buildings`, at the files cited beside each claim, with `Game.Common` for the `PathfindUpdated` stamps; plus the pathfind-prefab shape read live, against the `ecs_query` stated beside it.)

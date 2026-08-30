@@ -30,7 +30,7 @@ GetWorkerWorkforce(happiness, level) = ((level == 0 ? 2 : 1) + 2.5 * level) * (0
 ```
 
 **A commercial company that is fully stocked produces nothing** — the taper reaches a hard zero, which is the mechanism behind a shop idling.
-`citizens-and-households` owns the workforce ladder and `EconomyUtils.CalculateNumberOfWorkplaces`; what this topic adds is that `WorkplaceComplexity` comes off the company prefab's `WorkplaceData` and the level off the rented building's `SpawnableBuildingData` — a company has no level of its own.
+[`citizens-and-households`](../citizens-and-households/citizens-and-households.md) owns the workforce ladder and `EconomyUtils.CalculateNumberOfWorkplaces`; what this topic adds is that `WorkplaceComplexity` comes off the company prefab's `WorkplaceData` and the level off the rented building's `SpawnableBuildingData` — a company has no level of its own.
 
 ## Building efficiency
 
@@ -44,7 +44,7 @@ Destroyed, Abandoned, Disabled, Fire, ServiceBudget, NotEnoughEmployees, SickEmp
 ```
 
 The writers this topic owns: `ProcessingCompanySystem.UpdateEfficiencyFactors` writes `SpecializationBonus`, `CityModifierOfficeEfficiency` for an office output (a commercial office output gets it pinned at 1 with the modifier skipped), `CityModifierIndustrialEfficiency` only for a non-commercial non-office output — an ordinary commercial company gets neither city-modifier factor — one of `CityModifierSoftware` or `CityModifierElectronics` (by which the output is), and `CityModifierFishInput` for a fish-input recipe; the system's own chunk loop writes `LackResources` after the input caps; `ExtractorCompanySystem` writes `NaturalResources` and `CityModifierFishHub`; `WorkProviderSystem` writes `NotEnoughEmployees`, `SickEmployees` and `EmployeeHappiness`.
-The rest belong to `city-services-and-coverage` and the utility topics.
+The rest belong to [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) and the utility topics.
 `ProcessingCompanySystem` reads `GetEfficiencyExcludingFactor(buffer, LackResources)` rather than the plain product, because it is about to write `LackResources` itself from whether the inputs allowed any output — reading it would feed last tick's shortage into this tick's production.
 
 **Employee happiness enters production twice, multiplicatively.**
@@ -142,13 +142,13 @@ ExtractorAISystem:   -1 if m_MaxWorkers > 5 and stock at or above the upgrade-co
 commercial and industrial, on a company not already seeking (a renting one only on a 1-in-4 roll per pass): live GetCompanyTotalWorth > kLowestCompanyWorth = -10000 enables PropertySeeker; at or below it, a propertyless company is Deleted and a renting one is left alone. An extractor has no worth test, and this pass seeks only a propertyless one.
 ```
 
-`m_MaxWorkers` becomes jobs by level through `EconomyUtils.CalculateNumberOfWorkplaces`, which `citizens-and-households` records.
+`m_MaxWorkers` becomes jobs by level through `EconomyUtils.CalculateNumberOfWorkplaces`, which [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) records.
 
 ## Profit, the two profitability numbers, and the income statement
 
 Sources: `src/Game/Game.Simulation/CompanyProfitabilitySystem.cs`, `src/Game/Game.Simulation/CompanyUtils.cs`, `src/Game/Game.Simulation/CompanyEconomyStatisticSystem.cs`, `src/Game/Game.Economy/EconomyUtils.cs`.
 
-`GetCompanyProfitPerDay = GetCompanyProfitPerUnit * production - CalculateTotalWage(employees)`; `GetCompanyMaxProfitPerDay` is the projection at `m_MaxWorkers`, efficiency 1 and every worker at happiness 50, with no commercial saturation taper — and `zoning-buildings-and-land-value` records that `RentAdjustSystem` compares the asked rent against it.
+`GetCompanyProfitPerDay = GetCompanyProfitPerUnit * production - CalculateTotalWage(employees)`; `GetCompanyMaxProfitPerDay` is the projection at `m_MaxWorkers`, efficiency 1 and every worker at happiness 50, with no commercial saturation taper — and [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) records that `RentAdjustSystem` compares the asked rent against it.
 `GetCompanyTotalWorth` is money plus every stocked resource at price plus every loaded owned truck's cargo — a commercial company's *output* stock at the market price, everything else (truck cargo included) at the industrial price.
 
 ```

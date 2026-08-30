@@ -3,10 +3,10 @@
 Verified against game version 1.6.0f1.
 
 **Read this with the game's string tables open.**
-The counts below are taken from those tables and the decompile carries none of them; `localization` owns the C# behind a key lookup.
+The counts below are taken from those tables and the decompile carries none of them; [`localization`](localization.md) owns the C# behind a key lookup.
 They ship inside the install, which the toolchain's environment variables locate.
 
-The lookup behind `localization`'s reuse section: every group the game's own shipped strings occupy, and how many keys each one holds.
+The lookup behind [`localization`](localization.md)'s reuse section: every group the game's own shipped strings occupy, and how many keys each one holds.
 
 Each row is a **group**: the segment before the first dot.
 **Ids** counts the distinct `Group.ID` pairs in the group, ignoring hash and index.
@@ -94,5 +94,5 @@ Each row is a **group**: the segment before the first dot.
 
 (VOLATILE: the whole table — its group set, both count columns and the coverage of each group all move with the game's shipped locale data.)
 
-The 21 groups `localization` names as the C#-visible ones are `Editor`, `Common`, `Options`, `Properties`, `Paradox`, `Assets`, `Tools`, `Menu`, `PhotoMode`, `DefaultTool`, `SelectedInfoPanel`, `Services`, `Maps`, `Infoviews`, `Policy`, `GameListScreen`, `SubServices`, `StatisticsPanel`, `Radio`, `Notifications` and `Loading`.
+The 21 groups [`localization`](localization.md) names as the C#-visible ones are `Editor`, `Common`, `Options`, `Properties`, `Paradox`, `Assets`, `Tools`, `Menu`, `PhotoMode`, `DefaultTool`, `SelectedInfoPanel`, `Services`, `Maps`, `Infoviews`, `Policy`, `GameListScreen`, `SubServices`, `StatisticsPanel`, `Radio`, `Notifications` and `Loading`.
 Every other row above is built entirely in the frontend.

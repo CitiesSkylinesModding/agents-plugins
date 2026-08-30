@@ -47,7 +47,7 @@ Tourism.m_AverageTourists = round(2 * GetTouristProbability * 100000 / 16)  // d
 
 The weather terms' coefficients are `AttractivenessParameterData` fields; every other number in this section is a C# literal.
 `GetTouristRandomStay()` returns the literal 262144 — one game day — and has no caller in `src/`, so it states an intent rather than a mechanism.
-`citizens-and-households` owns the tourist household itself; `TouristSpawnSystem` rolls this probability per pass.
+[`citizens-and-households`](../citizens-and-households/citizens-and-households.md) owns the tourist household itself; `TouristSpawnSystem` rolls this probability per pass.
 
 ## Lodging
 
@@ -78,6 +78,6 @@ Sources: `src/Game/Game.Citizens/HouseholdInitializeSystem.cs`, `src/Game/Game.S
 `StatisticType.TouristIncome` is credited the household's starting money at spawn and debited whatever it still holds at leave; everything spent in between reaches companies through `ResourceBuyerSystem`, `LeisureSystem` and `LodgingProviderSystem`, so there is no tourist-specific revenue channel to hook.
 Source: `src/Game/Game.Citizens/HouseholdInitializeSystem.cs`, `src/Game/Game.Simulation/HouseholdMoveAwaySystem.cs`.
 
-Tourist starting wealth and the tourist consumption multiplier are `citizens-and-households`' fields.
+Tourist starting wealth and the tourist consumption multiplier are [`citizens-and-households`](../citizens-and-households/citizens-and-households.md)' fields.
 
 (VOLATILE: every system, component, field, formula and `Source:` path this file names — their declarations in `Game.Simulation`, `Game.City`, `Game.Companies`, `Game.Citizens`, `Game.Buildings` and `Game.Prefabs` under `src/Game/`, at the files the sections cite.)

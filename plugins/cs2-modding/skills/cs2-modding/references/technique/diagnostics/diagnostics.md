@@ -41,7 +41,7 @@ Source: `src/Game/Game.Modding/ModManager.cs`, `src/Game/Game/GameSystemBase.cs`
    `SceneFlow.log` carries `System update error during <Phase>-><SystemType>:` at `Critical`, and the system keeps running and keeps throwing.
 7. **Is the system registered and never running?**
    Nothing logs this at all.
-   It is the anchoring failure `mod-lifecycle-and-ordering` owns: a system spliced beside a type registered in a different phase is filed in a dictionary the rebuild never enumerates, with no exception and no line.
+   It is the anchoring failure [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns: a system spliced beside a type registered in a different phase is filed in a dictionary the rebuild never enumerates, with no exception and no line.
 8. **Is the mod's own logger reaching its file?**
    Check `Player.log` first: the mod's lines there while its own file is missing mean the level is not the problem, and the severity ladder below names the three causes that are.
    Otherwise a `Logs/<Name>.log` that exists and is short is a level problem: read `effectivenessLevel` in the mod's source, then the `<Name> Logger` block in `FallbackSettings.coc`, then the launch options the user actually set.
@@ -49,8 +49,8 @@ Source: `src/Game/Game.Modding/ModManager.cs`, `src/Game/Game/GameSystemBase.cs`
 
 Every _failure_ line steps 2 to 6 produce is `Warn` or above, so each of them reaches `Player.log` as well: the load error at `Error`, the shipped-game-assembly warning at `Warn`, the lifecycle throw at `Error`, and the per-frame update throw at `Critical`.
 Step 1's lines and step 2's `Loaded … in <n>ms` are `Info` and stay out of it — see the ladder below.
-Where the symptom is memory growth rather than silence, this order has nothing to offer: no log line records it at all, and `performance-and-memory` owns the one instrument that does.
-A process that died with no managed exception is the other symptom this order cannot take: it assumes a live process still writing lines, and `performance-and-memory` owns the native failures that end a run without one.
+Where the symptom is memory growth rather than silence, this order has nothing to offer: no log line records it at all, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the one instrument that does.
+A process that died with no managed exception is the other symptom this order cannot take: it assumes a live process still writing lines, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the native failures that end a run without one.
 Copy the logs before going there — the log-directory section below states the deadline.
 
 (VOLATILE: the loader and lifecycle message strings quoted above — the mod manager, `GameSystemBase`'s hook wrappers, and `UpdateSystem.Update`.)
@@ -139,7 +139,7 @@ Four places set it, each overriding the one before it.
   Source: `src/Game/Game.SceneFlow/GameManager.cs` (option parsing and the asset cache both ahead of mod initialisation).
 - **The developer menu's Logs tab**, which writes those same persisted settings live and is the fastest way to raise a mod's level mid-session.
   Its level dropdown is built from an enumerator that **omits `Critical`**, so a logger sitting at that level shows no selection at all and cannot be set to it there — which is worth knowing because `Critical` is the level a system's own update exception logs at.
-  `debug-menu` owns the menu.
+  [`debug-menu`](../debug-menu/debug-menu.md) owns the menu.
   Source: `src/Game/Game.Debug/LogsDebugUI.cs` (the fields and the dropdown), `src/Colossal.Logging/Colossal.Logging/Level.cs` (the enumerator that skips `Critical`).
 
 **The logger name is an identity, not a label**, and this is where a mod can break the game for everyone else.
@@ -152,7 +152,7 @@ Name the logger after the mod's own assembly or display name.
 Matching it to the mod's settings folder name is worth doing too, for a reason no mechanism enforces: a user reporting a problem has to be able to find the file to send.
 Source: `src/Colossal.Logging/Colossal.Logging/LogManager.cs` (one object per name, and where the "already exists" warning sits), `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs` (the name as the file name, and `Default` getting none), `src/Colossal.Core/Colossal.Entities/COSystemBase.cs` (`SceneFlow` as the lifecycle wrappers' logger), `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/AssetDatabase.cs` (the name as the settings key).
 
-What a log call costs, and how to make one cheap enough to leave in a shipped build, is `performance-and-memory`.
+What a log call costs, and how to make one cheap enough to leave in a shipped build, is [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 
 (VOLATILE: the settings key suffix `" Logger"`, the file name `FallbackSettings.coc`, and which logger names the game has already taken — the asset database's settings provider, the game's own user data root, and the `Logs/` directory of a vanilla run, which lists every logger the game itself creates.)
 
@@ -168,7 +168,7 @@ What a log call costs, and how to make one cheap enough to leave in a shipped bu
 
 `Modding.log` also carries the game's own Harmony patch census, and **an empty census there proves nothing about what is patched.**
 The census runs before any mod assembly is in the process, so under the built-in modding runtime it finds no Harmony to reflect over and returns immediately.
-Getting a real list means calling for it from a mod's own code after load, which `patching` owns.
+Getting a real list means calling for it from a mod's own code after load, which [`patching`](../patching/patching.md) owns.
 Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 
 ## Where a load failure is reported
@@ -235,13 +235,13 @@ The type name in the message is the system's short name, so it greps.
   It keeps running, half-initialised, for the rest of the session, so a reader who trusts the message concludes the system is out of the picture when it is the thing still misbehaving.
   Source: `src/Game/Game/GameSystemBase.cs`.
 
-Which of the five hooks each message belongs to, and what a disabled system leaves running in the rest of the mod, is `mod-lifecycle-and-ordering`.
+Which of the five hooks each message belongs to, and what a disabled system leaves running in the rest of the mod, is [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md).
 
 ## A developer-menu tab that throws logs under two names
 
 A debug-menu tab method that throws loses its tab, and the exception surfaces under two names on two separate paths: the attribute scan logs `Failed to register '<tab name>' Debug UI` once, and an explicit rebuild of that delegate logs the same message with the method name — repeating on every rebuild while the menu stays open.
 Grep for `Failed to register`, and read repeated method-name lines as one defect re-thrown rather than several.
-`debug-menu` owns the menu, its registration paths, and the one mod shape known to throw there.
+[`debug-menu`](../debug-menu/debug-menu.md) owns the menu, its registration paths, and the one mod shape known to throw there.
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
 ## An `Error` from a logger is a modal dialog and a paused simulation
@@ -303,14 +303,14 @@ Source: `src/Game/Game.Tools/ValidationSystem.cs` (the tagging and the icons), `
 **How a tool knows it is blocked.** The tool base holds a query over that error component, and the base implementation of `GetAllowApply` is true when the tool system's `ignoreErrors` is set _or_ that query is empty, and the original-deleted check also passes.
 So "why will this not apply" is answered by whether that query is empty.
 `ignoreErrors` is a plain public settable bool, and the developer menu's validation-bypass toggle is what writes it — but it clears only the error-query half, and the original-deleted check still gates the return.
-So an apply that still refuses with `ignoreErrors` set is the second clause, not a broken toggle; `custom-tools` owns that clause and overriding `GetAllowApply` in a tool of your own, and `debug-menu` owns the menu.
+So an apply that still refuses with `ignoreErrors` set is the second clause, not a broken toggle; [`custom-tools`](../custom-tools/custom-tools.md) owns that clause and overriding `GetAllowApply` in a tool of your own, and [`debug-menu`](../debug-menu/debug-menu.md) owns the menu.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the query and the base `GetAllowApply`), `src/Game/Game.Tools/ToolSystem.cs` (`ignoreErrors`), `src/Game/Game.Debug/DebugSystem.cs` (the toggle that writes it).
 
 **How the reason reaches the player.** Each error type has a prefab carrying its notification icon, and a prefab whose flags disable it in the current mode is skipped, leaving an empty slot.
 So **a missing icon means a disabled error prefab rather than an absent error** — and a disabled one raises no `Error` tag either, so it does not block the apply at all.
 Source: `src/Game/Game.Tools/ValidationSystem.cs` (the skipped prefab and the early return before both the icon and the tag), `src/Game/Game.Prefabs/ToolErrorFlags.cs` (the flags it is skipped on).
 
-`placement-definitions` owns the error prefab: the error type, severity and flag enumerations by name, and how to suppress an error by editing its prefab and put it back afterwards.
+[`placement-definitions`](../placement-definitions/placement-definitions.md) owns the error prefab: the error type, severity and flag enumerations by name, and how to suppress an error by editing its prefab and put it back afterwards.
 `TemporaryOnly` is the flag that changes what you see rather than what applies: it marks an error whose icon is deleted at apply time instead of being promoted, so it shows while previewing and is gone once the placement lands.
 
 ## Verifying the debug patch before attaching anything
@@ -320,15 +320,15 @@ Two log lines and two file checks do it, each sourced in one of the patch's two 
 Whether one of the two log lines going missing on its own identifies which edit failed is untested, so read them together rather than singly.
 They are in [debug-patch-signals.md](debug-patch-signals.md), with the port to attach to.
 
-Applying the patch is the setup skill's `debug-patching` reference.
-This reference stops at whether a debugger can attach at all; getting a Burst-compiled job into it once attached is `performance-and-memory`.
+Applying the patch is the setup skill's [`debug-patching`](../../../../cs2-modding-setup/references/debug-patching.md) reference.
+This reference stops at whether a debugger can attach at all; getting a Burst-compiled job into it once attached is [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 
 ## What this reference hands to others
 
-`mod-lifecycle-and-ordering` owns the mechanism behind steps 4 to 7 of the order — which hook, which state, whether the system stays enabled, and the anchoring failure that logs nothing.
-`navigating-the-decompile` is where a reader goes once a log line has handed them a type name or a message string, which is what the quoted strings here are for.
-`city-state-and-progression` owns the notification system from the other side: the simulation's own failure-state icons, rather than a mod reporting one.
-`performance-and-memory` owns what a log line costs and every lever that makes one cheap, where this reference owns where a line goes and how to change that.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the mechanism behind steps 4 to 7 of the order — which hook, which state, whether the system stays enabled, and the anchoring failure that logs nothing.
+[`navigating-the-decompile`](../navigating-the-decompile/navigating-the-decompile.md) is where a reader goes once a log line has handed them a type name or a message string, which is what the quoted strings here are for.
+[`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) owns the notification system from the other side: the simulation's own failure-state icons, rather than a mod reporting one.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what a log line costs and every lever that makes one cheap, where this reference owns where a line goes and how to change that.
 It also owns the two symptoms the order above cannot take: memory growth, and a process death with no managed exception.
 
 Every question in the order that a log cannot answer is a live-state question — whether a system is registered, whether it is enabled, whether a query matches anything, whether a patch took.

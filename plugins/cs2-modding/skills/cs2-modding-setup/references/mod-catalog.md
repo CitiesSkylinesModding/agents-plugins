@@ -211,7 +211,7 @@ Source: [ruzbeh0/Time2Work](https://github.com/ruzbeh0/Time2Work)
 **Demonstrates:** Substitution at the largest scale here: roughly a dozen vanilla simulation systems disabled and replaced.
 Reimplementing the game's time model, deriving ticks per day from the vanilla constant scaled by a factor, which is where to look for how the simulation's time units actually work.
 The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval.
-Read the `cs2-modding` skill's `mod-lifecycle-and-ordering` reference before copying the pattern, because the offset does not transfer.
+Read the `cs2-modding` skill's [`mod-lifecycle-and-ordering`](../../cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) reference before copying the pattern, because the offset does not transfer.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A serializable component for per-citizen state whose deserializer wraps its reads in a catch that cannot fire on the size mismatch it is written for.
 A system save section whose read is gated on one of the game's own save-format tags while its write is unconditional, which is the coupling hazard rather than a pattern to copy.

@@ -17,12 +17,12 @@ Each consumer compares `TimeSystem.normalizedTime` against its own constants, `P
 | `ClimateSystem` | `day = t >= EffectFlagSystem.kDayBegin && t < kNightBegin` | 06:00–18:00 |
 | `TimeUISystem.GetLightingState` | `day = !(t < 7f / 24f) && !(t > 0.875f)`, the fallback when `LightingSystem.state` is `Invalid` | 07:00–21:00 |
 | `TransportLineSystem` | `isNight = t < 0.25f \|\| t >= 11f / 12f` | 06:00–22:00 |
-| `CitizenBehaviorSystem.IsSleepTime` | `t` inside `GetSleepTime(…)`'s `float2`, wrapping when `y < x` | per citizen; the window's derivation belongs to `citizens-and-households` |
+| `CitizenBehaviorSystem.IsSleepTime` | `t` inside `GetSleepTime(…)`'s `float2`, wrapping when `y < x` | per citizen; the window's derivation belongs to [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) |
 | `CalendarEventLaunchSystem` | `(CalendarEventTimes)(1 << floor(t * 4f))`, `Night = 1, Morning = 2, Afternoon = 4, Evening = 8` | `Night` is 00:00–06:00, `Evening` 18:00–24:00 |
 
 Source: `src/Game/Game.Effects/EffectFlagSystem.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`, `src/Game/Game.UI.InGame/TimeUISystem.cs`, `src/Game/Game.Simulation/TransportLineSystem.cs`, `src/Game/Game.Simulation/CitizenBehaviorSystem.cs`, `src/Game/Game.Simulation/CalendarEventLaunchSystem.cs`, `src/Game/Game.Prefabs/CalendarEventTimes.cs`.
 
-`RoadSafetySystem` and `TrafficFlowSystem` use the same `normalizedTime * 4f` without flooring it, as the centre of a saturated tent of four weights over the `Road` component's four per-quarter slots (`roads-and-traffic`).
+`RoadSafetySystem` and `TrafficFlowSystem` use the same `normalizedTime * 4f` without flooring it, as the centre of a saturated tent of four weights over the `Road` component's four per-quarter slots ([`roads-and-traffic`](../roads-and-traffic/roads-and-traffic.md)).
 
 ## The sun
 
@@ -54,7 +54,7 @@ ClimatePrefab.sunLimitRadians = double2(radians(m_SunElevationClampStart), radia
 ```
 
 So the game year's `timeOfYear` fraction is stretched across 365 astronomical days and the sun's position is a solar calculation, which is why day length varies with the season and with the map's latitude and no curve or constant states it.
-`overrideTime` and `debugTimeMultiplier` are the developer menu's, reached through `debug-menu`.
+`overrideTime` and `debugTimeMultiplier` are the developer menu's, reached through [`debug-menu`](../../technique/debug-menu/debug-menu.md).
 
 **The visual day-night cycle is rendering, and `DayNightCycleData` sets none of its timing.**
 No field on that `ScriptableObject` is a time — they are sun-elevation angles, exposure and contrast limits, colours, LUT settings and light multipliers: `DawnStartAngle` and `DuskEndAngle` say which look to use once the sun is at an angle.

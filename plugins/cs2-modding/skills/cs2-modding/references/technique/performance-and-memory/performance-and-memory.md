@@ -7,7 +7,7 @@ The technique holds without one, but every game symbol named below is checkable 
 `cs2-modding-setup` provisions it.
 
 Not leaking, and not stalling.
-Writing the job itself belongs to `ecs-in-this-game`; this reference owns what the job's memory costs and what its scheduling has to respect.
+Writing the job itself belongs to [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md); this reference owns what the job's memory costs and what its scheduling has to respect.
 
 Everything here rests on one property: **this build has no collections safety system**, so almost every mistake below is silent.
 An out-of-bounds native read, two jobs writing one container, a container disposed while a job still holds it — none of the three throws, and each surfaces later as a crash somewhere else or as wrong numbers.
@@ -39,7 +39,7 @@ Three consequences a mod designs around:
   The load-boundary hooks are where a mod can see its own accumulation.
   Source: `src/Game/Game.SceneFlow/GameManager.cs` (the world's teardown at process exit, and the boot call that disables leak detection).
 
-`mod-lifecycle-and-ordering` owns the hooks themselves; `save-serialization` owns the load boundary this makes load-bearing.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the hooks themselves; [`save-serialization`](../save-serialization/save-serialization.md) owns the load boundary this makes load-bearing.
 
 ## Managed against unmanaged, and where a mod's own data sits
 
@@ -52,7 +52,7 @@ Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeArray.cs` (the refus
 
 **Chunk memory is unmanaged and owned by the entity store.**
 A mod declaring a component pays for it in chunk space and pays nothing to manage it.
-What that costs per entity is `ecs-in-this-game`'s chunk geometry.
+What that costs per entity is [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)'s chunk geometry.
 Source: `src/Unity.Entities/Unity.Entities/Chunk.cs`, `src/Unity.Entities/Unity.Entities/EntityComponentStore.cs` (the store that allocates the chunk).
 
 **Native containers a mod allocates are unmanaged, untracked and invisible.**
@@ -159,7 +159,7 @@ Source: `src/Colossal.Collections/Colossal.Collections/NativeAccumulator.cs`, `s
 `OnDestroy` is the exception, and vanilla's own teardowns split exactly there — some search systems complete first, the rest dispose bare, and both forms are safe.
 By the time `OnDestroy` runs on the world's own teardown — the only path this game takes to it — every published job is complete: `World.Dispose` completes all tracked jobs before it destroys the first system.
 So a bare `Dispose()` in `OnDestroy` touches nothing a job still holds, provided every job that touched the container published its handle through `base.Dependency` — an unpublished handle is one gap a teardown completion would still cover, and a job scheduled without being published is already a bug against the discipline below.
-The other gap is a system torn down individually by a direct world call — nothing in the supported lifecycle does that, per `mod-lifecycle-and-ordering` — which completes only that system's own published handle on the way down, so a foreign job still holding the container leaves that `OnDestroy` under the live-world rule above.
+The other gap is a system torn down individually by a direct world call — nothing in the supported lifecycle does that, per [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — which completes only that system's own published handle on the way down, so a foreign job still holding the container leaves that `OnDestroy` under the live-world rule above.
 Source: `src/Unity.Entities/Unity.Entities/World.cs`.
 (VOLATILE: the complete-before-destroy ordering — `World.Dispose` in the entities package.)
 
@@ -195,7 +195,7 @@ Five things happen and each is load-bearing: the gather is asynchronous and hand
 3. **Register with every provider whose data you took**, using the handle you got back from scheduling.
    The protocol is below.
 4. **Register with the barrier if you wrote through its command buffer.**
-   `AddJobHandleForProducer`, and the contract is `ecs-in-this-game`'s.
+   `AddJobHandleForProducer`, and the contract is [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)'s.
 5. **Complete only where something outside the chained graph forces it: a genuine main-thread readback, the conflicting work before a `Run`, an unregistered provider's next write, or a container without `Dispose(JobHandle)` before a live-world dispose or clear.**
    Every `Complete()` is a main-thread stall until the job and its whole upstream chain finish; at teardown the world has already completed everything, per the disposal section.
    Source: `src/UnityEngine.CoreModule/Unity.Jobs/JobHandle.cs` (the stall; `Complete` is an `extern` and the chain is the engine's own, per https://docs.unity3d.com/2022.3/Documentation/Manual/JobSystemJobDependencies.html), `src/Unity.Entities/Unity.Entities/World.cs` (the teardown completion).
@@ -269,7 +269,7 @@ A provider that never learns your handle cannot wait for you, so nothing stops i
 Consume it the way the game's own rendering consumers do — schedule against the returned handle in the same frame and publish through `base.Dependency` — and treat the loan as over once the owner updates again, since nothing orders the owner's next write after you: a job that can still be running by then needs its own completion or its own copy of the data.
 Source: `src/Game/Game.Tools/NetToolSystem.cs`, `src/Game/Game.Rendering/GuideLinesSystem.cs`.
 
-`custom-tools` and `placement-definitions` both consume vanilla search trees during a raycast or a snap, and `roads-and-traffic` is the heaviest area to query.
+[`custom-tools`](../custom-tools/custom-tools.md) and [`placement-definitions`](../placement-definitions/placement-definitions.md) both consume vanilla search trees during a raycast or a snap, and [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) is the heaviest area to query.
 
 ### A mod-owned spatial index
 
@@ -303,7 +303,7 @@ Three mechanisms, in increasing order of what they let you skip.
 **The update interval skips the whole update.**
 Your `GetUpdateInterval` override is called **once, at registration**, and the value is cached; the dispatch loop then tests the cached mask _before_ `Update()` is called, so a skipped frame costs one bitwise-and and one comparison, and the query gate, `OnUpdate`, the handle refresh and the schedule are all skipped whole.
 Because the override runs once, an interval computed from mutable state — a settings slider, a load-time flag — is frozen at whatever it returned during registration, and nothing reports that it never changes again.
-The mechanism, its power-of-two requirement and the three phases that honour it belong to `mod-lifecycle-and-ordering`.
+The mechanism, its power-of-two requirement and the three phases that honour it belong to [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md).
 Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game/GameSystemBase.cs`.
 
 - **Only the simulation phases consult it.**
@@ -322,12 +322,12 @@ The shape to copy is an interval **plus** a relevance gate — a system feeding 
 The check is a length read on a cached chunk list: no chunk walk, no dependency sync.
 It tests the query **ignoring your filter and its enableable components' state**, so a query narrowed with `SetSharedComponentFilter` still gates on the unfiltered set — a filter is not a throttle, and neither is a disabled marker.
 `IsEmptyIgnoreFilter` is the same free check spelled by hand, and is what to use inside `OnUpdate` when one system schedules several independent jobs each needing its own gate — with the same blind spot, so a gate over an enableable marker never closes.
-`ecs-in-this-game` owns what the gate does and does not see.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns what the gate does and does not see.
 Source: `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs`.
 
 **The chunk-level early exit inside the job body is the finest-grained form**, and is what the simulation actually runs on: one shared-component read rejects a whole chunk's worth of entities.
-A per-entity job cannot express it — that is one of the three things holding the chunk buys you, per `ecs-in-this-game` — so a per-entity job wanting the same throttle pushes the test into the query as a shared-component filter before scheduling instead.
-`ecs-in-this-game`'s bucketing sibling owns which index and which count to filter on — guessing either runs the job at the wrong cadence or on nothing, with nothing logged; what that cadence is worth in simulated time is `simulation-time-and-units`.
+A per-entity job cannot express it — that is one of the three things holding the chunk buys you, per [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) — so a per-entity job wanting the same throttle pushes the test into the query as a shared-component filter before scheduling instead.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)'s bucketing sibling owns which index and which count to filter on — guessing either runs the job at the wrong cadence or on nothing, with nothing logged; what that cadence is worth in simulated time is [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 Source: `src/Game/Game.Simulation/AgingSystem.cs` (the in-job test), `src/Game/Game.Simulation/BuildingUpkeepSystem.cs` (the query-filter form).
 
 ## A log call is a synchronous file write, so logging is a per-frame cost like any other
@@ -382,7 +382,7 @@ Four rungs, and a mod's per-frame code should stay on the first two.
 Source: `src/Unity.Entities/Unity.Entities/EntityQueryImpl.cs`.
 
 The synchronous forms are not forbidden, and the game's own load and editor paths use them heavily; the rule is that each one is a stall, so a system calling `ToEntityArray` every frame stalls every frame.
-`debug-menu` inherits this directly: a widget getter runs every frame its tab is open, so a getter doing a count is rung 3 and one doing a `ToEntityArray` is rung 4.
+[`debug-menu`](../debug-menu/debug-menu.md) inherits this directly: a widget getter runs every frame its tab is open, so a getter doing a count is rung 3 and one doing a `ToEntityArray` is rung 4.
 
 **The failure mode here is a stall, not a leak, and the diagnosis differs.**
 A leaked container costs memory and shows nothing.
@@ -405,14 +405,14 @@ Source: `src/Unity.Entities/Unity.Entities/EntityCommandBufferSystem.cs`.
 
 The barrier allocates each buffer from its own rewindable allocator, plays every pending buffer back in its own update, disposes it and rewinds — so a mod never disposes a buffer it got from `CreateCommandBuffer()` and never should.
 A hand-rolled `new EntityCommandBuffer(Allocator.TempJob)` is the exception: that one the caller owns and disposes.
-The barrier contract itself is `ecs-in-this-game`'s.
+The barrier contract itself is [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)'s.
 
 Adding or removing a component is also an archetype move, which copies the entity between chunks.
 Nothing about a tag is free except its storage.
 
 ### Sizing, where it changes a decision
 
-`ecs-in-this-game` owns the chunk constants; what they decide is here.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the chunk constants; what they decide is here.
 
 An archetype is **chunk-bound** when its components are large enough that the per-entity budget runs out before the entity cap does, and **entity-bound** when the cap is what binds — the first wastes bytes, the second wastes slots, and a tag-only archetype is the extreme of the second.
 Work out which you are before adding a field: past the threshold, one more byte per entity costs you a whole extra chunk's worth of them.
@@ -465,10 +465,10 @@ Source: `src/UnityEngine.CoreModule/Unity.Collections/NativeLeakDetection.cs` an
 
 A reader leaves with what a job's memory costs and what its scheduling has to respect: which of the four allocators a container belongs in, the handle discipline that keeps one alive until every reader is done with it, the three throttles, and the fact that on this build almost every mistake in that area is silent.
 
-- `ecs-in-this-game` owns writing the job itself, the chunk geometry a mod sizes its data against and the barrier contract; what travels the other way is what the chunk, the buffer and the barrier cost, and what a mod may not do to a container a job still holds.
-- `mod-lifecycle-and-ordering` owns the update-interval mechanism and the system hooks; this reference owns what an interval buys, and that a world spanning the whole session makes `OnCreate` the place to allocate and the load boundary the place to clear.
-- `save-serialization` owns the load boundary that same lifetime makes load-bearing.
-- `custom-tools` and `placement-definitions` take the reader half of the provider protocol and the register-the-scheduled-handle rule, and `roads-and-traffic` is the heaviest area to query.
-- `debug-menu` takes the cost ladder, applied to a widget getter that runs every frame its tab is open.
-- `simulation-time-and-units` says what a throttled cadence is worth in simulated time, and `patching` takes from [`burst-at-debug-time.md`](burst-at-debug-time.md) the launch switch that turns Burst off for a session.
-- `diagnostics` assumes a live process still writing lines, so the failures this reference produces do not start there: an out-of-bounds native read or a use-after-free is a process death with no managed exception, and "the game crashed and there is no stack trace" belongs here. What `diagnostics` does own for a dead process is the evidence rule — the crashed run's logs are copied before anything is relaunched.
+- [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns writing the job itself, the chunk geometry a mod sizes its data against and the barrier contract; what travels the other way is what the chunk, the buffer and the barrier cost, and what a mod may not do to a container a job still holds.
+- [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the update-interval mechanism and the system hooks; this reference owns what an interval buys, and that a world spanning the whole session makes `OnCreate` the place to allocate and the load boundary the place to clear.
+- [`save-serialization`](../save-serialization/save-serialization.md) owns the load boundary that same lifetime makes load-bearing.
+- [`custom-tools`](../custom-tools/custom-tools.md) and [`placement-definitions`](../placement-definitions/placement-definitions.md) take the reader half of the provider protocol and the register-the-scheduled-handle rule, and [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) is the heaviest area to query.
+- [`debug-menu`](../debug-menu/debug-menu.md) takes the cost ladder, applied to a widget getter that runs every frame its tab is open.
+- [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md) says what a throttled cadence is worth in simulated time, and [`patching`](../patching/patching.md) takes from [`burst-at-debug-time.md`](burst-at-debug-time.md) the launch switch that turns Burst off for a session.
+- [`diagnostics`](../diagnostics/diagnostics.md) assumes a live process still writing lines, so the failures this reference produces do not start there: an out-of-bounds native read or a use-after-free is a process death with no managed exception, and "the game crashed and there is no stack trace" belongs here. What [`diagnostics`](../diagnostics/diagnostics.md) does own for a dead process is the evidence rule — the crashed run's logs are copied before anything is relaunched.

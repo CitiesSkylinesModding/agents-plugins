@@ -8,7 +8,7 @@ Without one you cannot check anything below.
 
 A company holds no money field: money is the `Resource.Money` row of its `Game.Economy.Resources` buffer, written through `EconomyUtils.AddResources` and `EconomyUtils.SetResources` (`src/Game/Game.Economy/EconomyUtils.cs`).
 A grep for call sites passing `Resource.Money` is the first sweep on the routing below, not a census: a resource-agnostic loop over a whole buffer moves the money row without ever naming it (`src/Game/Game.Simulation/PartnerSystem.cs` merging one household's buffer into another is the shape).
-The table is the company-facing flows; household money is `citizens-and-households`.
+The table is the company-facing flows; household money is [`citizens-and-households`](../citizens-and-households/citizens-and-households.md).
 
 | Flow | Where it moves |
 | --- | --- |
@@ -20,7 +20,7 @@ The table is the company-facing flows; household money is `citizens-and-househol
 | Lodging and leisure | `LodgingProviderSystem` and `LeisureSystem` debit the visitor and credit the provider |
 | Wages | `PayWageSystem` debits the company per employee |
 | Dividends, rent, tax, fees | `CompanyDividendSystem`, `PropertyRenterSystem`, `TaxSystem`, `UtilityFeeSystem` and `ServiceFeeSystem` debit the company |
-| Building upkeep | `BuildingUpkeepSystem` splits the non-material share of each pass's upkeep slice across the renters and debits each — a second recurring property cost beside the rent, skipped entirely when the renters together cannot cover it (the building's condition drops instead; `zoning-buildings-and-land-value` owns the system) |
+| Building upkeep | `BuildingUpkeepSystem` splits the non-material share of each pass's upkeep slice across the renters and debits each — a second recurring property cost beside the rent, skipped entirely when the renters together cannot cover it (the building's condition drops instead; [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) owns the system) |
 | Robbery, starting capital | `CriminalSystem`; `CompanyInitializeSystem` |
 
 ## A sale

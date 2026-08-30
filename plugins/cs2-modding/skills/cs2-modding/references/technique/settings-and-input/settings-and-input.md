@@ -9,13 +9,13 @@ The technique holds without one, but every game symbol named below is checkable 
 The player-facing configuration surface: the page a mod adds to the options screen, the file that page persists to, and the input actions declared beside it.
 One class carries all three, and one string derived from the mod type ties them together.
 
-`localization` owns every string this surface generates a key for.
+[`localization`](../localization/localization.md) owns every string this surface generates a key for.
 This reference establishes the shape of those keys and where the engine generates the matching ones; the sources that answer them belong there.
 
-`custom-tools` owns the three actions the tool base class hands every tool for free — apply, secondary apply and cancel — and states the split from its own side.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the three actions the tool base class hands every tool for free — apply, secondary apply and cancel — and states the split from its own side.
 This reference owns every action a mod declares itself, which is everything else.
 
-`mod-lifecycle-and-ordering` owns the `OnLoad` and `OnDispose` frame this whole topic sits inside, and two of its facts are load-bearing here: the ECS world already exists when `OnLoad` runs, and `OnDispose` is called even on a mod whose `OnLoad` threw.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the `OnLoad` and `OnDispose` frame this whole topic sits inside, and two of its facts are load-bearing here: the ECS world already exists when `OnLoad` runs, and `OnDispose` is called even on a mod whose `OnLoad` threw.
 
 ## The class, and the one string everything hangs off
 
@@ -165,13 +165,13 @@ The engine reports nothing when it drops a property, so the diagnosis is a walk 
 4. **The builder returned null even though the type matched.** The bool-button builder rejects a readable property; the three dropdown builders reject a missing `[SettingsUIDropdown]`; the int-slider builder rejects a missing `[SettingsUISlider]`; the custom-dropdown builder also rejects a type that is not both `IJsonWritable` and `IJsonReadable` with a parameterless constructor; and a second button in a group returns null by design. The tab builder then skips every item with a null widget without a word.
 5. **The widget exists and hides itself.** A hide-by-condition delegate is re-evaluated on every frame the page is open, and a section with no visible option is itself invisible.
 6. **The page was never registered**, or was registered before the ECS world existed. Registration resolves the options system through the default world and **returns false silently** when that world is null, and the mod-facing wrapper discards the return value — so there is no signal at all.
-7. **The label is missing rather than the widget.** A row whose localization key has no entry renders the raw key; that is `localization`'s failure mode, reached most often through the inherited-property path mismatch above.
+7. **The label is missing rather than the widget.** A row whose localization key has no entry renders the raw key; that is [`localization`](../localization/localization.md)'s failure mode, reached most often through the inherited-property path mismatch above.
 
 An attribute whose `Type` and method-name pair fails to resolve never fails loudly either: the resolver returns false and the widget simply has no setter, no disable condition or no item list.
 A dropdown whose getter returns the wrong element type — anything but an array of `DropdownItem<T>` for the matching `T` — gets a null accessor and renders empty.
 Source: `src/Game/Game.UI.Menu/AutomaticSettings.cs` (the filters, the builders and the resolver), `src/Game/Game.UI.Menu/OptionsUISystem.cs` (the per-frame visibility passes), `src/Game/Game.Settings/Setting.cs` (registration's silent false), `src/Game/Game.Modding/ModSetting.cs` (the discarded return value).
 
-Nearly everything in this area fails silently, which is why the walk above is a code path rather than a list of log messages; `diagnostics` owns what the game does tell you when something goes wrong, and the keybinding conflict below is the one failure here that reaches the player by itself.
+Nearly everything in this area fails silently, which is why the walk above is a code path rather than a list of log messages; [`diagnostics`](../diagnostics/diagnostics.md) owns what the game does tell you when something goes wrong, and the keybinding conflict below is the one failure here that reaches the player by itself.
 
 ## Registering the page, and what unregistering does not undo
 
@@ -419,7 +419,7 @@ protected override void OnStopRunning()
 }
 ```
 
-A mod with several actions whose enablement depends on which tool is active recomputes the whole block from the tool-changed event rather than scattering the assignments — `custom-tools` owns that event and warns that it is a plain delegate field, so subscribe with `+=`.
+A mod with several actions whose enablement depends on which tool is active recomputes the whole block from the tool-changed event rather than scattering the assignments — [`custom-tools`](../custom-tools/custom-tools.md) owns that event and warns that it is a plain delegate field, so subscribe with `+=`.
 
 ## Using a button the game reserves, and still following the player's rebinds
 
@@ -427,7 +427,7 @@ Two mechanisms answer this, and they answer different halves of it.
 
 **For a tool's own apply, secondary apply and cancel, nothing is needed.**
 The tool base class fetches per-tool wrappers over the shared vanilla actions in its own `OnCreate` and exposes them as `applyAction`, `secondaryApplyAction` and `cancelAction`, which follow the player's rebinds automatically.
-`custom-tools` establishes that path in full, including why the raw action underneath cannot be taken.
+[`custom-tools`](../custom-tools/custom-tools.md) establishes that path in full, including why the raw action underneath cannot be taken.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 **For any other action a mod declares, mimicking copies the vanilla binding's control path onto the mod's own action and keeps copying it.**
@@ -437,22 +437,22 @@ Source: `src/Game/Game.Modding/ModSetting.cs`.
 
 ## What this reference hands to others
 
-`localization` owns every string this surface generates a key for.
+[`localization`](../localization/localization.md) owns every string this surface generates a key for.
 The seam is the eleven key-building methods on the settings base class — for the page title, an option's label, description and warning, a tab, a group, an enum value, a value format, a binding key in three overloads, a binding hint, and the binding map's own name.
 This reference establishes the shapes those keys take and where the reflection engine generates the matching ones; the dictionary sources that answer them belong there.
 
-`custom-tools` owns the three actions the tool base class provides and the tool-changed event that drives the enablement idiom above; this reference owns every action a mod declares.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the three actions the tool base class provides and the tool-changed event that drives the enablement idiom above; this reference owns every action a mod declares.
 The two halves meet exactly once, at mimicking: the tool's own apply and cancel never need it, and anything else the tool wants on a reserved button does.
 
-`[SettingsUIDeveloper]` is the only attribute in the catalog gated on the game's developer-mode flag, which is how a settings page carries a debug section ordinary players never see; `debug-menu` owns what that flag gates.
+`[SettingsUIDeveloper]` is the only attribute in the catalog gated on the game's developer-mode flag, which is how a settings page carries a debug section ordinary players never see; [`debug-menu`](../debug-menu/debug-menu.md) owns what that flag gates.
 
-`units-and-formatting` owns the three interface preferences the game's own settings carry — the time format, the temperature unit and the unit system — and everything a mod does with them when it renders a number to a player.
+[`units-and-formatting`](../units-and-formatting/units-and-formatting.md) owns the three interface preferences the game's own settings carry — the time format, the temperature unit and the unit system — and everything a mod does with them when it renders a number to a player.
 
 Camera input has no mechanics topic of its own and stays here: most of the game's input settings are camera — the keyboard, mouse and gamepad move, rotate and zoom sensitivities and the four invert flags, which the game groups under a camera section — beside a few it groups elsewhere, including mouse scroll sensitivity under navigation and the elevation-dragging and legacy-camera toggles under a general one.
 These are setting _values_ rather than actions on a map, so the system-action tier that outranks every mod binding does not reach them; what that tier governs is the composites the settings page builds its keybinding widgets over, and those span every vanilla map.
 
-`frontend-and-injection` receives everything this topic produces.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) receives everything this topic produces.
 The options screen is one binding group carrying the pages, the active page and section, the widget bindings and the rebinding triggers, and the widget classes the engine instantiates are ordinary frontend widgets.
 A mod that wants a control the automatic path cannot build either overrides the page-data method here or builds its own panel over there.
 
-`mod-lifecycle-and-ordering` owns the `OnLoad` and `OnDispose` frame, and settles the two facts this reference leans on: the world already exists when `OnLoad` runs, so the options system resolves; and `OnDispose` runs even after a failed load, so unregistration is null-guarded.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the `OnLoad` and `OnDispose` frame, and settles the two facts this reference leans on: the world already exists when `OnLoad` runs, so the options system resolves; and `OnDispose` runs even after a failed load, so unregistration is null-guarded.

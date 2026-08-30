@@ -8,7 +8,7 @@ The technique holds without one, but every game symbol named below is checkable 
 
 Mimicking copies a vanilla binding's control path onto the mod's own action and keeps copying it, which is how a mod uses a button the game reserves and still follows the player's rebinds.
 It has a declarative form and an imperative one, and past both sits the hand-built map, for an input the binding attributes cannot express at all.
-A tool's own apply, secondary apply and cancel need none of this; the entry file states why, and `custom-tools` owns that path in full.
+A tool's own apply, secondary apply and cancel need none of this; the entry file states why, and [`custom-tools`](../custom-tools/custom-tools.md) owns that path in full.
 
 ## The declarative form
 

@@ -8,7 +8,7 @@ The technique holds without one, but every game symbol named below is checkable 
 
 How to change the behaviour of code you did not write, when the game offers no seam for the change you want.
 
-Adding code of your own — a system, a phase registration, a fork of a vanilla system — is `mod-lifecycle-and-ordering`, and it is what you should be doing instead most of the time.
+Adding code of your own — a system, a phase registration, a fork of a vanilla system — is [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md), and it is what you should be doing instead most of the time.
 This reference covers the other case: a vanilla method whose behaviour has to differ, reached by rewriting it at runtime.
 
 **Harmony is the runtime that does it**, and it is the only one this ecosystem has, so its vocabulary — prefix, postfix, injected parameter, patch id — is the vocabulary below.
@@ -39,7 +39,7 @@ What survives is the ordering, not the ratio: reach for a patch after the four a
 The first three are used at scale by mods that ship zero patches; the fourth avoids _adding_ a patch rather than avoiding the dependency, since three of its four idioms are Harmony's own API.
 
 **One: insert a system.** The ordinary way to add behaviour, and the reason the ecosystem patches so little.
-`mod-lifecycle-and-ordering` owns it entirely.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns it entirely.
 The negative is the part that belongs here: **a behaviour reachable from a phase your own system can occupy does not need a patch.**
 
 **Two: disable a vanilla system and register your fork in its slot.**
@@ -51,7 +51,7 @@ updateSystem.UpdateBefore<MySubstituteSystem, Game.Simulation.SomeVanillaSystem>
 
 **Anchor the fork against the system it replaces, rather than with `UpdateAt`.**
 Position within a phase is registration order and every mod registers after all of vanilla, so `UpdateAt` puts the fork at the end of the phase instead of in the slot the original held — where it reads state the systems that used to follow it have not produced yet.
-`GetOrCreateSystemManaged` also creates the system when the world does not already have it, rather than failing, so naming a type the game no longer registers disables nothing and reports nothing; `mod-lifecycle-and-ordering` owns both rules.
+`GetOrCreateSystemManaged` also creates the system when the world does not already have it, rather than failing, so naming a type the game no longer registers disables nothing and reports nothing; [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns both rules.
 Source: `src/Game/Game/UpdateSystem.cs`, `src/Unity.Entities/Unity.Entities/World.cs`.
 
 Whole mods are built this way — a substitute zoning check behind its own tagging systems, a substitute lane system registered ahead of the vanilla one, a substituted geometry system — with no patches anywhere.
@@ -68,7 +68,7 @@ The shape is fixed:
 5. Write the result back into the field, and call the public `RequireForUpdate(query)`.
    Source: `src/Unity.Entities/Unity.Entities/EntityQuery.cs`, `src/Unity.Entities/Unity.Entities/ComponentSystemBase.cs`, `src/Unity.Entities/Unity.Entities/SystemState.cs`, `src/Unity.Entities/Unity.Entities/EntityQueryManager.cs` (`Absent` matched without the enableable-ignore `None` gets).
 
-`ecs-in-this-game` owns `EntityQueryDesc` and what `None` means to a query.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns `EntityQueryDesc` and what `None` means to a query.
 
 **Four: cache a reflection accessor** rather than patching just to reach a private member.
 Four idioms exist and they differ in what each access costs:
@@ -83,7 +83,7 @@ Four idioms exist and they differ in what each access costs:
 **`AccessTools.Field` walks base types**, so a lookup naming a derived class still resolves a field the base declares — which is why an accessor built against the wrong class works, and why a miss means the field is nowhere in the hierarchy rather than merely on the wrong type.
 Source: `0Harmony.dll` decompiled — `HarmonyLib.AccessTools.Field`.
 
-`performance-and-memory` owns what these cost in a hot path.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what these cost in a hot path.
 
 ## What gets patched, and why those surfaces
 
@@ -100,8 +100,8 @@ They describe what was found rather than what exists, so a target fitting none o
 
 The surfaces recorded in each group, and what to make of your own target's absence from them: [what the corpus was found patching](what-gets-patched.md).
 
-`custom-tools` owns the raycast masks, the `InitializeRaycast` contract and the `GetRaycastResult` pair, and is where a tool mod should start; this reference owns the patch discipline that applies to any of them.
-`prefabs-and-assets` owns the prefab-refresh question the game's own documentation answers with a patch only as its third remedy.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the raycast masks, the `InitializeRaycast` contract and the `GetRaycastResult` pair, and is where a tool mod should start; this reference owns the patch discipline that applies to any of them.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the prefab-refresh question the game's own documentation answers with a patch only as its third remedy.
 
 ## Prefixes, postfixes and injected parameters
 
@@ -226,7 +226,7 @@ For a Burst-compiled **job**, the substitution point is not in C# at all: a job'
 So a patch on that `Execute` never runs while Burst is enabled: it rewrites the managed body, and the managed body is exactly what the native compilation replaces.
 Check the attribute before you conclude that — and know it settles only one direction, because it is a request rather than a record.
 A job struct without it takes a patch like any other, and so does one that carries it and was never compiled: Burst declines a generic job whose concrete type is closed only at runtime, which is how the serializers build theirs.
-`performance-and-memory` settles the same fact from the other side — a breakpoint set in that body binds and never fires — and owns the launch switch that turns Burst off for a session, which is how you tell a patch that never runs from one that never bound; a patch that fires with Burst still on is proof that job was never compiled.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) settles the same fact from the other side — a breakpoint set in that body binds and never fires — and owns the launch switch that turns Burst off for a session, which is how you tell a patch that never runs from one that never bound; a patch that fires with Burst still on is proof that job was never compiled.
 Source: `src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs` and `src/UnityEngine.CoreModule/Unity.Jobs.LowLevel.Unsafe/JobsUtility.cs` (`CreateJobReflectionData` is an `extern`, so the swap is native), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` and `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (a marked job whose concrete type is closed at runtime).
 
 **So the rule is: replace the job, not its body.**
@@ -243,7 +243,7 @@ The worked shape, from the two mods that do it:
   Source: `src/Unity.Entities/Unity.Entities/SystemBase.cs`, `src/Unity.Entities/Unity.Entities/SystemState.cs`.
 - **Assign the scheduled handle to `ref __result` and return `false`, rather than completing the job**, so the caller's temporary allocations still outlive the work.
 
-`ecs-in-this-game` owns jobs, handles and the Burst story itself.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns jobs, handles and the Burst story itself.
 
 ## Lifecycle: apply in `OnLoad`, and know what unpatching is for
 
@@ -292,7 +292,7 @@ Source: `0Harmony.dll` decompiled — `HarmonyLib.Harmony.GetPatchedMethods`, `H
 The asset loader deduplicates executable assets by simple assembly name across every installed mod and loads one winner per group, ordered by already-loaded, then local, then version descending, then asset id — so the copy every mod patches through may be one nobody compiled against, and it is not simply the highest version.
 Nothing here is strong-named, so version binding is not enforced and nothing objects at load.
 A member the loaded copy no longer has throws instead when the method calling it is first compiled, which is what a missing-member exception out of a patching call means.
-`mod-compatibility` owns that rule, the order it resolves in, and what it means for any library a mod ships; `cs2-mod-project` owns the pin every mod agrees to.
+[`mod-compatibility`](../mod-compatibility/mod-compatibility.md) owns that rule, the order it resolves in, and what it means for any library a mod ships; `cs2-mod-project` owns the pin every mod agrees to.
 Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs`.
 
 **Widen a shared flags field with `|=`, and treat a plain `=` as a bug.**
@@ -337,13 +337,13 @@ Source: `src/Game/Game.Tools/ToolRaycastSystem.cs`, `src/Game/Game.Tools/ToolBas
 
 ## What this reference hands to others
 
-`mod-lifecycle-and-ordering` is the boundary partner and the first alternative: it owns inserting a system, and it owns the anchoring that puts a fork in the dead original's slot rather than at the end of the phase.
-`ecs-in-this-game` owns the query vocabulary the rewrite alternative is written in, and owns the jobs and Burst material this file borrows one rule from.
-`performance-and-memory` owns what the four accessor idioms cost in a hot path, and owns the launch switch that turns Burst off for a session — the other side of this file's Burst rule.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) is the boundary partner and the first alternative: it owns inserting a system, and it owns the anchoring that puts a fork in the dead original's slot rather than at the end of the phase.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the query vocabulary the rewrite alternative is written in, and owns the jobs and Burst material this file borrows one rule from.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what the four accessor idioms cost in a hot path, and owns the launch switch that turns Burst off for a session — the other side of this file's Burst rule.
 
-`custom-tools` owns the raycast and snap surface the largest patch group targets, and states the flag-ownership discipline for that case specifically; this file owns the discipline as a general rule.
-`prefabs-and-assets` owns the prefab-refresh question, whose "**Harmony-patch the copy** where no reachable hook exists" remedy is this file's technique.
-`mod-compatibility` owns which copy of Harmony a process ends up on, and what a shared library means for anything a mod ships.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the raycast and snap surface the largest patch group targets, and states the flag-ownership discipline for that case specifically; this file owns the discipline as a general rule.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the prefab-refresh question, whose "**Harmony-patch the copy** where no reachable hook exists" remedy is this file's technique.
+[`mod-compatibility`](../mod-compatibility/mod-compatibility.md) owns which copy of Harmony a process ends up on, and what a shared library means for anything a mod ships.
 `cs2-mod-project` owns the package id and the pinned version.
 
 A reader leaves knowing patching comes after four alternatives rather than first, that the shapes that compose are a prefix rewriting an argument and a patch owning both halves of what it widens, and that a Burst-compiled job is replaced at its schedule rather than in its body.

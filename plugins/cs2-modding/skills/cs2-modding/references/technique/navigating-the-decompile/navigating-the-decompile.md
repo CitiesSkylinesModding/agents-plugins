@@ -87,7 +87,7 @@ What does not hold is the inference a reader draws from it — that a `Game.*` n
    Source: `src/Colossal.Core/Colossal.Rendering/`, `src/Game/Colossal.Rendering/`, `src/Colossal.Core/Colossal.IO/`, `src/Colossal.IO/Colossal.IO/`, `src/Unity.Entities/Colossal/CORuntimeApplication.cs`.
 4. **A type named `Game` that is not the assembly.** `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/Game.cs` declares `public readonly struct Game : IAssetDatabaseDescriptor<Game>`.
    Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/Game.cs`.
-5. **Two tree-wide indexes are not where a reader looks for them.** `SystemOrder` is in `Game.Common` rather than in the root `Game` namespace, and `Version.cs`, the save-format milestone list, is in the root `Game` directory rather than in `Game.Serialization`. What its constants do and do not tell you is `save-serialization`'s, and [decompiler-artifacts.md](decompiler-artifacts.md) states the trap.
+5. **Two tree-wide indexes are not where a reader looks for them.** `SystemOrder` is in `Game.Common` rather than in the root `Game` namespace, and `Version.cs`, the save-format milestone list, is in the root `Game` directory rather than in `Game.Serialization`. What its constants do and do not tell you is [`save-serialization`](../save-serialization/save-serialization.md)'s, and [decompiler-artifacts.md](decompiler-artifacts.md) states the trap.
    Source: `src/Game/Game.Common/SystemOrder.cs`, `src/Game/Game/Version.cs`.
 6. **Two files exist twice under the same namespace directory, in two assemblies, and are different classes.** `Colossal.IO/BinaryReaderExtensions.cs` and `Colossal.IO/BinaryWriterExtensions.cs` each appear in `src/Colossal.Core` and in `src/Colossal.IO`. The `Colossal.Core` copy declares a single method and the `Colossal.IO` one declares dozens, yet both are `public static class BinaryReaderExtensions` in `namespace Colossal.IO`, and neither is a partial of the other.
    Source: `src/Colossal.Core/Colossal.IO/BinaryReaderExtensions.cs`, `src/Colossal.IO/Colossal.IO/BinaryReaderExtensions.cs`.
@@ -128,7 +128,7 @@ An empty phase that is still driven is exactly the shape a reader of that file m
 Source: `src/Game/Game/SystemUpdatePhase.cs`, `src/Game/Game.Simulation/SimulationSystem.cs`.
 
 **The stock ECS ordering attributes are inert here**: zero `[UpdateAfter]`, `[UpdateBefore]` and `[UpdateInGroup]` across all of `src/Game`.
-Grepping for them is how a reader discovers that, and `mod-lifecycle-and-ordering` owns what to do instead.
+Grepping for them is how a reader discovers that, and [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns what to do instead.
 
 (VOLATILE: the phase set, and which phase carries no registration — `src/Game/Game.Common/SystemOrder.cs` and `src/Game/Game/SystemUpdatePhase.cs`.)
 
@@ -201,7 +201,7 @@ Source: `src/Game/Game.UI.Menu/NotificationUISystem.cs`, `Cities2_Data/Content/G
 `src/` contains zero `.js`, `.css`, `.html`, `.tsx` and `.jsx` files.
 The shipped bundle names over a thousand distinct `game-ui/…` module paths, and a grep for `game-ui/` across the whole tree returns nothing.
 The entire module registry — the surface a UI mod extends — is unreachable from the decompile by any search, and the decompile does not hint that it exists.
-`frontend-and-injection` and `ui-build-and-devloop` own that half.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) and [`ui-build-and-devloop`](../../../../cs2-modding-ui/references/ui-build-and-devloop/ui-build-and-devloop.md) own that half.
 Source: `Cities2_Data/Content/Game/UI/index.js` (the module registry the decompile has no counterpart for).
 
 **Anything shipping as data is half-visible.**
@@ -240,7 +240,7 @@ A compile-time constant is inlined at every use, so its name has no consumers to
 
 Three shapes, in ascending order of how convincing the false absence looks:
 
-- **Inverted into a literal.** `public const Snap kSnapAllIgnoredMask = …` in `Game.Tools/ToolBaseSystem.cs` is its only occurrence anywhere. Its consumer in `Game.UI.InGame/ToolUISystem.cs` writes the mask's bitwise _complement_ as a hex literal, so even a search for the constant's own value misses it. `custom-tools` works the arithmetic.
+- **Inverted into a literal.** `public const Snap kSnapAllIgnoredMask = …` in `Game.Tools/ToolBaseSystem.cs` is its only occurrence anywhere. Its consumer in `Game.UI.InGame/ToolUISystem.cs` writes the mask's bitwise _complement_ as a hex literal, so even a search for the constant's own value misses it. [`custom-tools`](../custom-tools/custom-tools.md) works the arithmetic.
 - **Cross-file.** `public const int kTicksPerDay = 262144;` in `Game.Simulation/TimeSystem.cs` is its only occurrence by name, while the literal `262144` is written all over the assembly.
 - **Same-file**, which is what makes the trap feel impossible. `public const float kDefaultSeaLevel = 511.7f;` in `Game.Simulation/WaterSystem.cs` has two consumers in that same file, and the name appears at neither — both write `511.7f`.
 
@@ -264,7 +264,7 @@ Know which directories your search covered, and state the span whenever you repo
 
 For the frontend, for shipped prefab values, and for a key the game constructs at runtime, an empty C# grep is not weak evidence — it is **no** evidence.
 The measured case: **most of the groups the game's own localization keys occupy are named nowhere in `src/Game`** as a key-prefix literal.
-When the subject is one of those surfaces, the install answers and the decompile cannot; `localization` and `binding-layer` say which artifact.
+When the subject is one of those surfaces, the install answers and the decompile cannot; [`localization`](../localization/localization.md) and [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) say which artifact.
 
 ### The pattern named one member of a family
 
@@ -335,9 +335,9 @@ Cheapest first.
 
 ## What this reference hands to others
 
-`diagnostics` is the partner, and the traffic runs one way into this file: a reader arriving from a log line holding a type name, a system name or a message string finds it by the name-glob, by `SystemOrder.cs`, or — when the string was assembled at runtime — by the byte-grep.
+[`diagnostics`](../diagnostics/diagnostics.md) is the partner, and the traffic runs one way into this file: a reader arriving from a log line holding a type name, a system name or a message string finds it by the name-glob, by `SystemOrder.cs`, or — when the string was assembled at runtime — by the byte-grep.
 
-`localization`, `binding-layer`, `frontend-and-injection` and `ui-build-and-devloop` own the far side of the one hard boundary here: the decompile ends where the string tables and the JavaScript bundle begin, and nothing past it is reachable by a C# search.
+[`localization`](../localization/localization.md), [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md), [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) and [`ui-build-and-devloop`](../../../../cs2-modding-ui/references/ui-build-and-devloop/ui-build-and-devloop.md) own the far side of the one hard boundary here: the decompile ends where the string tables and the JavaScript bundle begin, and nothing past it is reachable by a C# search.
 
-Everything else this file teaches is a technique another reference consumes in place — the mangled handle names in `ecs-in-this-game`, `SystemOrder.cs` in `mod-lifecycle-and-ordering`, the disambiguation rule in `patching`, the worked `CreationDefinition` and snap-mask cases in `placement-definitions` and `custom-tools`, the reflection list in `settings-and-input`, `Version.cs`'s home in `save-serialization`, and the Burst mangled names in `performance-and-memory`.
+Everything else this file teaches is a technique another reference consumes in place — the mangled handle names in [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md), `SystemOrder.cs` in [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md), the disambiguation rule in [`patching`](../patching/patching.md), the worked `CreationDefinition` and snap-mask cases in [`placement-definitions`](../placement-definitions/placement-definitions.md) and [`custom-tools`](../custom-tools/custom-tools.md), the reflection list in [`settings-and-input`](../settings-and-input/settings-and-input.md), `Version.cs`'s home in [`save-serialization`](../save-serialization/save-serialization.md), and the Burst mangled names in [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 Each of those owns its material; this file owns finding it, and every mechanics reference reaches its own through the namespace map and confirms it through the `_RW_` sweep.

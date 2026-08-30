@@ -71,7 +71,7 @@ Source: `src/Colossal.UI/Colossal.UI/UISystem.cs`.
 An unknown or empty host fails with an invalid-host-locations error.
 So **two mods registering the same host name do not conflict — they stack**, and the lowest priority number is asked first.
 Paths sharing one priority land wherever the binary search puts them, so between two mods that shipped the same file name under one host, which copy resolves is not something to rely on.
-`mod-compatibility` owns what that means when the host is one every UI mod shares.
+[`mod-compatibility`](../mod-compatibility/mod-compatibility.md) owns what that means when the host is one every UI mod shares.
 Source: `src/Colossal.UI/Colossal.UI/DefaultResourceHandler.cs` (the walk), `src/Colossal.UI/Colossal.UI/UISystem.cs` (the priority-ordered insert).
 
 The two shapes worth copying:
@@ -93,7 +93,7 @@ Watching is not what serves the file either.
 Resolution holds no cache — a request walks the host's paths and reads the file off disk again — so **a file written after startup is served the next time the frontend asks for it, watched or not.**
 Source: `src/Colossal.UI/Colossal.UI/DefaultResourceHandler.cs`.
 
-Whether the frontend asks again is the other half, and it is `frontend-and-injection`'s: the view's image cache pins a URL to the bytes it first resolved to, so a raster or SVG file rewritten under a fixed name is served stale until the URL itself changes, and the one C# call tested against it, `ClearCachedUnusedImages`, did not clear it.
+Whether the frontend asks again is the other half, and it is [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md)'s: the view's image cache pins a URL to the bytes it first resolved to, so a raster or SVG file rewritten under a fixed name is served stale until the URL itself changes, and the one C# call tested against it, `ClearCachedUnusedImages`, did not clear it.
 
 **One branch runs before that walk, and it is a name collision waiting to happen.**
 A request for a raster image — the extension list is `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.psd`, `.tga`, `.astc`, `.pkm`, `.dds`, `.ktx`, and pointedly not `.svg` — is first looked up as a Unity resource under `UI/SharedImages`, keyed case-insensitively on the file name with its extension dropped, and only falls through to the host walk when that lookup comes back null.
@@ -110,6 +110,6 @@ The thumbnail chain is the one to know: icon if set, else a placeholder when thu
 **So a prefab with no icon gets a live render keyed on its prefab id**, through one of three extra schemes the game's resource handler layers on top of `coui`, alongside screen capture and user avatar.
 Source: `src/Game/Game.UI/ImageSystem.cs` (the fallback chain), `src/Game/Game.Prefabs/PrefabBase.cs` (the thumbnail url), `src/Game/Game.UI/GameUIResourceHandler.cs` (the three schemes).
 
-The Cohtml side of the frontend is `frontend-and-injection`.
+The Cohtml side of the frontend is [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md).
 
 (VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names and which scheme each is registered under, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — the UI system, the UI live-reload class, the default resource handler, and for the host schemes the game manager's UI initialisation over the install's `*.uiHost` files.)

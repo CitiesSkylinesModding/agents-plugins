@@ -7,7 +7,7 @@ Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
 Nothing in the decompile says what a C# value crossing to the frontend is denominated in: `Game.UI.Unit` (`src/Game/Game.UI/Unit.cs`) is a static class of opaque `const string`s such as `kInteger = "integer"` and `kPower = "power"`, a `LocalizedNumber<T>` (`src/Game/Game.UI.Localization/LocalizedNumber.cs`) carries one, and the frontend dispatches on it.
-The formatter table in the shipped UI bundle — reached through `game-ui/common/localization/localized-number.tsx`, dispatching on the `Unit` enum `unit.ts` exports — is the only first-party statement of the divisor and threshold that turn a raw value into kilowatts or tonnes; rendering one yourself belongs to `units-and-formatting`.
+The formatter table in the shipped UI bundle — reached through `game-ui/common/localization/localized-number.tsx`, dispatching on the `Unit` enum `unit.ts` exports — is the only first-party statement of the divisor and threshold that turn a raw value into kilowatts or tonnes; rendering one yourself belongs to [`units-and-formatting`](../../technique/units-and-formatting/units-and-formatting.md).
 
 ## The unit table
 
@@ -43,7 +43,7 @@ Source: the shipped UI bundle's `localized-number.tsx` formatter table, the `uni
 | `screenFrequency` | 3 digits, no thousands separator | — | hertz |
 | `durationSeconds` | `VALUE_SHORT_SECOND`, 0 digits | — | real seconds |
 | `custom` | the caller's own format and fraction-digit arguments | — | |
-| `bodiesPerMonth` | no entry in the value table; a fraction entry only | — | belongs to `units-and-formatting` |
+| `bodiesPerMonth` | no entry in the value table; a fraction entry only | — | belongs to [`units-and-formatting`](../../technique/units-and-formatting/units-and-formatting.md) |
 
 ```
 fahrenheit(v) = 9 * v / 5 + 32        kelvin(v)     = v + 273.16
@@ -63,7 +63,7 @@ Source: the shipped UI bundle's `localized-number.tsx` formatter table.
 
 ## The C# side's own conventions
 
-Speed is km/h on the authoring class and m/s on the component: `AnimalPrefab`, `AircraftPrefab` and `AirplanePrefab` divide by `3.6f` writing `m_MoveSpeed`, `m_GroundMaxSpeed` and `m_FlyingSpeed`, and `roads-and-traffic` and `transportation-and-vehicles` carry the road and vehicle sites (`src/Game/Game.Prefabs/AnimalPrefab.cs`, `src/Game/Game.Prefabs/AircraftPrefab.cs`, `src/Game/Game.Prefabs/AirplanePrefab.cs`).
+Speed is km/h on the authoring class and m/s on the component: `AnimalPrefab`, `AircraftPrefab` and `AirplanePrefab` divide by `3.6f` writing `m_MoveSpeed`, `m_GroundMaxSpeed` and `m_FlyingSpeed`, and [`roads-and-traffic`](../roads-and-traffic/roads-and-traffic.md) and [`transportation-and-vehicles`](../transportation-and-vehicles/transportation-and-vehicles.md) carry the road and vehicle sites (`src/Game/Game.Prefabs/AnimalPrefab.cs`, `src/Game/Game.Prefabs/AircraftPrefab.cs`, `src/Game/Game.Prefabs/AirplanePrefab.cs`).
 Angles are degrees on the class and radians on the component, for vehicle turning and for `ClimatePrefab.sunLimitRadians` alike (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs`).
 Durations are days, real seconds or frames, told apart only by the multiplier at the use site ([cadence.md](cadence.md)).
 

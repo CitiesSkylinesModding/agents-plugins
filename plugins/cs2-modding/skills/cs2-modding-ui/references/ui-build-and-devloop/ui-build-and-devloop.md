@@ -10,7 +10,7 @@ A `Source:` line citing `create-csii-ui-mod/<path>` names the scaffold's own fil
 
 How a UI mod's frontend is built and iterated on.
 Hooking this build into the C# build is `cs2-mod-project`'s — its skill body owns the scaffold invocation and the hook, and its build-pipeline reference the supported hook moves; this reference starts at the build the hook invokes.
-What the built module does once loaded — the registry, injection, the page — is `frontend-and-injection`'s, and the C#-to-JS binding protocol is `binding-layer`'s.
+What the built module does once loaded — the registry, injection, the page — is [`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md)'s, and the C#-to-JS binding protocol is [`binding-layer`](../binding-layer/binding-layer.md)'s.
 
 ## What `npm run build` produces, and where it lands
 
@@ -44,7 +44,7 @@ Source: `src/Game/Game.Modding/ModManager.cs`, `src/Game/Game.SceneFlow/GameMana
 The resource handler tries the host's registered locations in list order and returns the first that answers; the list is sorted by a priority the mod manager never passes, so every mod sits at priority 0 and the order among equals is an unspecified binary-search insertion.
 The `.mjs` and `.css` carry the mod id and never collide, but the scaffold emits images as `images/[name][ext][query]` under `publicPath: "coui://ui-mods/"`, so two mods each shipping `images/icon.svg` request the same URL and one gets the other's file.
 The choice is the author's: rename the images output directory to something mod-prefixed — the asset rule's `generator.filename`, which the emitted URL follows — or keep the scaffold default and accept the shared namespace.
-The rename settles only the mod-versus-mod race: a raster request — `.png`, `.jpg`/`.jpeg`, `.gif`, not `.svg` — is first looked up in the game's own `UI/SharedImages` by bare file name with the directory dropped, so a base name the game also ships is shadowed whatever the directory; `prefabs-and-assets` owns that branch.
+The rename settles only the mod-versus-mod race: a raster request — `.png`, `.jpg`/`.jpeg`, `.gif`, not `.svg` — is first looked up in the game's own `UI/SharedImages` by bare file name with the directory dropped, so a base name the game also ships is shadowed whatever the directory; [`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md) owns that branch.
 Source: `src/Colossal.UI/Colossal.UI/DefaultResourceHandler.cs`, `UISystem.cs`, `create-csii-ui-mod/template/webpack.config.js`.
 
 ## The externals contract
@@ -88,7 +88,7 @@ Its validator also rejects any character outside `[a-zA-Z0-9_-]`, but that is th
 Source: `create-csii-ui-mod/utils/create-mod-project.js`.
 
 The same `id` is the natural binding group: import `mod.json` into the TypeScript and pass `mod.id` wherever a group name is needed, and the two halves cannot drift, because the group string derives from the same manifest field as the deploy folder.
-Nothing in the game requires this; `binding-layer` owns what a group is.
+Nothing in the game requires this; [`binding-layer`](../binding-layer/binding-layer.md) owns what a group is.
 
 ## Refreshing the declarations after a game update
 
@@ -113,7 +113,7 @@ Source: `create-csii-ui-mod/utils/clean-installed-local-mod.js`.
 
 ## The stylesheet contract
 
-A built module's contract with the page is two named exports, `default` and `hasCSS`; `frontend-and-injection` owns the loader that reads them.
+A built module's contract with the page is two named exports, `default` and `hasCSS`; [`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md) owns the loader that reads them.
 The build side of the second is a text substitution: the scaffold's CSS-presence tool taps webpack's `processAssets`, checks whether any emitted asset ends `.css`, and splices `const hasCSS = <bool>; export { hasCSS, ` over the first literal `export {` in each `.mjs`.
 **The splice works only because it runs before Terser** — the minified `export{` no longer matches the pattern, so a plugin reordered after minification injects nothing, silently.
 The scaffold's `types/validateTypes.ts` comment claims only the default export is processed; the game's loader reads both, and the tool exists to emit the export the comment says is ignored.
@@ -138,7 +138,7 @@ The debugger listens on port 9444, and turning it on also forces `Application.ru
 Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Colossal.UI/Colossal.UI/UIManager.cs`, `UISystem.cs`, `src/Cohtml.Runtime/cohtml/CohtmlSystemSettings.cs`.
 
 The endpoint at `http://localhost:9444` is a Chrome-DevTools-protocol server exposing one page target, the game's whole UI at `assetdb://gameui/index.html`.
-A browser's DevTools attach to it, and so does any other CDP client — the sibling `coherent-gameface` plugin, application-agnostic, drives the same port with its `game_*` tools; what a session there reaches (the live DOM, binding reads, the module registry) is `frontend-and-injection`'s.
+A browser's DevTools attach to it, and so does any other CDP client — the sibling `coherent-gameface` plugin, application-agnostic, drives the same port with its `game_*` tools; what a session there reaches (the live DOM, binding reads, the module registry) is [`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md)'s.
 
 ## The reload loop
 
@@ -195,16 +195,16 @@ A stale earlier output sharing the stem — a `.d.ts` beside the generated `.ts`
 
 `cs2-mod-project` owns the hook that invokes this build; it gets from here the wipe window and the declaration-order fact behind the hook's placement.
 
-`frontend-and-injection` owns the loaded module's life on the page; it gets the names the loader depends on — `<id>.mjs`, `<id>.css` derived by extension swap, `coui://ui-mods/` as the public path — the images-directory lever against the shared host, and the reload mechanics: `.mjs` is Media, a reload is a teardown plus image-cache sweep, and only local mods are watched.
+[`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md) owns the loaded module's life on the page; it gets the names the loader depends on — `<id>.mjs`, `<id>.css` derived by extension swap, `coui://ui-mods/` as the public path — the images-directory lever against the shared host, and the reload mechanics: `.mjs` is Media, a reload is a teardown plus image-cache sweep, and only local mods are watched.
 
-`binding-layer` gets the identity chain that makes `mod.json`'s `id` the natural binding group, and the type-generation route that keeps its two ends in step.
+[`binding-layer`](../binding-layer/binding-layer.md) gets the identity chain that makes `mod.json`'s `id` the natural binding group, and the type-generation route that keeps its two ends in step.
 
-`mod-lifecycle-and-ordering` — a UI module has a lifecycle apart from the C# half's: it is an asset created from the `.mjs` extension, registered when the mod manager initialises, and added or removed mid-session when a playset entry toggles, so a mod whose C# failed to load can still have its module registered from the same folder.
+[`mod-lifecycle-and-ordering`](../../../cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — a UI module has a lifecycle apart from the C# half's: it is an asset created from the `.mjs` extension, registered when the mod manager initialises, and added or removed mid-session when a playset entry toggles, so a mod whose C# failed to load can still have its module registered from the same folder.
 
-`mod-compatibility` — three collision surfaces are built here: the shared `images/` namespace, the three-character CSS class hash, and the loader's shared completion counter, where one mod's missing stylesheet silences every mod.
+[`mod-compatibility`](../../../cs2-modding/references/technique/mod-compatibility/mod-compatibility.md) — three collision surfaces are built here: the shared `images/` namespace, the three-character CSS class hash, and the loader's shared completion counter, where one mod's missing stylesheet silences every mod.
 
-`settings-and-input` and `localization` — both reach the frontend through this same bundle, so both inherit the identity rule and the vendored-declarations staleness above.
+[`settings-and-input`](../../../cs2-modding/references/technique/settings-and-input/settings-and-input.md) and [`localization`](../../../cs2-modding/references/technique/localization/localization.md) — both reach the frontend through this same bundle, so both inherit the identity rule and the vendored-declarations staleness above.
 
-`debug-menu` and `cs2-modding-setup` — the flag and its port also live with them: the trunk's debug-menu reference owns the developer command line, and the setup skill the launch-options row that turns it on, so a correction to the flag, its switches or the port lands in all three files.
+[`debug-menu`](../../../cs2-modding/references/technique/debug-menu/debug-menu.md) and `cs2-modding-setup` — the flag and its port also live with them: the trunk's debug-menu reference owns the developer command line, and the setup skill the launch-options row that turns it on, so a correction to the flag, its switches or the port lands in all three files.
 
-`diagnostics` — this topic's evidence lives in `UI.log` (the inspector port, every reload line, and the 404 with its failing URL), `Modding.log` (the `Registered UI Module` lines) and `SceneFlow.log` (the launch flags); all three truncate per session, so the run that shows the problem is the run to read.
+[`diagnostics`](../../../cs2-modding/references/technique/diagnostics/diagnostics.md) — this topic's evidence lives in `UI.log` (the inspector port, every reload line, and the 404 with its failing URL), `Modding.log` (the `Registered UI Module` lines) and `SceneFlow.log` (the launch flags); all three truncate per session, so the run that shows the problem is the run to read.

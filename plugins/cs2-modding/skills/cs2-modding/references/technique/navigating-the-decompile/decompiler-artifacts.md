@@ -7,7 +7,7 @@ Every artifact below is a property of that tree, so without one there is nothing
 `cs2-modding-setup` provisions it.
 
 Everything the decompiler left behind that is not in the game's original source, so a reader can tell machinery from meaning.
-The three that make a reader _wrong_ are stated in `navigating-the-decompile` itself and not repeated here; this page is everything else, plus the version decoy worked out in full, since that is the one of the three with a real answer sitting next to it.
+The three that make a reader _wrong_ are stated in [`navigating-the-decompile`](navigating-the-decompile.md) itself and not repeated here; this page is everything else, plus the version decoy worked out in full, since that is the one of the three with a real answer sitting next to it.
 
 ## The tool tells
 
@@ -36,9 +36,9 @@ Source: `src/Game/Game/UpdateSystem.cs`.
    Source: `src/Game/Game.AssetPipeline/AssetImportPipeline.cs`.
 9. **`unsafe` and raw pointers**, mostly native interop and `Colossal.Collections`.
    Source: `src/Colossal.Collections/Colossal.Collections/NativeAccumulator.cs`.
-10. **Codegen-only files.** `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `__JobReflectionRegistrationOutput__*.cs`, `-BurstDirectCallInitializer.cs` and `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs`, at most one of each in an assembly and in most assemblies none. They are a small share of the files and a large share of the lines, which is why `navigating-the-decompile` excludes them by name.
+10. **Codegen-only files.** `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `__JobReflectionRegistrationOutput__*.cs`, `-BurstDirectCallInitializer.cs` and `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs`, at most one of each in an assembly and in most assemblies none. They are a small share of the files and a large share of the lines, which is why [`navigating-the-decompile`](navigating-the-decompile.md) excludes them by name.
     Source: `src/Game/UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `src/Game/Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs`.
-11. **No closure or iterator residue.** No `<>c__DisplayClass`, `_003C`, `_003E` or `<>c` anywhere in `src/Game`, and only a small minority of files retain a visible `MoveNext()` — down to a genuine `from r in asset.references where r.Value == null select r.Key` surviving as LINQ. `navigating-the-decompile` states what that buys a reader.
+11. **No closure or iterator residue.** No `<>c__DisplayClass`, `_003C`, `_003E` or `<>c` anywhere in `src/Game`, and only a small minority of files retain a visible `MoveNext()` — down to a genuine `from r in asset.references where r.Value == null select r.Key` surviving as LINQ. [`navigating-the-decompile`](navigating-the-decompile.md) states what that buys a reader.
     Source: `src/Game/Game.Modding/ModManager.cs` (the surviving LINQ).
 
 ## The version, which is one line above the `AssemblyVersion` decoy
@@ -61,7 +61,7 @@ Source: `src/Game/Properties/AssemblyInfo.cs`, `src/Colossal.UI/Properties/Assem
 **Save-format history is the other version surface.**
 `src/Game/Game/Version.cs` is a long list of `[VersionConstant("<game version> [<build>]")]` fields, one per format milestone.
 The last one carrying a version string names `1.5.7f1`; the `current` field below it carries a bare `[VersionConstant]` with no string and a value past that milestone, so the named list is not a reading of what the running build writes.
-`save-serialization` owns what any of it implies for a save.
+[`save-serialization`](../save-serialization/save-serialization.md) owns what any of it implies for a save.
 Source: `src/Game/Game/Version.cs`.
 
 (VOLATILE: the four `VersionInternal` strings and `Version.cs`'s last named constant — `src/Game/Properties/AssemblyInfo.cs` and `src/Game/Game/Version.cs`; and the mangled names themselves, whose eight-hex block is a row id that moves with the method table — the `BurstCompiler.StaticTypeReinit` attributes in that same `AssemblyInfo.cs`.)
@@ -76,4 +76,4 @@ The decode is what dead-ends: the encoded segments name the namespace and the me
 `-BurstDirectCallInitializer.cs` is where that pays off: it writes `WaterRenderSystem.DequeueAndSort_00004B5A_0024BurstDirectCall.Initialize();`, naming the declaring type the encoded form leaves out.
 Grep it for the method name and the `_0024BurstDirectCall` suffix — it carries no `_002E` segment to match.
 Source: `src/Game/Properties/AssemblyInfo.cs`, `src/Game/-BurstDirectCallInitializer.cs`, `src/Game/Game.Rendering/WaterRenderSystem.cs`, and `Unity.Burst.CodeGen/ILPostProcessing.cs` in the Burst package (the mangling itself — the width, the row id, and the namespace-without-declaring-type).
-`performance-and-memory` owns what Burst compilation costs a reader chasing one of these at runtime.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what Burst compilation costs a reader chasing one of these at runtime.

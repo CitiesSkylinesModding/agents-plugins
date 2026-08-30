@@ -86,7 +86,7 @@ Your disposal system does still match it there, so the teardown is delayed rathe
 A cleanup component that is itself serializable is written into the save on top of that, because the save query gains every serializable component declared outside the game assembly.
 The load then deserializes a fresh copy beside the residue that already survived, carrying whatever your own `Serialize` wrote where a live handle used to be.
 So keep the cleanup component out of the save entirely: declare neither `ISerializable` nor `IEmptySerializable` on it, and nothing of it is ever written.
-`IEmptySerializable` is the one to watch — it looks like a tag marker rather than a serialization interface, and it is what `ecs-in-this-game` teaches for a tag that must survive a save.
-`save-serialization` owns both queries and the asymmetry between them.
+`IEmptySerializable` is the one to watch — it looks like a tag marker rather than a serialization interface, and it is what [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) teaches for a tag that must survive a save.
+[`save-serialization`](../save-serialization/save-serialization.md) owns both queries and the asymmetry between them.
 Source: `src/Game/Game.Serialization/ClearSystem.cs` (the clear's fixed list), `src/Game/Game.Serialization/SerializerSystem.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the save query's union over components declared outside the game assembly).
 (VOLATILE: the interface name and the cleanup-flag logic — `ICleanupComponentData` is the renamed form of `ISystemStateComponentData` and the obsolete spelling survives as an upgrade alias; both live in the entities package's component-type and entity-component-store types.)

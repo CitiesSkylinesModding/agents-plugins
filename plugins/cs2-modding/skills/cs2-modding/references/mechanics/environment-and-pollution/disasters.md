@@ -66,7 +66,7 @@ severity and damage:
 ```
 
 Endangerment is geometric: `FindEndangeredObjects` builds a segment from the phenomenon centre along the wind for `DisasterWarningTime` seconds minus the time still remaining before the start frame — zero as the warning opens, the full window once the disaster begins — and everything within the phenomenon radius of it gets an `Endanger` event: the early-warning building literally extends a lookahead downwind.
-`InDanger` marks the endangered object; what a citizen does with `DangerFlags` belongs to the evacuation half of `citizens-and-households`.
+`InDanger` marks the endangered object; what a citizen does with `DangerFlags` belongs to the evacuation half of [`citizens-and-households`](../citizens-and-households/citizens-and-households.md).
 
 **Ticking both authoring booleans yields `StayIndoors` only.**
 The prefab exposes `m_Evacuate` and `m_StayIndoors`, and its initialiser assigns the flags in sequence rather than or-ing them, so the second assignment wins.
@@ -79,7 +79,7 @@ Source: `src/Game/Game.Prefabs/EarlyDisasterWarningSystem.cs`.
 ## Fire
 
 `FireHazardSystem` (`src/Game/Game.Simulation/FireHazardSystem.cs`) accrues `noRainDays` (reset to zero on rain) and rolls a hazard for anything with `Building` or `Tree`, but the climate factor — `FireConfigurationPrefab.m_TemperatureForestFireHazard` times `m_NoRainForestFireHazard`, evaluated in `src/Game/Game.Simulation/EventHelpers.cs` — multiplies the tree path only; a building's hazard comes from its own prefab data, zone multiplier, fire-rescue coverage and district modifiers, with no weather term.
-`FireSimulationSystem` applies the same forest factor to spreading fires; `OnFire` is the marker, and dispatch and rescue belong to `city-services-and-coverage`.
+`FireSimulationSystem` applies the same forest factor to spreading fires; `OnFire` is the marker, and dispatch and rescue belong to [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md).
 
 ## The flood that cannot fire
 

@@ -63,7 +63,7 @@ Sources: `src/Game/Game.Simulation/SewageOutletAISystem.cs`, `src/Game/Game.Simu
 `SewageOutletAISystem` writes each of its sub-object water sources: `m_Height = min(2.5, m_SurfaceWaterUsageMultiplier * total)`, `m_Polluted = unpurified / total`, and `m_Modifier = 0` while nothing flows — an on/off gate rather than a deletion.
 The GPU advects the plume downstream.
 `WaterPumpingStationAISystem` reads back at its own sub-object — `WaterUtils.SamplePolluted` for surface intake, the per-cell concentration `m_Polluted / max(1, m_Amount)` for groundwater intake — and publishes `(1 − WaterPumpingStationData.m_Purification) * weightedPollution / capacity` onto the producer edge as `WaterPipeEdge.m_FreshPollution`.
-That edge is the seam: everything downstream of `m_FreshPollution` belongs to `utilities-and-flow-networks`.
+That edge is the seam: everything downstream of `m_FreshPollution` belongs to [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md).
 `WaterPipeParameterData.m_MaxToleratedPollution` gates the two dirty-water notifications — the pump's and the consumer's in `DispatchWaterSystem` — while the building-efficiency penalty is ungated, scaling with the pollution fraction through `BuildingEfficiencyParameterData.m_WaterPollutionPenalty`.
 
 There is no path from the ground-pollution map into surface water: the only pollution inlet into the water texture is a source with `m_Polluted > 0`, and the simulation's own writer of one is the sewage outlet's sub-object — the authoring `WaterSource` component and the editor's water tool can author one too.

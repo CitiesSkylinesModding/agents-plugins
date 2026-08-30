@@ -28,7 +28,7 @@ Three consequences a mod needs:
    Consume it in the same frame or not at all.
 3. **A tag written after the snapshot survives an extra frame.**
    A tag added from a simulation system misses that frame's snapshot, is picked up at the end of the _next_ frame's main loop and removed at the end of that frame — which is precisely what makes it visible to the next frame's modification, tool, UI and rendering work.
-   `mod-lifecycle-and-ordering` has the frame structure this rests on.
+   [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) has the frame structure this rests on.
 
 ## What each tag asks for
 
@@ -45,7 +45,7 @@ These never pass through the cleanup pair:
 
 - `Overridden` — this object conflicts with another object or network but is not deleted. Persists across a save; raycasting skips overridden geometry, and lane generation copies the tag onto the lanes it derives from an overridden original.
 - `Native` — marks map-native content. Persists.
-- `Owner` — a single `Entity m_Owner`, the standard back-reference from a sub-object to its parent, and the shape to copy when attaching your own entity to a game entity. Networks are dense graphs reached through it, which is why `roads-and-traffic` leans on it hardest.
+- `Owner` — a single `Entity m_Owner`, the standard back-reference from a sub-object to its parent, and the shape to copy when attaching your own entity to a game entity. Networks are dense graphs reached through it, which is why [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) leans on it hardest.
 - `PseudoRandomSeed` — a `ushort` seed plus `GetRandom(uint reason)`, which derives an independent stream per reason from the one stored seed. This is how the game gets stable per-entity randomness that survives a save without storing a stream, and a mod wanting reproducible per-entity variation should use it rather than seeding its own. It also forces the seed non-zero before constructing the generator, which a hand-rolled seed has to do for itself.
 
 Source: `src/Game/Game.Common/Overridden.cs`, `src/Game/Game.Common/Native.cs`, `src/Game/Game.Common/Owner.cs` and `src/Game/Game.Common/PseudoRandomSeed.cs` (each declaration, its fields and what it persists), `src/Game/Game.Objects/RaycastJobs.cs` (the raycast skip) and `src/Game/Game.Net/LaneSystem.cs` (the propagation onto derived lanes).

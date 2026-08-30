@@ -40,7 +40,7 @@ owner.AddReader(myJobHandle);
 
 A write is the same call with `readOnly: false` and `AddWriter` afterward.
 `Game.Rendering.OverlayInfomodeSystem` is a vanilla worked example of the read — one small job per info-view layer, each taking `CellMapData<T>` from the owning system and registering `AddReader` after the schedule — and the editor's `Game.Tools.ApplyBrushesSystem` is the worked example of the write: its brush appliers are generic over `CellMapSystem<TCell>` and end in `AddWriter`.
-The generic handle discipline — combine every provider's handle into the schedule, register back with each — is `performance-and-memory`'s.
+The generic handle discipline — combine every provider's handle into the schedule, register back with each — is [`performance-and-memory`](../../technique/performance-and-memory/performance-and-memory.md)'s.
 
 **`AddWriter` replaces the write chain, while `AddReader` combines into it.**
 Two systems writing one map in the same frame without explicit ordering lose one of the handles, so a mod calling `AddWriter` after the owning system already did drops the owner's write.

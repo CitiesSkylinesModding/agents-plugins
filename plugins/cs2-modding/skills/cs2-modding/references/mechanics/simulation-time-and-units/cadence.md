@@ -7,7 +7,7 @@ Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
 A system's interval and offset come from `GameSystemBase.GetUpdateInterval(phase)` and `GetUpdateOffset(phase)`, virtual with defaults `1` and `-1` (`src/Game/Game/GameSystemBase.cs`).
-Registering one, and the power-of-two throw that fires there, is `mod-lifecycle-and-ordering`'s.
+Registering one, and the power-of-two throw that fires there, is [`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md)'s.
 
 ## The mask
 

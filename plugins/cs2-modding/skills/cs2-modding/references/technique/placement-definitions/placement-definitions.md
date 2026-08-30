@@ -10,10 +10,10 @@ The seam between a tool and the world.
 A tool never mutates the city: it creates an entity describing what should happen — a **definition** — and a generation system in a later phase of the same frame does the work.
 Everything the placed thing ends up carrying is derived from that definition plus the prefab entity it names, with nothing carried over from the tool, which is why rewriting a definition in flight is enough to change what the game builds.
 
-`custom-tools` owns the tool side — the base classes, the tool list, the raycast, `ApplyMode`, snapping, overlays, tooltips and the input actions — and this reference owns what a tool emits once it has decided, and what happens to that emission afterwards.
-`mod-lifecycle-and-ordering` owns which phase and which band a system lands in, and every registration below is a decision that reference settles.
-`ecs-in-this-game` owns the frame-scoped tags and the barrier playback points this mechanism rides on.
-`prefabs-and-assets` owns the prefab layers a definition points into.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the tool side — the base classes, the tool list, the raycast, `ApplyMode`, snapping, overlays, tooltips and the input actions — and this reference owns what a tool emits once it has decided, and what happens to that emission afterwards.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns which phase and which band a system lands in, and every registration below is a decision that reference settles.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the frame-scoped tags and the barrier playback points this mechanism rides on.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the prefab layers a definition points into.
 
 ## A definition is a request, and it lives for exactly one frame
 
@@ -32,7 +32,7 @@ The whole seam is one component.
 
 It is a request rather than a result: the entity carrying it describes something the game should create, delete, move or select, and a later system creates a **separate** entity to satisfy it.
 
-The fact a definition author gets wrong first is that `m_Prefab` and `m_SubPrefab` are prefab **entities**, not `PrefabBase` objects, and the archetype the resulting instance gets is `ObjectData.m_Archetype` on that prefab entity — `prefabs-and-assets` owns both layers.
+The fact a definition author gets wrong first is that `m_Prefab` and `m_SubPrefab` are prefab **entities**, not `PrefabBase` objects, and the archetype the resulting instance gets is `ObjectData.m_Archetype` on that prefab entity — [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns both layers.
 
 **The minimal definition is three components and no archetype.**
 Every producer in the game builds it the same way, through a command buffer:
@@ -53,7 +53,7 @@ No tool anywhere in the game declares a definition archetype; the only two `Crea
 Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`, `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Simulation/AreaSpawnSystem.cs`.
 
 **`Updated` is load-bearing and not decoration.**
-Every consumer's query requires it, and the game's cleanup system strips it from every tagged entity in the `Cleanup` phase at the end of the frame, as it does every frame-scoped tag — `ecs-in-this-game` owns that protocol and its timing.
+Every consumer's query requires it, and the game's cleanup system strips it from every tagged entity in the `Cleanup` phase at the end of the frame, as it does every frame-scoped tag — [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns that protocol and its timing.
 So a definition is visible to its consumer for exactly the frame it was created in, and a definition emitted without `Updated` is invisible to every consumer while still matching the sweep that destroys stale definitions.
 Source: `src/Game/Game.Common/CleanUpSystem.cs`, `src/Game/Game.Tools/GenerateObjectsSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
@@ -141,7 +141,7 @@ On the **revive** path — where the previous frame's preview entity is reused r
 
 **The original is hidden rather than removed.**
 When `m_Original` is non-null, the first thing the consumer does is add `Hidden` and `BatchesUpdated` to it.
-`Hidden` is a zero-size tag; the apply systems remove it on commit and the clear system removes it on discard, which `custom-tools` records from the tool side.
+`Hidden` is a zero-size tag; the apply systems remove it on commit and the clear system removes it on discard, which [`custom-tools`](../custom-tools/custom-tools.md) records from the tool side.
 So the visual illusion of moving something is a hidden original standing behind a `Temp` that stands in front of it, and both halves are decided by one `Entity` field on the definition.
 Source: `src/Game/Game.Tools/GenerateObjectsSystem.cs`, `src/Game/Game.Tools/Hidden.cs`.
 
@@ -176,7 +176,7 @@ Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **The band matters more than the phase, and this is the mistake that costs a day.**
 `UpdateAt<MySystem>(SystemUpdatePhase.Modification1)` places the system after every vanilla `UpdateAt` in that phase, which means after `GenerateObjectsSystem` has already consumed everything.
-The system runs, the query matches, the writes land, and nothing changes — `mod-lifecycle-and-ordering` owns the banding rule that explains why.
+The system runs, the query matches, the writes land, and nothing changes — [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the banding rule that explains why.
 Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **Write synchronously.**
@@ -290,7 +290,7 @@ A definition entity is not destroyed by its consumer: nothing in the generation 
 Tool-emitted definitions are swept by the tool itself, one frame late.
 `ToolBaseSystem.DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` schedules a chunk job that destroys every entity in the query through the barrier's parallel writer, and the query it expects is `GetDefinitionQuery()` — `{CreationDefinition}` excluding `Updated`.
 Because the cleanup system strips `Updated` at the end of each frame, that query matches precisely last frame's definitions, so a tool calling `DestroyDefinitions` before creating this frame's leaves exactly one generation alive.
-Every vanilla tool does it, and `custom-tools` records where in the tool's own state machine the calls sit.
+Every vanilla tool does it, and [`custom-tools`](../custom-tools/custom-tools.md) records where in the tool's own state machine the calls sit.
 
 **The default tool sweeps too, and its query is global.**
 Its definition update opens with the same `DestroyDefinitions` call against a query filtered on nothing but `CreationDefinition` and the absence of `Updated`, so the fallback tool cleans up any stale definition in the world, including one a mod left behind.
@@ -303,7 +303,7 @@ That is how the selection highlight works — a `Select` definition becomes a `T
 ## Producing definitions: the sanctioned helper, and what "vanilla-quality" actually means
 
 `ObjectToolBaseSystem` exists for one protected method, `CreateDefinitions(...)`, which schedules the game's own definition job and emits through `ToolOutputBarrier`.
-`custom-tools` owns that helper — its signature, the cost behind it and the choice of base class it decides; what belongs here is what the job actually produces.
+[`custom-tools`](../custom-tools/custom-tools.md) owns that helper — its signature, the cost behind it and the choice of base class it decides; what belongs here is what the job actually produces.
 
 **The job's job is composition.**
 It resolves the control points into a placement, emits the definition for the object itself, and then recurses through the prefab's structure — sub-objects, sub-nets, sub-lanes, sub-areas — threading an `OwnerDefinition` down so every sub-element points at its not-yet-created parent.
@@ -314,7 +314,7 @@ Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`.
 It means a definition tree complete enough that the generation system produces the same `Temp` entities the vanilla tool would, which is what makes a placed building bring its own driveway, lawn and lamp posts along with it.
 Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`, `src/Game/Game.Tools/GenerateObjectsSystem.cs` (the definition tree the job emits, and the `Temp` entities the generator builds from it).
 
-A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled, after completing the handles it takes per `performance-and-memory`'s schedule-form rule — keeps and drops along a clean line.
+A mod that reimplements the job — expect fourteen hundred lines and some sixty injected lookup fields, wired one by one and executed on the main thread rather than scheduled, after completing the handles it takes per [`performance-and-memory`](../performance-and-memory/performance-and-memory.md)'s schedule-form rule — keeps and drops along a clean line.
 
 **What has to be kept** is everything driven by prefab structure: the recursive walk over sub-objects, sub-nets and sub-areas, the `OwnerDefinition` threading, placeholder variation resolution, the attached-parent resolution, the lowered-parent test, the parent-prefab check and the clear-area plumbing.
 **What can be dropped** is everything driven by tool state: brush scattering and with it the object search tree, snapping and distance, the frame delta, removal and stamping, decoration mode, the lane editor, the transform prefab — and dropping that last one means the fork never sets `CreationDefinition.m_SubPrefab` — and the attachment and service-upgrade data.
@@ -353,7 +353,7 @@ Declare an ordinary `IComponentData` of your own, emit it exactly the way a vani
 A generator that needs the vanilla `Temp` entities to exist runs later than `Modification1` — `Modification3` with a second query of `{Node, Temp, Updated}` is the worked shape — because at `Modification1` the vanilla nodes it wants to attach to have not been created yet.
 
 **Feed your validation back into the vanilla error protocol rather than replacing it**: add `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity _and_ to the `Temp`'s `m_Original`, so the vanilla apply gate blocks on your error too.
-Where the mod also wants its own feedback buffer, override `GetAllowApply()` to test that buffer's query alongside the vanilla error query — `custom-tools` owns that override from the tool side.
+Where the mod also wants its own feedback buffer, override `GetAllowApply()` to test that buffer's query alongside the vanilla error query — [`custom-tools`](../custom-tools/custom-tools.md) owns that override from the tool side.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the apply gate and the error query behind it).
 
 ## Mod-created entities need a prefab reference the load pass can resolve
@@ -455,17 +455,17 @@ The complementary move is to **reuse** a vanilla error prefab rather than suppre
 
 ## What this reference hands to others
 
-`custom-tools` is the other half of this seam, and neither reference is complete without it: it owns `ObjectToolBaseSystem` as a choice of base class, the `ApplyMode` state machine that decides when definitions are rebuilt and destroyed, and the `GetAllowApply()` gate that the error findings above fill in the first place.
+[`custom-tools`](../custom-tools/custom-tools.md) is the other half of this seam, and neither reference is complete without it: it owns `ObjectToolBaseSystem` as a choice of base class, the `ApplyMode` state machine that decides when definitions are rebuilt and destroyed, and the `GetAllowApply()` gate that the error findings above fill in the first place.
 
-`prefabs-and-assets` sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the producer seeds `ObjectDefinition.m_Probability` to 100 and overwrites it from the first only when that prefab's placement flags carry `HasProbability` — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the producer seeds `ObjectDefinition.m_Probability` to 100 and overwrites it from the first only when that prefab's placement flags carry `HasProbability` — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
 
-`zoning-buildings-and-land-value` is reached twice over: every act of zoning and dezoning passes through a `Zoning` definition, and growth itself emits `Permanent` definitions for the building, its sub-areas and its sub-nets, so a mod changing what grows on a lot has a seam here that involves no tool at all.
+[`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) is reached twice over: every act of zoning and dezoning passes through a `Zoning` definition, and growth itself emits `Permanent` definitions for the building, its sub-areas and its sub-nets, so a mod changing what grows on a lot has a seam here that involves no tool at all.
 
-`roads-and-traffic` owns `NetCourse`, the richest kind, and both of its consumers; `CoursePosFlags`' fifteen members are all network concepts, and the game's own definition rewriter exists to split courses at intersections.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) owns `NetCourse`, the richest kind, and both of its consumers; `CoursePosFlags`' fifteen members are all network concepts, and the game's own definition rewriter exists to split courses at intersections.
 
-`environment-and-pollution` owns what the other two kinds land on: a `WaterSourceDefinition` (position, constant depth, radius, multiplier, pollution, height, source id) becomes a `Game.Simulation.WaterSourceData` source entity, and a `BrushDefinition` (line, angle, size, strength, time, target) lands on terrain or on its cell maps — terrain height itself is map authoring, owned by no mechanics topic.
-`city-services-and-coverage` is reached through `IconDefinition`, which is how a notification icon is previewed alongside the thing that will carry it, and through the notification icon prefab the error prefabs share with service notifications.
-`transportation-and-vehicles` is reached through `WaypointDefinition` and `ColorDefinition` and the two-phase route pipeline.
+[`environment-and-pollution`](../../mechanics/environment-and-pollution/environment-and-pollution.md) owns what the other two kinds land on: a `WaterSourceDefinition` (position, constant depth, radius, multiplier, pollution, height, source id) becomes a `Game.Simulation.WaterSourceData` source entity, and a `BrushDefinition` (line, angle, size, strength, time, target) lands on terrain or on its cell maps — terrain height itself is map authoring, owned by no mechanics topic.
+[`city-services-and-coverage`](../../mechanics/city-services-and-coverage/city-services-and-coverage.md) is reached through `IconDefinition`, which is how a notification icon is previewed alongside the thing that will carry it, and through the notification icon prefab the error prefabs share with service notifications.
+[`transportation-and-vehicles`](../../mechanics/transportation-and-vehicles/transportation-and-vehicles.md) is reached through `WaypointDefinition` and `ColorDefinition` and the two-phase route pipeline.
 
-`ecs-in-this-game` owns `Updated`, `Temp` and the barrier playback points the whole window argument rests on.
-`mod-lifecycle-and-ordering` owns the band-versus-phase rule that decides whether a rewriter runs before or after its consumer.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns `Updated`, `Temp` and the barrier playback points the whole window argument rests on.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the band-versus-phase rule that decides whether a rewriter runs before or after its consumer.

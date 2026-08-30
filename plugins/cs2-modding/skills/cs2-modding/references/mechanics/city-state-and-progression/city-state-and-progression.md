@@ -28,11 +28,11 @@ On the city entity (`CitySystem.PostDeserialize` in `src/Game/Game.Simulation/Ci
 | City options | `Game.City.City { m_OptionMask }`, one bit per `CityOption` member | `CityUtils.CheckOption`; derived from the active policies and rebuilt on every refresh, so a direct write is overwritten ([policies.md](policies.md)) |
 | City-wide modifiers | `Game.City.CityModifier { float2 m_Delta }` buffer, indexed by `CityModifierType` | `CityUtils.ApplyModifier` / `GetModifier`; length is `max(used type) + 1`, and a missing index reads as `default` ([policies.md](policies.md)) |
 | Active policies | `Game.Policies.Policy { m_Policy, m_Flags, m_Adjustment }` buffer | written through a `Modify` event, and seeded once by `DefaultPoliciesSystem` ([policies.md](policies.md)) |
-| Population, tourism | `Game.City.Population`, `Game.City.Tourism` | contents belong to `citizens-and-households`; `CountHouseholdDataSystem` writes `Population`, `TourismSystem` writes `Tourism` |
-| Money, credit, loan, fees, trade costs, specialization | `PlayerMoney`, `Creditworthiness`, `Loan`, `ServiceFee` buffer, `TradeCost` buffer, `SpecializationBonus` buffer | belong to `economy-and-companies`; a milestone writes the first two directly ([progression.md](progression.md)) |
-| Danger | `Game.City.DangerLevel` | the default read; `CityDangerLevelSystem` overwrites it each pass with the max over live events' `Game.Events.DangerLevel` (`environment-and-pollution`'s) |
+| Population, tourism | `Game.City.Population`, `Game.City.Tourism` | contents belong to [`citizens-and-households`](../citizens-and-households/citizens-and-households.md); `CountHouseholdDataSystem` writes `Population`, `TourismSystem` writes `Tourism` |
+| Money, credit, loan, fees, trade costs, specialization | `PlayerMoney`, `Creditworthiness`, `Loan`, `ServiceFee` buffer, `TradeCost` buffer, `SpecializationBonus` buffer | belong to [`economy-and-companies`](../economy-and-companies/economy-and-companies.md); a milestone writes the first two directly ([progression.md](progression.md)) |
+| Danger | `Game.City.DangerLevel` | the default read; `CityDangerLevelSystem` overwrites it each pass with the max over live events' `Game.Events.DangerLevel` ([`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md)'s) |
 
-City-level configuration is on no component: `CityConfigurationSystem` (`src/Game/Game.City/CityConfigurationSystem.cs`) holds the city name, theme (`defaultTheme` resolves in `zoning-buildings-and-land-value`), required content, the option toggles — `unlockAll` and `unlockMapTiles` among them — and `usedMods` as properties, and serializes them with the camera as its own save section (`save-serialization` owns the gates); `usedMods` is cumulative, every mod the city has ever been saved with.
+City-level configuration is on no component: `CityConfigurationSystem` (`src/Game/Game.City/CityConfigurationSystem.cs`) holds the city name, theme (`defaultTheme` resolves in [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md)), required content, the option toggles — `unlockAll` and `unlockMapTiles` among them — and `usedMods` as properties, and serializes them with the camera as its own save section ([`save-serialization`](../../technique/save-serialization/save-serialization.md) owns the gates); `usedMods` is cumulative, every mod the city has ever been saved with.
 
 Statistics ([statistics.md](statistics.md)):
 
@@ -50,7 +50,7 @@ Progression ([progression.md](progression.md)):
 | XP for a placed object, upgrade or net | `PlaceableObjectData.m_XPReward`, `ServiceUpgradeData.m_XPReward`, `PlaceableNetData.m_XPReward` | prefab |
 | A milestone | `Game.Prefabs.MilestoneData { m_Index, m_Reward, m_DevTreePoints, m_MapTiles, m_LoanLimit, m_XpRequried, m_Major, m_IsVictory }` | `ecs_query` on the component; `MilestoneSystem.TryGetMilestone` is a linear scan over it; the field is spelled `m_XpRequried`; a milestone's name and description are the locale keys `Progression.MILESTONE_NAME:N` / `MILESTONE_DESCRIPTION:N` |
 | A dev-tree node | `Game.Prefabs.DevTreeNodeData { m_Cost, m_Service }` plus a `DevTreeNodeRequirement` buffer | `ecs_query` on the component; `DevTreeSystem.Purchase(node)` is the gate |
-| A node's service | `Game.Prefabs.ServiceData { m_Service, m_BudgetAdjustable }` on a `ServicePrefab` | what the service offers belongs to `city-services-and-coverage` |
+| A node's service | `Game.Prefabs.ServiceData { m_Service, m_BudgetAdjustable }` on a `ServicePrefab` | what the service offers belongs to [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) |
 
 Unlocking ([unlocking.md](unlocking.md)):
 
@@ -67,7 +67,7 @@ Map tiles ([map-tiles.md](map-tiles.md)):
 | --- | --- | --- |
 | A tile | `Game.Areas.MapTile` tag, `MapFeatureElement { m_Amount }` buffer indexed by `MapFeature`, `Geometry` | owned when `Game.Common.Native` is absent |
 | Tile pricing | `Game.Prefabs.MapFeatureData { m_Cost }` buffer and `TilePurchaseCostFactor { m_Amount }` on the `MapTilePrefab` | through the tile's `PrefabRef` |
-| Tile upkeep | `Game.Prefabs.EconomyParameterData.m_MapTileUpkeepCostMultiplier`, an `AnimationCurve1` over owned-tile count | `GetSingleton<T>`; the component belongs to `economy-and-companies` |
+| Tile upkeep | `Game.Prefabs.EconomyParameterData.m_MapTileUpkeepCostMultiplier`, an `AnimationCurve1` over owned-tile count | `GetSingleton<T>`; the component belongs to [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) |
 | Purchase status | `Game.Simulation.TilePurchaseErrorFlags` | `MapTilePurchaseSystem.status`, fresh only while the tile view is open |
 
 Policies ([policies.md](policies.md)):
@@ -86,9 +86,9 @@ Notifications ([notifications.md](notifications.md)):
 | --- | --- | --- |
 | An icon kind | `Game.Prefabs.NotificationIconData { m_Archetype }` and enableable `NotificationIconDisplayData { m_CategoryMask, … }` on a `NotificationIconPrefab` | found through the field naming it on a configuration singleton (`BuildingConfigurationData.m_CondemnedNotification` is the shape), never by name |
 | An icon | `Game.Notifications.Icon { m_Location, m_Priority, m_ClusterLayer, m_Flags }` entity with `Owner` and `PrefabRef`; `IconElement { m_Icon }` buffer on the owner | written only through `IconCommandBuffer` |
-| A tool error | `Game.Prefabs.ToolErrorData { m_Error, m_Flags }` beside `NotificationIconData` | belongs to `placement-definitions`; raised by the tools and never by the simulation |
+| A tool error | `Game.Prefabs.ToolErrorData { m_Error, m_Flags }` beside `NotificationIconData` | belongs to [`placement-definitions`](../../technique/placement-definitions/placement-definitions.md); raised by the tools and never by the simulation |
 
-The frontend half is a `kGroup` on each panel's UI system under `src/Game/Game.UI.InGame/` — `MilestoneUISystem` is the shape — and `binding-layer` owns the binding forms; lock state surfaces on any group binding a prefab, and `CityInfoUISystem` carries `happiness` beside `zoning-buildings-and-land-value`'s demand.
+The frontend half is a `kGroup` on each panel's UI system under `src/Game/Game.UI.InGame/` — `MilestoneUISystem` is the shape — and [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) owns the binding forms; lock state surfaces on any group binding a prefab, and `CityInfoUISystem` carries `happiness` beside [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md)'s demand.
 
 ## Traps
 
@@ -101,7 +101,7 @@ Milestones, dev nodes, policies, statistics and icons are all asset data a conte
 Source: `src/Game/Game.Prefabs/MilestonePrefab.cs`, `src/Game/Game.Prefabs/PolicyPrefab.cs`.
 
 **`Game.City.TaxRates` is a declared buffer no entity carries.**
-`TaxSystem` keeps the rates in its own persistent `NativeArray<int>`, sized by a literal equal to `TaxRate.Count` rather than by the enum, and serializes them itself, so writing that buffer onto the city changes nothing; the rates belong to `economy-and-companies`.
+`TaxSystem` keeps the rates in its own persistent `NativeArray<int>`, sized by a literal equal to `TaxRate.Count` rather than by the enum, and serializes them itself, so writing that buffer onto the city changes nothing; the rates belong to [`economy-and-companies`](../economy-and-companies/economy-and-companies.md).
 Source: `src/Game/Game.City/TaxRates.cs`, `src/Game/Game.Simulation/TaxSystem.cs`, `src/Game/Game.City/TaxRate.cs`.
 
 **Victory is console-only.**
@@ -121,24 +121,24 @@ Source: `src/Game/Game.UI.InGame/MilestoneUISystem.cs`, `src/Game/Game.Prefabs/P
 
 ## Bridges
 
-- `prefabs-and-assets` — everything here is prefab data written in `Initialize` or `LateInitialize`; the `GetPrefabComponents` / `GetArchetypeComponents` split is the difference between `StatisticsData` and `CityStatistic`, and between `NotificationIconData` and `Icon`; what this topic adds is `PrefabSystem.IsUnlockable`, which decides at add time whether a prefab gets `Locked` at all ([unlocking.md](unlocking.md)).
-- `ecs-in-this-game` — `Locked` and `NotificationIconDisplayData` are enableable.
-- `performance-and-memory` — the reader/writer handle protocol: `XPSystem.GetQueue` + `AddQueueWriter`, `CityStatisticsSystem.GetStatisticsEventQueue` + `AddWriter`, and `IconCommandSystem.CreateCommandBuffer` + `AddCommandBufferWriter` for a per-frame buffer with no handle — reading one of these without registering back races the owning system's next write.
-- `placement-definitions` — owns the tool-error prefab family in full, including the suppress-and-restore technique for turning one off.
-- `mod-compatibility` — `usedMods` above is the only durable in-save trace of the mod set.
-- `save-serialization` — `CityStatistic` widened `int` to `long` to `double` across `Version.statisticOverflowFix` and `Version.statisticPrecisionFix`, `CityModifier` reads only its relative channel below `Version.modifierRefactoring`, and `MapTileSystem` and `TaxSystem` serialize themselves rather than components.
-- `localization` — `Progression.*` carries the requirement labels and the indexed `MILESTONE_NAME:N` / `MILESTONE_DESCRIPTION:N` families, `Policy.TITLE[…]` and `Notifications.DESCRIPTION[…]` are hashed by prefab name, as that reference tabulates, and `UnlockRequirementPrefab.m_LabelID` is a key, not a string.
-- `binding-layer` — the groups above; `PrefabUtils.HasUnlockedPrefab<T>` is the per-frame "did anything unlock" test and `PrefabUISystem.BindPrefabRequirements` writes a prefab's requirements, walking the graph through `ProgressionUtils.CollectSubRequirements` so a mod need not.
-- `frontend-and-injection` — the progression, statistics, notifications and policy panels are React components over those groups; changing what they show is that reference's.
-- `city-services-and-coverage` — `DevTreeNodeData.m_Service` gates a `ServicePrefab`; whether a service is reachable is this topic's, what it offers is theirs, and each service failure's icon is a field on that service's configuration prefab.
-- `economy-and-companies` — owns what a milestone pays into and the `CityModifierType` members it reads; a milestone writes `PlayerMoney` and `Creditworthiness` directly, and `Creditworthiness.m_Amount` is the running sum of every reached milestone's `m_LoanLimit`.
-- `citizens-and-households` — owns `Population` and `Tourism`'s contents; `CountHouseholdDataSystem` writes the first and evaluates `CitizenRequirementData`.
-- `zoning-buildings-and-land-value` — owns what `ZoneBuiltRequirementSystem` tallies: `SpawnableBuildingData`'s zone and level, and the level-ups `BuildingUpkeepSystem` pushes into its queue ([unlocking.md](unlocking.md)).
-- `transportation-and-vehicles` — owns the `TransportUsageData` counters a `TransportRequirementData` reads ([unlocking.md](unlocking.md)).
-- `utilities-and-flow-networks` — reads `Locked` in the simulation: `DispatchElectricitySystem` and `DispatchWaterSystem` skip the cooldown step while the asset-menu prefab their parameter component names is still locked ([unlocking.md](unlocking.md)).
-- `environment-and-pollution` — reads `CityModifierType.IndustrialAirPollution`, `.IndustrialGroundPollution`, `.DisasterWarningTime` and `.DisasterDamageRate`, and `WeatherHazardSystem` skips an event prefab whose `Locked` is enabled, so a disaster's availability is a progression state ([policies.md](policies.md), [unlocking.md](unlocking.md)).
-- `simulation-time-and-units` — owns what `CityStatisticsSystem`'s `8192`-frame sample interval is worth in a day, which is what makes a `Daily` statistic a day.
-- `diagnostics` — the `"Unlocking"` logger's `Prefab unlocked: {0}` / `Prefab locked: {0}` lines are the cheapest way to watch a cascade; `MilestoneSystem` warns `did not find data for milestone N` when an index has no prefab.
-- `debug-menu` — `UnlockAllSystem`, `MilestoneSystem.UnlockAllMilestones`, `MapTilePurchaseSystem.UnlockMapTiles` and `DebugSystem`'s XP grants are reached from it, and `CityConfigurationSystem.unlockAll` / `unlockMapTiles` is what to read before believing a save's milestone level or tile count.
+- [`prefabs-and-assets`](../../technique/prefabs-and-assets/prefabs-and-assets.md) — everything here is prefab data written in `Initialize` or `LateInitialize`; the `GetPrefabComponents` / `GetArchetypeComponents` split is the difference between `StatisticsData` and `CityStatistic`, and between `NotificationIconData` and `Icon`; what this topic adds is `PrefabSystem.IsUnlockable`, which decides at add time whether a prefab gets `Locked` at all ([unlocking.md](unlocking.md)).
+- [`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) — `Locked` and `NotificationIconDisplayData` are enableable.
+- [`performance-and-memory`](../../technique/performance-and-memory/performance-and-memory.md) — the reader/writer handle protocol: `XPSystem.GetQueue` + `AddQueueWriter`, `CityStatisticsSystem.GetStatisticsEventQueue` + `AddWriter`, and `IconCommandSystem.CreateCommandBuffer` + `AddCommandBufferWriter` for a per-frame buffer with no handle — reading one of these without registering back races the owning system's next write.
+- [`placement-definitions`](../../technique/placement-definitions/placement-definitions.md) — owns the tool-error prefab family in full, including the suppress-and-restore technique for turning one off.
+- [`mod-compatibility`](../../technique/mod-compatibility/mod-compatibility.md) — `usedMods` above is the only durable in-save trace of the mod set.
+- [`save-serialization`](../../technique/save-serialization/save-serialization.md) — `CityStatistic` widened `int` to `long` to `double` across `Version.statisticOverflowFix` and `Version.statisticPrecisionFix`, `CityModifier` reads only its relative channel below `Version.modifierRefactoring`, and `MapTileSystem` and `TaxSystem` serialize themselves rather than components.
+- [`localization`](../../technique/localization/localization.md) — `Progression.*` carries the requirement labels and the indexed `MILESTONE_NAME:N` / `MILESTONE_DESCRIPTION:N` families, `Policy.TITLE[…]` and `Notifications.DESCRIPTION[…]` are hashed by prefab name, as that reference tabulates, and `UnlockRequirementPrefab.m_LabelID` is a key, not a string.
+- [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) — the groups above; `PrefabUtils.HasUnlockedPrefab<T>` is the per-frame "did anything unlock" test and `PrefabUISystem.BindPrefabRequirements` writes a prefab's requirements, walking the graph through `ProgressionUtils.CollectSubRequirements` so a mod need not.
+- [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) — the progression, statistics, notifications and policy panels are React components over those groups; changing what they show is that reference's.
+- [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) — `DevTreeNodeData.m_Service` gates a `ServicePrefab`; whether a service is reachable is this topic's, what it offers is theirs, and each service failure's icon is a field on that service's configuration prefab.
+- [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) — owns what a milestone pays into and the `CityModifierType` members it reads; a milestone writes `PlayerMoney` and `Creditworthiness` directly, and `Creditworthiness.m_Amount` is the running sum of every reached milestone's `m_LoanLimit`.
+- [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) — owns `Population` and `Tourism`'s contents; `CountHouseholdDataSystem` writes the first and evaluates `CitizenRequirementData`.
+- [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — owns what `ZoneBuiltRequirementSystem` tallies: `SpawnableBuildingData`'s zone and level, and the level-ups `BuildingUpkeepSystem` pushes into its queue ([unlocking.md](unlocking.md)).
+- [`transportation-and-vehicles`](../transportation-and-vehicles/transportation-and-vehicles.md) — owns the `TransportUsageData` counters a `TransportRequirementData` reads ([unlocking.md](unlocking.md)).
+- [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md) — reads `Locked` in the simulation: `DispatchElectricitySystem` and `DispatchWaterSystem` skip the cooldown step while the asset-menu prefab their parameter component names is still locked ([unlocking.md](unlocking.md)).
+- [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) — reads `CityModifierType.IndustrialAirPollution`, `.IndustrialGroundPollution`, `.DisasterWarningTime` and `.DisasterDamageRate`, and `WeatherHazardSystem` skips an event prefab whose `Locked` is enabled, so a disaster's availability is a progression state ([policies.md](policies.md), [unlocking.md](unlocking.md)).
+- [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) — owns what `CityStatisticsSystem`'s `8192`-frame sample interval is worth in a day, which is what makes a `Daily` statistic a day.
+- [`diagnostics`](../../technique/diagnostics/diagnostics.md) — the `"Unlocking"` logger's `Prefab unlocked: {0}` / `Prefab locked: {0}` lines are the cheapest way to watch a cascade; `MilestoneSystem` warns `did not find data for milestone N` when an index has no prefab.
+- [`debug-menu`](../../technique/debug-menu/debug-menu.md) — `UnlockAllSystem`, `MilestoneSystem.UnlockAllMilestones`, `MapTilePurchaseSystem.UnlockMapTiles` and `DebugSystem`'s XP grants are reached from it, and `CityConfigurationSystem.unlockAll` / `unlockMapTiles` is what to read before believing a save's milestone level or tile count.
 
 (VOLATILE: every component, field, property, enum, system, method, constant, quoted log string, binding name and `Source:` path this file names — their declarations under `src/Game/` in `Game.City`, `Game.Simulation`, `Game.Prefabs`, `Game.Prefabs.Modes`, `Game.Policies`, `Game.Areas`, `Game.Buildings`, `Game.Common`, `Game.Notifications`, `Game.Triggers`, `Game.Events`, `Game.Debug`, `Game.UI.InGame` and the root `Game` namespace, at the files the rows and traps cite, plus `AnimationCurve1` and `Platform` in the `Colossal` assemblies; and the locale key families it names — the install's `Locale.cok`, where the C# declares only `Policy.TITLE[…]` in `Game.UI.LocaleIds`.)

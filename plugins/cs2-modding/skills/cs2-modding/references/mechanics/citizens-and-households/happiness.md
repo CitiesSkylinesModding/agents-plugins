@@ -80,7 +80,7 @@ education    GetEducationBonuses: sqrt(n) * m_EducationWellbeingMultiplier * (ed
 ```
 
 Two more producers read a building instance component rather than these fields: the student term (`Game.Buildings.School`, [education-pipeline.md](education-pipeline.md)) and the prisoner term (`Game.Buildings.Prison`, [crime-pipeline.md](crime-pipeline.md)).
-The coverage inputs — healthcare, parks, education, welfare — arrive through `NetUtils.GetServiceCoverage` on the home building's road edge; telecom samples the telecom coverage cell map at the building's position instead, and garbage, crime and mail read producer components on the home building itself; `city-services-and-coverage` owns what those numbers mean.
+The coverage inputs — healthcare, parks, education, welfare — arrive through `NetUtils.GetServiceCoverage` on the home building's road edge; telecom samples the telecom coverage cell map at the building's position instead, and garbage, crime and mail read producer components on the home building itself; [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) owns what those numbers mean.
 
 ## What happiness feeds
 

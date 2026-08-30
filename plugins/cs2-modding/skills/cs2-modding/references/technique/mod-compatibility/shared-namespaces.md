@@ -21,7 +21,7 @@ The second prefab's entity is still created and appended, so it exists and is si
 Obsolete identifiers widen it: an obsolete id goes through the same first-come check as a primary one, so a mod migrating its own renamed prefab competes for that name with whatever else claims it, and the id resolves to whichever registered first.
 
 Prefix your runtime prefab names with something nobody else will pick, and treat an obsolete id you claim as a name in the same shared space.
-`prefabs-and-assets` owns prefab identity and creation.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns prefab identity and creation.
 
 ## UI resource hosts
 
@@ -34,7 +34,7 @@ Keep that shape.
 **Everything else the scaffold puts in that directory is exposed**, because the whole directory is what gets registered — its image output lands on `coui://ui-mods/images/<name>`, so an `icon.png` is a name you share with every other mod that shipped one.
 Your own build config is the fix: emit those assets under a subdirectory named after your mod, which the registered host resolves just the same.
 **Unregister with the two-argument form, naming the host and the path**: the single-argument overload drops the whole host and every path any mod registered under it.
-`prefabs-and-assets` owns host registration and resolution.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns host registration and resolution.
 Source: `src/Game/Game.Modding/ModManager.cs` (the whole module directory registered under the one host), `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod/template/webpack.config.js` (the image output path the scaffold emits), `src/Colossal.UI/Colossal.UI/UISystem.cs` (the two unregister overloads).
 
 ## Notification identifiers
@@ -44,10 +44,10 @@ The merge splits the fields two ways: the title, the thumbnail and the click han
 So a collision leaves one notification wearing the first mod's title and click handler over the second mod's message — the newcomer loses its identity and the incumbent loses its content.
 The game's own identifiers are a small fixed set plus one per failing mod's asset id.
 Prefix yours with your mod's name.
-`diagnostics` owns the notification surface and which fields merge which way.
+[`diagnostics`](../diagnostics/diagnostics.md) owns the notification surface and which fields merge which way.
 
 ## Settings asset names
 
 Two mods choosing the same settings **name** share a store; sharing only the file name does not, since each name is its own block in the file.
 Name yours after your mod.
-`settings-and-input` owns the mechanism.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns the mechanism.

@@ -17,7 +17,7 @@ The thresholds are C# static methods on `AgingSystem`, not prefab data:
 | Adult | 36 | `GetAdultAgeLimitInDays()` |
 | Elderly | 84 | `GetElderAgeLimitInDays()` |
 
-Converting any of them to game years divides by `TimeSettingsData.m_DaysPerYear` (`simulation-time-and-units` owns the conversion).
+Converting any of them to game years divides by `TimeSettingsData.m_DaysPerYear` ([`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) owns the conversion).
 
 Sources: `src/Game/Game.Simulation/AgingSystem.cs`.
 

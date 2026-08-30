@@ -8,9 +8,9 @@ The technique holds without one, but every game symbol named below is checkable 
 
 How to build a tool that behaves like a vanilla one: it claims the cursor, previews what it would do, and commits on click.
 
-What a tool ultimately emits — the creation definitions the game turns into entities — is `placement-definitions`, and a mod that only wants to change _what_ an existing tool places rewrites those definitions instead of writing a tool at all.
-`mod-lifecycle-and-ordering` owns which phase a system runs in, and every phase named below is a decision that reference already settles.
-`ecs-in-this-game` owns the frame-scoped tags and the command-buffer barriers the apply path rides on.
+What a tool ultimately emits — the creation definitions the game turns into entities — is [`placement-definitions`](../placement-definitions/placement-definitions.md), and a mod that only wants to change _what_ an existing tool places rewrites those definitions instead of writing a tool at all.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns which phase a system runs in, and every phase named below is a decision that reference already settles.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the frame-scoped tags and the command-buffer barriers the apply path rides on.
 
 ## Two base classes, and one thing forces the heavier one
 
@@ -28,9 +28,9 @@ So the rule is one line: **derive from `ObjectToolBaseSystem` when the tool plac
 The heavier base is the minority choice, because most tools select, edit or paint rather than place.
 
 Two shapes are worth adopting.
-**Every tool is declared `partial`**, which the source generators require anyway (`ecs-in-this-game`) and which lets a large tool split across files by concern rather than by nothing.
+**Every tool is declared `partial`**, which the source generators require anyway ([`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md)) and which lets a large tool split across files by concern rather than by nothing.
 **A family of tools that all raycast and mark eligibility the same way gets its own abstract layer** between the tools and `ToolBaseSystem`; that is the answer to "I have six tools and they differ only in what they do with the hit", and it scales to eight tools under two such layers without strain.
-**An abstract layer with no concrete descendant yet created kills the developer menu's whole `Simulation` tab**: that tab's tool enumeration instantiates every `ToolBaseSystem` descendant through the world with no abstract filter, so the layer is safe only once a concrete tool below it exists — `debug-menu` owns the mechanism and the repair.
+**An abstract layer with no concrete descendant yet created kills the developer menu's whole `Simulation` tab**: that tab's tool enumeration instantiates every `ToolBaseSystem` descendant through the world with no abstract filter, so the layer is safe only once a concrete tool below it exists — [`debug-menu`](../debug-menu/debug-menu.md) owns the mechanism and the repair.
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
 ## Registration is automatic, and it happens in `OnCreate`
@@ -67,7 +67,7 @@ The seal assigns rather than combines, so returning a handle that does not chain
 | `SetUnderground(bool)`, `ElevationUp()`, `ElevationDown()`, `ElevationScroll()` | `public virtual void` | Empty hooks. The UI's underground toggle calls `SetUnderground`; in game the elevation arrows render for the net tool alone, and the map editor's screen registers an elevation input over the same hooks. `ElevationScroll` is reachable too — the UI binds a `tool.elevationScroll` trigger that dispatches to the active tool — so a mod's own UI can fire it |
 | `OnCreate`, `OnStartRunning`, `OnStopRunning` | overridden by the base itself | Call `base`: the tool-specific work lives in the base body |
 
-The game-lifecycle hooks a tool shares with every other system — loading-complete, focus changed, preload, loaded, world ready — behave exactly as `mod-lifecycle-and-ordering` describes, including which of them disable the system when they throw.
+The game-lifecycle hooks a tool shares with every other system — loading-complete, focus changed, preload, loaded, world ready — behave exactly as [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) describes, including which of them disable the system when they throw.
 
 `OnStartRunning` sets the force-update flag and calls the base's action setup; `OnStopRunning` nulls the infoview, clears the infomodes and resets the actions.
 **The force-update flag is therefore true for exactly the first frame after activation**, which is how a tool knows to rebuild its preview from nothing rather than diff against last frame's.
@@ -96,7 +96,7 @@ Deactivation is the same assignment pointing elsewhere; the default tool is the 
 
 **The enable and disable dance belongs to the tool system, not to the tool.**
 Its update notices that the active tool differs from the last one, disables the last tool and pumps it once more — that final disabled update is what drives the outgoing tool's `OnStopRunning` — then latches the new tool, enables it, and drives `SystemUpdatePhase.ToolUpdate`.
-So a tool registered at `ToolUpdate` runs only while it is the active tool and needs no gate of its own; `mod-lifecycle-and-ordering` records the same mechanism from the phase side.
+So a tool registered at `ToolUpdate` runs only while it is the active tool and needs no gate of its own; [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) records the same mechanism from the phase side.
 Source: `src/Game/Game.Tools/ToolSystem.cs` (the tool update that performs the swap).
 
 **Remember the previous tool by subscribing, not by latching it at your own entry point.**
@@ -133,7 +133,7 @@ The mode-selection trigger is the same story: it type-tests the active tool agai
 So a mod tool may advertise modes to the UI and read `uiModeIndex` back, but nothing vanilla will set them: **activation and mode switching both have to come back through the mod's own C#**, driven by its own binding group rather than by the `"tool"` group.
 The mode icon path the UI synthesises is `"Media/Tools/" + toolID + "/" + modeName + ".svg"`, a game-content path rather than a `coui://` host, so a mod tool's mode icons resolve to nothing.
 Source: `src/Game/Game.UI.InGame/ToolUISystem.cs` (the two triggers and the synthesised path) and `Cities2_Data/Content/Game/UI/Media/Tools/` (the vanilla tool directories that path resolves into).
-`frontend-and-injection` owns the panel that replaces all of this, and `prefabs-and-assets` owns host locations.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns the panel that replaces all of this, and [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns host locations.
 
 (VOLATILE: the hard-coded tool-id switch and the mode type-test — the tool UI system.)
 
@@ -240,7 +240,7 @@ Where the mod needs several concurrent contexts of its own, the shape that scale
 
 **Route three: widen the vanilla masks and filter the results.**
 Cheapest, and the only one that works when the target _is_ a vanilla entity the masks merely exclude: postfix the vanilla tool's `InitializeRaycast` to add what you need, and prefix `GetRaycastResult` to veto the hits you do not want.
-`patching` owns the technique; the composition hazard belongs here.
+[`patching`](../patching/patching.md) owns the technique; the composition hazard belongs here.
 **Record whether you were the one that set the flag** — a `[ThreadStatic] bool` written in the postfix — and filter only in that case, so two mods widening the same mask do not each veto the other's hits.
 Disambiguate the `GetRaycastResult` overloads with explicit type arrays when you declare the patches, since the name is overloaded several times over and every parameter of every one is `out` — a by-ref type in that array.
 Source: `src/Game/Game.Tools/ToolRaycastSystem.cs` (the per-frame mask state every postfix writes) and `src/Game/Game.Tools/ToolBaseSystem.cs` (the overloads a prefix has to tell apart).
@@ -262,14 +262,14 @@ So the three values mean:
 **The dispatcher splits the `Temp` set by component, not by flag** — a chunk carrying the warning component gets `Deleted`, one carrying the override component gets `Updated` and `Overridden` — and `TempFlags` enters only to keep a `Cancel`ed entity out of the cost total. `TempFlags.Delete` is read nowhere in it, so setting that flag does not delete anything; the warning component comes from validation.
 Source: `src/Game/Game.Tools/ToolApplySystem.cs` (the component tests), `src/Game/Game.Tools/ValidationSystem.cs` (what produces the warning).
 
-`Temp` is the preview tag and `ecs-in-this-game` owns why nearly every query excludes it.
+`Temp` is the preview tag and [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns why nearly every query excludes it.
 What a tool needs from it is the flag set.
 
 **`TempFlags : uint`** — `Create = 1`, `Delete = 2`, `IsLast = 4`, `Essential = 8`, `Dragging = 0x10`, `Select = 0x20`, `Modify = 0x40`, `Regenerate = 0x80`, `Replace = 0x100`, `Upgrade = 0x200`, `Hidden = 0x400`, `Parent = 0x800`, `Combine = 0x1000`, `RemoveCost = 0x2000`, `Optional = 0x4000`, `Cancel = 0x8000`, `SubDetail = 0x10000`, `Duplicate = 0x20000`.
 
 `Hidden` is a zero-size tag put on the **original** entity so the preview can stand in for it: the generation systems add it, the apply family removes it on commit, and the clear system removes it on discard.
 `Error` is another zero-size tag, added in `ModificationEnd` by `ValidationSystem.Components` — a separate system spliced after `ValidationSystem`, which produces the error records but tags nothing itself — and it is the only thing `ToolBaseSystem` keeps a query for.
-Behind that tag is an error record naming a cause and a severity, and the severity is what decides whether the validation ends in the blocking tag at all; `placement-definitions` owns the record, its causes, the severity levels and the error prefabs that decide which of them are raised, which is also where the suppression technique lives.
+Behind that tag is an error record naming a cause and a severity, and the severity is what decides whether the validation ends in the blocking tag at all; [`placement-definitions`](../placement-definitions/placement-definitions.md) owns the record, its causes, the severity levels and the error prefabs that decide which of them are raised, which is also where the suppression technique lives.
 
 (VOLATILE: the `TempFlags` member set — the tools namespace.)
 
@@ -294,9 +294,9 @@ Source: `src/Game/Game.Tools/BulldozeToolSystem.cs` (the state machine and its u
 Its apply path checks `GetAllowApply()`, plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing sweeps away the definitions that produced the previews being committed, and creates none to replace them.**
 `DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` and the `GetDefinitionQuery()` it expects are both protected on the base class, and the tool's whole share of the mechanism is where it calls them: the pre-switch guard, the lost-raycast branch and the apply path above — each pairing the call with the `ApplyMode` it sets — plus the head of its own definition-update helper, which destroys before it re-creates.
 Source: `src/Game/Game.Tools/BulldozeToolSystem.cs` (the apply path and the four call sites) and `src/Game/Game.Tools/ToolBaseSystem.cs` (the two protected helpers).
-`placement-definitions` owns what that query matches, why the sweep runs a frame behind, and who collects a definition a tool leaves behind.
+[`placement-definitions`](../placement-definitions/placement-definitions.md) owns what that query matches, why the sweep runs a frame behind, and who collects a definition a tool leaves behind.
 
-What goes _into_ a definition, and what the generation systems make of it, is `placement-definitions`.
+What goes _into_ a definition, and what the generation systems make of it, is [`placement-definitions`](../placement-definitions/placement-definitions.md).
 
 ## Snapping is one formula plus a mask the tool declares
 
@@ -327,12 +327,12 @@ Unlike tool selection and mode selection, **these four go through the base-class
 Source: `src/Game/Game.UI.InGame/ToolUISystem.cs`.
 
 **Snapping by hand is a job you schedule yourself.**
-The vanilla object tool's snapping lives in a private method called from seven places across its cancel, apply and update paths, so a mod that wants different snapping _for that vanilla tool_ has to prefix it: schedule your own job against the zone, net and whatever other quadtrees you need — combining the handle the method was given into the schedule — register the search-tree readers, assign the scheduled handle as the result and return false: the vanilla method does exactly that and never completes, its callers chaining the handle it returns, and `patching` states the same rule for every prefix that schedules.
+The vanilla object tool's snapping lives in a private method called from seven places across its cancel, apply and update paths, so a mod that wants different snapping _for that vanilla tool_ has to prefix it: schedule your own job against the zone, net and whatever other quadtrees you need — combining the handle the method was given into the schedule — register the search-tree readers, assign the scheduled handle as the result and return false: the vanilla method does exactly that and never completes, its callers chaining the handle it returns, and [`patching`](../patching/patching.md) states the same rule for every prefix that schedules.
 Source: `src/Game/Game.Tools/ObjectToolSystem.cs`.
 Your own tool has no such problem: call `GetActualSnap()`, branch on the flags it returns and schedule whatever snap job you like, which is exactly what the vanilla bulldoze tool does.
 Where a mod carries several tools that all snap, the generalisation that pays is a base class parameterised on the tool type and on a flags enum of the mod's own snap kinds, with abstract raycast-initialisation and snap methods and a helper that feeds the tool's own `GetAvailableSnapMask` into `GetActualSnap`.
 
-The grids behind `ZoneGrid`, `LotGrid` and `CellLength` are `zoning-buildings-and-land-value`; the network flags are `roads-and-traffic`.
+The grids behind `ZoneGrid`, `LotGrid` and `CellLength` are [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md); the network flags are [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md).
 
 ## Overlays: one buffer, one dependency contract, two places to draw from
 
@@ -372,7 +372,7 @@ Source: `src/Game/Game.Rendering/OverlayRenderSystem.cs` (everything above excep
 A tool draws no tooltips itself.
 `TooltipSystemBase` offers exactly three protected members: `AddGroup(TooltipGroup)`, which rejects a duplicate path with a logged error; `AddMouseTooltip(IWidget)`, with the same duplicate check against the mouse group's children; and a static world-to-tooltip-position helper that flips Unity's screen Y into the UI's coordinate space.
 
-The tooltip UI system clears its group list and the mouse group's children, drives `SystemUpdatePhase.UITooltip`, then reads the lists back into its widget bindings — which is why that phase is a hard requirement rather than a convention, as `mod-lifecycle-and-ordering` records.
+The tooltip UI system clears its group list and the mouse group's children, drives `SystemUpdatePhase.UITooltip`, then reads the lists back into its widget bindings — which is why that phase is a hard requirement rather than a convention, as [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) records.
 It skips the whole pass while the pointer is over UI or tooltips are hidden.
 The mouse group sits at the mouse position plus sixteen pixels in flipped screen space, and is emitted only when it has children and the mouse is on screen.
 
@@ -414,7 +414,7 @@ Source: `src/Game/Game.Input/ProxyAction.cs` and `src/Game/Game.Input/InputActiv
 
 (VOLATILE: the five action alias strings above and the `internal` accessibility of the tool action collection — the base tool class's create body, and the input manager.)
 
-**A tool's own extra actions are declared as settings, and they live in the mod's own action map**, where nothing is built in and `shouldBeEnabled` works normally; `settings-and-input` owns that declaration side, and the split is clean — this reference owns the three actions the base class provides, that one owns every action a mod declares.
+**A tool's own extra actions are declared as settings, and they live in the mod's own action map**, where nothing is built in and `shouldBeEnabled` works normally; [`settings-and-input`](../settings-and-input/settings-and-input.md) owns that declaration side, and the split is clean — this reference owns the three actions the base class provides, that one owns every action a mod declares.
 To make one of them fire on whatever button the user rebound a vanilla action to, mimic it: declaratively with the binding-mimic attribute naming the map and the action, or imperatively by looking up the vanilla action, copying its binding path and modifiers onto your own binding, and setting the binding back.
 Mimicking is for a mod's _additional_ actions — a second modifier, a mode toggle, something that must appear on the settings screen — not for apply and cancel, which the base class already gave you.
 Source: `src/Game/Game.Modding/ModSetting.cs` (the mod's own map, and the registration that leaves nothing built in) and `src/Game/Game.Settings/SettingsUIBindingMimicAttribute.cs` (the declarative form).
@@ -435,17 +435,17 @@ Source: `src/Game/Game.Modding/ModSetting.cs` (the mod's own map, and the regist
 
 ## What this reference hands to others
 
-`placement-definitions` is the seam every tool that builds anything hands off to: a tool does not mutate the world, it emits creation definitions that the generation systems turn into `Temp` entities and the apply systems commit.
+[`placement-definitions`](../placement-definitions/placement-definitions.md) is the seam every tool that builds anything hands off to: a tool does not mutate the world, it emits creation definitions that the generation systems turn into `Temp` entities and the apply systems commit.
 That reference owns the definition components and their flags, and it owns the other direction too — a mod that wants to change what an existing tool places rewrites definitions rather than writing a tool.
 
-`settings-and-input` owns every action a mod declares, and the mimicking attributes above are its vocabulary.
-`frontend-and-injection` owns the tool-options panel, which is where a mod tool has to put its activation control and its mode switcher, since the vanilla ones are hard-coded to vanilla tools; a tool overriding none of the panel-triggering virtuals above gets no panel at all until that reference's visibility hook is extended.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns every action a mod declares, and the mimicking attributes above are its vocabulary.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns the tool-options panel, which is where a mod tool has to put its activation control and its mode switcher, since the vanilla ones are hard-coded to vanilla tools; a tool overriding none of the panel-triggering virtuals above gets no panel at all until that reference's visibility hook is extended.
 
-`roads-and-traffic` is what the network half of the raycast surface exists for, and it carries the deepest tool state machines: a tool over lanes or connections is also the case that most often needs a parallel raycast pipeline, because the things it selects are mod-owned entities no vanilla search tree holds.
-`zoning-buildings-and-land-value` is reached through the zone and lot masks and the grid snap flags, and any tool that places something on the ground meets that grid.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) is what the network half of the raycast surface exists for, and it carries the deepest tool state machines: a tool over lanes or connections is also the case that most often needs a parallel raycast pipeline, because the things it selects are mod-owned entities no vanilla search tree holds.
+[`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) is reached through the zone and lot masks and the grid snap flags, and any tool that places something on the ground meets that grid.
 
-`performance-and-memory` owns every job this reference tells you to schedule: what `base.Dependency` carries, how a provider handle is taken and registered back, and why a container held across frames has to be disposed in `OnDestroy` with nothing to tell you when it is not.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns every job this reference tells you to schedule: what `base.Dependency` carries, how a provider handle is taken and registered back, and why a container held across frames has to be disposed in `OnDestroy` with nothing to tell you when it is not.
 
-`patching` owns the third raycast route and any change to a vanilla tool's own behaviour.
-`ecs-in-this-game` owns `Temp`, the frame-scoped tags and the barrier contract the definition destruction above uses.
-`prefabs-and-assets` owns the prefab layers a tool's `GetPrefab` and `TrySetPrefab` deal in — a definition holds a prefab _entity_, not the authoring object.
+[`patching`](../patching/patching.md) owns the third raycast route and any change to a vanilla tool's own behaviour.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns `Temp`, the frame-scoped tags and the barrier contract the definition destruction above uses.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the prefab layers a tool's `GetPrefab` and `TrySetPrefab` deal in — a definition holds a prefab _entity_, not the authoring object.

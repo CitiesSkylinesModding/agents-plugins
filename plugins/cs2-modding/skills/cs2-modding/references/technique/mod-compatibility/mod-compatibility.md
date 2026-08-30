@@ -13,8 +13,8 @@ One structural fact sits under all of it: **a compile-time reference on another 
 Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (an unresolved reference), `src/Game/Game.Modding/ModManager.cs` (the state that stops the load).
 
 Where mod-to-mod interaction shows up in the simulation itself:
-`roads-and-traffic` — several mods write the same network components, and more than one takes over the vanilla lane system, so "which vanilla system does this mod replace" is the question that decides whether two of them can be loaded together at all.
-`zoning-buildings-and-land-value` — mods there publish a tag component that a second mod reads in order to exclude the entities carrying it, so a change in that area has to account for marks it did not make.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) — several mods write the same network components, and more than one takes over the vanilla lane system, so "which vanilla system does this mod replace" is the question that decides whether two of them can be loaded together at all.
+[`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — mods there publish a tag component that a second mod reads in order to exclude the entities carrying it, so a change in that area has to account for marks it did not make.
 
 ## No declared dependency binds a code mod
 
@@ -26,7 +26,7 @@ Three dependency channels exist and none of them makes another mod's presence a 
 - **The prefab-level prerequisite** is real and enforced: a prefab whose asset carries a platform id gets a mod-requirement dependency, and prefab registration silently returns false without registering when the required mod is not in the active playset.
   The limit is where it comes from — the prefab's **asset**.
   A prefab a code mod creates at runtime has no asset, so this channel covers asset mods and never a code mod's synthesized prefabs.
-  `prefabs-and-assets` owns prefab registration.
+  [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns prefab registration.
 - **The UI-module declaration** in a module's manifest is parsed into asset tags and read by nothing else.
 
 So a code mod that needs another mod present detects it itself, at runtime, every run.
@@ -86,7 +86,7 @@ That list is two halves concatenated: every loaded assembly by its full name, an
 A library a mod ships is registered, required and loaded exactly like a mod, so it carries its own full name into that first half.
 
 **Everything else defers to after all mods have loaded.**
-A one-shot main-thread callback registered from `OnLoad` runs on the next frame, which is after every mod's `OnLoad` has returned; `mod-lifecycle-and-ordering` owns the idiom.
+A one-shot main-thread callback registered from `OnLoad` runs on the next frame, which is after every mod's `OnLoad` has returned; [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the idiom.
 The deferral is not politeness: every other route reads something another mod's load created, and from `OnLoad` that thing may not exist yet.
 It is enough for what that mod's load itself creates — its assets, its assembly, its types.
 It is not enough for a system or a registry entry, which that mod's own deferred registration may create after yours has already run, so resolve those where they are used rather than probing once and caching.
@@ -129,7 +129,7 @@ Registering late takes effect for the single-type `UpdateAt`, `UpdateBefore` and
 The callback runs once, after your own load, at boot or the moment the player enabled you, so a registration that could not go ahead there re-runs from the mod-set event below.
 Guard it so the registration happens once however it is reached: there is no unregister, and a second call runs the system twice in the phase.
 Let nothing throw out of the callback or out of that event handler, since neither is guarded — a throw in the dispatcher tick strands an arbitrary set of other mods' deferred work for the rest of the session and stops the game's own platform update with it.
-`mod-lifecycle-and-ordering` owns the dispatcher, that anchoring silence, and the phase bands.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the dispatcher, that anchoring silence, and the phase bands.
 Source: `src/Game/Game/UpdateSystem.cs` (the registration forms, and where a two-type anchor is filed), `src/Colossal.Core/Colossal.Core/MainThreadDispatcher.cs` (the one-shot and the unguarded tick).
 
 ## Offering something other mods can call
@@ -141,17 +141,17 @@ The provider's surface and the consumer's facade, neither side taking a compile-
 Nothing arbitrates two mods claiming one runtime resource: it is first-come-first-served or last-write-wins, with the loser finding out at runtime and at most a log line to say so.
 
 The general move: **state your position relative to what you need, rather than claiming the front.**
-`custom-tools` owns the tool list, the procedure for taking a position in it, and the one gate under which the front of it is safe.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the tool list, the procedure for taking a position in it, and the one gate under which the front of it is safe.
 
 The rule that keeps the rest quiet is duller and it works: **name anything global after your own mod.**
 Registering a runtime prefab, a resource host, a notification identifier or a settings asset: [the namespaces nobody arbitrates](shared-namespaces.md) says what each does when two mods land on one name.
 Your assembly's own simple name is a claim in the same sense and the only one that is loud — _One assembly name, one loaded copy_ above owns it, and the loser there does not load at all.
 
-`localization` owns one more of the same kind: a mod overriding a vanilla key silently changes what every other mod's UI shows, and the guard is testing whether the id is already there before adding.
+[`localization`](../localization/localization.md) owns one more of the same kind: a mod overriding a vanilla key silently changes what every other mod's UI shows, and the guard is testing whether the id is already there before adding.
 
 ## The frontend chains where C# does not
 
-`frontend-and-injection` owns the UI module registry.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns the UI module registry.
 The compatibility half is one property: **`extend` and `append` wrap whatever is already at the path and therefore chain across mods, while `override` replaces an export outright and `reset` restores every override it recorded — never an added path, an SCSS class map, or an object mutated in place — stripping every other mod's recorded overrides with it.**
 `add` is not in that company: it registers a path that does not exist yet and throws when one does, so it can never take another mod's module, and it is the only call that puts a path in the registry for anything else to extend.
 Source: `Cities2_Data/Content/Game/UI/index.js` (the registry object literal, and the backup map `reset` replays).
@@ -163,7 +163,7 @@ Source: `Cities2_Data/Content/Game/UI/index.js` (`extend`'s delegation to `overr
 
 Whenever the mod set changes the reset runs and every registrar runs again, restoring every overridden export but leaving every added path in place.
 So a registrar that calls `add` throws the second time through, and the registrars are one unguarded loop, so that throw takes every later mod's registration with it — unless the body is wrapped in its own `try`/`catch`, which confines the loss to that mod's remaining calls.
-Nothing removes an added path, which is also the remedy: guard your `add` so it runs once, and let every later run fall through to the `extend` and `append` calls the reset did wipe — all but an SCSS class map or an object mutated in place, which `frontend-and-injection` shows survive it.
+Nothing removes an added path, which is also the remedy: guard your `add` so it runs once, and let every later run fall through to the `extend` and `append` calls the reset did wipe — all but an SCSS class map or an object mutated in place, which [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) shows survive it.
 Two more cross-mod facts ride the same loader, stated there: one mod whose `hasCSS` stylesheet never answers 200 keeps every mod unregistered, its own and every other's, and registrar order is import-completion order, so which mods a throw or a hang takes down varies between runs of the same playset.
 
 ## Another mod's data
@@ -192,8 +192,8 @@ Source: `src/Unity.Entities/Unity.Entities/EntityManager.cs` (both entry points)
 **Where the other mod wrote its effect into vanilla components, re-derive from those instead.**
 That is the migration a change to the foreign struct cannot break, and it holds the foreign type to what its name reliably buys.
 
-`save-serialization` owns the format, the interfaces and the migration machinery, and states the two facts this rests on: a foreign mod's save section is skipped rather than fatal when that mod is gone, and its components are readable and removable by anyone who can resolve the type.
-`ecs-in-this-game` owns queries and component types.
+[`save-serialization`](../save-serialization/save-serialization.md) owns the format, the interfaces and the migration machinery, and states the two facts this rests on: a foreign mod's save section is skipped rather than fatal when that mod is gone, and its components are readable and removable by anyone who can resolve the type.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns queries and component types.
 
 **Three postures a mod takes toward another mod's data:**
 
@@ -213,7 +213,7 @@ The consequences are not a matter of taste:
   Surfacing it with a button that opens the directory leaves the deletion to the player.
 - Tell the player what you did, through the surface _Telling the player_ below prescribes, naming both mods and how many entities you touched, because the player is the party losing the data.
 
-`city-state-and-progression` owns `usedMods`, the only durable in-save trace of the mod set a city has been saved with.
+[`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) owns `usedMods`, the only durable in-save trace of the mod set a city has been saved with.
 
 ## When the player changes the mod set mid-session
 
@@ -246,7 +246,7 @@ The restart-required flag is the other half: `GameManager.instance.modManager.re
 A mod whose disabling has to have an effect has nowhere to put it, which is why the restart prompt exists.
 
 The design consequence is on the other side: **your `OnLoad` runs either at boot or the moment the player enables your mod, which can be inside a loaded city**, so detection and registration written for boot have to be correct there too.
-`mod-lifecycle-and-ordering` owns `OnLoad` and phase registration.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns `OnLoad` and phase registration.
 Source: `src/Game/Game.SceneFlow/GameManager.cs` (the mid-session re-initialization that runs a newly enabled mod's load).
 
 ## Composing a patch with another mod's
@@ -262,7 +262,7 @@ Source: `src/Game/Game.Tools/ToolRaycastSystem.cs` (the shared mask and flags bo
 ## Telling the player
 
 **Copy the shape the game uses for a mod that failed to load**: a notification keyed to the thing that failed, carrying a failed progress state and an `onClicked`, whose click opens a message dialog and pops the notification it came from.
-`diagnostics` owns both surfaces, what the game puts in each, and their traps — above all that a bare string reaching a dialog or a notification is read as a localization key rather than as text.
+[`diagnostics`](../diagnostics/diagnostics.md) owns both surfaces, what the game puts in each, and their traps — above all that a bare string reaching a dialog or a notification is read as a localization key rather than as text.
 Source: `src/Game/Game.Modding/ModManager.cs` (the notification the game pushes per failing mod, and the dialog its click opens).
 
 **A milder problem belongs on your own settings page instead**, as a warning with a button that does something about it.
@@ -272,15 +272,15 @@ The frontend contributes nothing here: the whole mod-loading conflict path is C#
 
 ## What this reference hands to others
 
-`mod-lifecycle-and-ordering` owns `OnLoad`, phase registration, the deferred main-thread callback every route here waits for, and the silence a two-type anchor registers into.
-`patching` owns Harmony's vocabulary, the priority comparer and the worked ownership-flag code; this file keeps only what a shared target does to two mods at once.
-`custom-tools` owns the tool list, the procedure for taking a position in it, and the raycast case; `localization` owns the vanilla key a mod overrides for everyone.
-`save-serialization` owns the format, the interfaces and the migration machinery, and `ecs-in-this-game` the queries and component types a resolved foreign type is turned into.
-`prefabs-and-assets` owns prefab registration, and `settings-and-input` the settings mechanism — the two collisions [the namespaces nobody arbitrates](shared-namespaces.md) states from this side, beside the resource host and the notification identifier.
-`diagnostics` owns the notification and the dialog a mod reports through; `city-state-and-progression` owns `usedMods`, the only durable in-save trace of the mod set.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns `OnLoad`, phase registration, the deferred main-thread callback every route here waits for, and the silence a two-type anchor registers into.
+[`patching`](../patching/patching.md) owns Harmony's vocabulary, the priority comparer and the worked ownership-flag code; this file keeps only what a shared target does to two mods at once.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the tool list, the procedure for taking a position in it, and the raycast case; [`localization`](../localization/localization.md) owns the vanilla key a mod overrides for everyone.
+[`save-serialization`](../save-serialization/save-serialization.md) owns the format, the interfaces and the migration machinery, and [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) the queries and component types a resolved foreign type is turned into.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns prefab registration, and [`settings-and-input`](../settings-and-input/settings-and-input.md) the settings mechanism — the two collisions [the namespaces nobody arbitrates](shared-namespaces.md) states from this side, beside the resource host and the notification identifier.
+[`diagnostics`](../diagnostics/diagnostics.md) owns the notification and the dialog a mod reports through; [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) owns `usedMods`, the only durable in-save trace of the mod set.
 `cs2-mod-project` owns the publish-time dependency declaration and the agreed Harmony version.
-`frontend-and-injection`, in the UI skill, owns the module registry this file takes only the composition property from.
-`roads-and-traffic` and `zoning-buildings-and-land-value` are where these collisions land in the simulation itself.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md), in the UI skill, owns the module registry this file takes only the composition property from.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) and [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) are where these collisions land in the simulation itself.
 
 What a reader leaves with:
 No declared dependency binds a code mod, so detection is theirs to do at runtime, every run — through the mod manager from `OnLoad`, and through everything else a frame later.

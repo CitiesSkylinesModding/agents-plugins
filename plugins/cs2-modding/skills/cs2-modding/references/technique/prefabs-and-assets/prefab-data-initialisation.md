@@ -56,6 +56,6 @@ updateSystem.UpdateAfter<MyParcelInitializeSystem, ObjectInitializeSystem>(
 ```
 
 Build the query in the vanilla shape — `WithAll<PrefabData, Created>()` plus read-write access to what you write — gate on it, and finish by adding `Updated` to the query so the systems that consume that tag see the change.
-Anchoring, and the silence that follows a wrong phase argument, belong to `mod-lifecycle-and-ordering`.
+Anchoring, and the silence that follows a wrong phase argument, belong to [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md).
 
 (VOLATILE: the 23-system prefab-update list and its order, and the `GeometryFlags` member names — the vanilla system-order class, and the object initialize system.)

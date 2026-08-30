@@ -7,7 +7,7 @@ Every signal below is a string in a log, a config file or a shipped binary, and 
 The toolchain's environment variables locate it.
 
 Whether a debugger can attach at all, read from the logs and from the install.
-Applying the patch is the setup skill's `debug-patching` reference; getting a Burst-compiled job into the debugger once attached is `performance-and-memory`.
+Applying the patch is the setup skill's [`debug-patching`](../../../../cs2-modding-setup/references/debug-patching.md) reference; getting a Burst-compiled job into the debugger once attached is [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 
 The patch is two edits — swapping in the development player binary, and turning the player connection's debug flag on in `boot.config` — and each signal below is _sourced_ in one of them.
 

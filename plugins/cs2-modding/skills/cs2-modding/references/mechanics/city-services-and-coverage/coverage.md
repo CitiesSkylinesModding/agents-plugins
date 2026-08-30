@@ -85,7 +85,7 @@ The direct simulation reads — the property-score path below adds more (re-chec
 | `Police` | `CrimeAccumulationSystem`; `CitizenPathfindSetup` (shelter-seeking cost, twice); `LandValueSystem`, raw index `[2]` | crime rate scales by `PoliceConfigurationData.m_CrimePoliceCoverageFactor * max(0, 5 / (5 + coverage))`; shelter choice; land value |
 | `Park` | `CitizenHappinessSystem.GetEntertainmentBonuses` | wellbeing, shaped `min(1, sqrt(coverage / 1.5))` after `CityModifierType.Entertainment` |
 | `PostService` | nothing | — |
-| `Education` | `CitizenHappinessSystem.GetEducationBonuses`; `LandValueSystem`, raw index `[5]` | wellbeing scaled by `sqrt(n)` against `m_NeutralEducation`, where `n` is the household's size when the scored citizen is itself a child and 0 otherwise (`citizens-and-households` traps the loop); land value |
+| `Education` | `CitizenHappinessSystem.GetEducationBonuses`; `LandValueSystem`, raw index `[5]` | wellbeing scaled by `sqrt(n)` against `m_NeutralEducation`, where `n` is the household's size when the scored citizen is itself a child and 0 otherwise ([`citizens-and-households`](../citizens-and-households/citizens-and-households.md) traps the loop); land value |
 | `EmergencyShelter` | nothing | — |
 | `Welfare` | `CitizenHappinessSystem.GetWellfareBonuses` / `GetWelfareValue`; `CrimeCheckSystem` | wellbeing weighted toward unhappy citizens; a repeat offender's crime is cancelled with probability `coverage * m_WelfareCrimeRecurrenceFactor` against a population-scaled roll |
 

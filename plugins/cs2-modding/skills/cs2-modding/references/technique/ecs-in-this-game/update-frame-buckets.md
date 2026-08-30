@@ -8,7 +8,7 @@ Every step below is a read of that tree, so without one there is nothing here to
 
 [ecs-in-this-game.md](ecs-in-this-game.md) states what `UpdateFrame` is and shows the two forms a system skips on; neither says which index the system compares against or where it got it, which is what this file supplies.
 Read the original in this order.
-`mod-lifecycle-and-ordering` owns the interval and offset overrides themselves — their defaults, and the gate the update system runs them through — and what is below only reads them.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the interval and offset overrides themselves — their defaults, and the gate the update system runs them through — and what is below only reads them.
 
 ## First, check what it does with `UpdateFrame` — per job, not per system
 
@@ -46,7 +46,7 @@ Carrying sixteen over to a fork of a four- or eight-count family visits each req
 Neither is logged.
 Source: `src/Game/Game.Simulation/SimulationUtils.cs` (the two constant families), `src/Game/Game.Simulation/UpdateGroupSystem.cs` (the nine group arrays), `src/Game/Game.Simulation/ServiceRequestSystem.cs` (the bucket drawn against the request group's own count field).
 
-A search for either constant's name finds none of its consumers — a compile-time constant is inlined at every use, which `navigating-the-decompile` explains — and at the request write the count arrives through the component field, so even a value search lands on the `new RequestGroup(…)` construction sites rather than the write.
+A search for either constant's name finds none of its consumers — a compile-time constant is inlined at every use, which [`navigating-the-decompile`](../navigating-the-decompile/navigating-the-decompile.md) explains — and at the request write the count arrives through the component field, so even a value search lands on the `new RequestGroup(…)` construction sites rather than the write.
 
 **Check what a masked value is before reading its bound as a count.**
 An `&` mask is one less than the count and a `%` modulus is the count itself, but only where the value masked is a bucket index.
@@ -69,6 +69,6 @@ That `interval` argument is commonly the system's own `GetUpdateInterval`, so a 
   Source: `src/Game/Game.Simulation/AnimalMoveSystem.cs` and `src/Game/Game.Simulation/AnimalNavigationSystem.cs` (the gate, and the copies that guard a call), `src/Game/Game.Prefabs/Pet.cs`, `src/Game/Game.Prefabs/Domesticated.cs` and `src/Game/Game.Prefabs/Wildlife.cs` (the three pins), `src/Game/Game.Prefabs/AnimalPrefab.cs` (which declares none).
 
 Copy the original's form rather than converting between the two, and carry the index and the count these steps established across with it — the form is the only part a fork inherits for free.
-What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
+What a bucket is worth in simulated time belongs to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 
 (VOLATILE: the load-balanced and dispatch group counts — `SimulationUtils`'s `*_UPDATE_GROUP_COUNT` and `*_DISPATCH_GROUP_COUNT` declarations, `UpdateGroupSystem`'s group arrays, and the request group's own count field. The interval and offset defaults this page reads — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The `GetUpdateFrame` helpers' signatures — `SimulationUtils`. The interpolation ring's length — `TransformFrame`'s buffer-capacity attribute.)

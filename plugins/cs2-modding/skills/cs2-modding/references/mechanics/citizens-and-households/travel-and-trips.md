@@ -9,7 +9,7 @@ Without one you cannot check anything below.
 `TripNeeded` is a buffer on the citizen — `{ m_TargetAgent, m_Purpose, m_Data, m_Resource, m_Priority }` — and a behaviour system appends one to request a trip (`src/Game/Game.Citizens/TripNeeded.cs`).
 `TravelPurpose` is a component — `{ m_Purpose, m_Data, m_Resource }` — holding what the citizen is currently doing, and its absence means idle: the worker and student systems find available citizens by excluding it (`src/Game/Game.Citizens/TravelPurpose.cs`, `src/Game/Game.Simulation/WorkerSystem.cs`, `src/Game/Game.Simulation/StudentSystem.cs`).
 The `Purpose` enum declares the full set of activities, ordinary life through services, crime, tourism, logistics and the failure states (`src/Game/Game.Citizens/Purpose.cs`).
-It is serialized as a `byte`, so reordering its members changes what old saves mean (`save-serialization` owns the version gates).
+It is serialized as a `byte`, so reordering its members changes what old saves mean ([`save-serialization`](../../technique/save-serialization/save-serialization.md) owns the version gates).
 
 ## From request to path to arrival
 

@@ -101,7 +101,7 @@ Counts, guard conditions, failure modes and a claim contradicting a sibling all 
 
 **Aim the pass at over-reach, because that is what authoring produces:** a universal — _every_, _all_, _only_ — whose counterexample sits in its own sentence's parenthesis, a mechanism inferred from one observation, a rule generalised from the cases that happened to be checked, a diagnostic mistaken for the thing it reports on.
 Prose that has gone through a gate has been wrong on exactly these, and none of it read as doubtful.
-Read these before re-deriving anything: [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md), [a read that stopped where the code agreed with it](../../docs/solutions/decompile-read-stopped-at-the-confirming-line.md), and [a result credited to the wrong change](../../docs/solutions/attributed-a-result-to-the-wrong-change.md) where the claim rests on something you ran; where a claim is player-facing, [a binding without a consumer](../../docs/solutions/a-binding-without-a-consumer.md).
+Read these before re-deriving anything: [a search taken for a census](../../docs/solutions/empty-grep-read-as-proof-of-absence.md), [a read that stopped where the code agreed with it](../../docs/solutions/decompile-read-stopped-at-the-confirming-line.md), and [a result credited to the wrong change](../../docs/solutions/attributed-a-result-to-the-wrong-change.md) where the claim rests on something you ran; where a claim is player-facing, [a binding without a consumer](../../docs/solutions/a-binding-without-a-consumer.md); where it compresses a reference into a higher tier, [a summary that dropped the bolded qualifier](../../docs/solutions/a-summary-that-dropped-the-bolded-qualifier.md).
 Over-reach usually enters one stage before the prose carrying it: a reference is written by an agent holding a research file and no source, so a guard, a condition or a scope dropped while the research was written down is copied into the shipped file faithfully, and reads as well there as it did in the research.
 Aim finders at the research file's own citations as much as at the prose — open the line a claim rests on and read what surrounds it, rather than re-deriving only what the shipped sentence already says.
 A research error can underlie a correct shipped sentence — the authoring agent reads the decompile beside the file and silently fixes what it happens to catch — so a clean verdict on the shipped prose clears nothing about the research file.
@@ -130,7 +130,7 @@ Two passages that had survived five rewrites each settled on the first structura
 ## Reference families
 
 The trunk skill's references nest in two families, one directory each, because the sources decompose along two orthogonal axes and both are real.
-Only the trunk splits this way; every other skill keeps a flat `references/`.
+Only the trunk splits this way; every other skill keeps one undivided `references/` directory.
 
 - **Technique** references, in `skills/cs2-modding/references/technique/`, teach mechanism reusable across subject matter.
   **Read [the technique reference shape](../../docs/authoring/technique-reference-shape.md) before authoring or editing one.** It fixes the trap `Source:` rule, the disclosure rule and a prose-line budget the content lint enforces, so a reference written without it either fails the check or ships claims a fact-checking pass cannot open.
@@ -143,14 +143,15 @@ The boundary is the question a fact answers: _how do I do this at all_ is techni
 The bridge between them is the product — no other source connects "here is the ECS" to "here is how this part of the city works" with "therefore, to change X, modify Y" — so the two families cross-reference: a mechanics reference points at the techniques a change there needs, a technique reference points at the mechanics it serves.
 
 **Every reference is a folder, and its entry file repeats the topic name.**
-`references/technique/custom-tools/custom-tools.md` is the reference a bridge slug names and a pointer resolves to; anything else the topic discloses sits beside it, in that same folder, under its own name.
+`references/technique/custom-tools/custom-tools.md` is the reference a bridge names and a pointer resolves to; anything else the topic discloses sits beside it, in that same folder, under its own name.
 **The entry file links every sibling in its folder**, because it is the only place a reader can arrive from — a disclosed file nothing links to ships in every install and is read by nobody, and the lint asserts both halves.
 A topic that discloses nothing keeps the folder anyway — it is one file in a directory of its own, and that is the point: **disclosing later is then a new file rather than a move**, so no pointer, slug or ticket path changes when a reference outgrows one file.
 **Re-mark a sibling for what it now carries.** A section moved out of the entry file leaves its `VOLATILE:` behind, and no check catches it.
 
-Both families work this way, and so does the UI skill's flat `references/`.
+Both families work this way, and so does the UI skill's `references/`.
 A sub-file is a reference like any other: it carries its own title and its own `Verified against game version <version>.` line, because it goes stale on its own, and the content lint already treats any `.md` below a `references/` directory as a reference at any depth.
-Link to a sibling in the same folder by bare filename; a bridge to another _topic_ stays a backticked slug and never a link.
+Link to a sibling in the same folder by bare filename; a bridge to another _topic_ is a relative link to that topic's entry file, across families and skills alike, since the lint holds every shipped link to resolving inside the plugin.
+During a reference run, a bridge whose target topic is not yet authored stays a backticked slug for the run's closing coherence pass to convert — the reference-ticket protocol carries that rule.
 
 **A pointer that gates something a reader can get wrong states the consequence, not the ownership.**
 _`custom-tools` owns the tool list_ says who to ask; it does not say what happens to a reader who does not ask, which is how an accurate pointer stops nobody.

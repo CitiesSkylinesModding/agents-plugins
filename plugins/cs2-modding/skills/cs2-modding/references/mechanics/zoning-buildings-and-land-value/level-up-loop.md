@@ -7,7 +7,7 @@ Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
 The chain is five systems in `SystemUpdatePhase.GameSimulation` — `PropertyProcessingSystem`, `LandValueSystem`, `BuildingUpkeepSystem`, `RentAdjustSystem`, `PropertyRenterSystem` — registered in that order in `src/Game/Game.Common/SystemOrder.cs`.
-A system's passes per day is `262144 / GetUpdateInterval(phase)`, and the passes consuming `UpdateFrame` divide one building's own rate by its sixteen buckets (`ecs-in-this-game`).
+A system's passes per day is `262144 / GetUpdateInterval(phase)`, and the passes consuming `UpdateFrame` divide one building's own rate by its sixteen buckets ([`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md)).
 
 ## Land value
 

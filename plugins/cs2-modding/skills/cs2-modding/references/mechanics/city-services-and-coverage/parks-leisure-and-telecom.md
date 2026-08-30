@@ -7,7 +7,7 @@ Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
 Two services break the road-coverage mould: a park's coverage strength moves with its maintenance at runtime, and telecom is a cell map with no road buffer at all.
-Leisure lands here on the supply side, while the citizen's leisure demand belongs to `citizens-and-households`.
+Leisure lands here on the supply side, while the citizen's leisure demand belongs to [`citizens-and-households`](../citizens-and-households/citizens-and-households.md).
 
 ## Parks: coverage that moves with maintenance
 
@@ -37,11 +37,11 @@ Maintenance requests are answered by `Game.Buildings.MaintenanceDepot` (`Mainten
 ## Leisure: the supply side
 
 `Game.Prefabs.LeisureProviderData { m_Efficiency, m_Resources, m_LeisureType }` is a per-prefab component a park or a commercial venue carries, and the `Game.Buildings.LeisureProvider` tag is added to the archetype only when the authoring class's `m_Efficiency` is above zero — so a query on the tag finds the instances of prefabs that declared a working provider.
-What turns a park into a wellbeing bonus is its `CoverageService.Park` coverage, through `CitizenHappinessSystem.GetEntertainmentBonuses` ([coverage.md](coverage.md)); the trip generation, the citizen's leisure counter and `LeisureType`'s members are `citizens-and-households`'s.
+What turns a park into a wellbeing bonus is its `CoverageService.Park` coverage, through `CitizenHappinessSystem.GetEntertainmentBonuses` ([coverage.md](coverage.md)); the trip generation, the citizen's leisure counter and `LeisureType`'s members are [`citizens-and-households`](../citizens-and-households/citizens-and-households.md)'s.
 Source: `src/Game/Game.Prefabs/LeisureProvider.cs`, `src/Game/Game.Prefabs/LeisureProviderData.cs`.
 
 **Leisure has no failure surface — no request kind, no `EfficiencyFactor` member, no notification — and choosing a venue never reads building efficiency.**
-`SetupLeisureTargetJob` rejects a candidate only on `BuildingOption.Inactive`, a missing `LeisureProviderData`, a `LeisureType` mismatch and, for `Commercial` and `Meals`, insufficient `ServiceAvailable`; a search that finds nothing removes the citizen's `Leisure` and `TravelPurpose` and stamps `Game.Citizens.LeisureSeekerCooldown { m_SimulationFrame }` — `TripNeededSystem` stamps the same component when a leisure trip's path fails — overwritten per failure rather than counted, so the only trace is the citizen's leisure counter drifting down, which `citizens-and-households` owns.
+`SetupLeisureTargetJob` rejects a candidate only on `BuildingOption.Inactive`, a missing `LeisureProviderData`, a `LeisureType` mismatch and, for `Commercial` and `Meals`, insufficient `ServiceAvailable`; a search that finds nothing removes the citizen's `Leisure` and `TravelPurpose` and stamps `Game.Citizens.LeisureSeekerCooldown { m_SimulationFrame }` — `TripNeededSystem` stamps the same component when a leisure trip's path fails — overwritten per failure rather than counted, so the only trace is the citizen's leisure counter drifting down, which [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) owns.
 Source: `src/Game/Game.Simulation/CitizenPathfindSetup.cs`, `src/Game/Game.Simulation/LeisureSystem.cs`, `src/Game/Game.Simulation/TripNeededSystem.cs`, `src/Game/Game.Citizens/LeisureSeekerCooldown.cs`.
 
 **The `Leisure` info view is the parks-and-recreation view, and it has no UI system.**
@@ -76,7 +76,7 @@ SampleNetworkQuality = bilinear interpolation of min(1, strength / (127.5 + load
 Source: `src/Game/Game.Simulation/TelecomCoverage.cs`, `src/Game/Game.Simulation/TelecomCoverageSystem.cs` (the two byte clamps).
 
 The city-wide `TelecomStatus.m_Quality` is a **density-weighted** mean over all cells, so empty land does not dilute it.
-The map's readers this topic cares about: `TelecomEfficiencySystem`, on a 32-frame interval (`kUpdatesPerDay = 512`, sixteen `UpdateFrame` groups), writes `EfficiencyFactor.Telecom = 1 - (1 - quality / m_TelecomBaseline)² * 0.01 * ConsumptionData.m_TelecomNeed` where quality is under the baseline and 1 otherwise; `LandValueSystem`'s cell job adds `quality * m_TelecomCoverageBonusMultiplier`, capped at `m_CommonFactorMaxBonus` (`zoning-buildings-and-land-value` owns the system); and `FireSimulationSystem` scales a fire's response time by sampled quality through `FireConfigurationData.m_TelecomResponseTimeModifier`.
+The map's readers this topic cares about: `TelecomEfficiencySystem`, on a 32-frame interval (`kUpdatesPerDay = 512`, sixteen `UpdateFrame` groups), writes `EfficiencyFactor.Telecom = 1 - (1 - quality / m_TelecomBaseline)² * 0.01 * ConsumptionData.m_TelecomNeed` where quality is under the baseline and 1 otherwise; `LandValueSystem`'s cell job adds `quality * m_TelecomCoverageBonusMultiplier`, capped at `m_CommonFactorMaxBonus` ([`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) owns the system); and `FireSimulationSystem` scales a fire's response time by sampled quality through `FireConfigurationData.m_TelecomResponseTimeModifier`.
 Source: `src/Game/Game.Simulation/TelecomEfficiencySystem.cs`, `src/Game/Game.Simulation/LandValueSystem.cs`, `src/Game/Game.Simulation/FireSimulationSystem.cs`.
 
 **The efficiency write is progression-gated; the map is not.**

@@ -83,7 +83,7 @@ Showing one pauses the simulation the same way a logged error does.
 
 `LocalizedString`'s implicit conversion from `string` is the _id_ form, not the value form.
 So passing a literal English sentence to a dialog or a notification passes it as a localisation key.
-Write `LocalizedString.Value(...)` explicitly for literal text; `localization` owns what an unresolved key falls back to.
+Write `LocalizedString.Value(...)` explicitly for literal text; [`localization`](../localization/localization.md) owns what an unresolved key falls back to.
 Source: `src/Game/Game.UI.Localization/LocalizedString.cs`.
 
 (VOLATILE: the action-bit values and the `ErrorDialog` field names, the `AppBindings` method names, and the notification key namespaces — the game's own error dialog, app bindings and notification UI types.)

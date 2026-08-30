@@ -8,7 +8,7 @@ Nearly every line here names a game type or a method on one, and the wire string
 
 Carrying a value, a call or an event between a mod's C# and the game's frontend: the binding kinds, where they register and die, how a type crosses the wire, and what arrives at the far end.
 The C# side up to the call that crosses is this reference's; the far end is shown only as the receiver of what C# wrote.
-The frontend as source — the module registry, React, injection — is `frontend-and-injection`'s, and building the UI project is `ui-build-and-devloop`'s.
+The frontend as source — the module registry, React, injection — is [`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md)'s, and building the UI project is [`ui-build-and-devloop`](../ui-build-and-devloop/ui-build-and-devloop.md)'s.
 
 The binding kinds all live in one small assembly, `Colossal.UI.Binding`, under `src/Colossal.UI.Binding/Colossal.UI.Binding/` in the decompile; the systems that register them and the gates around them (`UISystemBase`, `GameMode`, `UIUpdateState`) are in `Game`.
 A mod project reaches it only through an explicit `<Reference Include="Colossal.UI.Binding">` in its own csproj — the toolchain's props put `$(ManagedPath)` on the assembly search path, so no hint path is needed, but they declare no game assembly (`cs2-mod-project` owns the csproj and its reference rules).
@@ -298,7 +298,7 @@ The wire's worked polymorphic example is the four localized elements: `Localized
 They must, because the frontend dispatches on exact string equality — a `switch` over the four tag constants falling through to a literal `<INVALID TYPE>`, and the typed renderer's key lookup falling through to the unknown-element box above — so a generic `FullName`, whose backtick arity suffix and type-argument list make it a different string, matches nothing (VOLATILE: both fallbacks — the frontend bundle's localization dispatch and typed renderer).
 Source: `src/Game/Game.UI.Localization/LocalizedString.cs`, `LocalizedNumber.cs`, `Cities2_Data/Content/Game/UI/index.js`.
 
-`Entity` is the one payload every mod sends and it is pre-registered: a `Unity.Entities.Entity` tag with `index` and `version`, read back symmetrically; `ecs-in-this-game` owns the type.
+`Entity` is the one payload every mod sends and it is pre-registered: a `Unity.Entities.Entity` tag with `index` and `version`, read back symmetrically; [`ecs-in-this-game`](../../../cs2-modding/references/technique/ecs-in-this-game/ecs-in-this-game.md) owns the type.
 
 **A custom reader is any `IReader<T>` passed inline to the trigger that needs it.**
 For an enum that is the shipped `new EnumReader<MyEnum>()`; for any other conversion a `new DelegateReader<T>((IJsonReader r, out T v) => …)` lambda; a class implementing `IReader<T>` is the same thing spelled longer, which is what the game's own service-budget reader is.
@@ -392,35 +392,35 @@ Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/ValueReaders.cs`.
 ## Two things that look like bindings and are not
 
 `ExecuteScript(string)` on the Cohtml `View` a `UIView` exposes hands a string of JavaScript to the page and forgets it: no return value, no reader, no writer, no path, no observer count, and nothing on the C# side learns whether it parsed.
-It is the one C#-to-UI channel with no contract at either end; a mod that needs to change the page injects a module instead, which is `frontend-and-injection`'s route.
+It is the one C#-to-UI channel with no contract at either end; a mod that needs to change the page injects a module instead, which is [`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md)'s route.
 
 `IDebugBinding` is the developer menu's inspector, not a registry: the menu publishes one chosen binding at a time.
 The live set is walkable from C#, since `IBindingRegistry` extends `IBindingGroup` and its `bindings` enumerates every registered binding, each printing its path through `ToString()` — a nested `CompositeBinding` is a group of its own and walks the same way.
 **No such walk exists from the frontend**: there the answer is the decompile plus the shipped bundle, and the sibling `coherent-gameface` plugin can read one known path back from the running game, which is the cheapest way to tell "the C# never registered" from "the React never subscribed" — calibrate it on the `l10n` group first, `l10n.locales` a value binding and `l10n.indexCounts` a map — never on an event binding, which pushes nothing on subscribe (VOLATILE: those paths — `src/Game/Game.UI.Localization/LocalizationBindings.cs`).
 Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/IBindingGroup.cs`, `CompositeBinding.cs`.
-`debug-menu` owns the menu itself and the `debug` group's binding table.
+[`debug-menu`](../../../cs2-modding/references/technique/debug-menu/debug-menu.md) owns the menu itself and the `debug` group's binding table.
 
 ## What this reference hands to others
 
-`frontend-and-injection` owns the other end of every wire here: the data-binding module whose `bindValue`, `bindMap`, `bindEvent`, `bindTrigger` and `call` compose the strings above, the typed renderer that turns a `__Type` into a component and draws the unknown-element box when it cannot, and the injection that gets a mod's React onto the page at all.
+[`frontend-and-injection`](../frontend-and-injection/frontend-and-injection.md) owns the other end of every wire here: the data-binding module whose `bindValue`, `bindMap`, `bindEvent`, `bindTrigger` and `call` compose the strings above, the typed renderer that turns a `__Type` into a component and draws the unknown-element box when it cannot, and the injection that gets a mod's React onto the page at all.
 
-`cs2-mod-project` owns the csproj half of the one build fact here — the manual reference to `Colossal.UI.Binding.dll` — and `ui-build-and-devloop` the UI project that consumes the scaffold's `bindings.d.ts`.
+`cs2-mod-project` owns the csproj half of the one build fact here — the manual reference to `Colossal.UI.Binding.dll` — and [`ui-build-and-devloop`](../ui-build-and-devloop/ui-build-and-devloop.md) the UI project that consumes the scaffold's `bindings.d.ts`.
 
-`localization` owns what goes into a `LocalizedString`; this reference owns the wire and the `l10n` group as its live probe.
+[`localization`](../../../cs2-modding/references/technique/localization/localization.md) owns what goes into a `LocalizedString`; this reference owns the wire and the `l10n` group as its live probe.
 
-This reference owns the widget-over-bindings transport — the raw binding, its patch event and the widget action triggers; `settings-and-input` owns authoring a settings page onto it and `debug-menu` the developer menu, and a mod adding a settings page never touches the transport directly.
+This reference owns the widget-over-bindings transport — the raw binding, its patch event and the widget action triggers; [`settings-and-input`](../../../cs2-modding/references/technique/settings-and-input/settings-and-input.md) owns authoring a settings page onto it and [`debug-menu`](../../../cs2-modding/references/technique/debug-menu/debug-menu.md) the developer menu, and a mod adding a settings page never touches the transport directly.
 
-`units-and-formatting` owns what a number means once it crosses: the unit is written as a plain string beside the value, and the player's unit settings travel as a three-field getter binding.
+[`units-and-formatting`](../../../cs2-modding/references/technique/units-and-formatting/units-and-formatting.md) owns what a number means once it crosses: the unit is written as a plain string beside the value, and the player's unit settings travel as a three-field getter binding.
 It also owns the four localized-element types and what the frontend does with one on arrival, so what a `LocalizedNumber` renders as is decided there.
 
-`mod-lifecycle-and-ordering` owns when a UI system may register — the registry exists before any mod loads, so `AddBinding` from `OnLoad` always finds it — and the `UIUpdate` phase where an interval override is dead.
+[`mod-lifecycle-and-ordering`](../../../cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns when a UI system may register — the registry exists before any mod loads, so `AddBinding` from `OnLoad` always finds it — and the `UIUpdate` phase where an interval override is dead.
 
-`performance-and-memory` owns the cost side: a getter on every observed frame, a raw payload re-serialised on every pump, the dead consecutive-push guard, and the `UIUpdateState` and observer-count levers that answer them.
+[`performance-and-memory`](../../../cs2-modding/references/technique/performance-and-memory/performance-and-memory.md) owns the cost side: a getter on every observed frame, a raw payload re-serialised on every pump, the dead consecutive-push guard, and the `UIUpdateState` and observer-count levers that answer them.
 
-`custom-tools` is where most mod bindings land: a tool's options row is a `UISystemBase` publishing the tool's mode and reading the player's choice back through triggers; gate it to the game mode as the toolbar is.
+[`custom-tools`](../../../cs2-modding/references/technique/custom-tools/custom-tools.md) is where most mod bindings land: a tool's options row is a `UISystemBase` publishing the tool's mode and reading the player's choice back through triggers; gate it to the game mode as the toolbar is.
 
-`diagnostics` owns where the failures go: every binding error in this layer is written to the `UI` logger obtained once on `BindingBase` — except the widget action bindings, which log a bad path through Unity's `Debug.LogError` — while a throw out of a UI system's `OnUpdate` is the update system's Critical line.
+[`diagnostics`](../../../cs2-modding/references/technique/diagnostics/diagnostics.md) owns where the failures go: every binding error in this layer is written to the `UI` logger obtained once on `BindingBase` — except the widget action bindings, which log a bad path through Unity's `Debug.LogError` — while a throw out of a UI system's `OnUpdate` is the update system's Critical line.
 
-`ecs-in-this-game` owns `Entity`, the pre-registered payload every mod sends, and the map key the frontend's key stringifier is built to handle.
+[`ecs-in-this-game`](../../../cs2-modding/references/technique/ecs-in-this-game/ecs-in-this-game.md) owns `Entity`, the pre-registered payload every mod sends, and the map key the frontend's key stringifier is built to handle.
 
-Among the mechanics topics, `simulation-time-and-units` has the smallest complete worked example in the game — the time system's settings struct and its pause barrier — and `city-services-and-coverage` has the most complete, the service-budget system registering a raw value, a keyed map, and triggers with a hand-written reader side by side.
+Among the mechanics topics, [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) has the smallest complete worked example in the game — the time system's settings struct and its pause barrier — and [`city-services-and-coverage`](../../../cs2-modding/references/mechanics/city-services-and-coverage/city-services-and-coverage.md) has the most complete, the service-budget system registering a raw value, a keyed map, and triggers with a hand-written reader side by side.

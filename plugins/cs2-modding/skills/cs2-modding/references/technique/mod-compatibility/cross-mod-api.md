@@ -7,7 +7,7 @@ The technique holds without one, but every game symbol named below is checkable 
 `cs2-modding-setup` provisions it.
 
 How a mod offers something other mods can call without either side taking a compile-time reference on the other.
-`mod-compatibility` owns why that reference is never taken.
+[`mod-compatibility`](mod-compatibility.md) owns why that reference is never taken.
 
 The provider is a `public static class` in a namespace a consumer can hard-code — the **bridge** — and **every signature on it uses only types both sides already reference**: engine types, game types, primitives.
 A parameter or return naming a type your own mod declares forces the consumer to construct one reflectively, which is possible and unreadable; a signature over an `Entity`, an `EntityQuery` or an assembly is one a consumer can call with values it already has.
@@ -31,7 +31,7 @@ Source: `src/Game/Game.Modding/ModManager.cs` (the enumeration, the derived-type
 
 - Resolve the bridge type once, lazily, behind an initialized flag — and clear that flag on the mod-set change event, since the other mod may load after you or be enabled mid-session, and a facade that once resolved to absent otherwise answers absent for the life of the process.
   Re-attempt from there anything you push through the facade once, a `TryRegister` of your own object included.
-  `mod-compatibility` owns that event and which answers are safe to refill from it.
+  [`mod-compatibility`](mod-compatibility.md) owns that event and which answers are safe to refill from it.
 - Cache each `MethodInfo`, resolved with an **explicit parameter-type array** rather than by name alone — that is what disambiguates overloads.
 - Route every call through one invoke helper that logs and returns a neutral value when the member is missing or the invocation throws.
 - Expose a single `IsAvailable` so no caller ever branches on reflection state itself.

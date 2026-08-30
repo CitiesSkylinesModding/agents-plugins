@@ -9,9 +9,9 @@ The technique holds without one, but every game symbol named below is checkable 
 Producing text the game will display: the dictionary source a mod registers, the keys it writes, and the strategies for shipping those strings.
 
 Where that text appears belongs to other references.
-`settings-and-input` owns the options page, its widgets and the input actions; this reference owns the strings those widgets look up, and the seam between them is the eleven key-building methods on the settings base class.
-`units-and-formatting` owns rendering a quantity in the player's own units — the unit strings, the number, fraction, percentage, date and duration formatters, and the interface preferences they branch on; this reference owns the text a formatted quantity is placed inside.
-`binding-layer`, in the UI skill, owns the wire that carries a localized element from C# to the frontend; this reference owns what goes into one.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns the options page, its widgets and the input actions; this reference owns the strings those widgets look up, and the seam between them is the eleven key-building methods on the settings base class.
+[`units-and-formatting`](../units-and-formatting/units-and-formatting.md) owns rendering a quantity in the player's own units — the unit strings, the number, fraction, percentage, date and duration formatters, and the interface preferences they branch on; this reference owns the text a formatted quantity is placed inside.
+[`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md), in the UI skill, owns the wire that carries a localized element from C# to the frontend; this reference owns what goes into one.
 
 Everything here funnels into one object, `GameManager.instance.localizationManager`, and one interface, `IDictionarySource`.
 
@@ -57,7 +57,7 @@ Reach for it where the diagnostic does not matter, and for your own class wherev
 
 **The manager exists before any mod does.**
 It is constructed during boot with `en-US` as the hard-coded fallback locale, and `LoadAvailableLocales` then enumerates every locale asset in the global asset database, ordering the fallback first and registering each one as a locale **and** as a source.
-All of that happens before the ECS world is created, and the world already exists when `OnLoad` runs (`mod-lifecycle-and-ordering` owns that frame), so by the time a mod loads, every shipped locale is registered and `GetSupportedLocales()` can be trusted.
+All of that happens before the ECS world is created, and the world already exists when `OnLoad` runs ([`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns that frame), so by the time a mod loads, every shipped locale is registered and `GetSupportedLocales()` can be trusted.
 That is what makes the standard loader shape — loop over `GetSupportedLocales()`, look for a translation of that name, add it — correct rather than merely lucky.
 Source: `src/Game/Game.SceneFlow/GameManager.cs`, `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`.
 
@@ -177,7 +177,7 @@ That formats through the game's own money formatter with no C# formatting code a
 The C# argument-name extractor will not list `AMOUNT`, because the whole `{AMOUNT:Money}` token fails its character class.
 A placeholder whose value is missing is left in the output verbatim.
 
-The game leans on the inline spec exactly once across all thirteen locales, and the unit it reaches for there — `DurationSeconds` — is one of the five `units-and-formatting` records as existing only on the frontend.
+The game leans on the inline spec exactly once across all thirteen locales, and the unit it reaches for there — `DurationSeconds` — is one of the five [`units-and-formatting`](../units-and-formatting/units-and-formatting.md) records as existing only on the frontend.
 So the frontend-only tail of the unit list is not a toolchain artefact: the game's own strings depend on it.
 
 ### Indexed keys pick a random variant
@@ -192,7 +192,7 @@ A mod that wants one name out of a pool writes `Group.ID:0` through `Group.ID:n`
 ## The keys the options screen expects
 
 The settings base class exposes eleven public key builders.
-`<id>` is the page id and `<name>` is the settings class's own type name; `settings-and-input` owns how both are composed and owns the widget on the other end of each key.
+`<id>` is the page id and `<name>` is the settings class's own type name; [`settings-and-input`](../settings-and-input/settings-and-input.md) owns how both are composed and owns the widget on the other end of each key.
 
 | Helper | Key produced |
 | --- | --- |
@@ -219,7 +219,7 @@ Two of the eleven are worth a note.
 `GetBindingMapLocaleID()` names the mod's action map in the rebinding UI and in the keybinding-conflict notification, so leaving its string unwritten shows the player the raw key in both places.
 
 `GetOptionFormatLocaleID` has **no C# consumer at all**; its consumer is the frontend slider widget, which builds the same key, defaults it to `"{SIGN}{VALUE}"`, substitutes `VALUE` and `SIGN`, and consults it **only when the slider's unit is `custom`**.
-That unit comes from the custom-format attribute, which is `settings-and-input`'s material.
+That unit comes from the custom-format attribute, which is [`settings-and-input`](../settings-and-input/settings-and-input.md)'s material.
 A slider carrying that attribute and no `Options.FORMAT` string renders the default rather than failing.
 
 ### Three attributes override the generated key, and all three drop the page prefix
@@ -333,7 +333,7 @@ LocalizedString.Id("MyMod.STATUS", ("LOADED", new LocalizedNumber<int>(n, Unit.k
 
 `NameTooltipPair`'s implicit conversion pairs an id with `id + "_TOOLTIP"`, and `CachedLocalizedStringBuilder<T>` memoises a key-building lambda per value — reach for it when the same key is rebuilt every frame.
 
-The three numeric elements a substitution carries — `LocalizedNumber<T>`, `LocalizedFraction<T>` and `LocalizedBounds<T>` — and everything that renders one are `units-and-formatting`'s material.
+The three numeric elements a substitution carries — `LocalizedNumber<T>`, `LocalizedFraction<T>` and `LocalizedBounds<T>` — and everything that renders one are [`units-and-formatting`](../units-and-formatting/units-and-formatting.md)'s material.
 
 ## The vanilla key namespaces
 
@@ -362,7 +362,7 @@ A prefab a mod registers has its display name and description looked up by the p
 | unresolvable | the obsolete identifier's name, and `Assets.MISSING_PREFAB_DESCRIPTION` |
 
 So naming a prefab is not a free choice: the mod ships the key the system will ask for, and the prefab's name and its key are one decision rather than two.
-`prefabs-and-assets` owns the registration on the other side of that seam.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the registration on the other side of that seam.
 
 (VOLATILE: the branch that picks a prefab's name and description keys — the prefab UI system's title-and-description lookup.)
 Source: `src/Game/Game.UI.InGame/PrefabUISystem.cs`.
@@ -429,7 +429,7 @@ Walk them in this order.
 
 1. **The key is not in any source the active locale carries.** Adding a source under an unregistered locale id is a silent no-op, so a translation for a locale the game does not ship never lands.
 2. **The source failed mid-import.** A single `Error` line naming the source's `ToString()` is the only trace, and every entry after the bad one is missing while everything before it is present.
-3. **The key the code writes is not the key the engine looks up.** For an options row this is nearly always the derived page path disagreeing with the helper — `settings-and-input` owns the inherited-property case where the two provably differ.
+3. **The key the code writes is not the key the engine looks up.** For an options row this is nearly always the derived page path disagreeing with the helper — [`settings-and-input`](../settings-and-input/settings-and-input.md) owns the inherited-property case where the two provably differ.
 4. **A later source overwrote it.** Load order decides, and nothing reports it.
 5. **The entry was written straight into the active dictionary and the player changed language.**
 
@@ -443,25 +443,25 @@ The game ships a diagnostic for exactly this, in the developer-mode debug window
 (VOLATILE: the localization debug tab's contents — the developer-mode localization debug UI.)
 
 The other diagnostic is the log: the `Localization` logger writes `Added localization source ...` at Debug and the import failure at Error, and the `ToString()` override is what makes either line identify your mod.
-`debug-menu` owns the developer menu itself; `diagnostics` owns the log channels and what each line proves.
+[`debug-menu`](../debug-menu/debug-menu.md) owns the developer menu itself; [`diagnostics`](../diagnostics/diagnostics.md) owns the log channels and what each line proves.
 
 ## What this reference hands to others
 
-`settings-and-input` generates the keys this reference supplies strings for, and the seam is the eleven helpers above: it owns the widget, the page and the action; this owns the string, the source and the file it lives in.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) generates the keys this reference supplies strings for, and the seam is the eleven helpers above: it owns the widget, the page and the action; this owns the string, the source and the file it lives in.
 
-`units-and-formatting` owns every quantity a mod renders to a player, and the seam is the substitution: a key written here carries a numeric element, and what that element becomes on screen is decided there.
-The argument-placeholder section above owns the inline format spec's syntax, and that reference owns the unit each spec names and the bridge onward to `simulation-time-and-units`.
+[`units-and-formatting`](../units-and-formatting/units-and-formatting.md) owns every quantity a mod renders to a player, and the seam is the substitution: a key written here carries a numeric element, and what that element becomes on screen is decided there.
+The argument-placeholder section above owns the inline format spec's syntax, and that reference owns the unit each spec names and the bridge onward to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 
-`prefabs-and-assets` owns the only mechanical key requirement here: the branch that picks a prefab's name and description keys makes the prefab's name and its localization key one decision.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the only mechanical key requirement here: the branch that picks a prefab's name and description keys makes the prefab's name and its localization key one decision.
 
-`mod-lifecycle-and-ordering` decides when a source can be added and who wins a key collision — the manager and every shipped locale exist before `OnLoad`, and because later sources overwrite earlier ones, two mods claiming one key are resolved by mod load order alone.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) decides when a source can be added and who wins a key collision — the manager and every shipped locale exist before `OnLoad`, and because later sources overwrite earlier ones, two mods claiming one key are resolved by mod load order alone.
 
-`mod-compatibility` inherits that collision: a mod overriding a vanilla key silently changes what every other mod's UI shows, and the only guard is testing the active dictionary for the key before adding it.
+[`mod-compatibility`](../mod-compatibility/mod-compatibility.md) inherits that collision: a mod overriding a vanilla key silently changes what every other mod's UI shows, and the only guard is testing the active dictionary for the key before adding it.
 
-`binding-layer`, in the UI skill, carries every localized element across the wire, and the `l10n` binding group with its locale list, debug mode, dictionary-changed signal, index counts and locale-selection trigger is that reference's material.
+[`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md), in the UI skill, carries every localized element across the wire, and the `l10n` binding group with its locale list, debug mode, dictionary-changed signal, index counts and locale-selection trigger is that reference's material.
 
-`frontend-and-injection`, in the UI skill, owns the one errand this topic generates: the generated typed dictionary of vanilla keys, which is how a mod reaches a vanilla key as a component rather than as a string literal.
+[`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md), in the UI skill, owns the one errand this topic generates: the generated typed dictionary of vanilla keys, which is how a mod reaches a vanilla key as a component rather than as a string literal.
 
-`custom-tools` is where the reused tooltip namespaces land: `ToolOptions.*` and `Toolbar.*` are the groups a mod's tool-options rows and toolbar entry are looked up in.
+[`custom-tools`](../custom-tools/custom-tools.md) is where the reused tooltip namespaces land: `ToolOptions.*` and `Toolbar.*` are the groups a mod's tool-options rows and toolbar entry are looked up in.
 
-The mechanics references each own a namespace in the linked namespace table, which is the route from "I changed this mechanic" to "here is the string the panel already shows for it" — `Services`/`SubServices`/`Properties` for `city-services-and-coverage`, `EconomyPanel`/`Budget`/`CompanyInfoPanel` for `economy-and-companies`, `Transport`/`TransportInfoPanel`/`BikesInfoPanel` for `transportation-and-vehicles`, the four pollution info panels plus `NaturalResourcesInfoPanel` for `environment-and-pollution`, `PopulationInfoPanel`/`LifePath`/`WealthInfoPanel` for `citizens-and-households`, `LevelInfoPanel`/`ZoningFactors`/`LandValueInfoPanel` for `zoning-buildings-and-land-value`, `RoadsInfoPanel` for `roads-and-traffic`, and `Progression` for `city-state-and-progression`.
+The mechanics references each own a namespace in the linked namespace table, which is the route from "I changed this mechanic" to "here is the string the panel already shows for it" — `Services`/`SubServices`/`Properties` for [`city-services-and-coverage`](../../mechanics/city-services-and-coverage/city-services-and-coverage.md), `EconomyPanel`/`Budget`/`CompanyInfoPanel` for [`economy-and-companies`](../../mechanics/economy-and-companies/economy-and-companies.md), `Transport`/`TransportInfoPanel`/`BikesInfoPanel` for [`transportation-and-vehicles`](../../mechanics/transportation-and-vehicles/transportation-and-vehicles.md), the four pollution info panels plus `NaturalResourcesInfoPanel` for [`environment-and-pollution`](../../mechanics/environment-and-pollution/environment-and-pollution.md), `PopulationInfoPanel`/`LifePath`/`WealthInfoPanel` for [`citizens-and-households`](../../mechanics/citizens-and-households/citizens-and-households.md), `LevelInfoPanel`/`ZoningFactors`/`LandValueInfoPanel` for [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md), `RoadsInfoPanel` for [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md), and `Progression` for [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md).

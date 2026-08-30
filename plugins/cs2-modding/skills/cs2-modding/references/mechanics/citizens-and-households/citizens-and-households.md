@@ -34,12 +34,12 @@ What a household is:
 | --- | --- | --- |
 | The household record | `Household` (`src/Game/Game.Citizens/Household.cs`) | flags `Tourist, Commuter, MovedIn`; `m_Resources` is the stock of shopped goods, not money; consumption and shopping stats |
 | Money | `Resource.Money` in the household's `Game.Economy.Resources` buffer (`src/Game/Game.Economy/Resources.cs`) | read and written through `EconomyUtils.GetResources` / `AddResources` |
-| The home | `PropertyRenter` on the household (`src/Game/Game.Buildings/PropertyRenter.cs`) | what the building is belongs to `zoning-buildings-and-land-value` |
+| The home | `PropertyRenter` on the household (`src/Game/Game.Buildings/PropertyRenter.cs`) | what the building is belongs to [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) |
 | Seeking a home | `PropertySeeker` (`src/Game/Game.Agents/PropertySeeker.cs`) | enableable; several systems set it, `HouseholdFindPropertySystem` clears it once a home is found |
 | Tourist, commuter, homeless | `TouristHousehold { m_Hotel, m_LeavingTime }`, `CommuterHousehold { m_OriginalFrom }`, `HomelessHousehold { m_TempHome }` (`src/Game/Game.Citizens/TouristHousehold.cs`, `CommuterHousehold.cs`, `HomelessHousehold.cs`) | separate components with their own state; the first two duplicated as `HouseholdFlags` bits |
 | Residential tax | `TaxPayer` (`src/Game/Game.Agents/TaxPayer.cs`) | a component on the household; `PayWageSystem` accumulates the untaxed income it holds |
 
-Where the numbers live — the read is `GetSingleton<T>` unless the row says otherwise (`ecs-in-this-game` carries the call):
+Where the numbers live — the read is `GetSingleton<T>` unless the row says otherwise ([`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) carries the call):
 
 | Family of numbers | Component | Access shape |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ Where the numbers live — the read is `GetSingleton<T>` unless the row says oth
 | Per-crime balance ranges | `CrimeData` (`src/Game/Game.Prefabs/CrimeData.cs`) | on each crime event prefab, behind an enableable `Locked` |
 | Spawn education mix, teen split, commuter spawn divisor, outside-connection weights | `DemandParameterData` (`src/Game/Game.Prefabs/DemandParameterData.cs`) | singleton |
 | The old-age death curve | `HealthcareParameterData.m_DeathRate`, `m_LegacyDeathRate` for old saves (`src/Game/Game.Prefabs/HealthcareParameterData.cs`) | singleton |
-| Days per year | `TimeSettingsData.m_DaysPerYear` | singleton; converting it belongs to `simulation-time-and-units` |
+| Days per year | `TimeSettingsData.m_DaysPerYear` | singleton; converting it belongs to [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) |
 | Workplace size, complexity, shifts, work conditions | `WorkplaceData` (`src/Game/Game.Prefabs/WorkplaceData.cs`) | on the workplace prefab, through the instance's `PrefabRef` — the worker count the simulation reads is the instance `WorkProvider.m_MaxWorkers` ([employment-and-wages.md](employment-and-wages.md)) |
 | School capacity, granted level, graduation modifier | `SchoolData` (`src/Game/Game.Prefabs/SchoolData.cs`) | on the school prefab through `PrefabRef` — its wellbeing and health twins are not what the simulation reads ([education-pipeline.md](education-pipeline.md)) |
 | Hospital treatment bonus | `HospitalData.m_TreatmentBonus` (`src/Game/Game.Prefabs/HospitalData.cs`) | on the hospital prefab through `PrefabRef` — the death check reads the building-instance twin ([lifecycle.md](lifecycle.md)) |
@@ -88,7 +88,7 @@ Source: `src/Game/Game.Citizens/Citizen.cs`, `src/Game/Game.Citizens/CitizenPseu
 
 **The parameter components above are not all write-once.**
 `GameModeSystem` has the loaded game mode rebuild parameter components on every load: a class under `src/Game/Game.Prefabs.Modes` naming yours makes it a candidate, and whether the loaded mode runs that class is authored asset data no code read settles.
-A retune lands in `OnGameLoaded`, which fires after the whole `Deserialize` phase the pass runs in (`mod-lifecycle-and-ordering` carries the hook).
+A retune lands in `OnGameLoaded`, which fires after the whole `Deserialize` phase the pass runs in ([`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) carries the hook).
 Source: `src/Game/Game.Prefabs.Modes/GameModeSystem.cs`, `src/Game/Game.Prefabs.Modes/EconomyParametersMode.cs`.
 
 **A component query and the census count different homeless populations.**
@@ -111,7 +111,7 @@ Source: `src/Game/Game.Simulation/CountHouseholdDataSystem.cs`, `src/Game/Game.S
 | The census | `CountHouseholdDataSystem` | below |
 
 **Rates.**
-A system's passes per day is `262144 / GetUpdateInterval(phase)` — the interval, never a `kUpdatesPerDay` constant a listing names (`ecs-in-this-game` owns the two conventions relating them).
+A system's passes per day is `262144 / GetUpdateInterval(phase)` — the interval, never a `kUpdatesPerDay` constant a listing names ([`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) owns the two conventions relating them).
 Consuming `UpdateFrame` divides the per-entity rate by the family's bucket count — sixteen for every system in this topic.
 
 **The household tick** (`src/Game/Game.Simulation/HouseholdBehaviorSystem.cs`).
@@ -138,13 +138,13 @@ The same system maintains `CitizenFlags.ValidCitizen` on citizens of moved-in ho
 
 ## Bridges
 
-- `ecs-in-this-game` — the `GetSingleton<T>` read behind every parameter row above, and the `UpdateFrame` bucket material the rates rule needs: consuming takes two forms, and a reader who assumes one misreads systems using the other.
-- `mod-lifecycle-and-ordering` — registering or forking any system above; a substitute must reproduce the vanilla interval and `UpdateFrame` partitioning both, or it runs sixteen times too often or too rarely, silently.
-- `performance-and-memory` — the reader/writer handle protocol behind the census arrays: take, combine, register back.
-- `simulation-time-and-units` — 262144 frames per day, `TimeSystem.GetDay`, and `TimeSettingsData.m_DaysPerYear`, the divisor under every age threshold.
-- `save-serialization` — the version and format gates on these components; `Citizen` serializes its packed `m_State` as one `short`, so a new `CitizenFlags` bit spends serialized space, and `HouseholdCitizen` is `IEmptySerializable`, rebuilt on load from the members' `HouseholdMember` back-references.
-- `zoning-buildings-and-land-value` — the other side of `PropertyRenter`: this topic decides that a household rents, moves in and leaves; the building, its lot and its residential capacity are that topic's, and they feed the apartment happiness factor.
-- `city-services-and-coverage` — the coverage numbers happiness consumes, school capacity and building efficiency.
-- `economy-and-companies` — the other end of employment: `Employee`, `FreeWorkplaces`, production, and the company-side wage debit.
+- [`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) — the `GetSingleton<T>` read behind every parameter row above, and the `UpdateFrame` bucket material the rates rule needs: consuming takes two forms, and a reader who assumes one misreads systems using the other.
+- [`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — registering or forking any system above; a substitute must reproduce the vanilla interval and `UpdateFrame` partitioning both, or it runs sixteen times too often or too rarely, silently.
+- [`performance-and-memory`](../../technique/performance-and-memory/performance-and-memory.md) — the reader/writer handle protocol behind the census arrays: take, combine, register back.
+- [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) — 262144 frames per day, `TimeSystem.GetDay`, and `TimeSettingsData.m_DaysPerYear`, the divisor under every age threshold.
+- [`save-serialization`](../../technique/save-serialization/save-serialization.md) — the version and format gates on these components; `Citizen` serializes its packed `m_State` as one `short`, so a new `CitizenFlags` bit spends serialized space, and `HouseholdCitizen` is `IEmptySerializable`, rebuilt on load from the members' `HouseholdMember` back-references.
+- [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — the other side of `PropertyRenter`: this topic decides that a household rents, moves in and leaves; the building, its lot and its residential capacity are that topic's, and they feed the apartment happiness factor.
+- [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) — the coverage numbers happiness consumes, school capacity and building efficiency.
+- [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) — the other end of employment: `Employee`, `FreeWorkplaces`, production, and the company-side wage debit.
 
 (VOLATILE: every component, flag, field, system and `Source:` path this file names, the parameter-ownership map most of all — their declarations under `src/Game/` in `Game.Agents`, `Game.Buildings`, `Game.Citizens`, `Game.Companies`, `Game.Creatures`, `Game.Economy`, `Game.Prefabs`, `Game.Prefabs.Modes`, `Game.Serialization` and `Game.Simulation`, at the files each row and trap cites.)

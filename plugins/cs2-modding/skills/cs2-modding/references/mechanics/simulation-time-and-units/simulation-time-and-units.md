@@ -44,7 +44,7 @@ Cadence ([cadence.md](cadence.md)):
 
 | The game models | Component or member | Access shape |
 | --- | --- | --- |
-| A system's cadence | `GameSystemBase.GetUpdateInterval(phase)`, `GetUpdateOffset(phase)` | virtual, defaults `1` and `-1`; registering one belongs to `mod-lifecycle-and-ordering` |
+| A system's cadence | `GameSystemBase.GetUpdateInterval(phase)`, `GetUpdateOffset(phase)` | virtual, defaults `1` and `-1`; registering one belongs to [`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) |
 | A per-entity rate | `SimulationUtils.GetUpdateFrame(frame, updatesPerDay, groupCount)` and its two siblings | static; paired with `interval = 262144 / (kUpdatesPerDay * groupCount)` |
 | A solver hour | `ElectricityFlowSystem.kUpdatesPerHour = 85`, `const` | the divisor in `Battery.storedEnergyHours` and the factor in `BatteryData.capacityTicks` |
 
@@ -54,9 +54,9 @@ Day, night and seasons ([day-night-and-seasons.md](day-night-and-seasons.md)):
 | --- | --- | --- |
 | Night, for effects and climate | `EffectFlagSystem.kNightBegin = 0.75f`, `kDayBegin = 0.25f`, `static readonly` | compared against `normalizedTime`; other consumers compile their own literals |
 | The day quarter and the month bit | `Game.Prefabs.CalendarEventTimes`, `CalendarEventMonths` | `1 << floor(normalizedTime * 4f)` and `1 << floor(normalizedDate * 12f)` in `CalendarEventLaunchSystem`; the month bit is [calendar.md](calendar.md)'s |
-| Sleep | `CitizenBehaviorSystem.GetSleepTime(entity, citizen, …)`, static | a per-citizen window from a compiled-in base, shifted clear of `EconomyParameterData`'s work hours; `IsSleepTime` is the test, and the derivation belongs to `citizens-and-households` |
+| Sleep | `CitizenBehaviorSystem.GetSleepTime(entity, citizen, …)`, static | a per-citizen window from a compiled-in base, shifted clear of `EconomyParameterData`'s work hours; `IsSleepTime` is the test, and the derivation belongs to [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) |
 | The sun | `Game.Simulation.PlanetarySystem { latitude, longitude, sunLimit, day, time, year }` | properties on the managed system, seeded from `ClimatePrefab.m_Latitude`, `m_Longitude`, `sunLimitRadians` once per load and stale after a runtime climate switch; `kDefaultLatitude`, `kDefaultLongitude` are its `private static readonly` fallbacks |
-| A season | `ClimateSystem.SeasonInfo { m_Prefab, m_StartTime, … }` in `ClimatePrefab.m_Seasons` | a `[Serializable]` class array, not a component; `FindSeasonByTime(normalizedDate)` on `PrefabSystem.GetPrefab<ClimatePrefab>(ClimateSystem.currentClimate)` is the read; what a season does belongs to `environment-and-pollution` |
+| A season | `ClimateSystem.SeasonInfo { m_Prefab, m_StartTime, … }` in `ClimatePrefab.m_Seasons` | a `[Serializable]` class array, not a component; `FindSeasonByTime(normalizedDate)` on `PrefabSystem.GetPrefab<ClimatePrefab>(ClimateSystem.currentClimate)` is the read; what a season does belongs to [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) |
 | The visual cycle's look | `DayNightCycleData : ScriptableObject` | sun-angle thresholds, exposure and colour only; it decides no timing |
 
 Units ([units.md](units.md)):
@@ -64,7 +64,7 @@ Units ([units.md](units.md)):
 | The game models | Component or member | Access shape |
 | --- | --- | --- |
 | A value's unit | `Game.UI.Unit`'s `const string`s, carried by `LocalizedNumber<T>` | opaque strings; the frontend's formatter table gives each its divisor and threshold |
-| The player's unit preferences | `Game.Settings.InterfaceSettings.unitSystem`, `temperatureUnit` | read off `SharedSettings.instance.userInterface`; enums whose ordinals the frontend declares identically; rendering and `timeFormat` belong to `units-and-formatting` |
+| The player's unit preferences | `Game.Settings.InterfaceSettings.unitSystem`, `temperatureUnit` | read off `SharedSettings.instance.userInterface`; enums whose ordinals the frontend declares identically; rendering and `timeFormat` belong to [`units-and-formatting`](../../technique/units-and-formatting/units-and-formatting.md) |
 
 ## Traps
 
@@ -100,26 +100,26 @@ Source: `src/Game/Game.Simulation/TimeSystem.cs`.
 
 ## Bridges
 
-- `mod-lifecycle-and-ordering` — owns registering a system at an interval and offset, the power-of-two throw and the phases that consult the interval; this topic owns what the resulting cadence is worth.
+- [`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — owns registering a system at an interval and offset, the power-of-two throw and the phases that consult the interval; this topic owns what the resulting cadence is worth.
   A system reading `TimeSystem.normalizedTime` runs after `TimeSystem`, which is `UpdateAt<TimeSystem>(SystemUpdatePhase.GameSimulation)` and `PostDeserialize<TimeSystem>` in `Deserialize`.
-- `ecs-in-this-game` — the read shapes above.
-- `prefabs-and-assets` — `TimeSettingsPrefab.LateInitialize` writes `TimeSettingsData`, so a mod changing the year length edits the prefab before initialisation or the component after it.
-- `save-serialization` — `SimulationSystem` serializes `frameIndex` and `TimeData` all five fields, so a frame number a mod stores in its own save data means something only against that save's `m_FirstFrame`.
-- `patching` — the only route into `TimeSystem`'s instance arithmetic, which nothing substitutes for; `GetDay` is static and called directly.
-- `debug-menu` — the eight-speed radio and the three advance buttons that move the clock by rewinding the epoch.
-- `diagnostics` — `frameDuration` is the game's own measurement of what a simulation step costs.
-- `performance-and-memory` — the frame-budget clamp in the step loop is where a mod's per-frame cost becomes a slower clock rather than a lower frame rate.
-- `binding-layer` — the `time` group; `simulationPausedBarrier`'s subscription is the mechanism.
-- `frontend-and-injection` — `game-ui/game/data-binding/time-bindings.ts`, `game-ui/common/localization/unit.ts`, `localized-number.tsx` and `units-us-customary.ts` are the registry paths a UI mod reaching the clock or a unit needs.
-- `units-and-formatting` — owns rendering: the `LocalizedNumber` call, the `cs2/l10n` exports, the preference settings as a surface; the unit table's magnitudes are this topic's.
-- `environment-and-pollution` — owns what weather and seasons do; takes the year as `262144 * m_DaysPerYear`, `SeasonInfo.m_StartTime` as a year fraction and the day-night boundary table from here.
-- `citizens-and-households` — age thresholds and `m_BirthDay` are `GetDay` values, per-citizen cadences are `UpdateFrame` shards, and a work-shift offset is an hour of `262144 / 24` frames.
-- `city-services-and-coverage` — the `262144 / (kUpdatesPerDay * 16)` idiom, the eight-service rotation and the dispatch backoff are all durations only once a tick is worth something.
-- `city-state-and-progression` — the `8192`-frame statistic sample is a thirty-second of a day, which is what makes a `Daily` series a day.
-- `economy-and-companies` — owns `EconomyParameterData`; its per-day wages, taxes and loans are per `262144` frames, and `65536` is a quarter-day.
-- `roads-and-traffic` — km/h to m/s on `RoadData.m_SpeedLimit`, the tent over `normalizedTime * 4` that blends the `Road` component's four day-quarter slots, and the pathfind backpressure that slows the step loop.
-- `transportation-and-vehicles` — km/h to m/s and degrees to radians on vehicle prefabs, and the `0.25f` / `11f / 12f` night window on transport lines.
-- `utilities-and-flow-networks` — `frameIndex % 128` solver ticks and `kUpdatesPerHour = 85` as the power-to-energy conversion.
-- `zoning-buildings-and-land-value` — a system's interval is not how often one building is touched, which is `UpdateFrame` sharding.
+- [`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) — the read shapes above.
+- [`prefabs-and-assets`](../../technique/prefabs-and-assets/prefabs-and-assets.md) — `TimeSettingsPrefab.LateInitialize` writes `TimeSettingsData`, so a mod changing the year length edits the prefab before initialisation or the component after it.
+- [`save-serialization`](../../technique/save-serialization/save-serialization.md) — `SimulationSystem` serializes `frameIndex` and `TimeData` all five fields, so a frame number a mod stores in its own save data means something only against that save's `m_FirstFrame`.
+- [`patching`](../../technique/patching/patching.md) — the only route into `TimeSystem`'s instance arithmetic, which nothing substitutes for; `GetDay` is static and called directly.
+- [`debug-menu`](../../technique/debug-menu/debug-menu.md) — the eight-speed radio and the three advance buttons that move the clock by rewinding the epoch.
+- [`diagnostics`](../../technique/diagnostics/diagnostics.md) — `frameDuration` is the game's own measurement of what a simulation step costs.
+- [`performance-and-memory`](../../technique/performance-and-memory/performance-and-memory.md) — the frame-budget clamp in the step loop is where a mod's per-frame cost becomes a slower clock rather than a lower frame rate.
+- [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) — the `time` group; `simulationPausedBarrier`'s subscription is the mechanism.
+- [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) — `game-ui/game/data-binding/time-bindings.ts`, `game-ui/common/localization/unit.ts`, `localized-number.tsx` and `units-us-customary.ts` are the registry paths a UI mod reaching the clock or a unit needs.
+- [`units-and-formatting`](../../technique/units-and-formatting/units-and-formatting.md) — owns rendering: the `LocalizedNumber` call, the `cs2/l10n` exports, the preference settings as a surface; the unit table's magnitudes are this topic's.
+- [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) — owns what weather and seasons do; takes the year as `262144 * m_DaysPerYear`, `SeasonInfo.m_StartTime` as a year fraction and the day-night boundary table from here.
+- [`citizens-and-households`](../citizens-and-households/citizens-and-households.md) — age thresholds and `m_BirthDay` are `GetDay` values, per-citizen cadences are `UpdateFrame` shards, and a work-shift offset is an hour of `262144 / 24` frames.
+- [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) — the `262144 / (kUpdatesPerDay * 16)` idiom, the eight-service rotation and the dispatch backoff are all durations only once a tick is worth something.
+- [`city-state-and-progression`](../city-state-and-progression/city-state-and-progression.md) — the `8192`-frame statistic sample is a thirty-second of a day, which is what makes a `Daily` series a day.
+- [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) — owns `EconomyParameterData`; its per-day wages, taxes and loans are per `262144` frames, and `65536` is a quarter-day.
+- [`roads-and-traffic`](../roads-and-traffic/roads-and-traffic.md) — km/h to m/s on `RoadData.m_SpeedLimit`, the tent over `normalizedTime * 4` that blends the `Road` component's four day-quarter slots, and the pathfind backpressure that slows the step loop.
+- [`transportation-and-vehicles`](../transportation-and-vehicles/transportation-and-vehicles.md) — km/h to m/s and degrees to radians on vehicle prefabs, and the `0.25f` / `11f / 12f` night window on transport lines.
+- [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md) — `frameIndex % 128` solver ticks and `kUpdatesPerHour = 85` as the power-to-energy conversion.
+- [`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — a system's interval is not how often one building is touched, which is `UpdateFrame` sharding.
 
 (VOLATILE: every system, component, field, property, enum, method, constant, binding name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Simulation`, `Game.Common`, `Game.Prefabs`, `Game.Prefabs.Climate`, `Game.Prefabs.Modes`, `Game.Rendering`, `Game.Effects`, `Game.Events`, `Game.Net`, `Game.Tools`, `Game.Buildings`, `Game.Settings`, `Game.Debug`, `Game.UI`, `Game.UI.InGame`, `Game.UI.Localization`, `Game.Citizens`, the root `Game` namespace and the assembly's global namespace, at the files the rows and traps cite; and the frontend module paths it names — the shipped UI bundle's module registry.)

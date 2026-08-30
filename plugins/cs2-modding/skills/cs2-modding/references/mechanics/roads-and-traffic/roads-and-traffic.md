@@ -115,17 +115,17 @@ Source: `src/Game/Game.Pathfind/PathNode.cs`.
 
 ## Bridges
 
-- `prefabs-and-assets` — every balance number here is a baked prefab component (`RoadData`, `PathfindCarData`, `TrafficAccidentData`, `LaneDeteriorationData`); changing one is a prefab-phase system overwriting the component, never a patch on the class field the asset overrides anyway.
-- `ecs-in-this-game` — the `Updated`/`PathfindUpdated` markers every rebuild rides, and the singleton and `PrefabRef` reads behind every map row.
-- `mod-lifecycle-and-ordering` — the `Modification*` phase order [network-rebuild.md](network-rebuild.md) walks, and the anchoring a replacement system needs.
-- `patching` — reaching the weight literals inside dispatch jobs, and substituting a system the game gives no seam into.
-- `custom-tools` — a tool that edits the network ends by writing exactly the markers [network-rebuild.md](network-rebuild.md) names.
-- `placement-definitions` — node and edge edits travel as `NetCourse` definitions through the placement pipeline; splitting an edge in place is `CoursePos.m_SplitPosition`, written by the net tool, computed for sub-courses by `CourseSplitSystem`, and consumed by the node- and edge-generation pass.
-- `performance-and-memory` — the pathfinder's per-thread linear allocators, its half-of-workers thread budget, and the `GetGraphMemory`/`GetQueryMemory` getters.
-- `transportation-and-vehicles` — owns the outside connection as an object, transit lines and the vehicle fleet itself; the agents' movement on this network is this topic's, and `PathfindQueueSystem` feeds the transit network's top speeds into the heuristic's transport branches.
-- `city-services-and-coverage` — its coverage and availability queries run on this topic's pathfind workers ([pathfind-queue.md](pathfind-queue.md)), and road maintenance owns the repair side of wear.
-- `utilities-and-flow-networks` — owns the utility carriage a road composition declares; the network substrate is this topic's, what flows in the pipes is theirs.
-- `environment-and-pollution` — owns what a vehicle's noise and air side effects become once written to the edge's `Pollution`.
-- `simulation-time-and-units` — owns what a frame and an update interval are worth in game time, the time-of-day tent [congestion-and-blockage.md](congestion-and-blockage.md)'s `float4` slots are blended with, and the step clamp [pathfind-queue.md](pathfind-queue.md) transcribes.
+- [`prefabs-and-assets`](../../technique/prefabs-and-assets/prefabs-and-assets.md) — every balance number here is a baked prefab component (`RoadData`, `PathfindCarData`, `TrafficAccidentData`, `LaneDeteriorationData`); changing one is a prefab-phase system overwriting the component, never a patch on the class field the asset overrides anyway.
+- [`ecs-in-this-game`](../../technique/ecs-in-this-game/ecs-in-this-game.md) — the `Updated`/`PathfindUpdated` markers every rebuild rides, and the singleton and `PrefabRef` reads behind every map row.
+- [`mod-lifecycle-and-ordering`](../../technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — the `Modification*` phase order [network-rebuild.md](network-rebuild.md) walks, and the anchoring a replacement system needs.
+- [`patching`](../../technique/patching/patching.md) — reaching the weight literals inside dispatch jobs, and substituting a system the game gives no seam into.
+- [`custom-tools`](../../technique/custom-tools/custom-tools.md) — a tool that edits the network ends by writing exactly the markers [network-rebuild.md](network-rebuild.md) names.
+- [`placement-definitions`](../../technique/placement-definitions/placement-definitions.md) — node and edge edits travel as `NetCourse` definitions through the placement pipeline; splitting an edge in place is `CoursePos.m_SplitPosition`, written by the net tool, computed for sub-courses by `CourseSplitSystem`, and consumed by the node- and edge-generation pass.
+- [`performance-and-memory`](../../technique/performance-and-memory/performance-and-memory.md) — the pathfinder's per-thread linear allocators, its half-of-workers thread budget, and the `GetGraphMemory`/`GetQueryMemory` getters.
+- [`transportation-and-vehicles`](../transportation-and-vehicles/transportation-and-vehicles.md) — owns the outside connection as an object, transit lines and the vehicle fleet itself; the agents' movement on this network is this topic's, and `PathfindQueueSystem` feeds the transit network's top speeds into the heuristic's transport branches.
+- [`city-services-and-coverage`](../city-services-and-coverage/city-services-and-coverage.md) — its coverage and availability queries run on this topic's pathfind workers ([pathfind-queue.md](pathfind-queue.md)), and road maintenance owns the repair side of wear.
+- [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md) — owns the utility carriage a road composition declares; the network substrate is this topic's, what flows in the pipes is theirs.
+- [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) — owns what a vehicle's noise and air side effects become once written to the edge's `Pollution`.
+- [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) — owns what a frame and an update interval are worth in game time, the time-of-day tent [congestion-and-blockage.md](congestion-and-blockage.md)'s `float4` slots are blended with, and the step clamp [pathfind-queue.md](pathfind-queue.md) transcribes.
 
 (VOLATILE: every component, field, enum, system, method and `Source:` path this file names — their declarations under `src/Game/` in `Game.Net`, `Game.Prefabs`, `Game.Pathfind`, `Game.Simulation` and `Game.Tools`, at the files the rows and traps cite; plus the road-class flag shape, against the running game's prefab set, re-derived by the `ecs_query` stated beside it.)

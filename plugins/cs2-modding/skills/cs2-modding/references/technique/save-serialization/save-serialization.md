@@ -17,7 +17,7 @@ The serializer library reflects over every type the type manager knows and build
 No mod code participates.
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the reflection walk), `src/Game/Game.Modding/ModManager.cs` (the dirty mark) and `src/Game/Game.Serialization/SerializerSystem.cs` (the rebuild).
 
-Settings are not this: they live in their own files with their own lifetime, and belong to `settings-and-input`.
+Settings are not this: they live in their own files with their own lifetime, and belong to [`settings-and-input`](../settings-and-input/settings-and-input.md).
 
 ## Choosing where your data lives
 
@@ -119,7 +119,7 @@ Two consequences:
     Source: `src/Game/Game.Serialization/SerializerSystem.cs` (the query's `None` list), `src/Game/Game.Common/PrepareCleanUpSystem.cs` and `src/Game/Game.Common/CleanUpSystem.cs` (the destroy pass).
 
 **The clear query does not know your types.**
-The world outlives a load — `mod-lifecycle-and-ordering` has why — and the system that empties it beforehand destroys entities matching a query whose `Any` list is nineteen fixed vanilla types and nothing else.
+The world outlives a load — [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) has why — and the system that empties it beforehand destroys entities matching a query whose `Any` list is nineteen fixed vanilla types and nothing else.
 It does not gain the mod types the save query gains.
 So an entity carrying only mod components and no vanilla anchor is written to the save, is not destroyed before the next load, and is recreated from the save on top of the copy that survived.
 Both halves have been observed on a running game: the save query matches such an entity and the clear query does not, and one created by hand survived a load into an unrelated city intact.
@@ -316,7 +316,7 @@ Source: `src/Game/Game.Serialization/SerializerSystem.cs`.
 
 ## The two phases, and where a mod migration goes
 
-`SystemUpdatePhase.Serialize` and `SystemUpdatePhase.Deserialize` each fire exactly once per save and per load; `mod-lifecycle-and-ordering` owns their position in the phase tree.
+`SystemUpdatePhase.Serialize` and `SystemUpdatePhase.Deserialize` each fire exactly once per save and per load; [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns their position in the phase tree.
 
 The deserialize phase is where the game does its own migrations, and they gate on one of two things: a format tag, or `context.version` against a named constant.
 Of those two gates, only the second is available to a mod.
@@ -346,7 +346,7 @@ The split that makes that work is three parts, and all three are needed:
 1.  **The system is `IDefaultSerializable`**, so it gets a save section wherever it is registered.
     `Deserialize` reads one int into a version field; `SetDefaults` sets it to zero for saves that predate the mod.
 2.  **`OnGameLoaded(Context)` sets a loaded flag.**
-    The callback fires after the whole deserialize phase has run and carries the `Context`, so the version and the format tags are in hand, and no phase registration is needed to receive it — `mod-lifecycle-and-ordering` owns the subscription and the two conditions that silently withhold it, of which **overriding `OnCreate` without calling `base.OnCreate()`** is the one that costs a migration everything.
+    The callback fires after the whole deserialize phase has run and carries the `Context`, so the version and the format tags are in hand, and no phase registration is needed to receive it — [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the subscription and the two conditions that silently withhold it, of which **overriding `OnCreate` without calling `base.OnCreate()`** is the one that costs a migration everything.
 3.  **`OnUpdate` runs on the chosen phase**, sees the flag, checks `context.purpose`, branches on the version, runs the repair, and clears the flag.
 
 **The purpose check in step 3 is not optional.**
@@ -433,23 +433,23 @@ This is the option that leans hardest on `context.purpose`: the collapse must no
 
 ## What this reference hands to others
 
-`ecs-in-this-game` owns the component kinds these mechanisms attach to and the archetype model the loader reconstructs.
-`mod-lifecycle-and-ordering` owns the phase tree, the once-per-load firing of `Serialize` and `Deserialize`, the pre- and post-deserialize wrappers, and the per-system exception catching this file's failure mode rests on.
-`prefabs-and-assets` owns prefab identity and the asset database; this file owns only what the save does with them.
-`diagnostics` owns the log; the strings a save problem produces are serializer-not-found (the type resolved but has no serializer), not-serializable-type (the type did not resolve — what an uninstalled mod produces), serializer-type-mismatch, unknown-format-tag and unknown-prefab-id.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the component kinds these mechanisms attach to and the archetype model the loader reconstructs.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns the phase tree, the once-per-load firing of `Serialize` and `Deserialize`, the pre- and post-deserialize wrappers, and the per-system exception catching this file's failure mode rests on.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns prefab identity and the asset database; this file owns only what the save does with them.
+[`diagnostics`](../diagnostics/diagnostics.md) owns the log; the strings a save problem produces are serializer-not-found (the type resolved but has no serializer), not-serializable-type (the type did not resolve — what an uninstalled mod produces), serializer-type-mismatch, unknown-format-tag and unknown-prefab-id.
 Two informational lines bracket a load, and the second is itself diagnostic: the serialized-version line is emitted always, while the format-tags line is emitted only where deserialization succeeded — so its absence is the signature of a save from a newer build, not evidence the phase never ran.
-`settings-and-input` owns the settings files, the other durable store, which share none of this machinery.
-`mod-compatibility` takes from here that a save records used mods cumulatively, that a foreign mod's save section is skipped rather than fatal, and that a foreign mod's components stay readable and removable by anyone who can resolve their type by name — which is how one mod migrates another's data.
+[`settings-and-input`](../settings-and-input/settings-and-input.md) owns the settings files, the other durable store, which share none of this machinery.
+[`mod-compatibility`](../mod-compatibility/mod-compatibility.md) takes from here that a save records used mods cumulatively, that a foreign mod's save section is skipped rather than fatal, and that a foreign mod's components stay readable and removable by anyone who can resolve their type by name — which is how one mod migrates another's data.
 
 The mechanics references whose components a mod would persist against:
 
-- `roads-and-traffic` — the densest case, and the home of the stride-serialized net types and the version-branching area node.
-- `zoning-buildings-and-land-value` — building-level tags are the archetypal empty-serializable case.
-- `citizens-and-households` — per-citizen persisted state, and three of the twelve shipped migrations repair household and citizen data on load.
-- `environment-and-pollution` — the cell maps are the stride-serialized types, and the ground-pollution cell carries the version-aware stride.
-- `utilities-and-flow-networks` — four of its node and edge types are save-query anchors; the flow edges serialize their capacities and flows, then on load the electricity ones are re-applied from prefab data while the adjacency buffers rebuild.
-- `city-state-and-progression` — the city, statistic, budget and time components are anchors, and the city configuration system is the system-level save section carrying name, theme, required content, options and the used-mods list.
-- `city-services-and-coverage` — service requests are an anchor, and coverage is rebuilt on load.
-- `transportation-and-vehicles` — route and vehicle membership is deliberately _not_ saved and is rebuilt in the deserialize middle band.
-- `economy-and-companies` — two of the twelve shipped migrations live here, and the collapse-into-vanilla-fields pattern is the model for anything borrowing an economic field.
-- `simulation-time-and-units` — time data is an anchor and the time system runs in the back band, so anything time-derived is restored after the stream is read.
+- [`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) — the densest case, and the home of the stride-serialized net types and the version-branching area node.
+- [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) — building-level tags are the archetypal empty-serializable case.
+- [`citizens-and-households`](../../mechanics/citizens-and-households/citizens-and-households.md) — per-citizen persisted state, and three of the twelve shipped migrations repair household and citizen data on load.
+- [`environment-and-pollution`](../../mechanics/environment-and-pollution/environment-and-pollution.md) — the cell maps are the stride-serialized types, and the ground-pollution cell carries the version-aware stride.
+- [`utilities-and-flow-networks`](../../mechanics/utilities-and-flow-networks/utilities-and-flow-networks.md) — four of its node and edge types are save-query anchors; the flow edges serialize their capacities and flows, then on load the electricity ones are re-applied from prefab data while the adjacency buffers rebuild.
+- [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) — the city, statistic, budget and time components are anchors, and the city configuration system is the system-level save section carrying name, theme, required content, options and the used-mods list.
+- [`city-services-and-coverage`](../../mechanics/city-services-and-coverage/city-services-and-coverage.md) — service requests are an anchor, and coverage is rebuilt on load.
+- [`transportation-and-vehicles`](../../mechanics/transportation-and-vehicles/transportation-and-vehicles.md) — route and vehicle membership is deliberately _not_ saved and is rebuilt in the deserialize middle band.
+- [`economy-and-companies`](../../mechanics/economy-and-companies/economy-and-companies.md) — two of the twelve shipped migrations live here, and the collapse-into-vanilla-fields pattern is the model for anything borrowing an economic field.
+- [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md) — time data is an anchor and the time system runs in the back band, so anything time-derived is restored after the stream is read.

@@ -11,9 +11,13 @@ Take the request as it comes rather than asking the user for a keyword.
 No argument, or anything that reads as "set me up", runs first-time setup.
 A game update, a stale decompile, or "does this still match my game" is the refresh branch.
 "What should I read for X" consults the catalog and clones nothing unless asked.
+An unavailable debug menu or UI debugging port is step 3 alone — the developer launch options — with nothing else run.
+A UI bundle copy to create is step 5's readable-copy extra alone; one that exists but is stale is the refresh branch.
 
 Verified against game version 1.6.0f1.
 Paths and commands throughout are Windows.
+A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
+**IMPORTANT: follow this skill's steps and references on anything they own — or at the very least grep them before acting on a remembered path, version or flag, because every value here is recorded or readable from the machine and the remembered one is the one that has drifted.**
 
 ## The record
 

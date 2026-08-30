@@ -7,7 +7,7 @@ Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
 The extractor economy spans four namespaces, and the join is the hub building's `Attached.m_Parent`: `Game.Areas.Extractor` is the per-area state, the `Game.Prefabs` extractor components the authored side, `Game.Companies.ExtractorCompany` the company tag and `Game.Buildings.ExtractorFacility` the hub's own state.
-`zoning-buildings-and-land-value` records the placement half; what this file owns is the chain from deposit to viability:
+[`zoning-buildings-and-land-value`](../zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) records the placement half; what this file owns is the chain from deposit to viability:
 
 ```
 NaturalResourceCell (the map grid -- environment-and-pollution)
@@ -64,6 +64,6 @@ GetUnlimitedUsage(originalConcentration, currentConcentration, mu = 1 / m_OreCon
 So an ore or oil deposit yields exponentially less as it is worked, reaching 1/e of its original concentration after exactly `m_OreConsumption` (or `m_OilConsumption`) extracted units — the field's own tooltip states the same 1/2.71 figure, phrased as efficiency — and viability drops only once the decayed concentration crosses below the `m_Full*` threshold above.
 That is the whole answer to what depletion does to a specialized industry: a formula, not a cliff — with one edge, since the decay is a single stochastic Euler step per write-down and the cell's used counter caps at 65535 rather than at its base, so one large step can overshoot and zero the cell outright.
 `CityModifierType.OreResourceAmount` and `OilResourceAmount` scale a cell's base amount where availability is read to pick the best cell, not inside `GetUnlimitedUsage`.
-Forest is absent from the depletion switch entirely: a forestry area is put on the same recompute list with no write-down, and its concentration comes from tree state, which `environment-and-pollution` owns.
+Forest is absent from the depletion switch entirely: a forestry area is put on the same recompute list with no write-down, and its concentration comes from tree state, which [`environment-and-pollution`](../environment-and-pollution/environment-and-pollution.md) owns.
 
 (VOLATILE: every system, component, field, formula and `Source:` path this file names — their declarations in `Game.Simulation`, `Game.Areas`, `Game.Companies`, `Game.Buildings`, `Game.City`, `Game.Agents` and `Game.Prefabs` under `src/Game/`, at the files the sections cite.)

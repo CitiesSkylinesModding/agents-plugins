@@ -91,7 +91,7 @@ wait      = max(wait + targetStopTime, 1)
 return simulationFrame + uint(wait * 60)
 ```
 
-**The whole of bunching control is that hyperbola**: a vehicle arriving early is held for close to `headway * m_UnbunchingFactor`, a late one gets a negative term floored to the one-second minimum dwell; the `60` is the frames-per-second divisor, and `simulation-time-and-units` owns what a frame is.
+**The whole of bunching control is that hyperbola**: a vehicle arriving early is held for close to `headway * m_UnbunchingFactor`, a late one gets a negative term floored to the one-second minimum dwell; the `60` is the frames-per-second divisor, and [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) owns what a frame is.
 The `elapsed < 0` arm is dead: the frame subtraction is unsigned, so a future `m_LastDepartureFrame` wraps to a huge elapsed and the wait collapses to the one-second floor rather than taking that return.
 `TransportLine.m_UnbunchingFactor` is seeded from `TransportLineData.m_DefaultUnbunchingFactor` by the component's own field initializers when the line is created, and the tick rewrites the interval, the price, the flags and `m_VehicleRequest` — `m_UnbunchingFactor` is the one field it never touches; a plain `IComponentData` construction, not the Unity-serialized kind the initializer trap covers (`src/Game/Game.Routes/TransportLine.cs`).
 The waypoint's `VehicleTiming.m_AverageTravelTime` updates at the same boarding: the first sample is taken whole, every later one as `lerp(old, sample, 0.5)`, and a `departureFrame` of zero skips the update (`RouteUtils.UpdateAverageTravelTime`).

@@ -8,7 +8,7 @@ The census below is read straight off that tree's registrations, so without one 
 
 What vanilla registers in each band of the deserialize phase, and the twelve migration systems it ships.
 Read this when placing a system in that phase, or when deciding whether the state your migration needs exists yet at the point you are running.
-The `Serialize` phase's own bands are `mod-lifecycle-and-ordering`'s.
+The `Serialize` phase's own bands are [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md)'s.
 
 ## Three bands, used deliberately
 

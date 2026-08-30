@@ -9,8 +9,8 @@ The technique holds without one, but every game symbol named below is checkable 
 How to write ECS code that reads like the rest of this codebase.
 Stock Entities practice and this game's practice diverge in several places, and each divergence below is a thing an agent arriving from a tutorial gets wrong.
 
-_When_ a system runs belongs to `mod-lifecycle-and-ordering`, and this reference states no phase ordering: where a command buffer's flush point appears below, it is the barrier's own registration and nothing more.
-What a component costs in bytes and allocations is `performance-and-memory`; what it costs in a save file is `save-serialization`.
+_When_ a system runs belongs to [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md), and this reference states no phase ordering: where a command buffer's flush point appears below, it is the barrier's own registration and nothing more.
+What a component costs in bytes and allocations is [`performance-and-memory`](../performance-and-memory/performance-and-memory.md); what it costs in a save file is [`save-serialization`](../save-serialization/save-serialization.md).
 Both take their declaration rules from here.
 
 ## The five component kinds, and how unevenly the game uses them
@@ -32,7 +32,7 @@ Source: `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (the value read on
 The entity moves into a residue archetype holding only the cleanup components and an internal marker, and dies for real only once you remove the cleanup component.
 That is the one correct way for a component to own a handle — an unmanaged allocation, or a managed mesh or material pinned inside an otherwise blittable struct — because it guarantees a disposal system gets to see the entity after deletion.
 Forget the removal and you leak entities silently, with nothing in the log.
-`performance-and-memory` owns the pattern itself — the disposal system's shape, and what a save and load do to a residue entity.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the pattern itself — the disposal system's shape, and what a save and load do to a residue entity.
 Source: `src/Unity.Entities/Unity.Entities/EntityComponentStore.cs` (the residue archetype, and the entity dying only once the component is removed).
 
 The game's own answer to "clean up after me" is not a cleanup component at all: it is the `Deleted` tag plus a frame of grace, and the tag section below is where that lives.
@@ -58,7 +58,7 @@ public abstract void GetArchetypeComponents(HashSet<ComponentType> components);
 `PrefabBase` seeds the prefab-entity set with `PrefabData` and `LoadedIndex`, and the instance set with `PrefabRef` alone, so an override calls `base` first and then adds its own.
 The prefab system unions every attached component's `GetPrefabComponents` contribution, **adds `Created` and `Updated` unconditionally**, and calls `EntityManager.CreateEntity` — that builds the prefab entity, not the instance archetype.
 The instance archetype is built separately, by a refresh method run from the prefab's late initialization, and several prefab families override that method — so which hook shapes your instances depends on what kind of prefab it is.
-`prefabs-and-assets` owns that path and the families it splits into.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns that path and the families it splits into.
 
 So a mod that wants a component on every instance of a prefab overrides `GetArchetypeComponents`, and a mod that wants it on the prefab entity overrides `GetPrefabComponents`.
 Neither needs a system.
@@ -121,7 +121,7 @@ if (chunk.GetSharedComponent(m_UpdateFrameType).m_Index != m_UpdateFrameIndex)
 Source: `src/Game/Game.Simulation/BuildingUpkeepSystem.cs` (the filtered query) and `src/Game/Game.Simulation/AgingSystem.cs` (the in-job test).
 
 Read [update-frame-buckets.md](update-frame-buckets.md) before forking a system that partitions on it, or before adding a prefab to a family a gated vanilla system serves — it carries both the read and the gated-bucket failure above.
-What a bucket is worth in simulated time belongs to `simulation-time-and-units`.
+What a bucket is worth in simulated time belongs to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 
 (VOLATILE: the 128-entity chunk maximum — the chunk constants. `UpdateFrame`'s field name and the load-balancing assignment — `UpdateGroupSystem` and its group arrays. The authored path — `UpdateFrameData`. The request-creation and save-migration writers — `ServiceRequestSystem` and `RequiredComponentSystem`.)
 
@@ -245,7 +245,7 @@ Where it needs one, keep the chunk form for that job rather than emulating the c
 Bursting every job and bursting none are both workable, so decide it per project.
 What the decision costs you is stepping: a Burst-compiled job cannot be stepped, so keep a route back to an unbursted run.
 Disable Burst compilation at launch rather than gating `[BurstCompile]` behind a conditional-compilation symbol, which silently ships the mod unbursted when the symbol is defined nowhere.
-`performance-and-memory` owns both gates in full.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns both gates in full.
 
 ## Type handles: what they index, and what breaks when one is stale
 
@@ -261,7 +261,7 @@ Source: `src/Unity.Entities/Unity.Entities/ComponentTypeHandle.cs` (the cached f
 **Nothing throws because this build has no safety system.**
 Handles, lookups and `ArchetypeChunk` carry no safety field, and the bounds and aliasing assertions are all conditional on a collections-checks define that is compiled out of the shipped assembly.
 A stale handle, an out-of-bounds chunk index, or two jobs writing the same component in parallel produce wrong data or a crash, never a diagnostic.
-`performance-and-memory` owns what that means for scheduling; here it means the handle discipline has no backstop.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what that means for scheduling; here it means the handle discipline has no backstop.
 The same absence covers what a structural change does to data you are already holding: adding or removing a component, destroying an entity or assigning a shared component value can move the entity to another chunk, so a `DynamicBuffer`, a chunk `NativeArray` or a component pointer taken before the change points at the old storage afterwards — reacquire it, because nothing here invalidates it for you: the engine call that would have, in an editor build, has that half compiled out.
 Source: `src/Unity.Entities/Unity.Entities/ComponentTypeHandle.cs` and `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` (no safety field, and the conditional assertions), `src/Unity.Entities/Unity.Entities/EntityDataAccess.cs` and `src/Unity.Entities/Unity.Entities/ComponentDependencyManager.cs` (the call a structural change routes through, and the body it has left).
 
@@ -271,7 +271,7 @@ Skipping the refresh is not something you can do by accident when you use those 
 Source: `src/Game/Game.Simulation/AgingSystem.cs` (the generated struct, assigned from `OnCreateForCompiler` and refreshed at use), `src/Unity.Entities/Unity.Entities.Internal/InternalCompilerInterface.cs` (the refresh those calls compile into).
 
 **Two hand-rolled idioms exist, and you need one whenever the generator is not writing that code for you** — which is exactly the case in a fork built from decompiled source.
-Either way acquire in `OnCreate`: the first `GetComponentLookup` or `GetComponentTypeHandle` call for a type completes the system's tracked jobs on the spot — `performance-and-memory` owns that sync — and the generated struct's create-time assignment is what dodges it.
+Either way acquire in `OnCreate`: the first `GetComponentLookup` or `GetComponentTypeHandle` call for a type completes the system's tracked jobs on the spot — [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns that sync — and the generated struct's create-time assignment is what dodges it.
 Source: `src/Unity.Entities/Unity.Entities/SystemState.cs` (the acquisition, and the completion it triggers on a type the system has not read before).
 
 - **Carry the generated struct into the fork and refresh it yourself.**
@@ -286,7 +286,7 @@ Source: `src/Unity.Entities/Unity.Entities/SystemState.cs` (the acquisition, and
 - **Put the handles on the job and give the job two methods**, `AssignHandles(ref SystemState)` called from the system's `OnCreate` and `UpdateHandles(ref SystemState)` called from its `OnUpdate`.
   This keeps each handle beside the job that reads it and is the cleanest hand-written form.
 
-(VOLATILE: the generated handle-name scheme, which `navigating-the-decompile` states in full, and the compiler-interface method names behind `SystemAPI` — the generated `TypeHandle` structs across `src/Game`.)
+(VOLATILE: the generated handle-name scheme, which [`navigating-the-decompile`](../navigating-the-decompile/navigating-the-decompile.md) states in full, and the compiler-interface method names behind `SystemAPI` — the generated `TypeHandle` structs across `src/Game`.)
 
 ## The chunk-enabled mask
 
@@ -332,7 +332,7 @@ Some enableable components carry a disabled state a reader would never guess fro
 
 - **`PrefabData` disabled means "obsolete prefab".** The loader disables it on prefabs a save references but the current install no longer has, and the prefab system uses its enabled state as the "does this prefab still exist" test when writing a save. So `WithAll<PrefabData>()` gives you live prefabs only — almost always what you want, but it is a filter you did not write, and it explains a prefab count that does not match the installed mod list.
   Source: `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the loader's disables) and `src/Game/Game.Prefabs/PrefabSystem.cs` (the enabled state read as the existence test).
-- **`Locked` disabled means "unlocked".** So a progression query on `WithAll<Locked>()` silently returns only what is _still_ locked, and unlocking is not the bit flip that implies. `city-state-and-progression` depends on this.
+- **`Locked` disabled means "unlocked".** So a progression query on `WithAll<Locked>()` silently returns only what is _still_ locked, and unlocking is not the bit flip that implies. [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) depends on this.
   Source: `src/Game/Game.Prefabs/UnlockSystem.cs`.
 
 Toggle from a job through the command buffer, as the vanilla aging system does at the child-to-teen transition:
@@ -378,7 +378,7 @@ Resolve the one you want once in `OnCreate` with `World.GetOrCreateSystemManaged
 | `DeserializationBarrier` | front of `Deserialize`'s back band |
 
 `DeserializationBarrier` is the one that does not play back at the end of its phase: it is the first `UpdateAfter` registration in `Deserialize`, so it plays back before the rest of that band rather than after it, and a system placed there cannot ask it for a command buffer.
-`save-serialization` maps that band, in the census file its entry points to, and states what a system placed there should use instead.
+[`save-serialization`](../save-serialization/save-serialization.md) maps that band, in the census file its entry points to, and states what a system placed there should use instead.
 
 A thirteenth type, `AudioEndBarrier`, exists in the assembly and is registered in no phase.
 It has a companion opener like the others, and that opener is unregistered too, so nothing ever re-opens the barrier after its first playback attempt closes it.
@@ -416,7 +416,7 @@ Source: `src/Game/Game/SafeCommandBufferSystem.cs` and `src/Game/Game/AllowBarri
 That is the general rule, and it falls out of where each barrier's opener sits.
 Eleven of the twelve open at the start of their own phase and play back in its closing band — the deserialization barrier ahead of the post-load wrappers that follow it — so each is open for the duration of that one phase and shut from its playback until the phase runs again.
 For most of the eleven that means the next frame; for the deserialization barrier it means the next load, since its phase fires once per load rather than every frame.
-Where the opener and the playback sit within the phase, and what that costs a system registered beside them, is `mod-lifecycle-and-ordering`.
+Where the opener and the playback sit within the phase, and what that costs a system registered beside them, is [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md).
 Source: `src/Game/Game.Common/SystemOrder.cs` (each barrier's opener and playback registrations).
 
 **`EndFrameBarrier` is the exception, and its window is the widest rather than the narrowest.**
@@ -492,7 +492,7 @@ Prefix your components rather than naming them after the concept alone.
 `[InternalBufferCapacity(0)]` means **never inline**: every non-empty buffer becomes a heap allocation and an empty one allocates nothing, which keeps chunks dense when most entities carry an empty buffer.
 Split the decision deliberately: `(0)` for a sparsely-populated buffer, and a small explicit capacity for one that almost always holds one to three elements.
 Pick a capacity the buffer will not exceed rather than a typical one: shrinking the length leaves the payload on the heap, so a buffer that overflows once pays the heap allocation and the reserved inline bytes together until something asks for it back.
-`performance-and-memory` owns that trade and the call that asks.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns that trade and the call that asks.
 Source: `src/Unity.Entities/Unity.Entities/TypeManager.cs` (the default capacity, and the reservation paid per entity slot), `src/Unity.Entities/Unity.Entities/BufferHeader.cs` (growth that never takes the inline arm) and `src/Unity.Entities/Unity.Entities/DynamicBuffer.cs` (`Clear` against `TrimExcess`).
 
 **Save cost is decided by one interface and nothing else.**
@@ -515,7 +515,7 @@ public struct MyPloppedMarker : IComponentData, IEmptySerializable { }
 
 **The library rebuilds after a mod assembly loads**, in the same step that registers the types, so a mod component becomes saveable purely by implementing the interface.
 Implementing neither and rebuilding the component on load is the cheaper and safer default: a component in a save is a compatibility obligation forever.
-The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to `save-serialization`, and you want it before the first release, not after.
+The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to [`save-serialization`](../save-serialization/save-serialization.md), and you want it before the first release, not after.
 Source: `src/Game/Game.Modding/ModManager.cs` (the dirty flag set beside the type registration) and `src/Game/Game.Serialization/SerializerSystem.cs` (the re-initialize it triggers).
 
 (VOLATILE: the serializer selection above — the component serializer library.)
@@ -541,14 +541,14 @@ Reach for them before writing your own.
 
 ## What this reference hands to others
 
-`mod-lifecycle-and-ordering` for which phase a system belongs in and how to register it there — everything above assumes that decision is already made.
-`performance-and-memory` for allocators, job dependencies, and what the chunk geometry and buffer capacity above mean for a frame budget.
-`save-serialization` for the save format and the versioning discipline inside `Serialize` and `Deserialize`.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) for which phase a system belongs in and how to register it there — everything above assumes that decision is already made.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) for allocators, job dependencies, and what the chunk geometry and buffer capacity above mean for a frame budget.
+[`save-serialization`](../save-serialization/save-serialization.md) for the save format and the versioning discipline inside `Serialize` and `Deserialize`.
 
 Every mechanics reference sits on top of this one.
-`citizens-and-households` exercises it most directly, since the citizen aging system is the canonical shape: a query excluding `Deleted` and `Temp`, a buffer handle walked per chunk, a scattered-write lookup, and `EndFrameBarrier` used to add, remove and toggle components.
-`zoning-buildings-and-land-value` and `city-services-and-coverage` need the `BatchesUpdated` rule most, because both are about things the player looks at.
-`roads-and-traffic` needs `Owner` and `Temp` more than any other area.
-`city-state-and-progression` needs the `Locked` trap.
-`simulation-time-and-units` owns what a bucket is worth in simulated time; the buckets themselves are [update-frame-buckets.md](update-frame-buckets.md)'s.
-`economy-and-companies`, `utilities-and-flow-networks`, `transportation-and-vehicles` and `environment-and-pollution` each need the query, job and barrier material without needing anything unique from it.
+[`citizens-and-households`](../../mechanics/citizens-and-households/citizens-and-households.md) exercises it most directly, since the citizen aging system is the canonical shape: a query excluding `Deleted` and `Temp`, a buffer handle walked per chunk, a scattered-write lookup, and `EndFrameBarrier` used to add, remove and toggle components.
+[`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) and [`city-services-and-coverage`](../../mechanics/city-services-and-coverage/city-services-and-coverage.md) need the `BatchesUpdated` rule most, because both are about things the player looks at.
+[`roads-and-traffic`](../../mechanics/roads-and-traffic/roads-and-traffic.md) needs `Owner` and `Temp` more than any other area.
+[`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) needs the `Locked` trap.
+[`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md) owns what a bucket is worth in simulated time; the buckets themselves are [update-frame-buckets.md](update-frame-buckets.md)'s.
+[`economy-and-companies`](../../mechanics/economy-and-companies/economy-and-companies.md), [`utilities-and-flow-networks`](../../mechanics/utilities-and-flow-networks/utilities-and-flow-networks.md), [`transportation-and-vehicles`](../../mechanics/transportation-and-vehicles/transportation-and-vehicles.md) and [`environment-and-pollution`](../../mechanics/environment-and-pollution/environment-and-pollution.md) each need the query, job and barrier material without needing anything unique from it.

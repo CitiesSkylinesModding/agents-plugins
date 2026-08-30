@@ -7,8 +7,8 @@ Nearly everything here rests on the frontend bundle, so the module paths, export
 `cs2-modding-setup` provisions it.
 
 How a mod's JavaScript gets onto the game's page and what it can do once there: the loader, the module registry and its operations, the append anchors, the proven extension points, the game's own React reached through the registry, the packages on `window`, styling, and image serving from the page's side.
-The C# end of every binding is `binding-layer`'s; what builds the `.mjs` this file describes — webpack, the scaffold, the dev loop — is `ui-build-and-devloop`'s.
-The C# registration of a resource host, its priority resolution and its watch parameter stay in `prefabs-and-assets`.
+The C# end of every binding is [`binding-layer`](../binding-layer/binding-layer.md)'s; what builds the `.mjs` this file describes — webpack, the scaffold, the dev loop — is [`ui-build-and-devloop`](../ui-build-and-devloop/ui-build-and-devloop.md)'s.
+The C# registration of a resource host, its priority resolution and its watch parameter stay in [`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md).
 
 The quickest census is the running game: `window["cs2/modding"].findModule(<fragment>)` lists every matching module with its export names, and the sibling `coherent-gameface` plugin can run that from outside the page; the empty query answers with every module — some 1,400, more than a debugger channel comfortably carries — so scope it.
 
@@ -74,7 +74,7 @@ Source: the registry object literal in `Cities2_Data/Content/Game/UI/index.js`.
 **`find` never invokes an accessor and `get` always does, and hundreds of exports throw when read.**
 Every module registers with a live getter per export, and where the bundler removed the binding behind one, the getter returns a name that no longer exists and throws `ReferenceError: <name> is not defined` — which reads as "this export does not exist" while `find` lists it.
 Read from the running game, those dead accessors cluster in the `*-bindings.ts` modules — `game/data-binding/infoview-bindings.ts`, `tool-bindings.ts`, `menu/data-binding/menu-bindings.ts`, `options-bindings.ts` and their kin — and the dead names are the binding objects themselves, so reading a vanilla binding's value through `getModule` is the single most likely way to meet this (VOLATILE: which modules carry dead accessors — the self-returning getters in the bundle's `add` registrations).
-A vanilla binding's value is read through `engine.on` and `engine.trigger` on its path, which `binding-layer` owns; the registry is for the enums and components beside it.
+A vanilla binding's value is read through `engine.on` and `engine.trigger` on its path, which [`binding-layer`](../binding-layer/binding-layer.md) owns; the registry is for the enums and components beside it.
 Source: `find` and `get` in the registry object literal (`Cities2_Data/Content/Game/UI/index.js`).
 
 **Some modules are registered with no exports at all — every `index.ts` barrel, the page entry `game-ui/index.tsx`, and non-barrels such as `game-ui/common/scrolling/scroll-controller.ts`.**
@@ -153,7 +153,7 @@ Each path below is registered in the bundle under the export named (VOLATILE: ev
 The declaration types it as one; the implementation only does `override(path, name, cb(current))`, so any transformer works, and that is how a plain object or an enum is extended.
 Source: `extend` in the registry object literal (`Cities2_Data/Content/Game/UI/index.js`).
 
-A mod may `add` a path of its own to the same registry, and every registrar that runs later can `extend` it: `add` throwing on a registered path is what makes that path a stable public surface between mods — and since `reset()` leaves the registry map intact, the second run's `add` throws: inside the `try`/`catch` above it silently costs the mod its own remaining calls, outside it every later mod's; `mod-compatibility` owns the guard.
+A mod may `add` a path of its own to the same registry, and every registrar that runs later can `extend` it: `add` throwing on a registered path is what makes that path a stable public surface between mods — and since `reset()` leaves the registry map intact, the second run's `add` throws: inside the `try`/`catch` above it silently costs the mod its own remaining calls, outside it every later mod's; [`mod-compatibility`](../../../cs2-modding/references/technique/mod-compatibility/mod-compatibility.md) owns the guard.
 A consumer guards its side too, tolerating the path's absence, since import-completion order decides per run whether the producer has registered yet.
 
 ## Tool options: what makes the panel appear
@@ -168,11 +168,11 @@ Source: `useToolOptionsVisible` in `Cities2_Data/Content/Game/UI/index.js`; `src
 
 **The mode switcher renders for any tool with two or more modes, and its C# half does nothing for a mod tool.**
 The switcher inside `MouseToolOptions` draws one `ValueToolButton` per mode — icon from `mode.icon`, tooltip from the `ToolOptions.TOOLTIP_TITLE[<id>]` and `TOOLTIP_DESCRIPTION[<id>]` keys, selected on `mode.index === activeTool.modeIndex` — and calls the `tool.selectToolMode` trigger on select.
-The C# handler type-tests the active tool against the vanilla tool systems with no fallback — `custom-tools` owns that switch — so a mod tool falls through every branch and the only thing the trigger does is re-push the unchanged active tool — the button's selected state is a pure prop over that binding, so the click changes nothing on screen (VOLATILE: the type test — `ToolUISystem.SelectToolMode` in `src/Game/Game.UI.InGame/ToolUISystem.cs`).
+The C# handler type-tests the active tool against the vanilla tool systems with no fallback — [`custom-tools`](../../../cs2-modding/references/technique/custom-tools/custom-tools.md) owns that switch — so a mod tool falls through every branch and the only thing the trigger does is re-push the unchanged active tool — the button's selected state is a pure prop over that binding, so the click changes nothing on screen (VOLATILE: the type test — `ToolUISystem.SelectToolMode` in `src/Game/Game.UI.InGame/ToolUISystem.cs`).
 The buttons render and click, and only the effect is missing, so a mod tool's mode switcher is its own: rows extended into `MouseToolOptions`, driven by the mod's own trigger binding.
 `selectTool` fails differently: its string switch over the vanilla tool ids falls through to the default tool, so a mod tool id handed to it switches the player off the mod's tool rather than doing nothing (VOLATILE: the id list — `ToolUISystem.GetToolSystem` in the same file).
 Source: the mode switcher in `game-ui/game/components/tool-options/mouse-tool-options/mouse-tool-options.tsx` (`Cities2_Data/Content/Game/UI/index.js`); `src/Game/Game.UI.InGame/ToolUISystem.cs`.
-`custom-tools` owns the C# side of the tool itself.
+[`custom-tools`](../../../cs2-modding/references/technique/custom-tools/custom-tools.md) owns the C# side of the tool itself.
 
 ## Registering a whole new panel type
 
@@ -193,7 +193,7 @@ moduleRegistry.extend("game-ui/game/components/game-panel-renderer.tsx", "gamePa
 ```
 
 The `any` on each parameter is the route past the compiler: `ModuleRegistryExtend` types the callback as a component wrapper, so an unannotated parameter is inferred as a component type and neither the index write nor the object return type-checks.
-The C# half is a `GamePanelUISystem` panel class whose emitted `__Type` equals the string added; `binding-layer` owns how `__Type` is written.
+The C# half is a `GamePanelUISystem` panel class whose emitted `__Type` equals the string added; [`binding-layer`](../binding-layer/binding-layer.md) owns how `__Type` is written.
 Only the second call affects rendering — the renderer keys on `gamePanelComponents[panel.__Type]` and nothing enumerates the enum — so the first is bookkeeping for the mod's own code and for other mods reading the enum.
 Mutating in place is what makes the registration survive `reset()`, for the reason under composition below.
 
@@ -244,7 +244,7 @@ Source: the scaffold's `types/ui.d.ts`, `types/api.d.ts`, `types/l10n.d.ts`; the
 The scaffold's `assets.d.ts` is wildcard module declarations for `*.scss`, `*.css`, `*.svg`, `*.png`, `*.jpg` and `*.gif` — the ambient typing that lets a mod `import icon from "./icon.svg"` — and there is no such window global, read from the running game, and no such external.
 Source: the scaffold's `types/assets.d.ts`.
 
-`ReactDOMClient` and `chart.js` are on `window` and absent from the scaffold's webpack externals, so a mod importing `chart.js` bundles its own copy beside the one the game already ships; whether adding the external yourself reaches the game's copy instead is `ui-build-and-devloop`'s to answer.
+`ReactDOMClient` and `chart.js` are on `window` and absent from the scaffold's webpack externals, so a mod importing `chart.js` bundles its own copy beside the one the game already ships; whether adding the external yourself reaches the game's copy instead is [`ui-build-and-devloop`](../ui-build-and-devloop/ui-build-and-devloop.md)'s to answer.
 
 ## Styling
 
@@ -279,11 +279,11 @@ Source: `override`, `extend` and `reset` in the registry object literal (`Cities
 ## Images from the page's side
 
 **The page is served over `assetdb://`, and `coui://gameui` does not exist.**
-`document.baseURI` is `assetdb://gameui/index.html`, read from the running game, so a bare `Media/Glyphs/Advisor.svg` in JSX — the form the game uses everywhere, and the form of the mode-icon path `custom-tools` says a mod tool's modes resolve to nothing under — resolves against `assetdb://gameui/`; the same path under `coui://gameui/` returns 404.
-`gameui` is a database host the base game and each UI-shipping content pack contribute to; `prefabs-and-assets` owns its registration.
+`document.baseURI` is `assetdb://gameui/index.html`, read from the running game, so a bare `Media/Glyphs/Advisor.svg` in JSX — the form the game uses everywhere, and the form of the mode-icon path [`custom-tools`](../../../cs2-modding/references/technique/custom-tools/custom-tools.md) says a mod tool's modes resolve to nothing under — resolves against `assetdb://gameui/`; the same path under `coui://gameui/` returns 404.
+`gameui` is a database host the base game and each UI-shipping content pack contribute to; [`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md) owns its registration.
 Source: `Cities2_Data/Content/Game/UI/index.html` and `gameui.uiHost`; `src/Game/Game.SceneFlow/GameManager.cs`.
 
-A mod's own files come through `coui://ui-mods/`, which the scaffold's webpack config makes the emitted `publicPath`, imported images landing under `images/` beneath it; a mod registering its own host reaches it as `coui://<host>/…`, which `prefabs-and-assets` owns along with the C# call (VOLATILE: `coui://ui-mods/` — `UIModuleAsset` in `src/Colossal.IO.AssetDatabase/` and the scaffold's `webpack.config.js`).
+A mod's own files come through `coui://ui-mods/`, which the scaffold's webpack config makes the emitted `publicPath`, imported images landing under `images/` beneath it; a mod registering its own host reaches it as `coui://<host>/…`, which [`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md) owns along with the C# call (VOLATILE: `coui://ui-mods/` — `UIModuleAsset` in `src/Colossal.IO.AssetDatabase/` and the scaffold's `webpack.config.js`).
 
 The frontend's own image helpers, all registry-reachable (VOLATILE: the paths and exports — their `add` registrations in `Cities2_Data/Content/Game/UI/index.js`):
 
@@ -299,12 +299,12 @@ It is the image cache and not a resource cache: the resource handler issues a fr
 Source: `RequestResourceAsync` in `src/Colossal.UI/Colossal.UI/DefaultResourceHandler.cs` for the resource half; the image half was read from the running game.
 
 A mod writing an image once per file name is fine; a mod rewriting a fixed file name — a screenshot preview, a live chart, a recoloured icon — sees the first version forever unless it changes the query on every write — and each new query pins another decoded copy, so a high-frequency writer grows the cache for as long as nothing evicts — and nothing observed did.
-The other way a `coui://` image serves bytes that are not the ones on disk is a raster whose base name collides with a shipped shared image, which the resource handler short-circuits before the host walk; `prefabs-and-assets` owns that, and the two are indistinguishable from the page.
+The other way a `coui://` image serves bytes that are not the ones on disk is a raster whose base name collides with a shipped shared image, which the resource handler short-circuits before the host walk; [`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md) owns that, and the two are indistinguishable from the page.
 
 ## The DOM hack the community moved past
 
 The superseded technique is C# reaching into the page through `ExecuteScript` with a string of JavaScript that walks `document.getElementsByTagName("img")`, matches `src.includes("<file>.svg")` and toggles a class.
-`binding-layer` owns why it cannot work as a channel; the frontend half is three failures of its own:
+[`binding-layer`](../binding-layer/binding-layer.md) owns why it cannot work as a channel; the frontend half is three failures of its own:
 
 - it matches on a rendered attribute, which a re-render, a theme change or a renamed shipped asset silently breaks;
 - it writes `className` under React, which the next render of that subtree discards;
@@ -324,24 +324,24 @@ The replacement is the registry: `MouseToolOptions` for the rows, `ToolButton` f
 - **One throwing registrar silences every mod after it**, in an order that varies per run, and on a reload of the UI page blanks the whole UI.
 
 Source: the registry object literal and the root component's module loader (`Cities2_Data/Content/Game/UI/index.js`).
-`mod-compatibility` owns the playset-level consequences; this reference states the mechanism.
+[`mod-compatibility`](../../../cs2-modding/references/technique/mod-compatibility/mod-compatibility.md) owns the playset-level consequences; this reference states the mechanism.
 
 ## What this reference hands to others
 
-`binding-layer` owns the C# end of every wire and the `__Type` contract; this reference owns the far side — the data-binding module, the typed renderer and its unknown-element box, and the component maps (`gamePanelComponents`, `selectedInfoSectionComponents`) that are each a `__Type` payload rendered through a map; the `Loc` dictionary rides beside them, keyed on localization ids rather than `__Type`.
+[`binding-layer`](../binding-layer/binding-layer.md) owns the C# end of every wire and the `__Type` contract; this reference owns the far side — the data-binding module, the typed renderer and its unknown-element box, and the component maps (`gamePanelComponents`, `selectedInfoSectionComponents`) that are each a `__Type` payload rendered through a map; the `Loc` dictionary rides beside them, keyed on localization ids rather than `__Type`.
 
-`ui-build-and-devloop` owns everything upstream of the `.mjs`; the contract that build satisfies is stated here — `default` and `hasCSS`, a file named after the mod id, `coui://ui-mods/` as the public path, the hashed `localIdentName` — and so is the dev-loop fact that a rebuilt `.mjs` or `.css` at an unchanged URL is picked up on reload while an image is not; a blank UI after a rebuild-and-reload is the loader's — a throwing registrar or a stylesheet not answering 200.
+[`ui-build-and-devloop`](../ui-build-and-devloop/ui-build-and-devloop.md) owns everything upstream of the `.mjs`; the contract that build satisfies is stated here — `default` and `hasCSS`, a file named after the mod id, `coui://ui-mods/` as the public path, the hashed `localIdentName` — and so is the dev-loop fact that a rebuilt `.mjs` or `.css` at an unchanged URL is picked up on reload while an image is not; a blank UI after a rebuild-and-reload is the loader's — a throwing registrar or a stylesheet not answering 200.
 
-`custom-tools` owns the tool; it gets `useToolOptionsVisible` — the extension a tool overriding none of `ToolBaseSystem`'s panel-triggering virtuals needs — and the mode switcher's silent C# half from here, with `selectTool`'s fall-through to the default tool.
+[`custom-tools`](../../../cs2-modding/references/technique/custom-tools/custom-tools.md) owns the tool; it gets `useToolOptionsVisible` — the extension a tool overriding none of `ToolBaseSystem`'s panel-triggering virtuals needs — and the mode switcher's silent C# half from here, with `selectTool`'s fall-through to the default tool.
 
-`localization` owns what goes into a localized string; it gets the `Loc` dictionary and its four key shapes from `promised-registry-paths.md`.
+[`localization`](../../../cs2-modding/references/technique/localization/localization.md) owns what goes into a localized string; it gets the `Loc` dictionary and its four key shapes from `promised-registry-paths.md`.
 
-`units-and-formatting` and `simulation-time-and-units` get the formatters `cs2/l10n` withholds, the three unit-preference enums and the `Unit` enum from the same file, with the caveat that the module carrying the enums carries dead accessors beside them; `simulation-time-and-units` also gets the time-bindings module and the twice-shipped clock widget.
+[`units-and-formatting`](../../../cs2-modding/references/technique/units-and-formatting/units-and-formatting.md) and [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) get the formatters `cs2/l10n` withholds, the three unit-preference enums and the `Unit` enum from the same file, with the caveat that the module carrying the enums carries dead accessors beside them; [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) also gets the time-bindings module and the twice-shipped clock widget.
 
-`settings-and-input` gets the options-screen modules and the widget renderer that draws a settings page, and the fact that the focus-key trio is `cs2/input`'s.
+[`settings-and-input`](../../../cs2-modding/references/technique/settings-and-input/settings-and-input.md) gets the options-screen modules and the widget renderer that draws a settings page, and the fact that the focus-key trio is `cs2/input`'s.
 
-`mod-compatibility` gets the composition list, the unguarded registrar loop, the `hasCSS` hang that keeps every mod unregistered, import-completion order and `reset()`'s blind spots.
+[`mod-compatibility`](../../../cs2-modding/references/technique/mod-compatibility/mod-compatibility.md) gets the composition list, the unguarded registrar loop, the `hasCSS` hang that keeps every mod unregistered, import-completion order and `reset()`'s blind spots.
 
-`prefabs-and-assets` keeps the C# registration of a host and the shared-image shadowing; it gets from here that `gameui` is an `assetdb` host rather than a `coui` one, that the page's base is `assetdb://gameui/`, and the image-cache answer.
+[`prefabs-and-assets`](../../../cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md) keeps the C# registration of a host and the shared-image shadowing; it gets from here that `gameui` is an `assetdb` host rather than a `coui` one, that the page's base is `assetdb://gameui/`, and the image-cache answer.
 
-`city-state-and-progression` and `citizens-and-households` get the panel components and the selected-info section map as the registry route to replacing a panel or adding a section, cheaper than forking the C# system behind it.
+[`city-state-and-progression`](../../../cs2-modding/references/mechanics/city-state-and-progression/city-state-and-progression.md) and [`citizens-and-households`](../../../cs2-modding/references/mechanics/citizens-and-households/citizens-and-households.md) get the panel components and the selected-info section map as the registry route to replacing a panel or adding a section, cheaper than forking the C# system behind it.

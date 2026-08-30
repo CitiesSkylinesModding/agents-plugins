@@ -29,7 +29,7 @@ CityServiceBudgetSystem.CityServiceBudgetJob, per building, per upkeep line (pre
 ```
 
 **The slider cuts the wage bill along with the maintenance bill** — wages join the money line above before the budget multiply.
-`ServiceUsage.m_Usage` is written by five AI systems — hospital (patients over capacity), school (students over capacity), emergency shelter, and the two utility systems `utilities-and-flow-networks` owns — plus a load-time back-fill seeding 1 on any budget-bearing building that lacks the component; every other service building's upkeep is flat (re-check: the files under `src/Game/` naming `ServiceUsage`).
+`ServiceUsage.m_Usage` is written by five AI systems — hospital (patients over capacity), school (students over capacity), emergency shelter, and the two utility systems [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md) owns — plus a load-time back-fill seeding 1 on any budget-bearing building that lacks the component; every other service building's upkeep is flat (re-check: the files under `src/Game/` naming `ServiceUsage`).
 
 **Effect two: every building of the service takes an efficiency factor.**
 `CityServiceEfficiencySystem` (at `ModificationEnd`, re-run over every building when a budget changes) writes `EfficiencyFactor.ServiceBudget = m_ServiceBudgetEfficiencyFactor.Evaluate(budget / 100)` — but only where the prefab, or an installed upgrade, has a `Resource.Money` upkeep line, and writes 1 otherwise.
@@ -116,7 +116,7 @@ Source: `src/Game/Game.Simulation/WorkProviderSystem.cs`.
 
 ## Cadence
 
-`CityServiceUpkeepSystem` consumes upkeep resources on a 256-frame interval (`kUpdatesPerDay = 64`, sixteen `UpdateFrame` groups); the money lines are accumulated by `CityServiceBudgetSystem` at `ModificationEnd` and applied to the treasury by `BudgetApplySystem` on its own interval; `simulation-time-and-units` owns the `262144 / (kUpdatesPerDay * 16)` idiom every figure here comes from.
+`CityServiceUpkeepSystem` consumes upkeep resources on a 256-frame interval (`kUpdatesPerDay = 64`, sixteen `UpdateFrame` groups); the money lines are accumulated by `CityServiceBudgetSystem` at `ModificationEnd` and applied to the treasury by `BudgetApplySystem` on its own interval; [`simulation-time-and-units`](../simulation-time-and-units/simulation-time-and-units.md) owns the `262144 / (kUpdatesPerDay * 16)` idiom every figure here comes from.
 Source: `src/Game/Game.Simulation/CityServiceUpkeepSystem.cs`, `src/Game/Game.Simulation/CityServiceBudgetSystem.cs`, `src/Game/Game.Simulation/BudgetApplySystem.cs`.
 
 (VOLATILE: every component, field, system, method, constant and `Source:` path this file names — their declarations under `src/Game/` in `Game.Simulation`, `Game.Buildings`, `Game.Prefabs`, `Game.Economy` and `Game.UI.InGame`, at the files each listing and trap cites; plus the frontend slider bounds, against the `budget-slider-item.tsx` module in the game's UI bundle; plus the live-read adjustability census, against the running game's `ServiceData` prefabs by the query stated beside it; plus the live-read curve shape, against `m_ServiceBudgetEfficiencyFactor` on the live `BuildingEfficiencyParameterData` singleton.)

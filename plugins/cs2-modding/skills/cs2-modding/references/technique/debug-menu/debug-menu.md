@@ -7,7 +7,7 @@ The technique holds without one, but every game symbol named below is checkable 
 `cs2-modding-setup` provisions it.
 
 The developer menu as a surface: what it already gives you, how a mod puts its own material into it, and how it behaves on a running game.
-Why a mod is not working is `diagnostics` — that reference owns the diagnosis order and the log surfaces; this one owns the instrument.
+Why a mod is not working is [`diagnostics`](../diagnostics/diagnostics.md) — that reference owns the diagnosis order and the log surfaces; this one owns the instrument.
 Building a player-facing panel is the UI skill's business: the menu takes no HTML, no CSS and no UI mod — a mod contributes C# widget objects, and the game's own React renders them.
 
 ## What `--developerMode` actually gates
@@ -56,8 +56,8 @@ The ones this topic's reader reaches for:
 - `--uiDeveloperMode` — "Enable UI debugger and memory tracker" in the game's help text; it turns on the UI debugger, the memory tracker and live reload together, and forces the whole game to keep running in background.
   The debugger is one CDP endpoint on port 9444 — the settings default — serving the game's single UI view, boot, menu and in-game alike.
 - `--qaDeveloperMode` — "Enable tests and automation"; without it the `Test Scenarios` and `Platforms` tabs return `null` and never exist, and part of the `Logs` tab stays hidden.
-- `--logsEffectiveness=<level>` — the global logger override `diagnostics` owns; the `Logs` tab is its live equivalent.
-- `--disableModding` and `--disableCodeModding` — the off switches `diagnostics` checks first.
+- `--logsEffectiveness=<level>` — the global logger override [`diagnostics`](../diagnostics/diagnostics.md) owns; the `Logs` tab is its live equivalent.
+- `--disableModding` and `--disableCodeModding` — the off switches [`diagnostics`](../diagnostics/diagnostics.md) checks first.
 
 `--developerMode` itself is free — three key bindings — but `--uiDeveloperMode` is not: its debugger forces `Application.runInBackground`, so an unfocused game keeps running at full rate, and live reload adds OS file watchers over the UI files.
 The menu being open has a cost of its own, which is the cost-model section below.
@@ -71,7 +71,7 @@ Source: `src/Game/Game.SceneFlow/GameManager.cs`.
 Unity Burst parses the raw argument list itself with an exact string compare, so the dash freedom the game's own options enjoy does not apply; the same block accepts `--burst-force-sync-compilation` and the `UNITY_BURST_DISABLE_COMPILATION` environment variable.
 Source: `src/Unity.Burst/Unity.Burst/BurstCompilerOptions.cs`.
 
-Turning Burst off makes every job run managed: steppable by a Mono debugger, and far slower for normal play; `performance-and-memory` owns that trade, the environment variable's accepted values included.
+Turning Burst off makes every job run managed: steppable by a Mono debugger, and far slower for normal play; [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns that trade, the environment variable's accepted values included.
 
 **There is no in-game text console.**
 The console classes in the debug namespace are a Win32 stdout capture, constructed only when `--captureStdout=` selects a capturing mode; nothing in the game reads a typed command, so a reader arriving from a game that has one should look for nothing here.
@@ -175,7 +175,7 @@ An instance tab method on an abstract class is invoked with no target and fails 
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
 **A tab method that throws loses its tab silently, apart from one log line.**
-Each tab's exception is caught and logged as `Failed to register '<name>' Debug UI`; that string is what to grep for, and `diagnostics` owns the log surfaces it appears in.
+Each tab's exception is caught and logged as `Failed to register '<name>' Debug UI`; that string is what to grep for, and [`diagnostics`](../diagnostics/diagnostics.md) owns the log surfaces it appears in.
 (VOLATILE: the message string — `DebugSystem`'s registration catch blocks.)
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
@@ -242,7 +242,7 @@ The tab's builder is a hard-coded list of `AddSystemGizmoField<T>` calls, one pe
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
 What `BaseDebugSystem` buys is the content of a gizmo entry, not its display: an option list built by the protected `AddOption(displayName, defaultEnabled)`, the `OnEnabled(DebugUI.Container)` / `OnDisabled(DebugUI.Container)` hooks for extra widgets, and a `JobHandle OnUpdate(JobHandle)` override point.
-Running it also takes a phase: the vanilla gizmo systems live in `SystemUpdatePhase.DebugGizmos`, driven after `LateUpdate`, and a mod placing a system there needs `mod-lifecycle-and-ordering`'s imperative phase registration.
+Running it also takes a phase: the vanilla gizmo systems live in `SystemUpdatePhase.DebugGizmos`, driven after `LateUpdate`, and a mod placing a system there needs [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md)'s imperative phase registration.
 
 Two display routes are open to a mod:
 
@@ -281,7 +281,7 @@ The consequences a mod author needs:
   The frontend dispatches on the widget's fully qualified C# type name against a fixed component map covering exactly what `DebugWidgetBuilders` produces, so vanilla never shows one; a mod reaching the widget layer another way can, since most of the shared widget layer's kinds are unmapped here.
   Source: `Cities2_Data/Content/Game/UI/index.js`.
 
-The menu's own React components are registered modules under `game-ui/debug/` a UI mod may import like any other — the multi-component float slider fields exist only in that tree — which is the one seam where this material touches a player-facing UI; `binding-layer` owns the machinery underneath.
+The menu's own React components are registered modules under `game-ui/debug/` a UI mod may import like any other — the multi-component float slider fields exist only in that tree — which is the one seam where this material touches a player-facing UI; [`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) owns the machinery underneath.
 
 ## The tool enumeration a mod can break
 
@@ -297,7 +297,7 @@ Source: `src/Game/Game.Debug/DebugSystem.cs`, `src/Colossal.Core/Colossal.Reflec
 Both catches see the same exception, so a grep for `Simulation` finds the failure — and the method-name line repeats while the menu stays open, the same defect re-thrown on every rebuild rather than new ones.
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
-The repair is a Harmony transpiler, and `patching` owns the technique; the shape that works here:
+The repair is a Harmony transpiler, and [`patching`](../patching/patching.md) owns the technique; the shape that works here:
 
 - Inject a call that filters abstract types out of the reflected array immediately after it is produced — before anything else runs, because the two parallel arrays that follow both size themselves from that array's length, and a repair landing later must fix both or leave trailing null entries behind.
 - Match the unpatched loop's opcode sequence before injecting, and stand down when it differs, on the assumption that another mod already applied a compatible fix — this is a repair every affected session needs exactly once.
@@ -344,11 +344,11 @@ The routes, the selectors and the traps — a fill that never commits, a select 
 
 ## What this reference hands to others
 
-`diagnostics` owns why a mod is not working; it takes from here the `Logs` tab as the live face of the logger configuration it reads off disk, and the `Failed to register '<name>' Debug UI` line, written with the tab name by the attribute scan and the method name by the explicit rebuild.
-`custom-tools` owns the tool base classes; the abstract-descendant hazard belongs beside any decision to ship an abstract tool layer.
-`mod-lifecycle-and-ordering` owns `SystemUpdatePhase.DebugGizmos` and the imperative phase registration a gizmo system needs, and its `ComponentSystemBase` distinction is what the four tab-method shapes turn on.
-`performance-and-memory` owns the per-frame rules the cost model instantiates, and gains the `[DebugWatchOnly]` idiom — a first-party pattern for a system that costs nothing while nobody watches.
-`ecs-in-this-game` owns archetypes, chunks and queries; the `ECS Components` census and the `Search` query builder are those concepts with a UI on them.
-`patching` owns the transpiler that repairs the tool enumeration — an instructive case, since the injection point is forced by two allocations sizing themselves from the array it rewrites.
-`binding-layer` owns the shared widget-over-bindings transport the `debug` group rides; the group's own binding table and the module-registry defect that bites any binding, not just this group's, are recorded in [driving the menu from outside](driving-the-menu.md).
+[`diagnostics`](../diagnostics/diagnostics.md) owns why a mod is not working; it takes from here the `Logs` tab as the live face of the logger configuration it reads off disk, and the `Failed to register '<name>' Debug UI` line, written with the tab name by the attribute scan and the method name by the explicit rebuild.
+[`custom-tools`](../custom-tools/custom-tools.md) owns the tool base classes; the abstract-descendant hazard belongs beside any decision to ship an abstract tool layer.
+[`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns `SystemUpdatePhase.DebugGizmos` and the imperative phase registration a gizmo system needs, and its `ComponentSystemBase` distinction is what the four tab-method shapes turn on.
+[`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the per-frame rules the cost model instantiates, and gains the `[DebugWatchOnly]` idiom — a first-party pattern for a system that costs nothing while nobody watches.
+[`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns archetypes, chunks and queries; the `ECS Components` census and the `Search` query builder are those concepts with a UI on them.
+[`patching`](../patching/patching.md) owns the transpiler that repairs the tool enumeration — an instructive case, since the injection point is forced by two allocations sizing themselves from the array it rewrites.
+[`binding-layer`](../../../../cs2-modding-ui/references/binding-layer/binding-layer.md) owns the shared widget-over-bindings transport the `debug` group rides; the group's own binding table and the module-registry defect that bites any binding, not just this group's, are recorded in [driving the menu from outside](driving-the-menu.md).
 A reader leaves knowing the menu is a C# widget tree the game's own React renders, that a mod joins it by attribute or by registry with no patching, and that the launch flags gate keys and tooling rather than capability.
