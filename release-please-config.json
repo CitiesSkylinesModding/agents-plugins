@@ -5,8 +5,6 @@
     "plugins/coherent-gameface": {
       "release-type": "node",
       "component": "coherent-gameface",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
       "extra-files": [
         {
           "type": "json",
@@ -34,8 +32,6 @@
     "plugins/unity-devtools": {
       "release-type": "node",
       "component": "unity-devtools",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
       "extra-files": [
         {
           "type": "json",
@@ -52,8 +48,6 @@
     "plugins/unity-devtools/mcp": {
       "release-type": "node",
       "component": "unity-devtools-mcp",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
       "extra-files": [
         {
           "type": "generic",
@@ -76,8 +70,6 @@
       "component": "cs2-modding",
       "initial-version": "0.1.0",
       "release-as": "1.0.0",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
       "extra-files": [
         {
           "type": "json",
