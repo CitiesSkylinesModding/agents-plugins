@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.3.0...cs2-modding-v1.0.0) (2026-08-30)
+
+
+### Features
+
+* **cs2-modding:** complete the plugin — the four skill maps, resolving bridges, and the README ([cfaeb90](https://github.com/CitiesSkylinesModding/agents-plugins/commit/cfaeb90c09a14f729ef685fc0343653e09fa6c85))
+* **cs2-modding:** teach the job-scheduler model in performance-and-memory ([df0a0d6](https://github.com/CitiesSkylinesModding/agents-plugins/commit/df0a0d690804c53a57ff54823453fd7f8033fc84))
+
+
+### Bug Fixes
+
+* **cs2-modding:** conform the technique references to their shape and correct what anchoring exposed ([9ed82cf](https://github.com/CitiesSkylinesModding/agents-plugins/commit/9ed82cf98524180fa722535d18d8a8ab9453d26b))
+* **cs2-modding:** correct the technique references against the corpus's inspection entry ([c18085e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/c18085ed6428cf178c5a82ab9075585c5aa1f2ad))
+* **cs2-modding:** correct the technique references against Unity's package documentation ([822dbd8](https://github.com/CitiesSkylinesModding/agents-plugins/commit/822dbd8bce9b3ec586d44e7750fc4cec78fe1b05))
+* **cs2-modding:** drop the unverified refusal from the boxed-read sentence ([3aee9eb](https://github.com/CitiesSkylinesModding/agents-plugins/commit/3aee9eb62ef841f13b192a128f8f4ad261537db8))
+* **cs2-modding:** unwrap the mechanics listings so indent carries structure again ([c3ae9a3](https://github.com/CitiesSkylinesModding/agents-plugins/commit/c3ae9a3e3929d7d45ad48f95b8a734bb2bd30a48))
+
 ## [0.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.2.0...cs2-modding-v0.3.0) (2026-08-24)
 
 
