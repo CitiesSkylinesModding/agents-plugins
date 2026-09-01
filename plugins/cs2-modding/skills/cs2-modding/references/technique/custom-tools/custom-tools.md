@@ -11,6 +11,7 @@ How to build a tool that behaves like a vanilla one: it claims the cursor, previ
 What a tool ultimately emits — the creation definitions the game turns into entities — is [`placement-definitions`](../placement-definitions/placement-definitions.md), and a mod that only wants to change _what_ an existing tool places rewrites those definitions instead of writing a tool at all.
 [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) owns which phase a system runs in, and every phase named below is a decision that reference already settles.
 [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) owns the frame-scoped tags and the command-buffer barriers the apply path rides on.
+The map editor's toolbar is a separate surface — its entry list shares no code with `ToolSystem.tools` — and adding an entry to it is [registering into the map editor's toolbar](editor-toolbar.md).
 
 ## Two base classes, and one thing forces the heavier one
 

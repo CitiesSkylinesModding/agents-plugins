@@ -109,7 +109,7 @@ Two load-bearing layers have no view, because a view only draws what is spatial:
 
 **Technique** — how to do a thing at all.
 
-- [Custom tools](references/technique/custom-tools/custom-tools.md) — building a tool that claims the cursor, previews what it would do, and commits on click.
+- [Custom tools](references/technique/custom-tools/custom-tools.md) — building a tool that claims the cursor, previews what it would do, and commits on click; also the door to the map editor's toolbar.
 - [The developer menu](references/technique/debug-menu/debug-menu.md) — what the menu already gives you, and how a mod puts its own material into it.
 - [Diagnostics](references/technique/diagnostics/diagnostics.md) — why a mod is not working: which file to open first, and what each line proves.
 - [ECS in this game](references/technique/ecs-in-this-game/ecs-in-this-game.md) — writing ECS code the way this codebase does, and where its practice diverges from stock Entities.

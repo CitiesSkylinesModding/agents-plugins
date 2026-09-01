@@ -327,6 +327,10 @@ Reading the bit is no safer except off the chunk handle, the one surface that te
 So test membership before either, which is true whatever the bit says: `HasComponent<T>` on `EntityManager` and `ComponentLookup<T>`, `Has<T>` off the chunk handle as above.
 An entity the query returned because it never carried the type needs `AddComponent`, not a flip.
 Source: `src/Unity.Entities/Unity.Entities/ChunkDataUtility.cs` and `src/Unity.Entities/Unity.Entities/ArchetypeChunkData.cs`.
+**Not every enableable call site is constrained to enableable types.**
+`EntityManager` and the command buffer carry `ComponentType` overloads, the chunk handle carries `DynamicComponentTypeHandle` forms, and `ComponentLookup<T>`'s own pair is unconstrained despite its compile-time `T`: none of them checks `IEnableableComponent`, at compile time or at run time.
+On an absent type they follow the rules above — every write corrupts, only the chunk handle's read tests the miss — and on a present type that is not enableable they read or write a plausible bit rather than failing, since the enabled-bits array allocates a slot for every archetype type regardless.
+Source: `src/Unity.Entities/Unity.Entities/EntityManager.cs`, `src/Unity.Entities/Unity.Entities/EntityCommandBuffer.cs`, `src/Unity.Entities/Unity.Entities/ArchetypeChunk.cs` and `src/Unity.Entities/Unity.Entities/ComponentLookup.cs` (the unconstrained overloads) and `src/Unity.Entities/Unity.Entities/ArchetypeChunkData.cs` (the per-type slot).
 A buffer element can carry `IEnableableComponent` the same way, which is what the enabled-buffer helpers below exist for.
 Some enableable components carry a disabled state a reader would never guess from the name:
 
