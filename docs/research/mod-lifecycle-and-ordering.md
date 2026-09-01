@@ -87,7 +87,7 @@ Disabling a loaded IL assembly mid-session cannot unload it: that branch calls `
 ### Ordering is imperative, and the stock ECS attributes are inert here
 
 **Verdict: `[UpdateAfter]`, `[UpdateBefore]` and `[UpdateInGroup]` do nothing in this game.**
-This is the first of the two open conflict entries (`conflicts.md:28-40`), whose claim originates in hand-written orientation prose at `DecompiledCitiesSkylines2/AGENTS.md:56`.
+This is the first of the two conflict entries that bound this topic, since ruled (`conflicts.md:775`), whose claim originates in hand-written orientation prose at `DecompiledCitiesSkylines2/AGENTS.md:56`.
 Re-verified independently, and the evidence is stronger than "the attributes are absent":
 
 - **The grep.** `Grep` for `\[UpdateAfter|\[UpdateBefore|\[UpdateInGroup` over `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2\src\Game` returns **0 matches across 0 files**. Widening to all of `src/` returns 26 files, every one of them inside the Unity packages themselves (`src/Unity.Entities/`, `src/Unity.Scenes/`, `src/Unity.Transforms/`, `src/Unity.Entities.Hybrid/`) — the stock system groups and their own members. Not one is a game type.

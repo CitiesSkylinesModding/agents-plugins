@@ -34,32 +34,6 @@ Whoever rules an entry writes the outcome into the research file of every topic 
 
 ## Open
 
-### Editor-toolbar registration is a demonstrated technique no shipped reference owns
-
-**Sources.** Four corpus mods register a tool into the map editor's toolbar — the catalog's Scene Explorer, Water Features, Road Builder and Write Everywhere entries each name their variant — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/custom-tools.md`'s re-sweep section (`Game.UI.Editor.EditorToolUISystem.tools`, a property-backed `IEditorTool[]` with no registration API, the vanilla four seeded in `OnCreate`, the world-once-per-process timing, the `Editor.TOOL[<id>]` locale key).
-
-**Established.** The full derivation with citations sits in that research section. The shipped `custom-tools` reference owns `ToolSystem.tools` — a different surface sharing no code — and the UI skill owns the frontend; a grep of `skills/cs2-modding/references/` finds no shipped mention of the editor tool array, so the catalog's four **Demonstrates** lines are its only shipped surface.
-
-**Needs a ruling on.** Whether a shipped reference should own editor-tool registration — a `custom-tools` sibling file, a topic of its own, or nothing, leaving the catalog's four entries as the shipped surface. What turns on it: an agent asked for an editor toolbar entry today finds no reference and must read mod source. The ruling is written into `docs/research/custom-tools.md`.
-
-### Runtime-typed component access is a demonstrated technique no shipped reference owns
-
-**Sources.** The catalog's inspection entry (Scene Explorer) reads components of types chosen at runtime — cached `MakeGenericMethod` over `EntityManager`'s generic getters, a pick list enumerated from `TypeManager.AllTypes` — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/ecs-in-this-game.md`'s re-sweep section.
-
-**Established.** Mod component types enter the registry from the game's own assembly-load callback before `OnLoad`, so an ordinary mod registers nothing and needs none of this; the non-generic enableable overloads carry no constraint and no runtime check in this build. Citations in that research section.
-
-**Needs a ruling on.** Whether `ecs-in-this-game` (or a sibling file) should own runtime-typed access, or it stays research-only as a tool-mod technique outside the ordinary-mod boundary the ticket's trap guard drew. What turns on it: the unguarded non-generic enableable calls are a trap with no shipped home. The ruling is written into `docs/research/ecs-in-this-game.md`.
-
-### The shipped Burst library's own build paths name the declared Entities version, against the one number `SOURCES.md` entry 13 commits to
-
-**Sources.** `docs/SOURCES.md` entry 13 states "The shipped `Unity.Entities.dll` is **1.3.5 to 1.3.8**", derived through [dating a shipped Unity package](../solutions/dating-a-shipped-unity-package.md) and standing as the worked example under its "The declared version is not the version that runs" paragraph.
-The ticket-38 `save-serialization` sweep of 2026-08-26 reached an artifact no entry names: `Cities2_Data/Plugins/x86_64/lib_burst_generated.dll` under `%CSII_INSTALLATIONPATH%`, Burst's ahead-of-time output for this build. It embeds absolute source paths from the machine the game was built on, and the six it carries are all under `ColossalPackages\com.unity.entities@1.3.10` — the **declared** version.
-
-**Established.** Both halves are real and neither settles the other. The dating derivation behind 1.3.5–1.3.8 is recorded in the solution doc and was not re-run by this pass. The directory name in a build path records where source sat on a build machine, which is not the same fact as what was compiled into the shipped assembly — a vendored directory can be named for one version and hold another, and nothing in the embedded string distinguishes the two. What the library does settle, and what no other listed source can, is whether a given `[BurstCompile]` method was actually compiled for this build: the same sweep used it that way, and bounded it honestly at 43 distinct `.cs` paths for a game with hundreds of Burst jobs, so a hit settles a question and a miss only narrows one.
-
-**Needs a ruling on.** Two things. Whether entry 13's version range survives, and if not, whether the fix is a corrected range or the removal of a committed number that has now been contested once — the plugin's own rule is that a claim coming back wrong twice is one to delete rather than rephrase, and this is the first time. And whether `lib_burst_generated.dll` joins the source list as an entry of its own or extends entry 5, which currently stops at `Content/` and never reaches `Plugins/`.
-What turns on it: entry 13's "the declared version is not the version that runs" paragraph rests on that range as its only worked example, so a ruling that 1.3.10 wins does not patch the number — it removes the example the paragraph is built on, and the paragraph needs rewriting rather than editing. The evidence is in `docs/research/save-serialization.md`'s 2026-08-26 re-sweep section, and the ruling goes there.
-
 ## Ruled
 
 ### A shipped claim about a debug read names a throw the decompile cannot reach, and neither half is settleable statically
@@ -850,3 +824,35 @@ On the evidence standard: uncorroborated is acceptable here and the derivation c
 What the standard buys instead is provenance in the shipped prose: one sentence saying the tree was derived from the registration table and the phase drivers rather than read from a single file, so a reader re-checking it knows what to re-run.
 `VOLATILE:` covers the per-phase system names and counts, which is where the version actually moves; the tree's shape is architecture and carries no marker.
 The derivation's own weak points are recorded in the research file under "Where the derivation is weakest" and stay there — a research file is where an authoring agent reads how far to reach, and shipped prose that hedged each of them would teach a reader to distrust the one source that checked.
+
+### Editor-toolbar registration is a demonstrated technique no shipped reference owns
+
+**Sources.** Four corpus mods register a tool into the map editor's toolbar — the catalog's Scene Explorer, Water Features, Road Builder and Write Everywhere entries each name their variant — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/custom-tools.md`'s re-sweep section (`Game.UI.Editor.EditorToolUISystem.tools`, a property-backed `IEditorTool[]` with no registration API, the vanilla four seeded in `OnCreate`, the world-once-per-process timing, the `Editor.TOOL[<id>]` locale key).
+
+**Established.** The full derivation with citations sits in that research section. The shipped `custom-tools` reference owns `ToolSystem.tools` — a different surface sharing no code — and the UI skill owns the frontend; a grep of `skills/cs2-modding/references/` finds no shipped mention of the editor tool array, so the catalog's four **Demonstrates** lines are its only shipped surface.
+
+**Needs a ruling on.** Whether a shipped reference should own editor-tool registration — a `custom-tools` sibling file, a topic of its own, or nothing, leaving the catalog's four entries as the shipped surface. What turns on it: an agent asked for an editor toolbar entry today finds no reference and must read mod source. The ruling is written into `docs/research/custom-tools.md`.
+
+**Ruling (2026-09-01, the maintainer's grilling).** A sibling file owns it: `references/technique/custom-tools/editor-toolbar.md`, linked from the entry file. A surface sharing no code with `ToolSystem.tools` earns a file of its own rather than a share of the entry file's budget, and a topic of its own fails the boundary rule ADR 0003's addendum records — the wiki never sees this surface, so only two of the three seed surveys agree on the split.
+
+### Runtime-typed component access is a demonstrated technique no shipped reference owns
+
+**Sources.** The catalog's inspection entry (Scene Explorer) reads components of types chosen at runtime — cached `MakeGenericMethod` over `EntityManager`'s generic getters, a pick list enumerated from `TypeManager.AllTypes` — and the 2026-08-25 re-sweep derived the mechanism first-party in `docs/research/ecs-in-this-game.md`'s re-sweep section.
+
+**Established.** Mod component types enter the registry from the game's own assembly-load callback before `OnLoad`, so an ordinary mod registers nothing and needs none of this; the non-generic enableable overloads carry no constraint and no runtime check in this build. Citations in that research section.
+
+**Needs a ruling on.** Whether `ecs-in-this-game` (or a sibling file) should own runtime-typed access, or it stays research-only as a tool-mod technique outside the ordinary-mod boundary the ticket's trap guard drew. What turns on it: the unguarded non-generic enableable calls are a trap with no shipped home. The ruling is written into `docs/research/ecs-in-this-game.md`.
+
+**Ruling (2026-09-01, the maintainer's grilling).** The technique stays research-only — the ordinary-mod boundary holds, since an ordinary mod registers nothing and needs none of it — and the trap ships on its own: the unguarded non-generic overloads join the shipped `ecs-in-this-game` passage that already teaches the `-1` corruption, the same root cause's write half.
+
+### The shipped Burst library's own build paths name the declared Entities version, against the one number `SOURCES.md` entry 13 commits to
+
+**Sources.** `docs/SOURCES.md` entry 13 states "The shipped `Unity.Entities.dll` is **1.3.5 to 1.3.8**", derived through [dating a shipped Unity package](../solutions/dating-a-shipped-unity-package.md) and standing as the worked example under its "The declared version is not the version that runs" paragraph.
+The ticket-38 `save-serialization` sweep of 2026-08-26 reached an artifact no entry names: `Cities2_Data/Plugins/x86_64/lib_burst_generated.dll` under `%CSII_INSTALLATIONPATH%`, Burst's ahead-of-time output for this build. It embeds absolute source paths from the machine the game was built on, and the six it carries are all under `ColossalPackages\com.unity.entities@1.3.10` — the **declared** version.
+
+**Established.** Both halves are real and neither settles the other. The dating derivation behind 1.3.5–1.3.8 is recorded in the solution doc and was not re-run by this pass. The directory name in a build path records where source sat on a build machine, which is not the same fact as what was compiled into the shipped assembly — a vendored directory can be named for one version and hold another, and nothing in the embedded string distinguishes the two. What the library does settle, and what no other listed source can, is whether a given `[BurstCompile]` method was actually compiled for this build: the same sweep used it that way, and bounded it honestly at 43 distinct `.cs` paths for a game with hundreds of Burst jobs, so a hit settles a question and a miss only narrows one.
+
+**Needs a ruling on.** Two things. Whether entry 13's version range survives, and if not, whether the fix is a corrected range or the removal of a committed number that has now been contested once — the plugin's own rule is that a claim coming back wrong twice is one to delete rather than rephrase, and this is the first time. And whether `lib_burst_generated.dll` joins the source list as an entry of its own or extends entry 5, which currently stops at `Content/` and never reaches `Plugins/`.
+What turns on it: entry 13's "the declared version is not the version that runs" paragraph rests on that range as its only worked example, so a ruling that 1.3.10 wins does not patch the number — it removes the example the paragraph is built on, and the paragraph needs rewriting rather than editing. The evidence is in `docs/research/save-serialization.md`'s 2026-08-26 re-sweep section, and the ruling goes there.
+
+**Ruling (2026-09-01, the maintainer's grilling).** The range survives: a build path dates a vendored directory's name and not the compiled assembly, so the six `@1.3.10` paths do not contest a derivation that compared the shipped binary itself. This counts as the number's first contestation, rejected — the two-strikes deletion rule is untouched. The second half was settled in the field before the ruling: the library is `SOURCES.md` entry 16, and entry 13's "contested and awaiting a ruling" clause is replaced by the sentence stating why the paths do not contest the range.

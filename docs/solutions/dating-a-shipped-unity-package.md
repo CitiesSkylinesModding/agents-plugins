@@ -6,8 +6,9 @@ symptoms:
   - 'the toolchain declares a package version that the shipped assembly does not match'
   - 'a member is missing from the decompile and the pass concludes the build predates it'
   - 'a version bound derived from one marker turns out to admit two answers'
+  - 'an artifact embeds a package path naming a version the dating contradicts'
 tags: [research, decompile, unity, versioning, stripping, false-absence, verification]
-updated: 2026-08-06
+updated: 2026-09-01
 ---
 
 # Dating a shipped Unity package when the assembly carries no version
@@ -41,7 +42,7 @@ shipped `Unity.Entities.dll` to 1.3.5-1.3.8 against a declared 1.3.10. The two s
 in the `IJobEntity` generator's handling of `WithPresent`, which this game uses nowhere, so nothing
 it ships can separate them.
 
-## The four traps, in the order they cost time
+## The five traps, in the order they cost time
 
 **Bound on presence, not on absence.** A member can be missing because the release predates it,
 because a later release removed it, or because it was compiled out — and the binary does not say
@@ -56,6 +57,14 @@ and the pass that assumed otherwise reached a confident wrong bound.
 **`[Conditional]` members are the reverse trap.** `CheckComponentType` is compiled out of this build
 entirely, so reading its absence as a version signal dates nothing. Check the attribute before
 using a member as a marker.
+
+**A build path embedded in an artifact dates a directory name, not the code.** The shipped Burst
+library embeds absolute build-machine paths under `ColossalPackages\com.unity.entities@1.3.10` —
+the declared version — while the assembly itself brackets to 1.3.5-1.3.8 above. A vendored
+directory is named for the release it was taken from and holds whatever has been put in it since,
+so such a path is a statement about the build machine's layout, never a version marker. Ruled in
+`research/conflicts.md` against exactly this reading; the same holds for any package cache or
+vendored directory name another artifact happens to record.
 
 **Prefer a string literal, and grep the `.dll` directly.** It skips the decompile, so it also rules
 out reading a stale checkout — which is the one failure that makes every other step's answer wrong

@@ -388,7 +388,7 @@ A grep scoped to `src/Game/Game.Tools/` returns 25 of the 34 and reads like a ce
 
 **What stating the scope looks like.** Two forms, and both are in the shipped tree already:
 
-- Scope in the sentence: `conflicts.md:177` — "A grep of `src/Game/` **outside `Game.Input` and `Game.Settings`** returns no other consumer of `Usages` at 1.6.0f1."
+- Scope in the sentence: `conflicts.md:586` — "A grep of `src/Game/` **outside `Game.Input` and `Game.Settings`** returns no other consumer of `Usages` at 1.6.0f1."
 - Scope in the claim's own terms: `placement-definitions.md:14` — "`EntityManager.CreateArchetype` is used for a definition in exactly two places **in `src/Game/`**, both in the simulation rather than in a tool".
 
 The rule for the reference: **a negative claim carries the span it was run over, in the sentence, not in the citation.** A citation names where the evidence is; a scope names where the search was not.
@@ -406,7 +406,7 @@ So the entire module registry — the surface a UI mod extends — is unreachabl
 **The 72% figure re-derived, and it holds.** `docs/solutions/empty-grep-read-as-proof-of-absence.md:45-47` states "72% of this game's localization namespaces never appear in C#". Re-derived against the 75 groups in `plugins/cs2-modding/skills/cs2-modding/references/technique/localization/vanilla-namespaces.md`:
 
 - Searching `src/Game` for each group name **used as a namespace prefix** — the literal `"<Group>.` — returns exactly **21**: `Assets`, `Common`, `DefaultTool`, `Editor`, `GameListScreen`, `Infoviews`, `Loading`, `Maps`, `Menu`, `Notifications`, `Options`, `Paradox`, `PhotoMode`, `Policy`, `Properties`, `Radio`, `SelectedInfoPanel`, `Services`, `StatisticsPanel`, `SubServices`, `Tools`.
-  That is the same 21 `localization.md` and `conflicts.md:133` name, reproduced independently. **54 of 75 groups — 72.0% — are invisible.** **Held.**
+  That is the same 21 `localization.md` and `conflicts.md:552` name, reproduced independently. **54 of 75 groups — 72.0% — are invisible.** **Held.**
 - Loosening the search to the bare literal `"<Group>"` adds eight — `Budget`, `Chirper`, `Climate`, `Content`, `Main`, `Overlay`, `Toolbar`, `Tutorials` — for 29 found and **46 of 75 (61.3%) invisible**. Several of the eight are coincidences rather than localization uses.
 
 So the shipped figure holds under the strict reading and 61% is the floor under the loosest one. The reference should state 72% with the counting rule attached, because a reader who counts differently gets a different number and will think the claim moved.
