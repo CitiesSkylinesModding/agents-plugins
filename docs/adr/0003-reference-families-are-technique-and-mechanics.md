@@ -38,3 +38,15 @@ The boundary test reads plainly to someone meeting the plugin for the first time
 The plugin's technique family defines itself with a word two letters from the other family's name. That is a permanent low-grade ambiguity, accepted because every site that states it also labels it.
 
 The word is load-bearing in four places that have to move together, and a future rename pays the same bill: the plugin's `AGENTS.md`, the research-stage conventions in `docs/research/README.md`, `docs/research/conflicts.md`, and the four manifest descriptions — both `plugin.json` files and both marketplace files, which `mise check:plugin-sync` holds identical. The manifests are the easiest of the four to miss and the only one a user ever reads.
+
+## Addendum (2026-09-01): how a boundary earns a reference, and the merges declined
+
+The structure gate that named the families also fixed the reference count; the working document carrying that decision was deleted with the feature's scratch folder, so the record moves here.
+
+A boundary earns a reference when the three seed surveys agree on it: the decompile's namespace map fixes where the code lives, the wiki's resolved hubs fix what the game models, and the corpus's technique map fixes which mechanisms mods actually reach for. Where only one source sees a split, the split is not real enough to spend a reference on.
+
+The count was reviewed and kept whole; no merge was taken. The three candidates were the cheapest reversals available, recorded so a later session hitting the fan-out cost knows they were considered and declined rather than missed:
+
+1. `placement-definitions` into `custom-tools` — one large tool reference, at the cost of making an agent that only wants to change placement read the tool contract first.
+2. `utilities-and-flow-networks` into `city-services-and-coverage` — restores the wiki's own concentration point, at the cost of one reference carrying 12 of the 33 info views.
+3. `mod-compatibility` dissolved into `patching`, `save-serialization` and `custom-tools` — cheapest to reverse later, most likely to leave the material scattered.

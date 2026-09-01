@@ -394,7 +394,7 @@ Each entry is a **self-describing binary key/value stream**: UTF-16LE type names
 `Playground04/Playground04.Prefab` decodes as a `Game.Prefabs.BuildingPrefab` carrying `Game.Prefabs.ServiceConsumption` with `m_Upkeep = 2000`, `m_ElectricityConsumption = 500`, `m_WaterConsumption = 0`, `m_GarbageAccumulation = 100`, `m_TelecomNeed = 0` — field order and types exactly as `src/Game/Game.Prefabs/ServiceConsumption.cs:14-22` declares them, and the values vary per prefab across the package (`ChirperPark01` at 1000/250/0/100, `BasketballCourt04` at 8000/3000/10000/150).
 Three of those five are columns this page tabulates.
 
-**The base game's own service buildings are not among them**, which is the half that keeps the entry open.
+**The base game's own service buildings are not among them**, which is the half that kept the entry open until the ruling below.
 No `.cok` in the install holds a base-game prefab: `Blob.cok`'s 27,910 entries are materials, geometry, surfaces and textures, and the prefab packages carry DLC and free-update content only.
 Every base-game prefab is a Unity serialized object in `Cities2_Data/resources.assets`, which carries type names (`ServiceConsumption`, `BuildingPrefab`) and **no field names**, so reading a value there needs a Unity serialized-file parser driven by the decompiled class's field order — a derivation rather than a read.
 `docs/SOURCES.md` entry 5 now records the split; it previously described the whole set as "the shipped prefabs, assets and their data" and had never been opened.

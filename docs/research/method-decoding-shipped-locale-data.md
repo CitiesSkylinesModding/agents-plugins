@@ -45,7 +45,7 @@ indexCountCount x (string key, int count)
 Every `string` is `BinaryWriter`'s own encoding — a 7-bit-encoded byte length followed by UTF-8 — so `BinaryReader.ReadString` decodes one and no hand-rolled string reader is needed.
 There is no compression, no checksum, no table of contents and no offset table, which is why `ReadHeader` can take the locale id and display name by reading the first four fields and stopping (`LocaleAsset.cs:83-92`).
 
-A `BinaryReader` over the extracted bytes, reading those fields in order, is the entire decoder; the working implementation was about forty lines of PowerShell.
+A `BinaryReader` over the extracted bytes, reading those fields in order, is the entire decoder; the working implementation is [`loc-parse/parse-loc.ps1`](loc-parse/parse-loc.ps1), with the key classification in [`loc-parse/analyse.ps1`](loc-parse/analyse.ps1) and the index-count sweeps in [`loc-parse/checks.ps1`](loc-parse/checks.ps1).
 
 ## Step 3 — two traps
 

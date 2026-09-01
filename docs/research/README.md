@@ -25,7 +25,7 @@ What lives here:
 - `method-<slug>.md` — how a source was obtained, where obtaining it was itself an investigation.
   No topic owns one and no authoring agent is pointed at one: they exist so a derivation that lives nowhere else survives the scratch folder it was done in.
   A topic file cites its method file like any other sibling here.
-  One exists: [`method-decoding-shipped-locale-data.md`](method-decoding-shipped-locale-data.md), which gets the vanilla strings out of the game's compiled `.loc` assets. Read it before decoding one yourself — it carries two traps, including the locale that ships loose beside the package and is silently missed by reading the package alone.
+  One exists: [`method-decoding-shipped-locale-data.md`](method-decoding-shipped-locale-data.md), which gets the vanilla strings out of the game's compiled `.loc` assets; its working scripts sit beside it in [`loc-parse/`](loc-parse/). Read it before decoding one yourself — it carries two traps, including the locale that ships loose beside the package and is silently missed by reading the package alone.
 
 ## Findings keep their names
 
