@@ -11,6 +11,7 @@ Loading assets _from code_ belongs here; authoring meshes, textures, maps and ed
 
 The plugin sits above the two toolkit plugins and may point at them, always softly: `unity-devtools` to settle a question against the running game, `coherent-gameface` for the UI engine underneath the frontend.
 Every skill works unchanged when neither is installed.
+The pointing is one-way by design: the toolkits stay game-agnostic, so neither ever points back here.
 
 Four disclosure tiers, in order of cost: skill descriptions, then `SKILL.md` bodies, then references, then the local decompile and mod corpus grepped on demand.
 A fact earns its tier by how many readers need it, and a trunk body carries what belongs to no single reference — plus the handful a trunk reader cannot act without, which are stated there in a paragraph and developed in their reference.
