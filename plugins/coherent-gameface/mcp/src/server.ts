@@ -187,6 +187,10 @@ async function main(): Promise<void> {
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
+        If the value reverts (the field, or the state behind it, goes back to the old value), the
+        field commits on blur: call again with commit true.
+        A value that still reverts with commit true was rejected by the field; read it back rather
+        than repeating the call.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the field to fill`),
@@ -196,10 +200,15 @@ async function main(): Promise<void> {
           .int()
           .min(0)
           .optional()
-          .describe(`Which match to fill when several exist (default: 0)`)
+          .describe(`Which match to fill when several exist (default: 0)`),
+        commit: z.boolean().optional().describe(oneLine`
+            Also dispatch a bubbling focusout after the value is set, so a field that commits on
+            blur takes it. This call moves focus nowhere itself, but the page's own focusout
+            handler may (default: false)
+          `)
       }
     },
-    ({ selector, value, index }) => gameFill(client, selector, value, index)
+    ({ selector, value, index, commit }) => gameFill(client, { selector, value, index, commit })
   );
 
   server.registerTool(
@@ -210,6 +219,10 @@ async function main(): Promise<void> {
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync.
         Use when handlers react to individual keystrokes; otherwise game_fill.
+        If the value reverts (the field, or the state behind it, goes back to the old value), the
+        field commits on blur: call again with commit true.
+        A value that still reverts with commit true was rejected by the field; read it back rather
+        than repeating the call, which would type the text a second time.
       `,
       inputSchema: {
         selector: z.string().describe(`CSS selector of the field to type into`),
@@ -219,10 +232,15 @@ async function main(): Promise<void> {
           .int()
           .min(0)
           .optional()
-          .describe(`Which match to type into when several exist (default: 0)`)
+          .describe(`Which match to type into when several exist (default: 0)`),
+        commit: z.boolean().optional().describe(oneLine`
+            Also dispatch a bubbling focusout after the last keystroke, so a field that commits on
+            blur takes the text. This call moves focus nowhere itself, but the page's own focusout
+            handler may (default: false)
+          `)
       }
     },
-    ({ selector, text, index }) => gameType(client, selector, text, index)
+    ({ selector, text, index, commit }) => gameType(client, { selector, text, index, commit })
   );
 
   server.registerTool(

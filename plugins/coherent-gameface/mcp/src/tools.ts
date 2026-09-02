@@ -854,17 +854,27 @@ export async function gameWait(
 }
 
 /**
+ * Options for gameFill.
+ */
+export interface GameFillOptions {
+  readonly selector: string;
+  readonly value: string;
+  readonly index?: number | undefined;
+  readonly commit?: boolean | undefined;
+}
+
+/**
  * Sets the value of an input/textarea/contenteditable (framework-aware).
  */
 export async function gameFill(
   client: CdpClient,
-  selector: string,
-  value: string,
-  index = 0
+  options: GameFillOptions
 ): Promise<CallToolResult> {
+  const { selector, value, index = 0, commit = false } = options;
+
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(fillFn, selector, value, index),
+      expression: callPageFn(fillFn, selector, value, index, commit),
       returnByValue: true
     });
 
@@ -891,17 +901,27 @@ export async function gameFill(
 }
 
 /**
+ * Options for gameType.
+ */
+export interface GameTypeOptions {
+  readonly selector: string;
+  readonly text: string;
+  readonly index?: number | undefined;
+  readonly commit?: boolean | undefined;
+}
+
+/**
  * Types text into an element key by key (real KeyboardEvents + value sync).
  */
 export async function gameType(
   client: CdpClient,
-  selector: string,
-  textToType: string,
-  index = 0
+  options: GameTypeOptions
 ): Promise<CallToolResult> {
+  const { selector, text: textToType, index = 0, commit = false } = options;
+
   try {
     const res = await client.call<EvaluateResult>('Runtime.evaluate', {
-      expression: callPageFn(typeFn, selector, textToType, index),
+      expression: callPageFn(typeFn, selector, textToType, index, commit),
       returnByValue: true
     });
 
@@ -1450,8 +1470,11 @@ function waitCheckFn(sel: string, visible: boolean): boolean {
  * Sets an input/textarea/contenteditable value so the framework's change handler fires.
  * We use the native value setter (verified present in Cohtml) so a framework value tracker notices.
  * InputEvent is missing in Cohtml, so we dispatch a plain bubbling `Event('input')`.
+ * `commit` adds the blur-side event for fields whose change handler only updates local framework
+ * state and whose blur handler performs the real commit.
+ * Exported for the seam tests, which drive it against a DOM; nothing else calls it directly.
  */
-function fillFn(sel: string, value: string, index: number): FillResult {
+export function fillFn(sel: string, value: string, index: number, commit: boolean): FillResult {
   const nodes = document.querySelectorAll<HTMLElement>(sel);
 
   if (nodes.length == 0) {
@@ -1480,6 +1503,7 @@ function fillFn(sel: string, value: string, index: number): FillResult {
     el.textContent = value;
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
+    commitEdit();
 
     return { found: true, count, mode: 'contenteditable', value: el.textContent ?? '' };
   }
@@ -1497,15 +1521,43 @@ function fillFn(sel: string, value: string, index: number): FillResult {
 
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
+  commitEdit();
 
   return { found: true, count, mode: tag || 'input', value: field.value };
+
+  // The blur-side commit, dispatched last so the framework sees the new value when it runs.
+  // Only the bubbling `focusout` fires: no `blur` and no real focus move, so this leaves the
+  // active element where it was.
+  // An engine without the FocusEvent constructor still gets the commit, through the base Event.
+  function commitEdit(): void {
+    if (!commit) {
+      return;
+    }
+
+    let event: Event;
+
+    try {
+      event = new FocusEvent('focusout', { bubbles: true });
+    } catch {
+      event = new Event('focusout', { bubbles: true });
+    }
+
+    el.dispatchEvent(event);
+  }
 }
 
 /**
  * Types text character by character, firing real KeyboardEvents (present in Cohtml) plus keeping
  * the value in sync and dispatching input/change for the framework.
+ * `commit` adds the blur-side event, as in fillFn.
+ * Exported for the seam tests, which drive it against a DOM; nothing else calls it directly.
  */
-function typeFn(sel: string, textToType: string, index: number): TypeResult {
+export function typeFn(
+  sel: string,
+  textToType: string,
+  index: number,
+  commit: boolean
+): TypeResult {
   const nodes = document.querySelectorAll<HTMLElement>(sel);
 
   if (nodes.length == 0) {
@@ -1566,6 +1618,19 @@ function typeFn(sel: string, textToType: string, index: number): TypeResult {
   }
 
   el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  // The blur-side commit, in fillFn's shape and for its reasons.
+  if (commit) {
+    let event: Event;
+
+    try {
+      event = new FocusEvent('focusout', { bubbles: true });
+    } catch {
+      event = new Event('focusout', { bubbles: true });
+    }
+
+    el.dispatchEvent(event);
+  }
 
   return { found: true, count, typed, value: current() };
 

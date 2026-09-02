@@ -32179,10 +32179,11 @@ async function gameWait(client, reloads, debug, options) {
     }
   }
 }
-async function gameFill(client, selector, value, index = 0) {
+async function gameFill(client, options) {
+  const { selector, value, index = 0, commit = false } = options;
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(fillFn, selector, value, index),
+      expression: callPageFn(fillFn, selector, value, index, commit),
       returnByValue: true
     });
     if (res.exceptionDetails) {
@@ -32203,10 +32204,11 @@ async function gameFill(client, selector, value, index = 0) {
     return toErrorResult(error51);
   }
 }
-async function gameType(client, selector, textToType, index = 0) {
+async function gameType(client, options) {
+  const { selector, text: textToType, index = 0, commit = false } = options;
   try {
     const res = await client.call("Runtime.evaluate", {
-      expression: callPageFn(typeFn, selector, textToType, index),
+      expression: callPageFn(typeFn, selector, textToType, index, commit),
       returnByValue: true
     });
     if (res.exceptionDetails) {
@@ -32530,7 +32532,7 @@ function waitCheckFn(sel, visible) {
   const rect = el.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0;
 }
-function fillFn(sel, value, index) {
+function fillFn(sel, value, index, commit) {
   const nodes = document.querySelectorAll(sel);
   if (nodes.length == 0) {
     return { found: false, count: 0 };
@@ -32549,6 +32551,7 @@ function fillFn(sel, value, index) {
     el.textContent = value;
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    commitEdit();
     return { found: true, count, mode: "contenteditable", value: el.textContent ?? "" };
   }
   const field = el;
@@ -32561,9 +32564,22 @@ function fillFn(sel, value, index) {
   }
   el.dispatchEvent(new Event("input", { bubbles: true }));
   el.dispatchEvent(new Event("change", { bubbles: true }));
+  commitEdit();
   return { found: true, count, mode: tag || "input", value: field.value };
+  function commitEdit() {
+    if (!commit) {
+      return;
+    }
+    let event;
+    try {
+      event = new FocusEvent("focusout", { bubbles: true });
+    } catch {
+      event = new Event("focusout", { bubbles: true });
+    }
+    el.dispatchEvent(event);
+  }
 }
-function typeFn(sel, textToType, index) {
+function typeFn(sel, textToType, index, commit) {
   const nodes = document.querySelectorAll(sel);
   if (nodes.length == 0) {
     return { found: false, count: 0, typed: 0 };
@@ -32601,6 +32617,15 @@ function typeFn(sel, textToType, index) {
     typed++;
   }
   el.dispatchEvent(new Event("change", { bubbles: true }));
+  if (commit) {
+    let event;
+    try {
+      event = new FocusEvent("focusout", { bubbles: true });
+    } catch {
+      event = new Event("focusout", { bubbles: true });
+    }
+    el.dispatchEvent(event);
+  }
   return { found: true, count, typed, value: current() };
   function current() {
     if (editable) {
@@ -32898,26 +32923,44 @@ async function main() {
         Set the value of an input, textarea, or contenteditable element and fire input/change so
         the UI framework reacts as if the user edited it.
         Best for setting a field in one shot; use game_type for keystrokes.
+        If the value reverts (the field, or the state behind it, goes back to the old value), the
+        field commits on blur: call again with commit true.
+        A value that still reverts with commit true was rejected by the field; read it back rather
+        than repeating the call.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector of the field to fill`),
       value: exports_external.string().describe(`Value to set`),
-      index: exports_external.number().int().min(0).optional().describe(`Which match to fill when several exist (default: 0)`)
+      index: exports_external.number().int().min(0).optional().describe(`Which match to fill when several exist (default: 0)`),
+      commit: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
+            Also dispatch a bubbling focusout after the value is set, so a field that commits on
+            blur takes it. This call moves focus nowhere itself, but the page's own focusout
+            handler may (default: false)
+          `)
     }
-  }, ({ selector, value, index }) => gameFill(client, selector, value, index));
+  }, ({ selector, value, index, commit }) => gameFill(client, { selector, value, index, commit }));
   server.registerTool("game_type", {
     title: `Type text into the Gameface UI`,
     description: import_common_tags6.oneLine`
         Type text into an element character by character, firing real KeyboardEvents plus keeping
         the value in sync.
         Use when handlers react to individual keystrokes; otherwise game_fill.
+        If the value reverts (the field, or the state behind it, goes back to the old value), the
+        field commits on blur: call again with commit true.
+        A value that still reverts with commit true was rejected by the field; read it back rather
+        than repeating the call, which would type the text a second time.
       `,
     inputSchema: {
       selector: exports_external.string().describe(`CSS selector of the field to type into`),
       text: exports_external.string().describe(`Text to type`),
-      index: exports_external.number().int().min(0).optional().describe(`Which match to type into when several exist (default: 0)`)
+      index: exports_external.number().int().min(0).optional().describe(`Which match to type into when several exist (default: 0)`),
+      commit: exports_external.boolean().optional().describe(import_common_tags6.oneLine`
+            Also dispatch a bubbling focusout after the last keystroke, so a field that commits on
+            blur takes the text. This call moves focus nowhere itself, but the page's own focusout
+            handler may (default: false)
+          `)
     }
-  }, ({ selector, text: text2, index }) => gameType(client, selector, text2, index));
+  }, ({ selector, text: text2, index, commit }) => gameType(client, { selector, text: text2, index, commit }));
   server.registerTool("game_hover", {
     title: `Hover an element in the Gameface UI`,
     description: import_common_tags6.oneLine`

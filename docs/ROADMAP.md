@@ -24,16 +24,6 @@ carry a standing directive to every client. Two sentences here — reach for `ga
 fails, and act on the construct a rejected selector names — would close the gap as a pointer rather
 than a duplicate, leaving one tier per fact intact.
 
-### Committing a programmatic fill
-
-`game_fill` sets a React-controlled input's DOM value without committing it: fields whose change
-handler only updates local state and whose blur handler fires the real commit read back the old
-value after a fill. The cs2-modding debug-menu pass hit this on the game's debug text inputs and
-had to follow every fill with a hand-written
-`el.dispatchEvent(new FocusEvent('focusout', {bubbles: true}))` through `game_eval` (the
-workaround its `driving-the-menu.md` reference now teaches). A `commit` option on `game_fill` —
-dispatch a bubbling `focusout` after setting the value — would make the fill one call.
-
 ### Removing a breakpoint the UI is paused at
 
 `game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
