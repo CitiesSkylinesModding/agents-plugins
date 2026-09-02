@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.1.1...coherent-gameface-v1.2.0) (2026-09-02)
+
+
+### Miscellaneous Chores
+
+* **coherent-gameface:** Synchronize coherent-gameface versions
+
 ## [1.1.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.1.0...coherent-gameface-v1.1.1) (2026-08-24)
 
 

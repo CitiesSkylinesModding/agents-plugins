@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.1.1...gameface-devtools-mcp-v1.2.0) (2026-09-02)
+
+
+### Features
+
+* **coherent-gameface:** commit a programmatic fill in one call ([d6f8d4c](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d6f8d4c151469c5efaa2c2506e08d8b136523bdb))
+
 ## [1.1.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.1.0...gameface-devtools-mcp-v1.1.1) (2026-08-24)
 
 
