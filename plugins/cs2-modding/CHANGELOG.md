@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.0.0...cs2-modding-v1.0.0) (2026-09-02)
+
+
+### Features
+
+* **cs2-modding:** ship the map-editor toolbar reference and widen the enableable-overload trap ([e416eb7](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e416eb767f0065612bc875d86080586c03b263c7))
+
 ## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.3.0...cs2-modding-v1.0.0) (2026-08-30)
 
 
