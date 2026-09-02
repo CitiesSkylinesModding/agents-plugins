@@ -44,6 +44,8 @@ Re-reading `game_console` at a higher `depth` renders the tree captured with the
 Its stamps are local wall-clock times, exact where the engine sends the epoch milliseconds CDP specifies and server receive times otherwise (Cohtml sends milliseconds since engine boot), so treat them as accurate to the socket hop.
 Clipping is what makes a screenshot cheap: pass the selector of the region you are verifying, and keep the full viewport for orienting, where you do not yet know what to clip to.
 `game_click` returns after dispatching the event sequence, before any async handler work; pair it with a wait on the expected outcome.
+Where the effect you need sits in the application rather than in the DOM, record what the UI sent: wrap `engine.trigger` through `game_eval`, act, then read the calls back.
+Stash the original in a global before wrapping it, since nothing else can restore it and the wrapper otherwise stands until the view reloads.
 
 ## Keyboard: `game_key` and native-handled keys
 
