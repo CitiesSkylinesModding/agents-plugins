@@ -3,7 +3,8 @@
 # 🔬 unity-devtools
 
 **Give your agent a live line into a running Unity Mono development build:
-reflect types, evaluate C# expressions, and read & write ECS state, with no code injection.**
+see the rendered frame, reflect types, evaluate C# expressions, and read & write ECS state, with
+no code injection.**
 
 Generic tooling: works with **any** dev-Mono Unity game exposing the Mono Soft Debugger (SDB)
 agent.
@@ -99,6 +100,7 @@ Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 | `detach` | Free the exclusive debugger slot (e.g. for your IDE); reattach is automatic. |
 | `find_types` | Resolve a type live by name, or search every loaded type by regex; optionally list its members. |
 | `eval` | Evaluate a C# statement sequence against the live game, like an IDE debugger would. |
+| `screenshot` | Return the frame the renderer is drawing, everything a player would see, as an inline image. |
 | `ecs_query` | Count/list entities having ALL given components, optionally labeled via a system call. |
 | `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component. |
 | `ecs_get_buffer` / `ecs_buffer_edit` | Read, append to, or remove from a `DynamicBuffer`. |

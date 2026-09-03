@@ -106,6 +106,41 @@ public sealed class UnitySessionAttachTests : IDisposable {
     Assert.False(session.Detach());
   }
 
+  [SkippableFact]
+  public void AHoldASequenceTakesForItselfDoesNotReportAsTheCallersWindow() {
+    Skip.If(MonoDebuggee.SkipReason is not null, MonoDebuggee.SkipReason);
+
+    var (_, port) = this.StartDebuggee();
+
+    using var session = new UnitySession(this.beacons);
+
+    Assert.True(session.Attach(port).Attached);
+
+    // The shape a capture makes on its own: the game really frozen, so every guard asking whether
+    // it is held says yes and the window it advances is real, and nothing reported to an agent who
+    // opened no window and would resume one they never took.
+    Assert.Equal(0, session.SuspendHold(reported: false));
+    Assert.Equal(1, session.HeldSuspendCount);
+    Assert.Equal(0, session.Snapshot().HeldSuspends);
+    session.RequireHold();
+    Assert.False(session.AdvanceHold(TimeSpan.FromSeconds(0.1)));
+
+    // Stacked under a window the caller does hold, only theirs is reported -- and every surface
+    // that answers them reports the same number.
+    Assert.Equal(1, session.SuspendHold());
+    Assert.Equal(2, session.HeldSuspendCount);
+    Assert.Equal(1, session.Snapshot().HeldSuspends);
+
+    Assert.Equal(1, session.ResumeHold(reported: false));
+    Assert.Equal(1, session.HeldSuspendCount);
+    Assert.Equal(1, session.Snapshot().HeldSuspends);
+
+    Assert.Equal(0, session.ResumeHold());
+    Assert.Equal(0, session.HeldSuspendCount);
+
+    Assert.True(session.Detach());
+  }
+
   [Fact]
   public void AFailedAttachSaysThePortWasGivenRatherThanDiscovered() {
     // Nothing listens here, which is what a mistyped port usually is and what fails fastest. Only

@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     The unity-devtools MCP server: a C# stdio MCP server that drives a running dev-Mono Unity game
-    over SDB (discovery, type reflection, method invokes, ECS query/read/write, buffer edits)
+    over SDB (discovery, type reflection, method invokes, ECS query/read/write, buffer edits,
+    screen capture)
     through one persistent lazy-attach session. It references the UnityDevtools.Sdb library for all
     vendored/SDB plumbing, so this project stays nullable-clean with warnings as errors.
   -->
@@ -31,7 +32,7 @@
     <PackageId>UnityDevtools.Mcp</PackageId>
     <ToolCommandName>unity-devtools-mcp</ToolCommandName>
     <Authors>Morgan Touverey Quilling</Authors>
-    <Description>MCP server driving a running Unity Mono development build over the Mono Soft Debugger protocol: process discovery, live type reflection, C# expression evaluation, and ECS entity/component/buffer read-write. Part of the unity-devtools agent plugin.</Description>
+    <Description>MCP server driving a running Unity Mono development build over the Mono Soft Debugger protocol: process discovery, live type reflection, C# expression evaluation, ECS entity/component/buffer read-write, and screen capture. Part of the unity-devtools agent plugin.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/CitiesSkylinesModding/agents-plugins</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CitiesSkylinesModding/agents-plugins</RepositoryUrl>

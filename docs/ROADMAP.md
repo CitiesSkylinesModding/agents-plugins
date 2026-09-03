@@ -165,8 +165,8 @@ headers and timing rather than learning that a request failed at all.
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
 (SDB): discovery, live type reflection, C# expression evaluation, ECS entity/component/buffer
-read-write, and breakpoint/pause debugging (`debug_*`, `advance`), through one persistent
-lazy-attach session.
+read-write, breakpoint/pause debugging (`debug_*`, `advance`) and screen capture, through one
+persistent lazy-attach session.
 
 ### Cross-platform support
 
@@ -292,6 +292,27 @@ overload matching — likely the argument arriving as the enum type where the pa
 its underlying integer, or the reverse. It blocked settling a runtime question in its general form
 and left only the field types the game happens to ship as evidence.
 
+### `advance` drops its `after` snippet's failure
+
+`advance` takes care of the window and of what surrounds it: a `before` snippet that ran and then a
+window that failed comes back with the flip named and the after snippet run to undo it. The `after`
+snippet itself runs outside that care, so its own failure propagates raw — three calls this session
+ended on `statement 1 (var p = System.IO.Path.GetTempPath() + "probe.png";) failed at offset 0: The
+vm is not suspended`, with the window spent, the game advanced and neither fact reported. The value
+the snippet existed to read is gone, and the caller cannot tell a snippet bug from a session one.
+Report a failed `after` the way a failed window already is: what the window did, then what the
+snippet could not do.
+
+### Watching for a debuggee-side change costs a window per sample
+
+`advance` clamps to 0.1 s and the `eval` grammar has no loop, so waiting on a state the game
+produces means one tool call per sample, each spending a full window whether or not the state
+arrived. Bracketing when `ScreenCapture.CaptureScreenshot` puts its file on disk took four calls and
+still never caught the write; a state that passes faster cannot be observed at all. A predicate mode
+— advance until a snippet returns true, bounded by a timeout and reporting how long it took —
+collapses the loop into the one place that can run it without a round trip per turn, and is the
+shape `debug_wait` already has for pauses.
+
 ### Injected in-game helper (exploratory, opt-in)
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
@@ -312,31 +333,45 @@ one invoke instead of thousands); reflection-driven member-path projections over
 (covers most lambda use without compilation); JSON-shaped writes and invoke arguments
 (deserialize onto the real struct debuggee-side, dissolving the coercion ceiling); managed
 (class) `IComponentData` access via the object-based EntityManager APIs (unreachable over
-mirrors today); temporal captures (record a value across N frames, return the series); plus a
+mirrors today); temporal captures (record a value across N frames, return the series); an
+in-memory screen capture, which needs end-of-frame execution and would give the `screenshot`
+tool a debuggee-side pixel size through `ImageConversion.EncodeArrayToPNG`, the only place a
+downscale costs no server-side image decoder (settle first whether such a capture still
+composites the UI, since a `RenderTexture` render draws one camera and may drop the layer that
+matters); plus a
 version/handshake method (detect a stale helper after a plugin update; no reload until game
 restart) and structured try/catch so in-game exceptions come back as data. User-compiled
 lambda execution would come only as a later layer on the same gateway, where the no-unload
 leak actually bites.
 
-### Screenshots as inline images
+### A native screen capture beside the engine route
 
-An `eval` of `UnityEngine.ScreenCapture.CaptureScreenshot(path)` already writes the composited frame
-(3D scene and UI together) to the game machine's disk, verified live; the `unity-driving` skill
-carries the recipe and the freeze interaction that makes it subtle. That covers the normal case
-where the agent shares a machine with the game. What it does not cover is the image arriving in the
-tool result, which a remote game needs and which spares everyone else the read-back.
+`screenshot` drives the engine's own `ScreenCapture.CaptureScreenshot`, which is a request only a
+rendered frame fulfils, and everything awkward about the tool follows from that: it has to run the
+game to get its frame, so it spends up to 0.2 s of simulation inside a caller's suspend window,
+budgets two windows and a retry, has to tell a slow renderer apart from a game drawing nothing, and
+refuses outright while a breakpoint holds the game. The frame then crosses SDB as several megabytes
+of base64, freezing the main thread for the encode. A compositor capture (`Windows.Graphics.Capture`)
+reads an already-presented frame instead and erases all of it — including the refusal, since the
+last presented frame is exactly what an agent inspecting a breakpoint hit wants, and the engine
+route structurally cannot give it. It also pairs with the deferred downscale knob: both want pixels
+held server-side, which is why the shipped tool has no size lever.
 
-Two gaps of very different size. Capturing in memory (`CaptureScreenshotAsTexture`, or a
-`RenderTexture` render, then `EncodeToPNG`) only works after end-of-frame, so it needs debuggee-side
-execution and rides on the injected-helper tier above rather than on the evaluator. Returning it is
-the small half: tools here return records the SDK serializes as text and `mcp/` has no image content
-block anywhere, but the `ModelContextProtocol` SDK supports returning `DataContent` with an
-`image/png` mime type. Size the result in pixels rather than bytes, since an image costs the client's
-context in proportion to its pixel area: a downscale knob is the lever worth exposing, and an
-encoder quality setting is not one. One trap worth naming, observed in Coherent Labs' Gameface MCP
-server: `take-screenshot.ts` builds a correct `{ type: "image", … }` block and `index.ts` then wraps
-it in the uniform `JSON.stringify` text path every one of its tools takes, so the image arrives as a
-wall of base64 text and nothing fails loudly.
+Three costs. It is Windows-only, in a plugin whose only remaining Windows-only code is the pair of
+watchdogs above, and unlike those it would be a user-visible feature that simply does not exist
+elsewhere. It needs a dependency and carries a trap: `BitBlt`/`PrintWindow` commonly return black
+for GPU-composited or exclusive-fullscreen games, which is most builds worth screenshotting, so
+doing it properly means `Windows.Graphics.Capture` (Win10 1803+) and its capture-border quirk,
+against the two package references `mcp/` carries today. And it does not escape the debugger: the
+beacon carries host, port, guid and an id string but no pid and no window handle, so finding the
+window still costs one `eval` of `System.Diagnostics.Process.GetCurrentProcess().Id` per attach and
+a match through `EnumWindows`.
+
+The two routes also photograph different things. The engine route returns the game's own back
+buffer at native resolution whatever window sits on top of it; a compositor capture returns what a
+screen recorder sees, so occlusion becomes a failure mode the engine route does not have. Keep the
+engine route as the portable default and gate a native fast path on the server sharing a desktop
+session with the game.
 
 ### GameObject/MonoBehaviour tools
 

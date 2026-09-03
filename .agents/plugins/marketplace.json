@@ -18,7 +18,7 @@
         "source": "local",
         "path": "./plugins/unity-devtools"
       },
-      "description": "Drive a running Unity Mono development build from your coding agent over the Mono Soft Debugger protocol: live reflection, method invokes, and ECS read-write, no code injection."
+      "description": "Drive a running Unity Mono development build from your coding agent over the Mono Soft Debugger protocol: live reflection, method invokes, ECS read-write, and screen capture, no code injection."
     },
     {
       "name": "cs2-modding",

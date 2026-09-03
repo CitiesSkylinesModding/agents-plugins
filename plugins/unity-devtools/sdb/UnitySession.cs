@@ -48,6 +48,25 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   private int heldSuspends;
 
   /// <summary>
+  /// How many of <see cref="heldSuspends"/> a sequence took for its own use rather than for the
+  /// caller. <see cref="Snapshot"/> stays live through a gate-held sequence by design, so a hold
+  /// taken inside one would otherwise report as a window the caller opened, and an agent unwinding
+  /// what it believes it took resumes the window it really holds.
+  /// It subtracts from what is REPORTED and from nothing else: a hold freezes the VM whoever took
+  /// it, so every guard asking whether the game is held reads <see cref="HeldSuspendCount"/>.
+  /// </summary>
+  private int unreportedHolds;
+
+  /// <summary>
+  /// The held count as the CALLER sees it, for a caller already holding <see cref="stateGate"/>.
+  /// Every surface that answers an agent goes through this one, so `suspend`, `resume` and
+  /// `status` cannot answer a question with three different numbers.
+  /// Floored, since a release that fails without disconnecting strands the pair above zero and the
+  /// caller's own resume then unwinds the reported side past it.
+  /// </summary>
+  private int ReportedHolds => Math.Max(this.heldSuspends - this.unreportedHolds, 0);
+
+  /// <summary>
   /// Runs one operation inside a suspend window, attaching or reattaching as needed.
   /// </summary>
   public T Run<T>(Func<SdbContext, T> operation) {
@@ -108,15 +127,45 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   }
 
   /// <summary>
+  /// Runs a SEQUENCE of operations as one, so nothing else touches the session between its steps.
+  /// <see cref="Run{T}"/> serializes a single operation, which is enough for a tool that is one;
+  /// a tool built from several is not covered by it, because the MCP host dispatches tool calls
+  /// concurrently and every gap between two of its operations is a gap another call can take.
+  /// The gaps that bite: <see cref="AdvanceHold"/> releases EVERY held suspension, so one
+  /// sequence's window unfreezes the game inside another's, and <see cref="ResumeHold"/> from any
+  /// caller drops a count a sequence in flight is standing on.
+  /// Reporting stays live throughout (<see cref="Snapshot"/>, <see cref="DebugOrNull"/> and
+  /// <see cref="HeldSuspendCount"/> read under <see cref="stateGate"/>), and the sequence's own
+  /// operations re-enter the gate on this thread, which a <see cref="Lock"/> permits.
+  /// </summary>
+  public T Exclusive<T>(Func<T> sequence) {
+    lock (this.gate) {
+      return sequence();
+    }
+  }
+
+  /// <summary>
   /// Holds one extra suspension across operations; returns the held count. The game is fully
   /// frozen until <see cref="ResumeHold"/> releases it (or the session detaches).
   /// </summary>
-  public int SuspendHold() {
+  public int SuspendHold() => this.SuspendHold(reported: true);
+
+  /// <summary>
+  /// <see cref="SuspendHold()"/>, taken unreported when a sequence needs a hold of its own: the
+  /// game freezes the same way, and the count the status tools publish stays the caller's.
+  /// </summary>
+  public int SuspendHold(bool reported) {
     return this.Run(ctx => {
         ctx.Vm.Suspend();
 
         lock (this.stateGate) {
-          return ++this.heldSuspends;
+          if (!reported) {
+            this.unreportedHolds++;
+          }
+
+          this.heldSuspends++;
+
+          return this.ReportedHolds;
         }
       }
     );
@@ -155,7 +204,13 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   /// <summary>
   /// Releases one held suspension; returns the count still held.
   /// </summary>
-  public int ResumeHold() {
+  public int ResumeHold() => this.ResumeHold(reported: true);
+
+  /// <summary>
+  /// <see cref="ResumeHold()"/>, giving back a hold taken through
+  /// <see cref="SuspendHold(bool)"/> unreported.
+  /// </summary>
+  public int ResumeHold(bool reported) {
     lock (this.gate) {
       this.RequireHoldHeld();
 
@@ -167,7 +222,13 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
       }
 
       lock (this.stateGate) {
-        return --this.heldSuspends;
+        if (!reported) {
+          this.unreportedHolds--;
+        }
+
+        this.heldSuspends--;
+
+        return this.ReportedHolds;
       }
     }
   }
@@ -241,7 +302,10 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   }
 
   /// <summary>
-  /// Suspensions held via <see cref="SuspendHold"/> (the unified-pause fallback).
+  /// Every suspension held across operations (the unified-pause fallback), whoever took it: the
+  /// physical question of whether the game is frozen, which is what a guard deciding whether a
+  /// resume can move it or a frame can be read has to ask.
+  /// <see cref="Snapshot"/> answers the other one, what the CALLER holds.
   /// </summary>
   public int HeldSuspendCount {
     get {
@@ -324,7 +388,7 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
 
         // A dropped connection resumed the game, so a hold reported against a dead attach would be
         // a second falsehood on top of the first.
-        HeldSuspends = alive ? this.heldSuspends : 0
+        HeldSuspends = alive ? this.ReportedHolds : 0
       };
     }
   }
@@ -439,6 +503,7 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
         this.attachedVmVersion = null;
         this.attachedProtocol = null;
         this.heldSuspends = 0;
+        this.unreportedHolds = 0;
       }
     }
   }
@@ -451,12 +516,19 @@ public sealed class UnitySession(BeaconListener beacons) : IDisposable {
   private void LoseConnection() {
     var hadHold = this.heldSuspends > 0;
 
+    // Only a window the caller opened is one they can redo, and a sequence's own hold is not:
+    // sending them to re-suspend a window they never took is the same falsehood Snapshot avoids.
+    var wasTheirs = this.heldSuspends > this.unreportedHolds;
+
     this.Discard();
 
     if (hadHold) {
       throw new InvalidOperationException(
         "the debugger connection dropped while a suspension was held; the game resumed and the " +
-        "hold was lost - re-suspend and redo the whole window"
+        (wasTheirs
+          ? "hold was lost - re-suspend and redo the whole window"
+          : "tool's own hold " +
+          "went with it, so nothing you were holding was lost")
       );
     }
   }

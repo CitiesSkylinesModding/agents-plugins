@@ -71,12 +71,8 @@ On failure the error reports the failing statement, the in-game exception, and t
 
 ## Seeing the game
 
-One `eval` of `UnityEngine.ScreenCapture.CaptureScreenshot(path)` writes a PNG of the composited frame, 3D scene and UI together; the API is engine-level, so every Unity build carries it.
-Build an absolute path from `UnityEngine.Application.persistentDataPath`, since a relative one resolves per platform.
-The call is a request rather than a capture: it returns `null` at once and a rendered frame is what fulfils it.
-A game that renders nothing therefore produces no file — under a held `suspend`, or when the window is minimized and the game does not run in background — and the image, once a frame arrives, shows that later frame rather than the moment you asked.
-`advance` is the way to spend a frame without giving up a held window.
-The file lands on the machine running the game and no tool here reads it back, so opening it is your own filesystem's job and only works when you share that machine.
+`screenshot` returns the frame the renderer is drawing as an inline image. It spends the running time a capture needs itself, so it works inside a held `suspend` window as well as outside one, advancing that window by up to 0.2 s.
+For a file on the game's own machine rather than an image in your context, `eval` the engine call the tool is built on — `UnityEngine.ScreenCapture.CaptureScreenshot(path)`. Build that path absolute and on the game machine (`UnityEngine.Application.persistentDataPath`, or `System.IO.Path.GetTempPath()` as the tool does): a relative one resolves per platform, and one from your own filesystem is not there. It is a request, not a capture, so a frame has to render before the file appears: inside a held `suspend` window spend one with `advance`, outside one the game renders on its own. A game rendering nothing writes no file and reports nothing — a minimized window on a build that does not run in the background is the usual cause.
 
 ## Debugging with breakpoints
 
@@ -84,6 +80,7 @@ Where `eval` reads the game from outside, the `debug_*` tools stop it from insid
 Burst decides what is debuggable: Burst-compiled jobs are native code the Mono debugger cannot see, no frames and no hits on any thread; managed code hits fine, worker threads included.
 Mod code is normally non-Burst, so it just works; to reach the game's own Burst-compiled systems, run the game with Burst compilation disabled (Unity games generally take a `--burst-disable-compilation` launch option) and everything becomes managed and visible.
 A hit freezes the whole game until released, but every other unity tool keeps working against the frozen state (suspends are counted), so inspect at leisure; the UI stops rendering, which is normal, not a crash.
+The two exceptions are `screenshot` and `advance`, which need the game to run: both refuse while a hit holds it, and releasing it with `debug_step action=resume` abandons the frame you were inspecting. A refusal that `debug_pause_state` then denies is a hit the pump was still classifying — usually a conditional breakpoint auto-resuming on a false condition — so retry rather than resume.
 Arm hot-path breakpoints with a `condition` gating on the instance you care about (an entity index, a parameter value, a field of `this`): false hits release the game automatically, so a method called every frame costs little until YOUR case arrives.
 A condition that fails to evaluate pauses with the error recorded in the pause state; fix the expression and re-arm rather than guessing.
 `debug_evaluate` is `eval` plus the frame: locals, parameters, and `this` resolve and assign like C# variables, `frameIndex` climbs the stack, and `_` is shared with `eval`.

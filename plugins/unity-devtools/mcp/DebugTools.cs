@@ -191,9 +191,7 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [UsedImplicitly]
   public PauseDetails PauseState(
     [Description("Which frame's variables to list; 0 = top.")] int frameIndex = 0,
-    [Description(
-      "Append every thread's name/state and names-only stack: the ECS job-worker view."
-    )]
+    [Description("Append every thread's name/state and names-only stack: the ECS job-worker view.")]
     bool allThreads = false
   ) {
     return ToolGuard.Run(() => session.Run(ctx => {
@@ -311,7 +309,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
         if (session.HeldSuspendCount > 0) {
           throw new McpException(
             "a held suspension would prevent the step from ever completing; release it with " +
-            "resume first"
+            "resume first, or retry if status reports none held and another tool is running one " +
+            "of its own"
           );
         }
 
@@ -435,63 +434,68 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     [Description("ECS world name for the snippets' em/world builtins.")]
     string? world = null
   ) {
-    return ToolGuard.Run(() => {
-        // Before the before snippet, because that snippet attaches and mutates the game: a call
-        // that can never advance anything must not leave a state change behind on its way to
-        // failing. The session owns the diagnosis, a window lost with the connection reading from
-        // outside exactly like one never opened.
-        session.RequireHold();
+    // One exclusive sequence: the guard, the snippets and the window each take the session's gate
+    // on their own, and a resume landing in a gap between them fails the window after the before
+    // snippet has already changed the game.
+    return ToolGuard.Run(() => session.Exclusive(() => {
+          // Before the before snippet, because that snippet attaches and mutates the game: a call
+          // that can never advance anything must not leave a state change behind on its way to
+          // failing. The session owns the diagnosis, a window lost with the connection reading from
+          // outside exactly like one never opened.
+          session.RequireHold();
 
-        var duration = TimeSpan.FromSeconds(Math.Clamp(seconds, 0.1, 60));
+          var duration = TimeSpan.FromSeconds(Math.Clamp(seconds, 0.1, 60));
 
-        var beforeResult = before is null ? null : this.RunSnippet(before, world);
+          var beforeResult = before is null ? null : this.RunSnippet(before, world);
 
-        bool pausedDuring;
-
-        try {
-          pausedDuring = session.AdvanceHold(duration);
-        }
-        catch (Exception ex) when (before is not null) {
-          // The before snippet may have flipped game state (e.g., unpaused the simulation); a
-          // failed window must not strand that flip, so the compensating after snippet still
-          // runs whenever the connection survived.
-          if (after is null) {
-            throw new McpException(
-              $"{ex.Message}; note: the before snippet already ran and its change is still applied"
-            );
-          }
-
-          if (!session.Snapshot().Attached) {
-            throw new McpException(
-              $"{ex.Message}; the connection is gone, so the after snippet could NOT run: " +
-              "the before snippet's change is still applied"
-            );
-          }
-
-          string compensation;
+          bool pausedDuring;
 
           try {
-            _ = this.RunSnippet(after, world);
-
-            compensation = "the after snippet was still run to compensate";
+            pausedDuring = session.AdvanceHold(duration);
           }
-          catch (Exception afterEx) {
-            compensation = $"the compensating after snippet ALSO failed ({afterEx.Message}); " +
-              "the before snippet's change is still applied";
+          catch (Exception ex) when (before is not null) {
+            // The before snippet may have flipped game state (e.g., unpaused the simulation); a
+            // failed window must not strand that flip, so the compensating after snippet still
+            // runs whenever the connection survived.
+            if (after is null) {
+              throw new McpException(
+                $"{ex.Message}; note: the before snippet already ran and its change is still " +
+                "applied"
+              );
+            }
+
+            if (!session.Snapshot().Attached) {
+              throw new McpException(
+                $"{ex.Message}; the connection is gone, so the after snippet could NOT run: " +
+                "the before snippet's change is still applied"
+              );
+            }
+
+            string compensation;
+
+            try {
+              _ = this.RunSnippet(after, world);
+
+              compensation = "the after snippet was still run to compensate";
+            }
+            catch (Exception afterEx) {
+              compensation = $"the compensating after snippet ALSO failed ({afterEx.Message}); " +
+                "the before snippet's change is still applied";
+            }
+
+            throw new McpException($"{ex.Message}; {compensation}");
           }
 
-          throw new McpException($"{ex.Message}; {compensation}");
+          var afterResult = after is null ? null : this.RunSnippet(after, world);
+
+          return new AdvanceResult {
+            SecondsAdvanced = duration.TotalSeconds,
+            Before = beforeResult,
+            After = afterResult,
+            PausedDuringAdvance = pausedDuring
+          };
         }
-
-        var afterResult = after is null ? null : this.RunSnippet(after, world);
-
-        return new AdvanceResult {
-          SecondsAdvanced = duration.TotalSeconds,
-          Before = beforeResult,
-          After = afterResult,
-          PausedDuringAdvance = pausedDuring
-        };
-      }
+      )
     );
   }
 

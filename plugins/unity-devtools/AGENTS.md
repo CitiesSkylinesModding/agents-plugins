@@ -3,13 +3,13 @@
 ## Plugin overview
 
 `unity-devtools` drives a running **Unity Mono development build** from the outside over the **Mono Soft Debugger protocol (SDB)**: no code injection, no game modification.
-It ships the `unity` MCP server (beacon discovery, live type reflection, C# expression evaluation on the main thread, breakpoints and stepping, ECS entity/component/buffer read-write) plus the `unity-driving` skill.
+It ships the `unity` MCP server (beacon discovery, live type reflection, C# expression evaluation on the main thread, breakpoints and stepping, ECS entity/component/buffer read-write, screen capture) plus the `unity-driving` skill.
 It is generic: any dev Mono build with the SDB agent live is drivable, and it is developed against one such build as the reference target.
 Verified on Windows and on Linux, there attaching from the host to a Windows game running under Proton; the server-lifetime watchdogs are the sole Windows-bound code, and users need the .NET 10 SDK, since the server ships as the `UnityDevtools.Mcp` NuGet dotnet tool launched via `dotnet dnx`.
 
 ## Tool surface
 
-Bare names for generic Unity tools (`status`, `find_types`, `eval`, `debug_*`, `advance`, session lifecycle), an `ecs_*` prefix for ECS tools — the plugin will grow beyond ECS.
+Bare names for generic Unity tools (`status`, `find_types`, `eval`, `screenshot`, `debug_*`, `advance`, session lifecycle), an `ecs_*` prefix for ECS tools — the plugin will grow beyond ECS.
 The tool schemas are the reference for behavior; they are in context whenever the server is connected.
 
 Two semantics span the whole toolset and no single schema owns them:
@@ -22,6 +22,7 @@ Two semantics span the whole toolset and no single schema owns them:
 - ONE persistent session per server process (`UnitySession`). Tools attach lazily to the endpoint the PlayerConnection beacon advertises, and reattach once, resolving from the beacon again, when the connection drops.
 - The game keeps running between calls: each operation opens its own counted suspend window. `suspend`/`resume` hold an extra one across calls for consistency windows spanning several reads and writes.
 - Counted suspends are what make the debug pump and those per-operation windows commutative: eval and ecs tools keep working while stopped at a breakpoint.
+- The host dispatches tool calls CONCURRENTLY, and `Run` serializes one operation rather than one call, so a tool built from several wraps them in `UnitySession.Exclusive`, whose docblock states which gaps bite. A hold such a sequence takes for itself goes through `SuspendHold(reported: false)`: it freezes the game like any other, and `status` keeps reporting the caller's own windows rather than one they never opened and would resume.
 - `detach` and server shutdown always resume and free the exclusive debugger slot; the "resume + detach even on failure" invariant lives in `SdbSession.Dispose`, with a closed socket auto-resuming the VM as the safety net.
 - The server has NO configuration surface, environment or otherwise: `BeaconListener` receives what the game advertises, and `attach` is the one in-band override, for a debuggee no beacon describes.
 
@@ -31,7 +32,7 @@ The .NET projects plus the vendored SDB client, grouped by `agents-plugins.slnx`
 
 - `package.json`: private release-please version anchor; NOT a bun workspace package.
 - `.claude-plugin/plugin.json` + `.mcp.json`, `.codex-plugin/plugin.json` + `.codex-plugin/mcp.json`: the two harness manifest sets, both launching `dotnet dnx UnityDevtools.Mcp --version <pin> --yes`. The command is `dotnet`, never the bare `dnx` shim — that is a `.cmd` script MCP hosts cannot spawn on Windows. The version pin is a standalone args element so release-please can update it (`$.mcpServers.unity.args[3]`, checked by `check:plugin-sync`).
-- `sdb/` (`UnityDevtools.Sdb`): the SDB client library, and the surface the repo's other projects build on so that none of them touches vendored code. It ships only inside the `mcp/` tool and is never packed on its own, so its types are internal to this repo however `public` they are declared: changing one is a matter of updating the call sites in the same commit, not a break anyone downstream can feel. It compiles the vendored `Mono.Debugger.Soft` sources — read [`docs/solutions/sdb-vendored-client-limits.md`](../../docs/solutions/sdb-vendored-client-limits.md) before changing anything around them. Its own plumbing: `SdbSession`, `Invoker`, `Ecs`, `UnitySession`, `BeaconListener` + `PlayerConnectionBeacon`, `DebugController` + `DebugModel`, `TypeCatalog`.
+- `sdb/` (`UnityDevtools.Sdb`): the SDB client library, and the surface the repo's other projects build on so that none of them touches vendored code. It ships only inside the `mcp/` tool and is never packed on its own, so its types are internal to this repo however `public` they are declared: changing one is a matter of updating the call sites in the same commit, not a break anyone downstream can feel. It compiles the vendored `Mono.Debugger.Soft` sources — read [`docs/solutions/sdb-vendored-client-limits.md`](../../docs/solutions/sdb-vendored-client-limits.md) before changing anything around them. Its own plumbing: `SdbSession`, `Invoker`, `Ecs`, `UnitySession`, `BeaconListener` + `PlayerConnectionBeacon`, `DebugController` + `DebugModel`, `TypeCatalog`, `Screenshot`.
 - `sdb/Eval/`: the expression evaluator (Roslyn parse-only into an owned AST, then a client-side walker over `Invoker`; operators delegate to the C# runtime binder, so promotion and concat semantics are exactly the language's).
 - `tests/` (`mise test`): offline parser/AST and operator-semantics suite, also in CI and the pre-commit.
 - `tests-integration/`: the evaluator and debug toolset against a real net472 debuggee under Mono — traps in [`docs/solutions/mono-fixture-traps.md`](../../docs/solutions/mono-fixture-traps.md).
@@ -46,6 +47,8 @@ The grammar is FROZEN: literals, member access, calls with explicit generic type
 The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as C# would; edge semantics may diverge but must fail loudly with an actionable message, never succeed silently wrong.
 Deliberate divergences stay documented — today: numeric-to-enum convenience, in-range integral narrowing, enum/numeric operator mixing, `entity(index)` version defaulting.
 New evaluator effort goes to enforcing that contract through `tests-integration/`, not to growing the grammar. Anything needing debuggee-side execution belongs to the injected-helper roadmap tier.
+
+A result comes back FORMATTED for a reader — a string quoted, a bool as `True` — and locals live on the interpreter rather than the state, so only `_` survives a call. Code building on `eval` therefore parses that rendering back and re-embeds whatever the next program needs, quoting a path through Roslyn's own `SymbolDisplay.FormatLiteral` so the literal it emits is one the parser accepts.
 
 ## C# project settings
 
