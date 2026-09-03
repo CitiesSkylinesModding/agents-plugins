@@ -1,10 +1,11 @@
 ---
 date: 2026-08-26
-area: plugins/cs2-modding/skills and docs/research (any prose correction sweep)
+area: plugins/*/skills, docs/research and shipped plugin metadata (any correction sweep)
 symptoms:
   - 'a section heading asserts what its own body denies three lines below'
   - 'a claim is corrected and the next round finds the same claim standing elsewhere'
   - 'a dated correction note itself states what the correction retired'
+  - 'a feature ships and the marketplace or package description still sells the product without it'
 tags: [prose, correction, sweep, carriers, review-gate]
 ---
 
@@ -31,6 +32,7 @@ A claim lives in more places than its sentence, and the other places do not read
 - **The bridge paragraph in the matching `docs/research/` file**, which is what the next authoring pass runs on.
 - **A supersede note that itself asserts what the correction overturned** — appending a note is not editing the original, and the note is new prose that can be wrong in its own right.
 - **A pointer's promise**: "`performance-and-memory` owns that trade in full" is a claim about another file's contents.
+- **A capability sentence in shipped metadata**, where adding a tool restates it ten times: both harness `plugin.json` files, both marketplace files, the package project's `<Description>` AND its own header comment, the plugin README's headline and tool table, the ROOT README's row for that plugin, and the roadmap's section intro for it. `check:plugin-sync` compares two of the ten, so a sweep that stops at prose leaves every install-decision surface selling the plugin without the thing it just gained.
 
 ## Fix
 
