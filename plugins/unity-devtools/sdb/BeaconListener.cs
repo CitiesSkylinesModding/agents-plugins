@@ -173,8 +173,7 @@ public sealed class BeaconListener : IDisposable {
   /// no caller has to read them in a particular order: every port that loses its listen records
   /// why before this turns false. A disposal is the exception, ending the listen without a fault.
   /// </summary>
-  public bool Listening =>
-    !this.closed && this.faults.Count < BeaconListener.MulticastPorts.Count;
+  public bool Listening => !this.closed && this.faults.Count < BeaconListener.MulticastPorts.Count;
 
   /// <summary>
   /// The most recent beacon received, attachable or not, or null when none has arrived within

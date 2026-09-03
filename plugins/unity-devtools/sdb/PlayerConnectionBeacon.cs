@@ -86,8 +86,7 @@ public sealed class PlayerConnectionBeacon {
   /// Where an attach would go, or null when this beacon names no target. It is one rule so that
   /// what <c>status</c> reports and what an attach then dials cannot drift apart.
   /// </summary>
-  public (string Host, int Port)? Endpoint =>
-    this.Attachable ? (this.Host, this.SdbPort) : null;
+  public (string Host, int Port)? Endpoint => this.Attachable ? (this.Host, this.SdbPort) : null;
 
   /// <summary>
   /// Parses a beacon payload, or returns null when the line is not one.
@@ -142,13 +141,14 @@ public sealed class PlayerConnectionBeacon {
     // NumberStyles.None so a sign or surrounding space disqualifies the suffix instead of being
     // read through, and ushort so the range check comes with the parse.
     return ushort.TryParse(
-      id.AsSpan(colon + 1),
-      NumberStyles.None,
-      CultureInfo.InvariantCulture,
-      out var port
-    ) && port > 0
-      ? port
-      : null;
+        id.AsSpan(colon + 1),
+        NumberStyles.None,
+        CultureInfo.InvariantCulture,
+        out var port
+      ) &&
+      port > 0
+        ? port
+        : null;
   }
 
   /// <summary>
