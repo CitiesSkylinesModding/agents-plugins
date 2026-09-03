@@ -82,8 +82,8 @@ The menu survives a view reload — which is what a UI-mod rebuild causes: the t
 
 ## A gizmo never shows in a UI-side capture
 
-A gizmo toggled on is drawn by the game's renderer into the 3D view and never reaches the Cohtml view, so a UI-side screenshot shows the toggle and not the gizmo.
-A capture that composites the scene and the UI does show it.
+A gizmo toggled on is drawn by the game's renderer into the 3D view and never reaches the Cohtml view, so `game_screenshot`, which captures that view alone, shows the toggle and not the gizmo.
+The sibling `unity-devtools` plugin's `screenshot` captures the rendered frame instead and does show it, for anyone who has it installed.
 
 ## Watches
 
