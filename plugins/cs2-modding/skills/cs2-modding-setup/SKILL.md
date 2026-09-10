@@ -15,7 +15,7 @@ An unavailable debug menu or UI debugging port is step 3 alone — the developer
 A UI bundle copy to create is step 5's readable-copy extra alone; one that exists but is stale is the refresh branch.
 
 Verified against game version 1.6.0f1.
-Paths and commands throughout are Windows.
+Where a command differs by platform, it is given for Windows (PowerShell) and for Linux (bash), where the game runs under Proton.
 A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's steps and references on anything they own — or at the very least grep them before acting on a remembered path, version or flag, because every value here is recorded or readable from the machine and the remembered one is the one that has drifted.**
 
@@ -56,6 +56,8 @@ Anything citing the copy cites line numbers, so the count is how a later reader 
 
 The official modding toolchain, once installed, exports the paths as environment variables: `CSII_INSTALLATIONPATH` (game root), `CSII_MANAGEDPATH` (the managed assemblies), `CSII_USERDATAPATH` (user data, mods, logs).
 Read those first, ask the user for the game root when they are unset, and offer the platform's default install path as a suggestion to confirm rather than as an answer.
+On Linux only the hand setup in [linux-toolchain.md](../cs2-mod-project/references/linux-toolchain.md) writes them, so unset variables there usually mean the toolchain was never set up: offer that before asking for paths.
+The Linux defaults sit in the Steam library: the game under `steamapps/common/Cities Skylines II`, and the user data inside its Proton prefix, at `steamapps/compatdata/949230/pfx/drive_c/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II`.
 
 The Unity version is the product version of `Cities2.exe`:
 
@@ -63,13 +65,21 @@ The Unity version is the product version of `Cities2.exe`:
 (Get-Item "$env:CSII_INSTALLATIONPATH\Cities2.exe").VersionInfo.ProductVersion
 ```
 
+```bash
+strings -el "$CSII_INSTALLATIONPATH/Cities2.exe" | grep -A1 '^ProductVersion$'
+```
+
 Take it from the executable and nowhere else.
-The toolchain exports a `CSII_UNITYVERSION` too, but that is the editor version it installed for compiling mods, which drifts from the game's own — and debug patching against the drifted one is the documented way to break the game at launch.
+The toolchain exports a `CSII_UNITYVERSION` too, but that is the editor version it installed for compiling mods, which drifts from the game's own — and debug patching against the drifted one breaks the game at launch.
 
 The game version is the `Game version:` line that every launch writes to `Player.log`, at the root of the user data path:
 
 ```powershell
 Select-String -Path "$env:CSII_USERDATAPATH\Player.log" -Pattern "^Game version:"
+```
+
+```bash
+grep '^Game version:' "$CSII_USERDATAPATH/Player.log"
 ```
 
 That needs the game to have been run at least once; when there is no log, the main menu shows the version and the user can read it off.
@@ -93,6 +103,16 @@ $root = "<decompile root>"
 Get-ChildItem $managed -Filter *.dll | ForEach-Object {
   ilspycmd -p -o "$root\src\$($_.BaseName)" -r $managed $_.FullName
 }
+```
+
+```bash
+dotnet tool install -g ilspycmd
+
+managed="$CSII_MANAGEDPATH"
+root="<decompile root>"
+for dll in "$managed"/*.dll; do
+  ilspycmd -p -o "$root/src/$(basename "$dll" .dll)" -r "$managed" "$dll"
+done
 ```
 
 `-p` exports each assembly as a compilable project instead of one flat file, which is what lays the tree out as `src/<assembly>/<namespace>/<Type>.cs` — the shape every navigation recipe in this plugin assumes.

@@ -7,7 +7,7 @@ verified against the game itself, not against the wiki.**
 
 Knowledge only: four skills and their references. No MCP server, no runtime, no scaffolds.
 
-[![platform](https://img.shields.io/badge/platform-Windows-lightgrey)](#what-it-deliberately-leaves-out)
+[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
 
 [The skills](#the-skills) · [How it stays honest](#how-it-stays-honest) ·
@@ -60,7 +60,6 @@ Your agent picks these up from their descriptions, so you don't have to name the
 - **Asset, map and editor authoring.** Meshes, textures, import setup, map creation: a GUI and
   DCC-tool discipline an agent can't drive. The scope is code mods; loading assets *from code* is
   covered.
-- **Mod authoring on Linux.** The official toolchain is Windows-only, and so is this plugin.
 - **Code artifacts.** No scaffolds, no templates, no helper classes: the official toolchain
   generates projects, and the references teach mechanisms your agent writes itself.
 - **Playing with mods.** Consuming or troubleshooting other people's mods as a player is out of
@@ -68,8 +67,12 @@ Your agent picks these up from their descriptions, so you don't have to name the
 
 ## Requirements
 
-- **Cities: Skylines II installed on Windows**, with the official modding toolchain (in the game:
-  Options → Modding).
+- **Cities: Skylines II with the official modding toolchain.** On Windows, the game installs it
+  (Options → Modding). On Linux the game runs under Proton, and that installer can't run there.
+  You set the toolchain up by hand instead, and the `cs2-mod-project` skill walks your agent
+  through it. The wiki's
+  [Modding Toolchain on Linux](https://cs2.paradoxwikis.com/Modding_Toolchain_on_Linux) guide has
+  the same steps for you.
 - The setup skill walks you through decompiling your own installed game — nothing copyrighted is
   distributed; the decompile is yours, from the game you own.
 - Optional but a great fit: the sibling **[unity-devtools](../unity-devtools/README.md)** plugin

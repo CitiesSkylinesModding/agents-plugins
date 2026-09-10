@@ -57,7 +57,7 @@ Copy the logs before going there — the log-directory section below states the 
 
 ## The log directory, and the six files that matter
 
-The log directory is `Logs/` under the user data path, which the toolchain names in `%CSII_USERDATAPATH%` and which on Windows is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`.
+The log directory is `Logs/` under the user data path, which the toolchain names in `%CSII_USERDATAPATH%` and which on Windows is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`, and on Linux the same path with `%USERPROFILE%` standing for the Proton prefix's `<Steam library>/steamapps/compatdata/949230/pfx/drive_c/users/steamuser`.
 It never has to be guessed: the log manager writes the resolved path to standard output as `Logs at <path>`, and that line lands near the top of `Player.log`.
 
 | File | What it is | Why it is opened |

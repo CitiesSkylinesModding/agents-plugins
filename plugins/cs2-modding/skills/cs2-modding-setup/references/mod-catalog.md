@@ -19,9 +19,9 @@ For a single question, recommend one repository and link it.
 
 Agree on a corpus root, clone shallow, and record the root under `Mod corpus root` so later sessions find it:
 
-```powershell
-$corpus = "<corpus root>"
-git clone --depth 1 https://github.com/<owner>/<repo>.git "$corpus\<repo>"
+```shell
+cd "<corpus root>"
+git clone --depth 1 https://github.com/<owner>/<repo>.git
 ```
 
 The corpus is read, never harvested: each repository carries its author's own licence, and this plugin's knowledge prose states techniques on its own authority rather than copying code or crediting a mod.

@@ -17,6 +17,8 @@ What the built module does once loaded — the registry, injection, the page —
 The scaffold's webpack config is the whole build; the MSBuild toolchain ships no UI stage at all.
 Its output path is `${CSII_USERDATAPATH}\Mods\${MOD.id}` — the installed mod folder itself, with no intermediate `dist/`, so `npm run build` *is* the install.
 The config throws before webpack starts when `CSII_USERDATAPATH` is unset, naming the missing variable.
+**On Linux that path's Windows separators create one folder whose name holds the backslashes, beside the user data folder rather than in `Mods`, so the game never sees the UI half**; `path.join(CSII_USERDATAPATH, "Mods", MOD.id)` fixes it, and `npm run update` puts the original back.
+Source: `create-csii-ui-mod/template/webpack.config.js`.
 
 Four kinds of file come out, and every name is load-bearing (VOLATILE: the produced file set and its names — `create-csii-ui-mod/template/webpack.config.js`, `UIModuleAsset.kExtension`, and a built mod's own folder for the names the config leaves to webpack's defaults):
 

@@ -1,12 +1,12 @@
 ---
 name: cs2-mod-project
-description: 'The official Cities: Skylines II modding toolchain. Use when the user wants to start a CS2 mod project, when a mod build or its post-processing fails, when a mod they just built does not appear in the game, or when they are publishing or updating one.'
+description: 'The official Cities: Skylines II modding toolchain. Use when the user wants to start a CS2 mod project, when the toolchain needs setting up on Linux, when a mod build or its post-processing fails, when a mod they just built does not appear in the game, or when they are publishing or updating one.'
 ---
 
 # Building and shipping a Cities: Skylines II mod
 
 Verified against game version 1.6.0f1.
-Paths and commands throughout are Windows.
+On Linux, where the game runs under Proton, the toolchain is set up by hand and every project needs one csproj edit the Windows toolchain never asks for: [linux-toolchain.md](references/linux-toolchain.md) carries both, and without them a template project fails on an empty target framework rather than on anything naming the toolchain.
 A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's sections and references on anything they own — or at the very least grep them before writing a familiar csproj or build shape, because the toolchain inverts several standard .NET idioms and the familiar one builds cleanly, then fails inside the game.**
 
@@ -15,17 +15,19 @@ Drive it rather than reproducing it: a hand-written project drifts from the shar
 
 ## Installing the toolchain
 
-In the game: Options → Modding.
+On Windows, in the game: Options → Modding.
 The same page repairs a broken installation, updates an outdated one, and rewrites the environment variables the build reads.
 
 It pulls in everything a mod build needs, so nothing here is installed by hand: a Unity editor, a Unity project carrying the Entities and Burst packages, the .NET SDK, Node.js, both project templates, and integration for Visual Studio, VS Code or Rider.
 Read the versions it pinned from the `CSII_*` environment variables rather than from a number written down.
 
+On Linux that page installs nothing, and [linux-toolchain.md](references/linux-toolchain.md) sets the same toolchain up by hand.
+
 ## Creating a project
 
 ### The C# half
 
-```powershell
+```shell
 dotnet new csiimod -n MyMod
 ```
 
@@ -42,15 +44,16 @@ What lands in the folder:
 
 ### The UI half
 
-```powershell
+```shell
 npx create-csii-ui-mod
 ```
 
 Run it inside the C# project's folder; it prompts for a project name and an author, takes `--name=` and `--author=` to skip the prompts, and creates a subfolder with a webpack build, a `mod.json` and the game's TypeScript type declarations.
 Its `update` subcommand refreshes those declarations after a game update — and overwrites `webpack.config.js` and `tsconfig.json`, taking any local edit with them — and `clean` deletes the shared deploy folder so the game stops seeing the mod: the C# half's `.dll` and `.pdb` go with the bundle.
+On Linux the scaffolded `webpack.config.js` needs the deploy-path edit [linux-toolchain.md](references/linux-toolchain.md) carries, re-applied after every `update`, or the game never sees the UI half.
 
 The `id` in `mod.json` must equal the C# project's assembly name.
-Both halves deploy by that name into one folder — the C# build to `%CSII_LOCALMODSPATH%\<assembly name>` and the UI build to `%CSII_USERDATAPATH%\Mods\<mod.json id>`, which is the same directory — so a mismatch installs two half-mods instead of one whole one.
+Both halves deploy by that name into one folder — the C# build to `%CSII_LOCALMODSPATH%/<assembly name>` and the UI build to `%CSII_USERDATAPATH%/Mods/<mod.json id>`, which is the same directory — so a mismatch installs two half-mods instead of one whole one.
 
 `npm run build` builds once and `npm run dev` watches.
 To make one `dotnet build` do both, run the UI build from an `Exec` target hooked `AfterTargets="DeployWIP"`: the deploy stage empties that shared folder before refilling it from the C# output, so a UI bundle written any earlier is deleted rather than installed.
@@ -103,7 +106,7 @@ Declaring a job or an aspect is enough to trigger it with nothing scheduling the
 
 ## Testing locally
 
-Building installs the mod into `%CSII_LOCALMODSPATH%\<assembly name>`, so there is no separate install step.
+Building installs the mod into `%CSII_LOCALMODSPATH%/<assembly name>`, so there is no separate install step.
 The game reads that folder at startup and lists what it finds there as local mods.
 A mod deployed there yet missing from that list, or listed but doing nothing, is a loader question: [diagnostics](../cs2-modding/references/technique/diagnostics/diagnostics.md) owns which log to open first and what each line proves.
 

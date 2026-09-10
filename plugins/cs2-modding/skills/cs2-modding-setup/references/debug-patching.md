@@ -2,6 +2,7 @@
 
 Verified against game version 1.6.0f1.
 Paths throughout are Windows.
+On Linux, where the game runs under Proton, the edits are the same and only getting the library differs: [debug-patching-linux.md](debug-patching-linux.md) carries the commands.
 
 A retail build ships the player library with managed debugging compiled out, so a debugger has nothing to attach to.
 Swapping that library for the development variant from the matching Unity editor, and turning the debug connection on in the boot configuration, turns the user's installed game into a development build.
@@ -17,6 +18,8 @@ Read it off the game:
 ```
 
 (VOLATILE: the game's Unity version — the executable itself, which is the only copy that tracks a game update; a number written down anywhere else is a snapshot.)
+
+A library from an older Unity than the game's no longer matches the game's own data, and the game fails at launch with `Failed to load PlayerSettings`.
 
 Install exactly that editor version through Unity Hub, with Windows build support, when it is not already present.
 Only the one file below is taken from it.
@@ -40,15 +43,6 @@ Set `Debug patch: applied` in the record once a signal confirms it, so a later s
 
 Verify before pointing a debugger at the game.
 An unpatched build refuses the connection in a way that reads as "the debugger cannot find the process", which sends people looking in the wrong place.
-
-## Why not the automated patcher
-
-The community distributes a build-time package a mod project can reference to have all of this done on every Debug build, and undone on Release and Clean builds.
-It carries its own copy of the development binaries, pinned to one Unity version.
-Once the game moves to a newer Unity than the package was built against, the copied library no longer matches the game's own data and the game fails at launch with `Failed to load PlayerSettings`.
-
-The official wiki documents that failure and recommends the manual copy instead.
-Do the manual copy: it is three steps, and it always matches because the version comes from the game.
 
 ## After a game update
 

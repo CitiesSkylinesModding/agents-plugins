@@ -1,7 +1,6 @@
 # What a mod build does
 
 Verified against game version 1.6.0f1.
-Paths and commands are Windows.
 
 `Mod.props` and `Mod.targets`, which every mod csproj imports from `%CSII_TOOLPATH%`, own everything below.
 They are shared by every mod project on the machine, so a project changes the build through the hooks at the bottom of this file rather than by editing them.
@@ -11,6 +10,7 @@ They are shared by every mod project on the machine, so a project changes the bu
 The toolchain writes these as **user** environment variables when it installs, and the game's Options → Modding page rewrites them on request.
 The C# side reads the user scope directly, so a rewritten value reaches the next build however long the shell or IDE has been open.
 The UI build is the exception: it reads the inherited process environment, so a rewritten path only reaches it from a shell opened afterwards.
+Linux has no user scope, so there both sides read the process environment, the C# side through the fallback [linux-toolchain.md](linux-toolchain.md) patches in, and a changed value reaches only a build started from a session that has it.
 
 | Variable | Points at | Why it matters |
 | --- | --- | --- |
@@ -18,13 +18,13 @@ The UI build is the exception: it reads the inherited process environment, so a 
 | `CSII_MANAGEDPATH` | the game's managed assemblies | every `Game`, `Colossal.*` and `Unity.*` reference resolves from here |
 | `CSII_MSCORLIBPATH` | the game's `mscorlib.dll` | referenced explicitly so the mod compiles against the game's runtime, not the SDK's |
 | `CSII_USERDATAPATH` | the user data folder | holds `Player.log`, the settings, and the local mods folder |
-| `CSII_LOCALMODSPATH` | `<user data>\Mods` | where every build installs the mod |
+| `CSII_LOCALMODSPATH` | `<user data>/Mods` | where every build installs the mod |
 | `CSII_TOOLPATH` | the per-user toolchain folder | holds `Mod.props`, `Mod.targets` and the Unity mod project |
 | `CSII_UNITYMODPROJECTPATH` | that Unity project | source of the Entities source generators and of the packages Burst compiles against |
 | `CSII_ENTITIESVERSION` | the Entities package version | selects the source-generator folder inside the package cache |
 | `CSII_UNITYVERSION` | the editor version installed for compiling mods | locates the editor whose IL post-processor the post-processing stage runs |
-| `CSII_MODPOSTPROCESSORPATH` | the post-processor executable | the post-processing stage |
-| `CSII_MODPUBLISHERPATH` | the publisher executable | what the publish path runs |
+| `CSII_MODPOSTPROCESSORPATH` | the post-processor executable, or on Linux its Proton wrapper | the post-processing stage |
+| `CSII_MODPUBLISHERPATH` | the publisher executable, or on Linux its Proton wrapper | what the publish path runs |
 | `CSII_PDXCACHEPATH` | the mod platform's cache | the publisher reads it to sign in |
 | `CSII_PDXMODSPATH` | downloaded platform mods | the publisher's mod root |
 | `CSII_ASSEMBLYSEARCHPATH` | extra assembly search paths, empty by default | the supported hook for referencing assemblies outside the game folder |
@@ -86,10 +86,11 @@ It then runs the Burst compiler once per platform over whatever the assembly mar
 (Jobs are reached through their schedule sites, so a `[BurstCompile]` job nothing schedules is compiled to nothing and the build still passes; the pass's own `containing N methods` line is what says otherwise.)
 A mod that marks nothing still gets those files, and its own code stays managed.
 A failure here reads `Failed to compile Burst dll for <platform>` or reports an error from the post-processor, and neither is a compilation error, so re-reading the C# is wasted effort.
+On Linux the post-processor runs under Proton through a wrapper, and a failure naming `hostfxr.dll`, `wineserver` or an incomplete toolchain is the wrapper's or the prefix's: [linux-toolchain.md](linux-toolchain.md)'s troubleshooting table covers each.
 The game loads the Windows library beside a mod assembly when it is there, and the other two ship against a port that has not happened.
 
 **5. Deployment.**
-The deploy folder `%CSII_LOCALMODSPATH%\<assembly name>` is removed and the whole build output copied into it.
+The deploy folder `%CSII_LOCALMODSPATH%/<assembly name>` is removed and the whole build output copied into it.
 The removal is what makes anything written into that folder earlier in the build disappear.
 
 Publishing runs its own path checks and then the publisher, over the folder this stage filled; [publishing.md](publishing.md) covers the modes and the metadata they read.

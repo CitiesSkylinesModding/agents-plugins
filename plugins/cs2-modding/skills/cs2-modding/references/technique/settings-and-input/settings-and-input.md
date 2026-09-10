@@ -222,7 +222,7 @@ Source: `src/Game/Game.Modding/ModSetting.cs`.
 ## Persistence: one file, its format, and the moment it is written
 
 `[FileLocation(string fileName)]` on the settings class is what gives it a file, and the attribute forces the extension to `.coc` whatever you write.
-The path it carries is relative to the user data database's root, which on Windows is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`.
+The path it carries is relative to the user data database's root, which on Windows is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`, and on Linux the same path with `%USERPROFILE%` standing for the Proton prefix's `<Steam library>/steamapps/compatdata/949230/pfx/drive_c/users/steamuser`.
 That database is the one settings are written back to, because it is the only one that reports itself writable.
 
 Nothing in the attribute or in the data source knows about folders: a nested path and a flat name work identically, and the widely-used `ModsSettings/<Mod>/<Mod>` layout is an agreement among mod authors rather than a mechanism.
