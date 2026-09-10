@@ -62,8 +62,8 @@ All C# projects live here, none is covered by a `Directory.Build.props`, all set
 
 The server is a NuGet **dotnet tool** (`PackAsTool`, framework-dependent, platform-agnostic) that both harness configs launch with `dotnet dnx ... --version <pin> --yes` — downloaded on first launch, cached after. `--version` placed after the package id is consumed by dnx, not forwarded to the tool.
 
-`mise build:unity:pack` packs the nupkg into `mcp/dist/` (gitignored); `mise publish:unity:nuget` pushes it, MANUAL, no CI publish.
-Release-day ordering: merging the release PR bumps the dnx pins in git, so publish the nupkg right after — installs and reconnects resolve the pinned version from NuGet and fail until it exists (`check:plugin-sync` verifies the pins offline, not their publication).
+`mise build:unity:pack` packs the nupkg into `mcp/dist/` (gitignored); the release workflow packs and pushes it when release-please cuts the mcp release, and `mise publish:unity:nuget` pushes it by hand.
+Release-day ordering: merging the release PR bumps the dnx pins in git before that push lands, so wait for the publish job before reconnecting or announcing — installs and reconnects resolve the pinned version from NuGet and fail until it exists (`check:plugin-sync` verifies the pins offline, not their publication).
 
 There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV ONLY) runs the server from sources via `dotnet run --project`, so every `/mcp` reconnect rebuilds and serves the current code. dnx is deliberately not used for dev — it caches the extracted tool by version, so a rebuilt nupkg under an unchanged version would keep serving stale bits.
 

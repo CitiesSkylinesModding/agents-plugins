@@ -1,9 +1,9 @@
 # Maintains a rolling release PR that bumps versions and changelogs from Conventional Commits.
-# Merging that PR tags and creates the GitHub Releases. Requires the org/repo setting
-# "Allow GitHub Actions to create and approve pull requests" to be enabled.
-# A release of the gameface mcp then publishes it to npm through trusted publishing (OIDC): the
-# npm package trusts this workflow file by name, so renaming it breaks publishing.
-# A manual run publishes the given tag, to retry or backfill a release that never reached npm.
+# Merging that PR tags and creates the GitHub Releases. Release-please acts as a GitHub App rather
+# than as GITHUB_TOKEN, since GitHub holds the CI runs of a PR the GITHUB_TOKEN opened for approval.
+# A release of an mcp then publishes it, to npm or NuGet, through trusted publishing (OIDC): both
+# registries trust this workflow file by name, so renaming it breaks publishing.
+# A manual run publishes the given tag, to retry or backfill a release its registry never got.
 name: release-please
 
 on:
@@ -12,28 +12,33 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to publish to npm (ex. gameface-devtools-mcp-v1.2.0).
+        description: Release tag of an mcp to publish (ex. gameface-devtools-mcp-v1.2.0).
         required: true
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
       gameface-mcp-released: ${{ steps.release.outputs['plugins/coherent-gameface/mcp--release_created'] }}
+      unity-mcp-released: ${{ steps.release.outputs['plugins/unity-devtools/mcp--release_created'] }}
     steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
       - uses: googleapis/release-please-action@v5
         id: release
         with:
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
   publish-npm:
     needs: release-please
-    if: ${{ needs.release-please.outputs.gameface-mcp-released == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.release-please.outputs.gameface-mcp-released == 'true' || startsWith(inputs.tag, 'gameface-devtools-mcp-v') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -50,3 +55,28 @@ jobs:
       - run: npm install --global npm@^11.5.1
       - run: npm publish
         working-directory: plugins/coherent-gameface/mcp
+
+  publish-nuget:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.unity-mcp-released == 'true' || startsWith(inputs.tag, 'unity-devtools-mcp-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+      - uses: jdx/mise-action@v4
+      - run: mise build:unity:pack
+      # Logs in after the build: the API key it issues expires an hour later.
+      - uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ vars.NUGET_USER }}
+      # Skipping a version already on NuGet makes a retry after a partial failure safe to rerun.
+      - run: >-
+          dotnet nuget push dist/*.nupkg --skip-duplicate
+          --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+        working-directory: plugins/unity-devtools/mcp

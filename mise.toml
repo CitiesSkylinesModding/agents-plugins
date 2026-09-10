@@ -227,7 +227,7 @@ description = "Check, test, pack, then publish the unity-devtools MCP dotnet too
 run = ["mise check", "mise test", "mise build:unity:pack", "mise publish:unity:nuget"]
 
 [tasks."publish:unity:nuget"]
-description = "Push the packed UnityDevtools.Mcp nupkg to nuget.org (manual, like npm; append --api-key <key> or configure one)."
+description = "Push the packed UnityDevtools.Mcp nupkg to nuget.org (manual fallback to the release workflow; append --api-key <key> or configure one)."
 dir = "{{config_root}}/plugins/unity-devtools/mcp"
 raw = true
 # bash so `dist/*.nupkg` expands: mise defaults to cmd on Windows, where dotnet nuget push gets the

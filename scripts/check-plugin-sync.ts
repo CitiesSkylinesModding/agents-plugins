@@ -184,9 +184,10 @@ function isDnxLaunch(command: unknown, args: unknown): boolean {
 // Both harness configs launch the dnx-shipped server with an explicit version pin
 // (`dotnet dnx <packageId> --version <pin> --yes`); release-please syncs the pins via
 // extra-files, so a drift from the mcp anchor means a hand edit bypassed the release process.
-// Publish existence cannot be checked offline; release-day ordering matters instead: after
-// merging the release PR (which bumps the pins), publish the nupkg to NuGet BEFORE reconnecting
-// or announcing, since installs resolve the pinned version from NuGet and fail until it exists.
+// Publish existence cannot be checked offline; release-day ordering matters instead: merging the
+// release PR bumps the pins before the release workflow pushes the nupkg, so wait for that push
+// before reconnecting or announcing, since installs resolve the pinned version from NuGet and
+// fail until it exists.
 function checkMcpVersionPins(pluginRoot: string): void {
   for (const configPath of [`${pluginRoot}/.mcp.json`, `${pluginRoot}/.codex-plugin/mcp.json`]) {
     if (!existsSync(path.join(repoRoot, configPath))) {

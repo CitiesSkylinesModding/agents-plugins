@@ -25,7 +25,8 @@
       Shipped as a NuGet dotnet tool, launched by the plugin configs through
       `dotnet dnx UnityDevtools.Mcp` (version-pinned, auto-confirmed; users
       need the .NET 10 SDK).
-      Publishing is manual: `mise build:unity:pack` then `mise publish:unity:nuget`.
+      The release workflow publishes it; by hand, `mise build:unity:pack` then
+      `mise publish:unity:nuget`.
     -->
     <PackAsTool>true</PackAsTool>
     <PackageId>UnityDevtools.Mcp</PackageId>
