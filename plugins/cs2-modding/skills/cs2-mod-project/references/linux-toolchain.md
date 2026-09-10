@@ -242,7 +242,7 @@ Mono does not raise `AppDomain.AssemblyResolve` for a reference it meets while l
 Make the game references copy-local on Linux instead, `<Private Condition="'$(OS)' == 'Windows_NT'">false</Private>`, which copies them beside the tests with the non-framework dependencies MSBuild finds next to them.
 Pointing `MONO_PATH` at the game's managed folder makes Mono load the game's own `mscorlib` and abort.
 
-`dotnet publish` with a publish profile runs the publisher through its wrapper (UNVERIFIED: publishing from Linux — nobody has published from Linux yet).
+`dotnet publish` with a publish profile runs the publisher through its wrapper, and its automatic sign-in finds the game's login with no `CSII_PDXCACHEPATH` set.
 
 ## After a game update
 
