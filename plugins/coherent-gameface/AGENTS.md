@@ -9,7 +9,7 @@ It targets any Gameface application, but is developed and verified against **Cit
 The plugin wears two hats, with distinct names:
 
 - The plugin (this directory) launches the committed server bundle — zero-install, offline, version-locked — from `.mcp.json` on Claude Code and `.codex-plugin/mcp.json` on Codex CLI, and carries `skills/`.
-- The MCP server (`mcp/`) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name and bin `gameface-devtools-mcp`, run via `npx -y @csmodding/gameface-devtools-mcp@latest`). `mcp/README.md` is its npm product page. Publishing is manual (`mise publish`).
+- The MCP server (`mcp/`) is also a standalone product for ANY MCP client, published on npm as **`@csmodding/gameface-devtools-mcp`** (handshake name and bin `gameface-devtools-mcp`, run via `npx -y @csmodding/gameface-devtools-mcp@latest`). `mcp/README.md` is its npm product page. Its release publishes it to npm from CI (see the root AGENTS.md).
 
 ## Directory structure
 
