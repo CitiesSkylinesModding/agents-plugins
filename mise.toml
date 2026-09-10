@@ -236,6 +236,10 @@ raw = true
 shell = "bash -c"
 run = "dotnet nuget push dist/*.nupkg --source https://api.nuget.org/v3/index.json"
 
+[tasks."publish:discord"]
+description = "Print the Discord announcement for the latest release batch (append a tag to pick an older one)."
+run = "bun scripts/discord-release-notes.ts"
+
 # RUN TASKS
 # =========
 
