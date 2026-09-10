@@ -62,7 +62,7 @@ Never hand-edit a version: each unit's number lives in a private `package.json` 
 - Any releasable commit under a plugin's directory bumps BOTH of that plugin's units.
 - Keep a commit inside one release unit: each unit's changelog is written from the commits touching it, so a `feat` spanning a plugin and the root files root tooling under that plugin's release notes.
 - `feat` bumps minor, `fix` patch; a `!` or `BREAKING CHANGE:` commit bumps major once a unit has reached 1.0.0, and only minor while it is below. Any other version comes from a deliberate `Release-As:` footer.
-- An mcp release publishes itself from `release-please.yml` through trusted publishing, the gameface one to npm and the unity one to NuGet; `mise publish` and `mise publish:unity` are the manual fallbacks.
+- An mcp release publishes itself from `release-please.yml` through trusted publishing, the gameface one to npm and the unity one to NuGet. There is no local publish path: a failed or missed publish is retried by running the workflow by hand with the release tag.
 - CI runs `mise check:agents` + `mise build:gameface` with `git diff --exit-code` (catching a stale committed bundle) + `mise test:gameface`, then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the gameface bundle, and runs `dotnet test` on staged C# changes.
 
 ## Boundaries

@@ -170,13 +170,13 @@ raw = true
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
 [tasks."build:unity:pack"]
-description = "Pack the unity-devtools MCP server as the UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; publish with publish:unity:nuget)."
+description = "Pack the unity-devtools MCP server as the UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; the release workflow publishes it)."
 dir = "{{config_root}}"
 raw = true
 # bash for the glob-clean; mise defaults to cmd on Windows.
 shell = "bash -c"
 # Wipe dist/ first so a renamed package id or an old version cannot linger and get pushed by the
-# `dist/*.nupkg` glob in publish:unity:nuget.
+# release workflow's `dist/*.nupkg` glob.
 run = "rm -rf plugins/unity-devtools/mcp/dist && dotnet pack plugins/unity-devtools/mcp/UnityDevtools.Mcp.csproj -c Release -o plugins/unity-devtools/mcp/dist"
 
 # FIX TASKS
@@ -210,31 +210,6 @@ run = "dotnet jb cleanupcode agents-plugins.slnx --profile=\"AutoCleanup\" --set
 
 # PUBLISH TASKS
 # =============
-
-[tasks.publish]
-description = "Check, rebuild the bundle, then publish @csmodding/gameface-devtools-mcp to npm."
-run = ["mise check", "mise build:gameface", "mise publish:npm"]
-
-[tasks."publish:npm"]
-description = "Publish the mcp/ package to npm (assumes checks and build already ran)."
-dir = "{{config_root}}/plugins/coherent-gameface/mcp"
-# raw keeps stdio interactive so npm can prompt for the OTP.
-raw = true
-run = "npm publish"
-
-[tasks."publish:unity"]
-description = "Check, test, pack, then publish the unity-devtools MCP dotnet tool to nuget.org."
-run = ["mise check", "mise test", "mise build:unity:pack", "mise publish:unity:nuget"]
-
-[tasks."publish:unity:nuget"]
-description = "Push the packed UnityDevtools.Mcp nupkg to nuget.org (manual fallback to the release workflow; append --api-key <key> or configure one)."
-dir = "{{config_root}}/plugins/unity-devtools/mcp"
-raw = true
-# bash so `dist/*.nupkg` expands: mise defaults to cmd on Windows, where dotnet nuget push gets the
-# literal glob and fails.
-# `build:unity:pack` keeps dist/ to a single nupkg, so the glob is unambiguous.
-shell = "bash -c"
-run = "dotnet nuget push dist/*.nupkg --source https://api.nuget.org/v3/index.json"
 
 [tasks."publish:discord"]
 description = "Print the Discord announcement for the latest release batch (append a tag to pick an older one)."
