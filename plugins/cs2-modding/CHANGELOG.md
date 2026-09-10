@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.1.0...cs2-modding-v1.1.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **cs2-modding:** confirm publishing from Linux, whose sign-in needs no CSII_PDXCACHEPATH ([56ad09f](https://github.com/CitiesSkylinesModding/agents-plugins/commit/56ad09f5636ac8613a7f07a4c12cee099c6140f3))
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.0.0...cs2-modding-v1.1.0) (2026-09-10)
 
 
