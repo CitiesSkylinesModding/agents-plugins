@@ -5,7 +5,7 @@
 `unity-devtools` drives a running **Unity Mono development build** from the outside over the **Mono Soft Debugger protocol (SDB)**: no code injection, no game modification.
 It ships the `unity` MCP server (beacon discovery, live type reflection, C# expression evaluation on the main thread, breakpoints and stepping, ECS entity/component/buffer read-write) plus the `unity-driving` skill.
 It is generic: any dev Mono build with the SDB agent live is drivable, and it is developed against one such build as the reference target.
-Verified on Windows only, and the server-lifetime watchdogs are the sole Windows-bound code; users need the .NET 10 SDK, since the server ships as the `UnityDevtools.Mcp` NuGet dotnet tool launched via `dotnet dnx`.
+Verified on Windows and on Linux, there attaching from the host to a Windows game running under Proton; the server-lifetime watchdogs are the sole Windows-bound code, and users need the .NET 10 SDK, since the server ships as the `UnityDevtools.Mcp` NuGet dotnet tool launched via `dotnet dnx`.
 
 ## Tool surface
 

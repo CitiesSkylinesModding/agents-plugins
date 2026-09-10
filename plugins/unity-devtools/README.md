@@ -130,8 +130,9 @@ the next call. The `attach` tool is there for the cases the beacon cannot cover.
 
 - **A Unity game running as a development Mono build**, launched with `player-connection-debug=1`
   so its SDB agent is live; a retail build exposes no SDB port and cannot be driven.
-- **Windows.** Discovery itself is platform-agnostic, but the plugin is verified on Windows only
-  and its server-lifetime watchdogs are Windows-only.
+- **Windows or Linux.** Discovery is platform-agnostic, and a live attach is verified on both, on
+  Linux to a game running under Proton. The server-lifetime watchdogs are still Windows-only, so
+  on Linux a server stuck mid-call can outlive its client.
 - **The .NET 10 SDK** to launch the server. No build step: the plugin launches the
   [`UnityDevtools.Mcp`](https://www.nuget.org/packages/UnityDevtools.Mcp)
   NuGet dotnet tool through `dotnet dnx`, version-pinned to the plugin (downloaded on first
@@ -198,3 +199,4 @@ beacon, so pass it again for as long as it is still needed.
   to per-project `.jsonl` files under the Claude CLI cache, in an `mcp-logs-unity/` folder keyed
   by the project path; the newest `.jsonl` shows why a launch failed:
   - Windows: `%LocalAppData%\claude-cli-nodejs\Cache\<project-path>\mcp-logs-unity\`
+  - Linux: `~/.cache/claude-cli-nodejs/<project-path>/mcp-logs-unity/`
