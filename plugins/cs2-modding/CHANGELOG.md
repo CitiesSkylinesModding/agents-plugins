@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.0.0...cs2-modding-v1.1.0) (2026-09-10)
+
+
+### Features
+
+* **cs2-modding:** ship the map-editor toolbar reference and widen the enableable-overload trap ([e416eb7](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e416eb767f0065612bc875d86080586c03b263c7))
+* **cs2-modding:** teach mod development on Linux, where the game runs under Proton ([ea9af15](https://github.com/CitiesSkylinesModding/agents-plugins/commit/ea9af15765676f6b7c87ee728cb95ed63d316db0))
+
 ## [1.0.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v0.3.0...cs2-modding-v1.0.0) (2026-08-30)
 
 
