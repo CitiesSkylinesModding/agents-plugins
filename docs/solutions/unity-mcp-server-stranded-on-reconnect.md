@@ -61,11 +61,18 @@ its server child can die and leave it holding the `bin/mcp-run/` locks alone:
 
 ```powershell
 Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" |
-  Where-Object { $_.CommandLine -match 'UnityDevtools\.Mcp\.csproj' }
+  Where-Object { $_.CommandLine -match 'UnityDevtools\.Mcp' }
 ```
 
 A survivor older than the failed reconnect is the culprit; `Stop-Process -Force` takes the server with
 it (kill-on-close job object) and is safe for the game, whose VM auto-resumes on the closed socket.
+
+On Linux the server is a separate `unity-devtools-mcp` child of the wrapper, with no job object
+tying the two, so list both with their start times and kill both pids:
+
+```bash
+ps -eo pid,ppid,lstart,args | grep -E '[U]nityDevtools\.Mcp|[u]nity-devtools-mcp'
+```
 
 That settles the usual case, where those build locks are the whole story — but not a slot genuinely
 held by another client, which fails identically from the harness. The port `status` reports tells them
@@ -73,6 +80,10 @@ apart:
 
 ```powershell
 Get-NetTCPConnection | Where-Object { $_.RemotePort -eq <sdbPort> }
+```
+
+```bash
+ss -tnp | grep ':<sdbPort>'
 ```
 
 Empty means the slot was free all along. An established connection from an IDE debugger is the case no

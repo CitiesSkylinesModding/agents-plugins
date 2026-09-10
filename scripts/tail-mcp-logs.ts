@@ -3,14 +3,15 @@
 
 import assert from 'node:assert/strict';
 import { closeSync, existsSync, openSync, readdirSync, readSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import chalk from 'chalk';
 
 // Tails the newest Claude Code MCP log for this project and pretty-prints its .jsonl entries.
 // Claude Code writes one log file per connection under
-// %LocalAppData%\claude-cli-nodejs\Cache\<project-slug>\mcp-logs-<server>\<timestamp>.jsonl,
-// so the tail follows the directory: when reconnecting creates a newer file, it switches to it.
+// <cache root>/<project-slug>/mcp-logs-<server>/<timestamp>.jsonl, so the tail follows the
+// directory: when reconnecting creates a newer file, it switches to it.
 // Usage: `bun scripts/tail-mcp-logs.ts [server-name]` (defaults to "gameface").
 
 const POLL_INTERVAL_MS = 500;
@@ -189,21 +190,11 @@ function findNewestLog(dir: string): string | undefined {
 }
 
 function resolveLogDir(server: string): string {
-  // oxlint-disable-next-line node/no-process-env -- locating the appdata root is this script's job.
-  const localAppData = process.env.LOCALAPPDATA;
-  assert.ok(localAppData != undefined, `LOCALAPPDATA is not set; this script targets Windows.`);
-
   // Claude Code derives the cache directory name by replacing every non-alphanumeric character
   // of the project path with a dash (ex. C:\Foo\bar becomes C--Foo-bar).
   const projectSlug = process.cwd().replaceAll(/[^a-zA-Z0-9]/gu, '-');
 
-  const dir = path.join(
-    localAppData,
-    'claude-cli-nodejs',
-    'Cache',
-    projectSlug,
-    `mcp-logs-${server}`
-  );
+  const dir = path.join(resolveCacheRoot(), projectSlug, `mcp-logs-${server}`);
 
   assert.ok(
     existsSync(dir),
@@ -213,3 +204,22 @@ function resolveLogDir(server: string): string {
 
   return dir;
 }
+
+/* oxlint-disable node/no-process-env -- locating the cache root is this script's job. */
+function resolveCacheRoot(): string {
+  if (process.platform == 'win32') {
+    const localAppData = process.env.LOCALAPPDATA;
+    assert.ok(localAppData != undefined, `LOCALAPPDATA is not set.`);
+
+    return path.join(localAppData, 'claude-cli-nodejs', 'Cache');
+  }
+
+  if (process.platform == 'darwin') {
+    return path.join(homedir(), 'Library', 'Caches', 'claude-cli-nodejs');
+  }
+
+  const cacheHome = process.env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache');
+
+  return path.join(cacheHome, 'claude-cli-nodejs');
+}
+/* oxlint-enable node/no-process-env */

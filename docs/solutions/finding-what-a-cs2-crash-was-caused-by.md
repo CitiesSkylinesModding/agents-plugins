@@ -34,7 +34,8 @@ The two log sets answer different questions and age differently.
   messages the game logs through `UnityEngine.Debug`. **It holds the crashed run for as long as the
   game has not been restarted**, and moves to `Player-prev.log` on the next launch.
 
-`<userdata>` is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`.
+`<userdata>` is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II`; under Proton,
+`%USERPROFILE%` is the prefix's `<Steam library>/steamapps/compatdata/949230/pfx/drive_c/users/steamuser`.
 
 **Some crashes to desktop write nothing usable to either.** A `Logs/<Name>.log` is created lazily, by
 the first message that reaches its logger — `Open()` is called only from `Internal_WriteStream`

@@ -176,8 +176,8 @@ needs no per-RID artifacts. What remains is the pair of server-lifetime watchdog
 — `ParentWatchdog` reads the parent pid through a Win32 call and `StdinWatchdog` watches the pipe
 with `PeekNamedPipe`. Elsewhere the stdio transport's own shutdown is the only lifetime tie, so an
 MCP reconnect can strand the previous server still holding the exclusive SDB slot
-(`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`). Port those two, then verify a live
-attach on Linux and macOS: nothing here has ever run on either.
+(`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`). Port those two. A live attach from
+Linux is verified, against a game running under Proton; nothing here has ever run on macOS.
 
 ### A network interface that appears after the server did
 

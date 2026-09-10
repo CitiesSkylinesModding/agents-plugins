@@ -2,7 +2,7 @@
 
 > **Seed survey.** Produced 2026-07-31 during the interview that became the `cs2-modding` spec, before the discovery pipeline existed.
 > Read the wiki only, fetched 2026-07-31, when the game was at 1.6.0f1.
-> Kept as it was written, citations intact; its recommendations are that pass's opinion, not decisions.
+> Kept as it was written, citations intact, except two entries updated 2026-09-10: `Modding Toolchain on Linux` describes the page's rewrite, and the `Debugging` entries no longer cite the community debug-patch package. Its recommendations are that pass's opinion, not decisions.
 
 ## 0. What worked (step 1)
 
@@ -57,13 +57,13 @@ Headings: `Definition` · `Creating & loading a Settings file` · `Saving a Sett
 Headings: `Creating a Log File` · `Changing the Log's Effectiveness` (Available Log Levels) · `Guidelines & Tips`. Substantial. `LogManager.GetLogger(fileName)` from `Colossal.Logging`; logs at `%AppData%\..\LocalLow\Colossal Order\Cities Skylines II\Logs`; 11 severity levels DISABLED→VERBOSE→ALL; global override via `--logsEffectiveness=DEBUG`.
 
 **`Debugging`** — https://cs2.paradoxwikis.com/Debugging
-Headings: `Enable Unity Support in IDE` · `Automated debugging` · `Modifying the game files to support a debugger` · `Debugging` (Visual Studio, Rider). Substantial. Five-step manual path: find Unity version → find editor install → copy `UnityPlayer.dll` → edit `boot.config` → add `player-connection-debug=1`. **Contains an explicit version conflict:** the CS2-ModdingTools NuGet automated path is flagged broken on patch **v1.5.7f1** with package 1.0.5, with manual setup recommended instead.
+Headings: `Enable Unity Support in IDE` · `Automated debugging` · `Modifying the game files to support a debugger` · `Debugging` (Visual Studio, Rider). Substantial. Five-step manual path: find Unity version → find editor install → copy `UnityPlayer.dll` → edit `boot.config` → add `player-connection-debug=1`.
 
 **`Localize your mod`** — https://cs2.paradoxwikis.com/Localize_your_mod
 21 headings; the deepest community page on the wiki. `Setup translations files` · `Standalone approach` · `Using I18n EveryWhere dependency` · `Translating strings, localizing dates and numbers` · `In UI code (preferred)` · `Translating strings` · `Format single numbers (with or without units)` · `Format fractions` · `Format bounds` · `Format percentage` · `Format date` · `Format time` · `Format duration` · `Time format, temperature and length unit preferences` · `In C# code (when you don't have a choice)` · `Translation keys namespacing` · `How to name your keys` · `Vanilla translation keys & namespaces` · `Bonus` · `Finding translators` · `Dump all keys and values from the locale dictionary`. Substantial. **Carries a reference table of vanilla translation keys and namespaces** (Assets, Budget, Common, Options…) — directly reusable data.
 
 **`Modding Toolchain on Linux`** — https://cs2.paradoxwikis.com/Modding_Toolchain_on_Linux
-Headings: `Requirements` · `The process` · `IDE integration` (Mod template, Intellisense & autocompletion, Building & publishing) · `References` (empty). Substantial. protontricks + dotnet48/dotnet6, Unity Hub 3.7.0 under Proton not Wine, protontricks-wrapped `dotnet` for build/publish.
+Headings: `How it fits together` · `Requirements` · `Setup` · `Building` · `Publishing` · `Debugging` · `After a game update` · `Troubleshooting` · `Automating it`. Substantial, verified on 1.6.0f1. Native .NET SDK build; only the post-processor and the publisher run under the game's Proton, through wrapper scripts; the Unity mod project is opened by a native Linux editor; no protontricks. Publishing from Linux is marked unverified.
 
 **`Developer mode`** — https://cs2.paradoxwikis.com/Developer_mode
 Headings: `Enabling developer mode` · `Using developer mode` · `Known Issues`. Substantial. `-developerMode`, Tab for dev UI, Home for object menu, "bypass validation results", plus three known bugs and workarounds. **Note the flag spelling differs from Launch Parameters** (`-developerMode` here vs `--developerMode` there) — a genuine contradiction to resolve.
@@ -296,7 +296,6 @@ Radio stations: `Atmospheric Piano Channel`, `Cloud Lounge FM`, `Cold Wave Chann
 | `Citizens`, `Pollution`, `Services`, `Traffic`, `Districts` | "Last verified for version 1.0" banners. |
 | `Progression` | "Potentially outdated"; contains its own 1.1.5f1 before/after table, so numbers elsewhere on the page may be from either era. |
 | `Service building data test` | Last edited **2 August 2023** — pre-launch data. Do not trust values. |
-| `Debugging` | Documents that the automated NuGet path is **broken as of 1.5.7f1** — an internal contradiction with its own recommendation. |
 | `Developer mode` vs `Launch Parameters` | `-developerMode` (single dash) vs `--developerMode` (double dash). |
 | `Beginner's guide` | Self-declared as CS1 content of uncertain applicability. |
 | `Policies` | 14 policies only; near-certainly incomplete for 1.6. |

@@ -77,7 +77,7 @@ The template beside them also carries the reference `webpack.config.js`, `tsconf
 
 ## 7. The official modding toolchain
 
-MSBuild targets in the `cs2-moddingtools` NuGet package, plus the `ModPostProcessor` and `ModPublisher` executables and the C# project template `ColossalOrder.ModTemplate.1.0.0.nupkg` (its `content/ModTemplate.csproj` is the shipped csproj, import-placement comment included) under `Cities2_Data/Content/Game/.ModdingToolchain/`, and the tool cache at `%CSII_TOOLPATH%`.
+The MSBuild targets `Mod.props` and `Mod.targets`, the `ModPostProcessor` and `ModPublisher` executables and the C# project template `ColossalOrder.ModTemplate.1.0.0.nupkg` (its `content/ModTemplate.csproj` is the shipped csproj, import-placement comment included) under `Cities2_Data/Content/Game/.ModdingToolchain/`, and the tool cache at `%CSII_TOOLPATH%`.
 Authoritative for how a mod is built, post-processed and published, and for the Unity and package versions a mod **targets** (`%CSII_UNITYVERSION%`, `%CSII_ENTITIESVERSION%`, and the fuller list in `%CSII_UNITYMODPROJECTPATH%/Packages/manifest.json`, whose sources that project resolves and entry 15 reads).
 Targets, not runs — the declared Entities version is ahead of the shipped assembly (entry 13).
 The full `CSII_*` set is the toolchain's own record of where everything lives: installation, managed, user data, local mods, Paradox mods cache, and the Unity mod project.

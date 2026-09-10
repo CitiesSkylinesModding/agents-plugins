@@ -173,7 +173,7 @@ The frontend consumes the generated file as an ordinary import (`Traffic/UI/src/
 
 The seam is the MSBuild hook, and both sides already exist in shipped prose. `cs2-mod-project` owns everything up to and including the `Exec`; this topic owns what the `Exec` runs.
 
-- `plugins/cs2-modding/skills/cs2-mod-project/SKILL.md:41-56` owns: the `npx create-csii-ui-mod` invocation and its `--name`/`--author` flags, the `update` and `clean` subcommands as one-liners, the rule that `mod.json`'s `id` equals the assembly name, the `npm run build`/`npm run dev` pair, and the `AfterTargets="DeployWIP"` hook.
+- `plugins/cs2-modding/skills/cs2-mod-project/SKILL.md:43-59` owns: the `npx create-csii-ui-mod` invocation and its `--name`/`--author` flags, the `update` and `clean` subcommands as one-liners, the rule that `mod.json`'s `id` equals the assembly name, the `npm run build`/`npm run dev` pair, and the `AfterTargets="DeployWIP"` hook.
 - `plugins/cs2-modding/skills/cs2-mod-project/references/build-pipeline.md`'s "Hooking into the build" section owns the three supported moves in `Mod.targets` and names `AfterTargets="DeployWIP"` as where a UI build belongs. Its "The environment variables" section already carries the fact that the UI build reads the inherited process environment while the C# side reads the user scope.
 
 **What this topic adds at the seam, and what a reference on this side owes.**

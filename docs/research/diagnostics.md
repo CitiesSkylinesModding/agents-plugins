@@ -458,7 +458,7 @@ So: **an empty patch census in `Modding.log` proves nothing about what is patche
 
 ### Verifying the debug patch before attaching anything
 
-The setup skill's shipped procedure (`plugins/cs2-modding/skills/cs2-modding-setup/references/debug-patching.md:30-40`) offers two signals: the "Development Build" watermark in the bottom-right corner, and `Player.log`'s `Player connection` line carrying `[Debug] 1`.
+The setup skill's shipped procedure (`plugins/cs2-modding/skills/cs2-modding-setup/references/debug-patching.md:33-38`) offers two signals: the "Development Build" watermark in the bottom-right corner, and `Player.log`'s `Player connection` line carrying `[Debug] 1`.
 Both hold. The install carries three stronger ones, and the strongest splits the two halves of the patch apart.
 
 **Read from the patched install on 2026-08-05:**
