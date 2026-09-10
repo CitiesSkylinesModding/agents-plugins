@@ -194,7 +194,8 @@ plugin's copy under the same name (see [`mcp/README.md`](mcp/README.md)).
   replaced with `-`); newest `.jsonl` first, and each `Server stderr: ...` line is what the server
   printed:
   - Windows: `%LocalAppData%\claude-cli-nodejs\Cache\<project-path>\mcp-logs-<server>\`
-  - macOS / Linux: `~/.cache/claude-cli-nodejs/Cache/<project-path>/mcp-logs-<server>/`
+  - macOS: `~/Library/Caches/claude-cli-nodejs/<project-path>/mcp-logs-<server>/`
+  - Linux: `~/.cache/claude-cli-nodejs/<project-path>/mcp-logs-<server>/`
 
   Installed as a plugin, `<server>` is `plugin-coherent-gameface-gameface`; registered by hand from
   npm, it is whatever name you gave the server.
