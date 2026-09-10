@@ -69,7 +69,6 @@
       "release-type": "node",
       "component": "cs2-modding",
       "initial-version": "0.1.0",
-      "release-as": "1.0.0",
       "extra-files": [
         {
           "type": "json",
