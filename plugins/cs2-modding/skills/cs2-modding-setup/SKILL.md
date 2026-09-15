@@ -95,32 +95,41 @@ Nothing is downloaded, nothing copyrighted changes hands, and the artifact belon
 Agree on a decompile root with the user before starting, and put it outside the game folder so a game update cannot overwrite or delete it.
 The output is tens of thousands of files and the run takes minutes, so confirm the location before starting rather than after.
 
-```powershell
-dotnet tool install -g ilspycmd
+The root is a git repository holding one commit per game version, so the diff between two of them is what an update changed.
+ilspycmd is pinned in it as a local tool, because another decompiler version rewrites files the game never touched and buries that diff under them.
 
+```powershell
 $managed = $env:CSII_MANAGEDPATH
-$root = "<decompile root>"
-Get-ChildItem $managed -Filter *.dll | ForEach-Object {
-  ilspycmd -p -o "$root\src\$($_.BaseName)" -r $managed $_.FullName
-}
+git init "<decompile root>"
+cd "<decompile root>"
+dotnet new tool-manifest
+dotnet tool install ilspycmd --allow-roll-forward
+dotnet ilspycmd -p -o src -r $managed (Get-ChildItem $managed -Filter *.dll).FullName
+git add -A
+git commit -m "<game version>"
 ```
 
 ```bash
-dotnet tool install -g ilspycmd
-
 managed="$CSII_MANAGEDPATH"
-root="<decompile root>"
-for dll in "$managed"/*.dll; do
-  ilspycmd -p -o "$root/src/$(basename "$dll" .dll)" -r "$managed" "$dll"
-done
+git init "<decompile root>"
+cd "<decompile root>"
+dotnet new tool-manifest
+dotnet tool install ilspycmd --allow-roll-forward
+dotnet ilspycmd -p -o src -r "$managed" "$managed"/*.dll
+git add -A
+git commit -m "<game version>"
 ```
 
 `-p` exports each assembly as a compilable project instead of one flat file, which is what lays the tree out as `src/<assembly>/<namespace>/<Type>.cs` — the shape every navigation recipe in this plugin assumes.
 `-r` points at the managed folder so cross-assembly references resolve.
+Passing every assembly to one run adds a solution over them, whose projects reference one another rather than paths into the install.
+`--allow-roll-forward` keeps the pinned version running once the .NET runtime it targets is gone.
+
+Moving to a newer ilspycmd is a commit of its own: `dotnet tool update ilspycmd`, re-decompile the game version already committed, and commit that before the next update, so the tool's changes and the game's never share one.
 
 The game's own code is `Game.dll` and the `Colossal.*` assemblies; the rest is Unity, .NET and third-party code, worth having for reference and cheap to include in the same pass.
 
-Done when `src/Game/Game.Modding/IMod.cs` exists and `src/Game` holds a few thousand `.cs` files.
+Done when `src/Game/Game.Modding/IMod.cs` exists, `src/Game` holds a few thousand `.cs` files, and the tree is committed.
 
 ### 3. Turn on the developer launch options
 
@@ -157,6 +166,7 @@ The other three are independent of it and of each other, so offer them and let t
 - Making the game's UI bundle readable, worth offering to anyone working on a mod's interface.
   `Cities2_Data/Content/Game/UI/index.js` under the install ships minified to a single line, so reading around a match or citing one needs a reformatted copy.
   Copy it somewhere of the user's choosing, reformat that copy with prettier at its defaults, and fill both record keys with the path and the resulting line count.
+  Inside the decompile root, commit it, so each later version diffs against it the way the decompile does.
   `index.css` beside it ships the same single-line way; a session working on the game's UI reformats a copy of it next to the script's.
 
 ## Refreshing after a game update
@@ -169,10 +179,14 @@ Nothing moved → nothing is stale, so say so rather than redoing the work.
 
 A moved game version stales three things, each guarded by its own key in the record:
 
-- `Decompile root` is set → re-decompile, deleting `src/` first so types the update removed do not survive as stale files.
+- `Decompile root` is set → delete `src/` so types the update removed do not survive as stale files, then re-run step 2's `managed` and `dotnet ilspycmd` lines from the root.
+  A root that is not a git repository yet takes step 2's setup before that deletion, installing the version `ilspycmd --version` reports, and commits the tree it already holds under the recorded game version.
+  Its first version commit still rewrites every project file, since the old per-assembly runs pointed each one into the install.
 - `Debug patch` reads applied → re-apply [debug-patching.md](references/debug-patching.md), which carries why an update undoes it and what changes when the Unity version moved too.
 - `UI bundle copy` is set → remake it from the updated `index.js` as in step 5, and write the new `UI bundle lines` count.
   The frontend is rebuilt every patch, so a stale copy is worse than none: its module paths and line numbers all still look plausible.
+
+With `Decompile root` set, commit its tree last, with the new game version as the message, so a UI bundle copy kept inside it lands in the same commit.
 
 A key that is absent or `(none)` means the user never provisioned that one, so leave it alone rather than offering to repair something they declined.
 
