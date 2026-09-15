@@ -563,7 +563,7 @@ Entry 3 covers `index.js` and its reformatted copy in detail and names `index.cs
 `docs/SOURCES.md` was otherwise accurate everywhere this pass touched it: entry 5's split between content-pack prefabs and `resources.assets` reproduced exactly (type names present, field names absent), and entry 3's `grep -c` warning is correct for the reason it gives.
 
 **Ruled (2026-08-05, orchestrator).** Two applied, two rejected. Applied: the `VersionInternal` line with the 131-assembly `0.0.0.0` decoy, which entry 1 now owns along with the version clause the precedence sentence at `:9` gave up; and the byte-grep-without-decoding fact on entry 4.
-**Proposals 3 and 4 above are wrong and must not be re-applied.** `src/.idea/`, `src/Solution.sln` and `src-ui/source.css` exist only in the maintainer's own checkout — the first two because it was opened in a JetBrains IDE, the third because the CSS was reformatted by hand. `cs2-modding-setup/SKILL.md` provisions `src/` with `ilspycmd` per DLL and reformats `index.js` alone, so a provisioned decompile has none of the three. This pass confirmed each "on disk" and mistook one machine's state for the decompile's, which is the same error the topic's own fourth trap describes.
+**Proposals 3 and 4 above are wrong and must not be re-applied.** `src/.idea/`, `src/Solution.sln` and `src-ui/source.css` are paths only the maintainer's own checkout has — `.idea/` because it was opened in a JetBrains IDE, the other two because the maintainer named them. `cs2-modding-setup/SKILL.md:90-132` provisions `src/` with one `ilspycmd` run, which writes its solution as `src/src.sln` and no `.idea/`, and `:170` makes a CSS copy only where "a session working on the game's UI reformats a copy of it next to the script's", wherever the user put that. This pass confirmed each "on disk" and mistook one machine's state for the decompile's, which is the same error the topic's own fourth trap describes.
 
 ### The checkout's own orientation prose has been deleted since the ruling that named it
 
@@ -575,7 +575,7 @@ Both cited lines are verifiable at commit `ec7c3720`, which `HEAD` has since mov
 
 The ruling is unaffected — it was already ruled that shipped prose states the trap as a plain negative fact about the game and names no document. What has changed is the `**Established.**` section's exposure claim. An `**Addendum**` has been appended to that entry (see `## Dead ends`, last item).
 
-This pass proposed a durable consequence — _hand-written prose sitting in a decompile checkout is not part of the decompile_ — and **the review gate cut it from the shipped file** (orchestrator, 2026-08-05). The reasoning that justified it is what refutes it: `cs2-modding-setup/SKILL.md:76-103` provisions `src/` alone, so a provisioned decompile contains no `.md` for a reader to hit, and the only checkout where the hazard was ever real is the maintainer's own — whose orientation notes were themselves deleted in `565e22b7`. A warning about a situation the provisioning path cannot produce costs every reader context and protects nobody.
+This pass proposed a durable consequence — _hand-written prose sitting in a decompile checkout is not part of the decompile_ — and **the review gate cut it from the shipped file** (orchestrator, 2026-08-05). The reasoning that justified it is what refutes it: `cs2-modding-setup/SKILL.md:90-132` writes no `.md` into the decompile root, so a provisioned decompile contains none for a reader to hit, and the only checkout where the hazard was ever real is the maintainer's own — whose orientation notes were themselves deleted in `565e22b7`. A warning about a situation the provisioning path cannot produce costs every reader context and protects nobody.
 
 ---
 
@@ -636,7 +636,7 @@ No repository documents how to search a decompile, and the catalog's `Demonstrat
 
 **Whether the twelve un-decompiled DLLs hold anything.** Not opened. Named as `Unconfirmed:` above with the artifact that would answer it (`ilspycmd` over one of them). None is reachable from a mod, so the answer changes nothing.
 
-**Whether the checkout's deleted `docs/*.md` were ever read by anything in this plugin.** Checked: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:76-103` provisions `src/` alone. No shipped path delivers that prose, which is what the mod-lifecycle-and-ordering pass's ruling already established and what makes the deletion a change to the evidence rather than to the product.
+**Whether the checkout's deleted `docs/*.md` were ever read by anything in this plugin.** Checked: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:90-132` writes no `.md` into the decompile root. No shipped path delivers that prose, which is what the mod-lifecycle-and-ordering pass's ruling already established and what makes the deletion a change to the evidence rather than to the product.
 
 **The running game was not used and did not need to be.** Every question this topic asks is about what is on disk. The one place a live source would help — enumerating a reflection-built registry's contents — belongs to the topics that own those registries, and `docs/SOURCES.md` entry 8 already routes there. No live question was recorded as unanswerable.
 

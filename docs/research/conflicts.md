@@ -779,7 +779,7 @@ The game orders systems imperatively instead, through `UpdateSystem.UpdateAt/Upd
 
 **Established.** A grep over `src/Game/` returns zero `[UpdateAfter]`, `[UpdateBefore]` and `[UpdateInGroup]` attributes, so they are inert here and a mod ordered with them compiles and never runs where it meant to.
 The error is one sentence in one file rather than a pattern: the same checkout's `DecompiledCitiesSkylines2/docs/game.md:9`, also at `ec7c3720` and since deleted, sends modders to `SystemUpdatePhase` and `UpdateSystem`, which is the right mechanism, though only one of the three phase names it offers as examples is real — `Rendering` (`src/Game/Game/SystemUpdatePhase.cs:20`), against no `Initialization` and no `Simulation`.
-It also reaches no user through this plugin: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:76-103` provisions a decompile by running `ilspycmd` over the user's own installed assemblies and emits `src/` alone, so no shipped path delivers that prose.
+It also reaches no user through this plugin: `plugins/cs2-modding/skills/cs2-modding-setup/SKILL.md:90-132` provisions a decompile by running `ilspycmd` over the user's own installed assemblies and writes no `.md` into the decompile root, so no shipped path delivers that prose.
 
 **Needs a ruling on.** Whether the trunk names this wrong guidance to warn a reader off it, now that the exposure is one checkout's hand-written file rather than anything the plugin hands out.
 Against naming it: shipped prose otherwise states mechanisms on their own authority and cites no source at all.
