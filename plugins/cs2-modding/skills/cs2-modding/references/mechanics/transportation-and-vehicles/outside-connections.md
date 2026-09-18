@@ -1,6 +1,6 @@
 # The outside connection as an object
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -15,7 +15,7 @@ Its archetype is the answer to "what enters through it": the `Game.Objects.Outsi
 So its trade capacity is literally unbounded delivery vehicles — the transport-count cap city companies are held to never fires on it — while its resource capacity is finite, through `Game.Companies.StorageLimitData.m_Limit` (`src/Game/Game.Companies/TransportCompanyData.cs`, `StorageLimitData.cs`).
 [`economy-and-companies`](../economy-and-companies/economy-and-companies.md) owns the storage and trade machinery those components belong to; what is this topic's is which of them sit on which connection.
 
-**`m_Commuting` is dead at 1.6.0f1.**
+**`m_Commuting` is dead at 1.6.2f1.**
 A whole-decompile grep returns only its declaration — a serialized authoring field with no consumer — so it gates nothing; commuter spawning lives in `CommuterSpawnSystem` and belongs to [`citizens-and-households`](../citizens-and-households/citizens-and-households.md).
 Source: `src/Game/Game.Prefabs/OutsideConnection.cs`.
 

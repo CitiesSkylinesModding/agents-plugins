@@ -1,6 +1,6 @@
 # Confirming the debug patch took
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the game install open.**
 Every signal below is a string in a log, a config file or a shipped binary, and reading them is the whole of this technique.

@@ -1,6 +1,6 @@
 # Demand
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -29,8 +29,9 @@ ResidentialDemandSystem.UpdateResidentialDemandJob:
   each factor then through GetFactorValue: multiplied by weight.x when negative, weight.y when positive, truncated to int
   m_HouseholdDemand = min(200, decay + happiness + homeless(down) + taxes + unemployment + students + max(simple workplaces, complex workplaces))
   per density i in (low, medium, high):
-    pressure[i]  = round(100 * (m_FreeResidentialRequirement[i] - free[i]) / m_FreeResidentialRequirement[i])
-                   // negative the moment free properties exceed the requirement
+    target[i]    = m_FreeResidentialProportion[i] * total properties[i]
+    pressure[i]  = target[i] > 0 ? round(100 * (target[i] - free[i]) / target[i]) : 100
+                   // negative once free properties exceed that share of the total
     factor slots (the reported arrays): [7] happiness, [11] taxes, [5] unemployment, [6] simple workplaces (halved for low density), [12] students (medium and high), [8] homeless(up) (high only), [13] pressure[i]
                    // homeless(up) in the high sum only: the negative half reaches every density through m_HouseholdDemand / 2, the positive half only high
     factorSum[i] = that density's slots summed, the whole sum zeroed when pressure[i] < 0

@@ -1,6 +1,6 @@
 # City services and coverage
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -76,7 +76,7 @@ Where the tuning numbers live, all singletons:
 | The budget-efficiency curve, the garbage, mail, telecom, staffing and sick penalties, the grace period, plus the utility penalties [`utilities-and-flow-networks`](../utilities-and-flow-networks/utilities-and-flow-networks.md) owns | `Game.Prefabs.BuildingEfficiencyParameterData` (`src/Game/Game.Prefabs/BuildingEfficiencyParameterData.cs`) |
 | Per-fee `FeeParameters { m_Default, m_Max, m_Adjustable }`, one field per `PlayerResource` that has a fee, plus the two utility consumption curves | `Game.Prefabs.ServiceFeeParameterData` |
 | Healthcare: transport warning time, death rates, notification prefabs | `Game.Prefabs.HealthcareParameterData` |
-| Garbage: the accumulation limits and balances, homeless produce, happiness steps | `Game.Prefabs.GarbageParameterData` |
+| Garbage: the accumulation limits and balances, homeless produce, happiness steps, the adaptive collection margin | `Game.Prefabs.GarbageParameterData` |
 | Police: crime accumulation cap and tolerance, the coverage factor, welfare recurrence factor | `Game.Prefabs.PoliceConfigurationData` |
 | Fire: structural integrity levels, response-time range and its darkness and telecom modifiers | `Game.Prefabs.FireConfigurationData` |
 | Post: mail accumulation cap, tolerance, outgoing percentage | `Game.Prefabs.PostConfigurationData` |

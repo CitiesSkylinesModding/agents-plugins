@@ -1,6 +1,6 @@
 # Climate and weather
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -46,7 +46,7 @@ The simulation-side consumers, each read at its citation:
 | Consumer (`src/Game/Game.Simulation/` unless noted) | Input | Effect |
 | --- | --- | --- |
 | `AdjustElectricityConsumptionSystem` | `temperature` | consumption times a prefab `AnimationCurve` over temperature |
-| `BuildingUpkeepSystem` | `temperature` | `GetHeatingMultiplier(t) = max(0, 15 − t)`, a public static — the `m_TemperatureUpkeep` it feeds is read by nothing at 1.6.0f1 |
+| `BuildingUpkeepSystem` | `temperature` | `GetHeatingMultiplier(t) = max(0, 15 − t)`, a public static — the `m_TemperatureUpkeep` it feeds is read by nothing at 1.6.2f1 |
 | `PowerPlantAISystem` | `cloudiness.value` | solar output `*= lerp(1, 1 − ElectricityParameterData.m_CloudinessSolarPenalty, cloudiness.value)` |
 | `FireHazardSystem`, `FireSimulationSystem` | `isRaining`, `temperature` | fire hazard, [disasters.md](disasters.md) |
 | `WeatherHazardSystem` | `temperature`, `precipitation`, `cloudiness` | disaster spawn probability, [disasters.md](disasters.md) |
@@ -54,7 +54,7 @@ The simulation-side consumers, each read at its citation:
 | `TourismSystem`, `TouristSpawnSystem` | `classification`, `temperature`, `precipitation`, `isRaining`, `isSnowing` | tourist spawn probability against `AttractivenessParameterData`'s weather fields |
 | `WetnessSystem` | `precipitation`, `temperature` | wetness and snow targets and rates, below |
 | `SnowSystem` | `temperature`, `precipitation` | parameters into the snow compute shader, below |
-| `SoilWaterSystem` | `precipitation.value` | the rain-flood counter — never ticks at 1.6.0f1 ([disasters.md](disasters.md)) |
+| `SoilWaterSystem` | `precipitation.value` | the rain-flood counter — never ticks at 1.6.2f1 ([disasters.md](disasters.md)) |
 | `IndustrialFindPropertySystem` | `averageTemperature` | property scoring input |
 | `EffectFlagSystem` (`Game.Effects`), `ClimateRenderSystem` (`Game.Rendering`), the colour and audio systems | various | presentation |
 

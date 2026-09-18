@@ -1,6 +1,6 @@
 # Patching the game for debugging on Linux
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 The game runs under Proton, so the patch is [debug-patching.md](debug-patching.md)'s own three edits applied to the Windows game, and everything there holds except where the development library comes from.
 The commands below use the shell variables and the `wine` and `winpath` helpers defined at the top of the setup in [linux-toolchain.md](../../cs2-mod-project/references/linux-toolchain.md); define them first, and keep the game closed.

@@ -1,6 +1,6 @@
 # Registry paths other references send a reader here for
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the game install open.**
 Every path and export name below is checkable only against its `Cities2_Data/Content/Game/UI/index.js`, read as the reformatted copy `cs2-modding-setup` records; nothing here names game C#.

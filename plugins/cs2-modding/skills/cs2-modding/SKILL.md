@@ -12,7 +12,7 @@ The simulation is Unity ECS: city state lives in components on entities, and sys
 Most of what the player sees as content is a prefab — a data-driven object the game derives entities from — so changing what the game does is often changing data rather than code.
 A change therefore starts as two questions: which components carry the state, and which system writes them.
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 Every reference below states its own baseline.
 
 ## Five facts to hold before writing a line

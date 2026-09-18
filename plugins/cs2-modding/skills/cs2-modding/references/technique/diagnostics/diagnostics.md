@@ -1,6 +1,6 @@
 # Diagnosing a mod that does not work
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -164,7 +164,7 @@ What a log call costs, and how to make one cheap enough to leave in a shipped bu
 - **The version block** carries `Game version`, `Unity version`, `Cohtml version`, and one line per installed DLC and radio pack.
 - **`Game configuration: Development (Mono)` or `Release (Mono)`** is the debug-patch signal, in a text log, at a known place — see the debug-patch section below.
 
-`Modding.log` opens with its own sequence: `Modding runtime: Builtin` (the alternative names a third-party loader assembly and its version), then the playset and enabled-mod blocks, then per mod in load order the optional `Loaded additional Burst code <path>` and the `Loaded <assembly full name> in <n>ms` line, then `Mods initialized in <n>ms`, then one `Registered UI Module …` line per UI module.
+`Modding.log` opens with its own sequence: `Modding runtime: Builtin` (the alternative names a third-party loader assembly and its version), the playset and enabled-mod blocks — written by an unawaited asynchronous log call, so they can land anywhere among the lines after — and per mod in load order the optional `Loaded additional Burst code <path>` and the `Loaded <assembly full name> in <n>ms` line, then `Mods initialized in <n>ms`, then one `Registered UI Module …` line per UI module.
 
 `Modding.log` also carries the game's own Harmony patch census, and **an empty census there proves nothing about what is patched.**
 The census runs before any mod assembly is in the process, so under the built-in modding runtime it finds no Harmony to reflect over and returns immediately.
@@ -301,9 +301,9 @@ That record is job-local rather than a component, so the tagged entity carries t
 Source: `src/Game/Game.Tools/ValidationSystem.cs` (the tagging and the icons), `src/Game/Game.Tools/Error.cs` and `src/Game/Game.Tools/ErrorData.cs` (the tag component and the job-local record).
 
 **How a tool knows it is blocked.** The tool base holds a query over that error component, and the base implementation of `GetAllowApply` is true when the tool system's `ignoreErrors` is set _or_ that query is empty, and the original-deleted check also passes.
-So "why will this not apply" is answered by whether that query is empty.
+So "why will this not apply" is answered by whether that query is empty, unless the tool's own `GetAllowApply()` override tests something else — [`custom-tools`](../custom-tools/custom-tools.md) owns the bulldoze and object tools' overrides.
 `ignoreErrors` is a plain public settable bool, and the developer menu's validation-bypass toggle is what writes it — but it clears only the error-query half, and the original-deleted check still gates the return.
-So an apply that still refuses with `ignoreErrors` set is the second clause, not a broken toggle; [`custom-tools`](../custom-tools/custom-tools.md) owns that clause and overriding `GetAllowApply` in a tool of your own, and [`debug-menu`](../debug-menu/debug-menu.md) owns the menu.
+So under the base gate, an apply that still refuses with `ignoreErrors` set is the second clause, not a broken toggle; [`custom-tools`](../custom-tools/custom-tools.md) owns that clause and overriding `GetAllowApply` in a tool of your own, and [`debug-menu`](../debug-menu/debug-menu.md) owns the menu.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the query and the base `GetAllowApply`), `src/Game/Game.Tools/ToolSystem.cs` (`ignoreErrors`), `src/Game/Game.Debug/DebugSystem.cs` (the toggle that writes it).
 
 **How the reason reaches the player.** Each error type has a prefab carrying its notification icon, and a prefab whose flags disable it in the current mode is skipped, leaving an empty slot.

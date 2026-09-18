@@ -1,6 +1,6 @@
 # Building spawning
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -49,7 +49,7 @@ SelectBuilding:
     the land value handed to the score is scaled first:
         residential: the building width is first widened to the lot's when one cell short and the zone lacks SupportNarrow, then landValue * (building width * the VACANT LOT's depth) / (m_ResidentialProperties == 1 ? 2 : CountProperties())
         the rest:    landValue / m_SpaceMultiplier
-    priority *= ZoneEvaluationUtils.GetScore(...)           // below; SelectBuilding's extractor parameter is false at its one call site, so the extractor bypass arms in this method are dead at 1.6.0f1; with m_MinDemand == 0 the score is floored at 0 and 1 is added first
+    priority *= ZoneEvaluationUtils.GetScore(...)           // below; SelectBuilding's extractor parameter is false at its one call site, so the extractor bypass arms in this method are dead at 1.6.2f1; with m_MinDemand == 0 the score is floored at 0 and 1 is added first
   the winner's lot rectangle is shrunk to its footprint, anchored by its access flags, with a coin flip when it has neither
 
 SpawnBuildingJob (IJobParallelFor scheduled over exactly 3 indices):

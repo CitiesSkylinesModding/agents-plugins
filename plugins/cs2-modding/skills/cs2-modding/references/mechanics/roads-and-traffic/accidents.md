@@ -1,6 +1,6 @@
 # Accidents
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -41,7 +41,7 @@ The flags tested are `RoadComposition.m_Flags` off the edge's composition prefab
 ## Which prefabs qualify
 
 Which events can start here is asset data: enumerate it with `ecs_query` on `Game.Prefabs.TrafficAccidentData` — a superset, since the system's own query also requires `EventData` and excludes `Locked`.
-Read live at 1.6.0f1 the only carrier whose `m_RandomSiteType` is `Road` is the lose-control accident; the other carriers declare no random site (`m_RandomSiteType = None`) and are unreachable from this system.
+Read live at 1.6.2f1 the only carrier whose `m_RandomSiteType` is `Road` is the lose-control accident; the other carriers declare no random site (`m_RandomSiteType = None`) and are unreachable from this system.
 **The authoring class and the baked component spell the probability field differently.**
 `TrafficAccident.m_OccurrenceProbability` is copied into `TrafficAccidentData.m_OccurenceProbability` — one `r` short — so one search finds half the sites, and the field is a prefab value like any other.
 Source: `src/Game/Game.Prefabs/TrafficAccident.cs`, `src/Game/Game.Prefabs/TrafficAccidentData.cs`.

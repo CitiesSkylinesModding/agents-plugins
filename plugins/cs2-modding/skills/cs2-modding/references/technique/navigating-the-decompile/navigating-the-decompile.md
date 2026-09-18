@@ -1,6 +1,6 @@
 # Navigating the decompile
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Every route below is a search over that tree, so without one there is nothing here to run.
@@ -174,7 +174,7 @@ These three are not.
    Source: `src/Game/Game.Simulation/AgingSystem.cs`.
 2. **Local names carry no meaning.** `num`, `num2`, `flag`, and worse, locals named after their own type with a numeric suffix — `int2 int5 = m_UpdateRanges[(int)phase];`. Never infer intent from a local identifier, and note the second-order cost: this is exactly why a call site with an inferred generic type argument is unsearchable by type name.
    Source: `src/Game/Game/UpdateSystem.cs`.
-3. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy**, repeated by most assemblies in the tree. **The decompile does state its own version**, one line above it: `src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.0f1 (419.d6c6) [6216.19404]")]` — game version, changelist and build.
+3. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy**, repeated by most assemblies in the tree. **The decompile does state its own version**, one line above it: `src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]` — game version, changelist and build.
    Source: `src/Game/Properties/AssemblyInfo.cs`.
 
 Against that: closure and iterator classes are essentially absent from `src/Game`, generic type arguments survive intact, and lambdas and LINQ read as ordinary C# — which is why a reader can trust what they read.
@@ -220,10 +220,10 @@ Where a question is really "what is in a registry the game built at startup", wi
 Source: `src/Game/Game.UI.Menu/AutomaticSettings.cs`, `src/Game/Game.Modding/ModSetting.cs`, `src/Game/Game.Modding/ModManager.cs`.
 
 **Two cheap tricks answer presence on the non-C# surfaces.**
-The `.cok` packages are stored zips with uncompressed payloads, so a plain `grep -a -o` over `Cities2_Data/Content/Game/Locale.cok` returns whole localization keys with no decoding at all — one command enumerates a whole key family.
+The `.cok` packages are stored zips with uncompressed payloads, so a plain `grep -a -h -o` over `Cities2_Data/Content/*/Locale.cok` returns whole localization keys with no decoding at all — one command enumerates a whole key family, provided the glob covers every content pack's package, since a pack's keys live only in its own.
 Write the character class wide enough to cover the family, though: a key set that looks complete under `[A-Za-z]*` gains a member under `[A-Za-z0-9]*`, because one of the game's own key names carries a digit.
 And the shipped UI bundle is one enormous line, so `grep -c` over it answers 1 or 0 whatever the truth; count with `grep -o … | wc -l`, and use the reformatted copy for citing line numbers rather than for establishing presence.
-Source: `Cities2_Data/Content/Game/Locale.cok`, `Cities2_Data/Content/Game/UI/index.js`.
+Source: `Cities2_Data/Content/*/Locale.cok`, `Cities2_Data/Content/Game/UI/index.js`.
 
 (VOLATILE: the three reflection files a mod author needs — `src/Game/Game.UI.Menu` and `src/Game/Game.Modding`.)
 

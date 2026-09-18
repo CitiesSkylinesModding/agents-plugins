@@ -5,7 +5,7 @@ description: 'The official Cities: Skylines II modding toolchain. Use when the u
 
 # Building and shipping a Cities: Skylines II mod
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 On Linux, where the game runs under Proton, the toolchain is set up by hand and every project needs one csproj edit the Windows toolchain never asks for: [linux-toolchain.md](references/linux-toolchain.md) carries both, and without them a template project fails on an empty target framework rather than on anything naming the toolchain.
 A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's sections and references on anything they own — or at the very least grep them before writing a familiar csproj or build shape, because the toolchain inverts several standard .NET idioms and the familiar one builds cleanly, then fails inside the game.**

@@ -1,6 +1,6 @@
 # Save serialization
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -119,14 +119,14 @@ Two consequences:
     Source: `src/Game/Game.Serialization/SerializerSystem.cs` (the query's `None` list), `src/Game/Game.Common/PrepareCleanUpSystem.cs` and `src/Game/Game.Common/CleanUpSystem.cs` (the destroy pass).
 
 **The clear query does not know your types.**
-The world outlives a load — [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) has why — and the system that empties it beforehand destroys entities matching a query whose `Any` list is nineteen fixed vanilla types and nothing else.
+The world outlives a load — [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) has why — and the system that empties it beforehand destroys entities matching a query whose `Any` list is twenty fixed vanilla types and nothing else.
 It does not gain the mod types the save query gains.
 So an entity carrying only mod components and no vanilla anchor is written to the save, is not destroyed before the next load, and is recreated from the save on top of the copy that survived.
 Both halves have been observed on a running game: the save query matches such an entity and the clear query does not, and one created by hand survived a load into an unrelated city intact.
 Delete your own marker entities yourself, from a main-loop system that runs after the one which wrote them, rather than relying on the clear.
 Source: `src/Game/Game.Serialization/ClearSystem.cs` and `src/Game/Game.Serialization/SerializerSystem.cs` (the two queries' `Any` lists).
 
-(VOLATILE: the eighteen save anchors and the nineteen clear types — the serializer system's query construction and the clear system's own.)
+(VOLATILE: the eighteen save anchors and the twenty clear types — the serializer system's query construction and the clear system's own.)
 
 ## The read and write contract
 
@@ -281,12 +281,12 @@ Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializ
 
 ## The game's own version constants, and what a format break looks like
 
-`Game.Version` is nothing but named build stamps — **273 of them** in 1.6.0f1, ending in `current`.
+`Game.Version` is nothing but named build stamps — **273 of them** in 1.6.2f1, ending in `current`.
 Each packs its fields so that `>=` is a chronological test, which is what the comparisons below rely on.
 Source: `src/Game/Game/Version.cs`, `src/Colossal.Core/Colossal/Version.cs` (the packing).
 
 **Beside them sits a coarser mechanism the game uses for two thirds of its own migrations: format tags.**
-`Game.FormatTags` is a flat enum — **42 members** in 1.6.0f1 — each naming one format change.
+`Game.FormatTags` is a flat enum — **42 members** in 1.6.2f1 — each naming one format change.
 On save, every name in the writing build's enum is written as a string.
 On load, each name is looked up in the loading build's enum and the matching bit set in `context.format`.
 Source: `src/Game/Game/FormatTags.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/EntitySerializer.cs` (the names written into the header buffer), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the lookup), `src/Game/Game.Serialization.DataMigration/` (the tag gate on the migrations that use one).

@@ -1,6 +1,6 @@
 # Custom tools
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -21,9 +21,10 @@ The game has eleven concrete tools — nine directly under `ToolBaseSystem`, plu
 (VOLATILE: the number of vanilla tools and the split between the two base classes — the vanilla tool registrations in the game's system-order class for the count, and the tool classes' own declarations in the tools namespace for the split.)
 
 **What the heavier base adds is exactly one protected helper.**
-`CreateDefinitions(...)` takes 23 parameters, schedules the game's own definition job wired with dozens of component and buffer lookups, and emits `CreationDefinition` and `ObjectDefinition` entities through `ToolOutputBarrier` — sub-objects, sub-nets, sub-lanes, sub-areas, placeholder resolution and attachment included.
+`CreateDefinitions(...)` takes 24 parameters, schedules the game's own definition job wired with dozens of component and buffer lookups, and emits `CreationDefinition` and `ObjectDefinition` entities through `ToolOutputBarrier` — sub-objects, sub-nets, sub-lanes, sub-areas, placeholder resolution and attachment included.
 The rest of the class is bookkeeping for that call — four cached system references, the tool output barrier, the object search system, the water system and the terrain system, assigned in its `OnCreate` — apart from `GetFirstNodeIndex`, a `public static` helper six systems outside the class call and that has nothing to do with definitions.
 Source: `src/Game/Game.Tools/ObjectToolBaseSystem.cs`.
+(VOLATILE: the `CreateDefinitions` parameter count — `ObjectToolBaseSystem`'s own declaration.)
 
 So the rule is one line: **derive from `ObjectToolBaseSystem` when the tool places objects and wants vanilla-quality previews for free, and from `ToolBaseSystem` for everything else**, including a tool that emits its own definitions by hand.
 The heavier base is the minority choice, because most tools select, edit or paint rather than place.
@@ -279,7 +280,9 @@ The base returns false when errors exist and the tool system's ignore-errors fla
 That system walks every `Temp` and sets a flag when the original carries `Deleted` or no longer exists at all, keeping a two-frame ring so the first index covers last frame and this one; it runs at `PreTool`.
 A tool whose previews point at originals that legitimately vanish therefore refuses to apply.
 **Override `GetAllowApply()` and keep only the error clause** when your tool does that deliberately; the second clause is the one you are dropping, and you drop it for the whole tool.
-Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the two clauses), `src/Game/Game.Tools/OriginalDeletedSystem.cs` (the two-frame ring) and `src/Game/Game.Common/SystemOrder.cs` (its `PreTool` registration).
+A vanilla tool's own gate can differ from the base, so read the override on the tool's class before reasoning from these two clauses: the bulldoze tool, for one, keeps only the second clause (below), and the object tool in move mode replaces the base's error test with one counting only an `Error` that traces back to the object being moved.
+Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the two clauses), `src/Game/Game.Tools/BulldozeToolSystem.cs` and `src/Game/Game.Tools/ObjectToolSystem.cs` (their overrides), `src/Game/Game.Tools/OriginalDeletedSystem.cs` (the two-frame ring) and `src/Game/Game.Common/SystemOrder.cs` (its `PreTool` registration).
+(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — those two tool classes.)
 (UNVERIFIED: whether that refusal is a game bug or the intended consequence of pointing `Temp` at originals the check considers gone — watching the check fire in a running game against a tool that does it deliberately would settle it.)
 
 **The canonical loop is the vanilla bulldoze tool**, and it is worth reading before writing your own.
@@ -292,7 +295,7 @@ Its update helper is the readable statement of the three modes:
 
 Source: `src/Game/Game.Tools/BulldozeToolSystem.cs` (the state machine and its update helper).
 
-Its apply path checks `GetAllowApply()`, plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing sweeps away the definitions that produced the previews being committed, and creates none to replace them.**
+Its apply path checks `GetAllowApply()` — its own override, `return !m_OriginalDeletedSystem.GetOriginalDeletedResult(0);`, which keeps only the second clause — plays a sound, sets `ApplyMode.Apply`, clears its control points and destroys the definitions — so **committing sweeps away the definitions that produced the previews being committed, and creates none to replace them.**
 `DestroyDefinitions(EntityQuery, ToolOutputBarrier, JobHandle)` and the `GetDefinitionQuery()` it expects are both protected on the base class, and the tool's whole share of the mechanism is where it calls them: the pre-switch guard, the lost-raycast branch and the apply path above — each pairing the call with the `ApplyMode` it sets — plus the head of its own definition-update helper, which destroys before it re-creates.
 Source: `src/Game/Game.Tools/BulldozeToolSystem.cs` (the apply path and the four call sites) and `src/Game/Game.Tools/ToolBaseSystem.cs` (the two protected helpers).
 [`placement-definitions`](../placement-definitions/placement-definitions.md) owns what that query matches, why the sweep runs a frame behind, and who collects a definition a tool leaves behind.

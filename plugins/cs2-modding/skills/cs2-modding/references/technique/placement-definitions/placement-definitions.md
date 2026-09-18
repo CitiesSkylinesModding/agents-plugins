@@ -1,6 +1,6 @@
 # Placement definitions
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -78,9 +78,10 @@ What gets built is decided by the **second** component on the definition entity,
 
 Every one of those queries is `{CreationDefinition, <kind>, Updated}`, some written with the kind in an `Any` clause so that one system can claim two kinds: the object generator matches `Any = {ObjectDefinition, NetCourse}`, and the node generator matches the same pair.
 
-Two more components ride along rather than selecting a consumer.
+Three more components ride along rather than selecting a consumer.
 `OwnerDefinition { Entity m_Prefab; float3 m_Position; quaternion m_Rotation; }` names an owner that **does not exist yet**: a sub-object of a building being placed points at the building's own definition rather than at an entity, which is what lets a whole composite be described before any of it is created.
 `ColorDefinition { Color32 m_Color; }` is written by the route tool and read by the route generator, and colours a transport line.
+`ColorVariationDefinition { ColorSet m_ColorSet; }` is written by the net tool, carried through by the course splitter, and read as optional by the edge generator.
 
 **`NetCourse` is the richest kind**: two `CoursePos` endpoints plus `Bezier4x3 m_Curve`, `float2 m_Elevation`, `float m_Length` and `int m_FixedIndex`.
 `CoursePos` carries `m_Entity`, `m_Position`, `m_Rotation`, `m_Elevation`, `m_CourseDelta`, `m_SplitPosition`, `CoursePosFlags m_Flags` and `m_ParentMesh`.
@@ -352,9 +353,10 @@ Declare an ordinary `IComponentData` of your own, emit it exactly the way a vani
 
 A generator that needs the vanilla `Temp` entities to exist runs later than `Modification1` — `Modification3` with a second query of `{Node, Temp, Updated}` is the worked shape — because at `Modification1` the vanilla nodes it wants to attach to have not been created yet.
 
-**Feed your validation back into the vanilla error protocol rather than replacing it**: add `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity _and_ to the `Temp`'s `m_Original`, so the vanilla apply gate blocks on your error too.
+**Feed your validation back into the vanilla error protocol rather than replacing it**: add `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity _and_ to the `Temp`'s `m_Original`, so the vanilla apply gate blocks on your error too — except the bulldoze tool, whose own `GetAllowApply()` ignores `Error`, and the object tool in move mode, whose override blocks only on an `Error` entity that traces back to the object being moved through `Temp.m_Original` and `Owner`.
 Where the mod also wants its own feedback buffer, override `GetAllowApply()` to test that buffer's query alongside the vanilla error query — [`custom-tools`](../custom-tools/custom-tools.md) owns that override from the tool side.
-Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the apply gate and the error query behind it).
+Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the apply gate and the error query behind it), `src/Game/Game.Tools/ObjectToolSystem.cs` (`GetAllowApply` and `HasMovedObjectError`), `src/Game/Game.Tools/BulldozeToolSystem.cs` (its `GetAllowApply` override).
+(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — those two tool classes.)
 
 ## Mod-created entities need a prefab reference the load pass can resolve
 
@@ -377,7 +379,7 @@ Stripping the component off a live sub-object disturbs nothing at runtime — no
 That silence is the trap: nothing connects the failure to the thing that caused it.
 
 The bill comes due whenever the game tears the world down and rebuilds it — reloading a save, or merely returning to the main menu.
-**The teardown is what `PrefabRef` gets the entity past.** The clear that runs before the deserialize phase destroys everything matching a nineteen-component `Any` query headed by `PrefabRef`; an entity carrying none of the nineteen is simply not destroyed, and survives into the next world holding a stale `Owner`.
+**The teardown is what `PrefabRef` gets the entity past.** The clear that runs before the deserialize phase destroys everything matching a twenty-component `Any` query headed by `PrefabRef`; an entity carrying none of the twenty is simply not destroyed, and survives into the next world holding a stale `Owner`.
 The pass that then rebuilds each owner's `SubObject` buffer from those back-references logs `Owner has no SubObject: <index>:<version>`, naming the survivor.
 That line is a plain `Debug.Log` in a loop that carries on, so it is the symptom rather than the failure: what it records is a sub-object that did not make it back into its owner's buffer.
 So a mod that leaves its own entities without a prefab does not fail the session that creates them; the damage lands on the teardown.
@@ -457,7 +459,7 @@ The complementary move is to **reuse** a vanilla error prefab rather than suppre
 
 [`custom-tools`](../custom-tools/custom-tools.md) is the other half of this seam, and neither reference is complete without it: it owns `ObjectToolBaseSystem` as a choice of base class, the `ApplyMode` state machine that decides when definitions are rebuilt and destroyed, and the `GetAllowApply()` gate that the error findings above fill in the first place.
 
-[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the producer seeds `ObjectDefinition.m_Probability` to 100 and overwrites it from the first only when that prefab's placement flags carry `HasProbability` — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
+[`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) sits on the other side of every `Entity` field here: `m_Prefab` and `m_SubPrefab` are prefab entities, `PlaceableObjectData` and `ObjectGeometryData` are what a definition producer reads off them — the producer seeds `ObjectDefinition.m_Probability` to 100 and overwrites it from the first only when that prefab's placement flags carry `HasProbability`, and in the editor with auto-parent snapping on an object tool's placement override for a non-building sub-object that is not being relocated replaces it (and `m_ParentMesh` and `m_GroupIndex`, each only when its own override is on) whatever those flags say — and the tool-error prefabs of the last two sections are authored prefabs found by `PrefabID` and edited at runtime.
 
 [`zoning-buildings-and-land-value`](../../mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md) is reached twice over: every act of zoning and dezoning passes through a `Zoning` definition, and growth itself emits `Permanent` definitions for the building, its sub-areas and its sub-nets, so a mod changing what grows on a lot has a seam here that involves no tool at all.
 

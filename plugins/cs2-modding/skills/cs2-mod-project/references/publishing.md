@@ -1,6 +1,6 @@
 # Publishing a mod
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 Three modes, one per publish profile in `Properties/PublishProfiles/`, run with the IDE's publish command.
 

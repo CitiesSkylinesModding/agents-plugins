@@ -1,6 +1,6 @@
 # The frontend as source
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Nearly everything here rests on the frontend bundle, so the module paths, export names and class shapes below are checkable only against the install's `index.js` and `index.css` — the script reads only as the reformatted copy `cs2-modding-setup` records, and the stylesheet only once reformatted the same way beside it, a copy that record does not yet track — and the tree itself answers for the few C# handlers and types named and for nothing else in this file.
@@ -145,7 +145,8 @@ Each path below is registered in the bundle under the export named (VOLATILE: ev
 | `game-ui/menu/components/shared/master-screen/master-screen.tsx` | `MasterScreen` | the menu's screen frame |
 | `game-ui/overlay/logo-screen/logo-screen.tsx` | `LogoScreen` | the loading screen |
 | `game-ui/game/components/toolbar/bottom/time-controls/time-controls.tsx` | `TimeControls` | the clock widget |
-| `game-ui/game/components/toolbar/bottom/time-controls/time-controls-new.tsx` | `TimeControlsNew` | its replacement — both ship, and a mod touching the clock extends both |
+| `game-ui/game/components/toolbar/bottom/time-controls/time-controls-new.tsx` | `TimeControlsNew` | its replacement — both ship, and a mod touching the clock extends both, and `ConsoleTimeControls` too |
+| `game-ui/game/components/toolbar/bottom/time-controls/console-time-controls.tsx` | `ConsoleTimeControls` | the clock while the gamepad scheme is active and the `options.useNewGamepadUI` setting is on, which the game turns on only for consoles |
 | `game-ui/game/components/toolbar/bottom/time-controls/time-controls.module.scss` | `classes` | merging a mod's class map into the vanilla one |
 | `game-ui/common/focus/focus-key.ts` | `FOCUS_DISABLED`, `FOCUS_AUTO`, `useUniqueFocusKey` | focus keys — the same values `cs2/input` exports, so the import is the route |
 
@@ -165,6 +166,9 @@ A mod tool overriding none of them brings nothing that mounts the panel — only
 Source: `useToolOptionsVisible` in `Cities2_Data/Content/Game/UI/index.js`; `src/Game/Game.UI.InGame/ToolUISystem.cs`, `ToolbarUISystem.cs` beside it and `src/Game/Game.Tools/ToolBaseSystem.cs` for what feeds its terms.
 
 `ToolOptions` renders `GamepadToolOptions` or `MouseToolOptions` by input scheme, then the editor options when in the editor, so rows for both schemes mean extending two modules.
+While the gamepad scheme is active and the `options.useNewGamepadUI` setting is on — which it is only for consoles — the game screen renders console twins of the tool-options panel, the asset menu and the toolbar instead, the first still behind `useToolOptionsVisible`, the second behind the toolbar's selected asset category and the third behind nothing further.
+Source: `src/Game/Game.Settings/InterfaceSettings.cs` (`useNewGamepadUI`); `useNewGamepadUIActive` in `game-ui/common/hooks/use-new-gamepad-ui.tsx` and the game screen's render in `Cities2_Data/Content/Game/UI/index.js`.
+(VOLATILE: the console twins and the two conditions that swap them in — the game screen's render and `game-ui/common/hooks/use-new-gamepad-ui.tsx`, `Cities2_Data/Content/Game/UI/index.js`.)
 
 **The mode switcher renders for any tool with two or more modes, and its C# half does nothing for a mod tool.**
 The switcher inside `MouseToolOptions` draws one `ValueToolButton` per mode — icon from `mode.icon`, tooltip from the `ToolOptions.TOOLTIP_TITLE[<id>]` and `TOOLTIP_DESCRIPTION[<id>]` keys, selected on `mode.index === activeTool.modeIndex` — and calls the `tool.selectToolMode` trigger on select.
@@ -336,7 +340,7 @@ Source: the registry object literal and the root component's module loader (`Cit
 
 [`localization`](../../../cs2-modding/references/technique/localization/localization.md) owns what goes into a localized string; it gets the `Loc` dictionary and its four key shapes from `promised-registry-paths.md`.
 
-[`units-and-formatting`](../../../cs2-modding/references/technique/units-and-formatting/units-and-formatting.md) and [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) get the formatters `cs2/l10n` withholds, the three unit-preference enums and the `Unit` enum from the same file, with the caveat that the module carrying the enums carries dead accessors beside them; [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) also gets the time-bindings module and the twice-shipped clock widget.
+[`units-and-formatting`](../../../cs2-modding/references/technique/units-and-formatting/units-and-formatting.md) and [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) get the formatters `cs2/l10n` withholds, the three unit-preference enums and the `Unit` enum from the same file, with the caveat that the module carrying the enums carries dead accessors beside them; [`simulation-time-and-units`](../../../cs2-modding/references/mechanics/simulation-time-and-units/simulation-time-and-units.md) also gets the time-bindings module and the clock widgets, shipped three times over.
 
 [`settings-and-input`](../../../cs2-modding/references/technique/settings-and-input/settings-and-input.md) gets the options-screen modules and the widget renderer that draws a settings page, and the fact that the focus-key trio is `cs2/input`'s.
 

@@ -1,6 +1,6 @@
 # Localization
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -147,7 +147,7 @@ A localization identifier is parsed by four regexes and nothing else.
 Read off the regexes: **exactly one dot separates group from id**, neither part may start with a digit, both are `\w`-or-`$`, and the hash body accepts a far wider set — letters, digits, `-+/*._&<>` and the space — which is why a generated key can carry a whole dotted type name or a slashed path inside the brackets.
 Source: `src/Colossal.Localization/Colossal.Localization/LocalizationValidation.cs`.
 
-Those four shapes account for **every one of the 22,120 keys the game itself ships**, with nothing left over: 16,627 hashed, 3,715 indexed, 1,656 single, 122 hashed-and-indexed.
+Those four shapes account for **every key in the base game's package** with nothing left over, its 22,163 splitting as 16,642 hashed, 3,715 indexed, 1,684 single, 122 hashed-and-indexed.
 So the one-dot grammar is not merely what the compiler enforces, it is what the shipped data obeys.
 Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok`.
 
@@ -160,7 +160,7 @@ Source: `src/Colossal.Localization/Colossal.Localization/MemorySource.cs`, `src/
 
 So a key with four dots works, and keys of that shape are widespread.
 What an invalid identifier actually forfeits is **index support**: a key that does not parse never contributes to the index counts, so `Group.ID:0`-style random variants only work on a well-formed identifier.
-Match the vanilla grammar anyway — it costs nothing, it is the shape with 22,120 worked examples behind it, and it keeps the indexed mechanism available.
+Match the vanilla grammar anyway — it costs nothing, it is the shape every vanilla key takes, and it keeps the indexed mechanism available.
 
 ### Argument placeholders
 
@@ -177,7 +177,7 @@ That formats through the game's own money formatter with no C# formatting code a
 The C# argument-name extractor will not list `AMOUNT`, because the whole `{AMOUNT:Money}` token fails its character class.
 A placeholder whose value is missing is left in the output verbatim.
 
-The game leans on the inline spec exactly once across all thirteen locales, and the unit it reaches for there — `DurationSeconds` — is one of the five [`units-and-formatting`](../units-and-formatting/units-and-formatting.md) records as existing only on the frontend.
+The game's own strings use the inline spec — `{TIME:DurationSeconds}` in the base game's package, and `{350:Height}`-style specs in a content pack's, where a name that parses as a number and has no value is formatted as that number — and `DurationSeconds` and `Height` are both among the five units [`units-and-formatting`](../units-and-formatting/units-and-formatting.md) records as existing only on the frontend.
 So the frontend-only tail of the unit list is not a toolchain artefact: the game's own strings depend on it.
 
 ### Indexed keys pick a random variant
@@ -185,7 +185,7 @@ So the frontend-only tail of the unit list is not a toolchain artefact: the game
 An entity carries a buffer of chosen indices, one per localization slot, generated from a count buffer; a helper turns a base id plus that index into `"<id>:<index>"` and returns the bare id when the index is `-1`.
 The counts reach the frontend as the index-counts binding, answered from the active dictionary.
 
-The game leans on it heavily: the shipped English data declares **260 indexed keys totalling 3,837 variants**, and that total accounts for every indexed entry in the file exactly.
+The game leans on it heavily: the English data in the base game's package declares **260 indexed keys totalling 3,837 variants**, and that total accounts for every indexed entry in the file exactly.
 The largest pools are the generated district names at 1,015 variants and city names at 501, then five network-name keys at 210 each.
 A mod that wants one name out of a pool writes `Group.ID:0` through `Group.ID:n` and lets the mechanism pick.
 
@@ -277,13 +277,13 @@ Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs`
 
 All six strategies above are reachable with the game's own types alone, so what a localization dependency buys is a parser somebody else maintains and a single agreed place for the `AddLocale` call that makes an unshipped locale addressable — not a capability a mod lacks.
 
-### The thirteen locales the game ships
+### The twelve locales the game ships
 
-`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`, `ja-JP`, `ko-KR`, `pl-PL`, `pt-BR`, `ru-RU`, `zh-HANS`, `zh-HANT` and `uk-UA`.
-Twelve are complete at 22,120-odd entries; `uk-UA` ships separately and is about 12% short of the English key set.
-No content pack adds a locale of its own — a pack's strings live in these same files.
+`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`, `ja-JP`, `ko-KR`, `pl-PL`, `pt-BR`, `ru-RU`, `zh-HANS` and `zh-HANT`.
+In the base game's package each is complete at 22,160-odd entries.
+Each content pack directory that ships a locale package carries these same twelve locales in it, with that pack's strings, rather than a locale of its own.
 
-Three locales mod translations commonly carry — `nl-NL`, `pt-PT` and `ar-SA` — are **not** among them.
+Four locales mod translations commonly carry — `nl-NL`, `pt-PT`, `ar-SA` and `uk-UA` — are **not** among them.
 **A source added for one of them is a silent no-op, and a later `AddLocale` does not replay it.**
 `AddSource` records the pair before checking whether the locale exists, and returns quietly when it does not; `AddLocale` only creates the locale. So `AddLocale` has to have run first — and since mod order is uncontrolled, a mod that needs a companion to register the locale cannot assume it did.
 **Retry on the locale signal, but test the locale before you spend a source.** `AddLocale` raises the public supported-locales-changed event, which is the cue to add the source again; the retry is subject to the same `Equals`-keyed re-add guard as the swap case above, so it needs a source that guard tells apart from the one your first attempt recorded.
@@ -337,11 +337,11 @@ The three numeric elements a substitution carries — `LocalizedNumber<T>`, `Loc
 
 ## The vanilla key namespaces
 
-The game's own strings occupy **75 groups** — the segment before the first dot — totalling 2,153 ids and 22,120 entries, counted in English, which is the fallback locale and therefore the set that defines what exists.
+The game's own strings occupy **75 groups** — the segment before the first dot — totalling 2,181 ids and 22,163 entries, counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in these counts.
 A group is a naming convention the panels agree on rather than a registered thing, so a mod can write a key into any of them — and whether that key is ever displayed depends on a panel asking for it, which is what the reuse section below governs.
 
 **Only 21 of the 75 groups are named as string literals anywhere in the game's C#**, and the other 54 are built entirely in the frontend, so grepping the decompile for a namespace and finding nothing proves nothing about whether it exists.
-Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok` (every group that exists), against `src/` (the 21 that appear there as string literals).
+Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok` (every base-game group), against `src/` (the 21 that appear there as string literals).
 
 Read [the vanilla key namespaces](vanilla-namespaces.md) for the whole group set with an id count, an entry count and a coverage note per group, which is how you find the group a string you want to reuse or override already lives in, and which 21 those are.
 

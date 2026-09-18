@@ -9,7 +9,7 @@ The game's interface is a web page: React components rendered by Coherent Gamefa
 A UI mod is a second ES module the page loads at startup and hands the module registry, through which it overrides, extends or appends to the game's own components.
 Its C# half publishes state and receives calls over the binding layer: every binding is a `group.name` path, pushed, triggered or called across the wire.
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 Each reference below states its own baseline.
 **IMPORTANT: follow this skill's references on anything they own — or at the very least grep them before acting on a familiar shape, because the frontend diverges from standard web shapes exactly where a prior feels safest, and the guess tends to fail silently.**
 

@@ -1,6 +1,6 @@
 # Environment and pollution
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -32,7 +32,7 @@ The other layers this topic owns, all cell maps read the same way:
 | Natural resources | `NaturalResourceCell` — fertility, ore, oil, fish, each `{ m_Base, m_Used }` | `NaturalResourceSystem` ([natural-resources.md](natural-resources.md)) |
 | Wind | `Wind { m_Wind }`, flattened from a 3D pressure volume | `WindSystem` ([climate-and-weather.md](climate-and-weather.md)) |
 | Terrain attractiveness | `TerrainAttractiveness { m_ShoreBonus, m_ForestBonus }` | `TerrainAttractivenessSystem` ([map-dynamics.md](map-dynamics.md)) |
-| Soil water | `SoilWater` — never ticked at 1.6.0f1 | `SoilWaterSystem` ([disasters.md](disasters.md)) |
+| Soil water | `SoilWater` — never ticked at 1.6.2f1 | `SoilWaterSystem` ([disasters.md](disasters.md)) |
 
 What emits, as data (a prefab component reads through the instance's `PrefabRef` unless noted):
 

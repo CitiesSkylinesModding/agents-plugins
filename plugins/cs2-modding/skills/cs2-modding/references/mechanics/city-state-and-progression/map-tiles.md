@@ -1,6 +1,6 @@
 # Map tiles
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -65,7 +65,7 @@ Permits are recomputed from the unlocked milestone set on every ask — there is
 `GetMapTileUpkeepEnabled()` is a probe, not a flag: false under `unlockMapTiles`, otherwise true on the first positive sample of the curve at `0, 10, …, 100`.
 
 **The whole milestone track's permits need not reach every tile on the grid.**
-The ceiling is `max(kAutoUnlockedTiles, startTiles.Length) + Σ m_MapTiles` over every milestone prefab, and the grid is the `MapTile` entity count; at 1.6.0f1 the ceiling falls short of the legacy grid, and the remainder is reachable only through `CityConfigurationSystem.unlockMapTiles` — re-derive with `ecs_query` on `Game.Prefabs.MilestoneData` summing `m_MapTiles` against `ecs_query` on `Game.Areas.MapTile`.
+The ceiling is `max(kAutoUnlockedTiles, startTiles.Length) + Σ m_MapTiles` over every milestone prefab, and the grid is the `MapTile` entity count; at 1.6.2f1 the ceiling falls short of the legacy grid, and the remainder is reachable only through `CityConfigurationSystem.unlockMapTiles` — re-derive with `ecs_query` on `Game.Prefabs.MilestoneData` summing `m_MapTiles` against `ecs_query` on `Game.Areas.MapTile`.
 Source: `src/Game/Game.Simulation/MapTilePurchaseSystem.cs`, `src/Game/Game.Areas/MapTileSystem.cs`.
 
 **`MapFeature` has nine members and the modifier array eight.**

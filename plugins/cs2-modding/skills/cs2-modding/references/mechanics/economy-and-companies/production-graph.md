@@ -1,6 +1,6 @@
 # The production graph
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -10,7 +10,7 @@ Without one you cannot check anything below.
 There is no table, no chart asset and no chain system: each recipe is one component on one company prefab, and the "graph" is the join over all of them by resource.
 A mod reaches a recipe by query, never by prefab name: an `EntityQuery` on `Game.Prefabs.IndustrialProcessData` filtered on its output resource.
 The game's own join is narrower: every `ZonePrefab` declares a `ProcessEstimate` buffer whose element at a dense resource index carries `m_ProcessEntity`, but `ZonePrefabInitializeSystem` fills it only on non-office industrial zone prefabs, from every recipe on a prefab carrying `IndustrialCompanyData` — office and extractor recipes included; no retail, converter or warehouse recipe resolves through it, and a resource with several producer prefabs keeps whichever was written last (`src/Game/Game.Zones/ProcessEstimate.cs`, `src/Game/Game.Prefabs/ZonePrefabInitializeSystem.cs`).
-The edges below were enumerated from one install's full prefab set at 1.6.0f1; the query above is the check, and content packs extend the set.
+The edges below were enumerated from one install's full prefab set at 1.6.2f1; the query above is the check, and content packs extend the set.
 Recipe *amounts* are asset data — the `ResourceStack.m_Amount` fields on each `IndustrialProcessData` — and a game mode multiplies them: `ProcessingCompanyGlobalMode` scales `m_Input1`/`m_Input2`/`m_Output` amounts over every recipe and never touches `m_Resource` (`src/Game/Game.Prefabs.Modes/ProcessingCompanyGlobalMode.cs`), so the edges are mode-invariant and the amounts are not.
 
 ## Materials — extractor recipes, no input
@@ -85,7 +85,7 @@ Whether a given good has a retail prefab is checked from its resource prefab: ho
 The prefabs are named `Commercial_<Good>Store`, with the odd domain name (a gas station for Petrochemicals).
 
 **A warehouse exists per material and per material good, and none for the four office resources.**
-`Industrial_Warehouse<Resource>` storage prefabs carry the process `NoResource → <Resource>` with `StorageCompanyData.m_StoredResources` set to that one resource (UNVERIFIED: the authored `NoResource → <Resource>` process on every warehouse — two were read live and the rest are name-inferred; one `ecs_query` over the storage prefabs plus batched `eval` reads settles it); a weightless resource stores against `IndustrialAISystem.kMaxVirtualResourceStorage` instead of any `StorageLimitData`, and `IndustrialSpawnSystem`'s warehouse branch finds no `StorageCompanyData` prefab to instantiate for it.
+`Industrial_Warehouse<Resource>` storage prefabs carry the process `NoResource → <Resource>` with `StorageCompanyData.m_StoredResources` set to that one resource; a weightless resource stores against `IndustrialAISystem.kMaxVirtualResourceStorage` instead of any `StorageLimitData`, and `IndustrialSpawnSystem`'s warehouse branch finds no `StorageCompanyData` prefab to instantiate for it.
 Source: `src/Game/Game.Prefabs/StorageCompany.cs`, `src/Game/Game.Simulation/IndustrialSpawnSystem.cs`, `src/Game/Game.Simulation/ProcessingCompanySystem.cs`.
 
 ## Company spawning

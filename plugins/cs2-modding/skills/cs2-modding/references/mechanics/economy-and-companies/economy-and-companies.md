@@ -1,6 +1,6 @@
 # Economy and companies
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -74,7 +74,7 @@ Where the tuning numbers live, all singletons:
 Each sibling carries further traps beside its listings.
 
 **A field initializer on a prefab-authoring class is a Unity-serialized default, not the value.**
-`EconomyPrefab`, `ExtractorParameterPrefab`, `AttractivenessParametersPrefab` and `OutsideTradeParameterPrefab` declare serialized fields — many with C# initializers, and some, the wages and the utility trade prices among them, with none at all — and copy them into their parameter components at initialization; the shipped asset overwrites the fields first, and read live at 1.6.0f1 many differ from their initializers, several by an order of magnitude.
+`EconomyPrefab`, `ExtractorParameterPrefab`, `AttractivenessParametersPrefab` and `OutsideTradeParameterPrefab` declare serialized fields — many with C# initializers, and some, the wages and the utility trade prices among them, with none at all — and copy them into their parameter components at initialization; the shipped asset overwrites the fields first, and read live at 1.6.2f1 many differ from their initializers, several by an order of magnitude.
 Only a `const` or `static readonly` the code reads is citable as a number.
 Source: `src/Game/Game.Prefabs/EconomyPrefab.cs`, `src/Game/Game.Prefabs/ExtractorParameterPrefab.cs`, `src/Game/Game.Prefabs/AttractivenessParametersPrefab.cs`, `src/Game/Game.Prefabs/OutsideTradeParameterPrefab.cs`.
 

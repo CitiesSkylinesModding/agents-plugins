@@ -1,6 +1,6 @@
 # Taxes and the city budget
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -61,7 +61,7 @@ Four `PlayerResource` members have no fee parameters — `Mail`, `PublicTranspor
 `ServiceFeeSystem` (`kUpdatesPerDay = 128`, no `UpdateFrame`) charges through `PayFeeJob` and books into a per-resource `CollectedCityServiceFeeData` buffer of internal, export and import figures scaled to daily rates; `GetServiceFees(resource)` returns `int3(internal, export, import)` and `GetServiceFeeIncomeEstimate` is `internalCount * fee`.
 
 **Three disagreeing fee-default sets exist, and only the live buffer is charged.**
-`ServiceFeeParameterData.m_Default`, the C# switch `ServiceFee.GetDefaultFee` (reached from the new-game deserialize path and from two save migrations — the garbage-fee reset, and a missing-Water backfill), and the city's `ServiceFee` buffer all differ at 1.6.0f1 — read the buffer, and treat the other two as where a stale figure hides.
+`ServiceFeeParameterData.m_Default`, the C# switch `ServiceFee.GetDefaultFee` (reached from the new-game deserialize path and from two save migrations — the garbage-fee reset, and a missing-Water backfill), and the city's `ServiceFee` buffer all differ at 1.6.2f1 — read the buffer, and treat the other two as where a stale figure hides.
 Source: `src/Game/Game.City/ServiceFee.cs`, `src/Game/Game.Prefabs/ServiceFeeParameterData.cs`, `src/Game/Game.Simulation/CitySystem.cs`, `src/Game/Game.Serialization/RequiredComponentSystem.cs`.
 
 ## Service trade

@@ -1,6 +1,6 @@
 # Burst: what it costs at debug time, and how to gate it
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but the attribute and the two off switches named below are checkable only there.

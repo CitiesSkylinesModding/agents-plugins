@@ -1,6 +1,6 @@
 # The UI build and the dev loop
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The build-side claims below check against the scaffold's own files and the toolchain's, but the manifest parser, the shared module host, the file watcher and the debugger switches are game C#, and without the tree none of those can be confirmed.

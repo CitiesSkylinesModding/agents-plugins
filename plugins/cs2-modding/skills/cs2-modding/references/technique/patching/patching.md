@@ -1,6 +1,6 @@
 # Patching
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -329,7 +329,7 @@ It also survives a vanilla change — if a future build sets that flag itself, t
 
 The same guard is what makes the unguarded-postfix rule harmless: when another mod's prefix suppresses the original, your postfix still runs, and an ownership flag is the thing that stops it acting on a frame that was never yours.
 
-The `[ThreadStatic]` costs nothing at 1.6.0f1 because both ends of that pair run on the main thread, and it is not free to copy: it makes same-thread execution a _requirement_, so the same shape around a pairing whose halves are not on one thread reads back the per-thread default and silently never filters.
+The `[ThreadStatic]` costs nothing at 1.6.2f1 because both ends of that pair run on the main thread, and it is not free to copy: it makes same-thread execution a _requirement_, so the same shape around a pairing whose halves are not on one thread reads back the per-thread default and silently never filters.
 What the pairing does require is that the set and the read happen in the same frame on the same call chain.
 Source: `src/Game/Game.Tools/ToolRaycastSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 

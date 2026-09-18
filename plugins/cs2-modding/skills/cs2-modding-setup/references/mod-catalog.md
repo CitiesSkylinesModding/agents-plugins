@@ -1,6 +1,6 @@
 # Community mod source worth reading
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 Open-source mods are the only place several modding techniques are written down at all, and reading one is usually faster than deriving the technique from the decompile.
 This catalog answers two questions: which repository demonstrates the thing the user is about to build, and what a local corpus should contain if they want one.

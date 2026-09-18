@@ -1,6 +1,6 @@
 # Utilities and flow networks
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -65,7 +65,7 @@ Where the tuning numbers live, all singletons:
 ## Traps
 
 **A field initializer on `ElectricityParametersPrefab` or `WaterPipeParametersPrefab` is a Unity-serialized default, not the value.**
-The shipped asset overwrites the fields before `LateInitialize` copies them into the parameter singletons, and read live at 1.6.0f1 many differ from their initializers; the test is what consumes the value, so a component a mod instantiates in code — with no asset behind it — does keep its initializers.
+The shipped asset overwrites the fields before `LateInitialize` copies them into the parameter singletons, and read live at 1.6.2f1 many differ from their initializers; the test is what consumes the value, so a component a mod instantiates in code — with no asset behind it — does keep its initializers.
 Source: `src/Game/Game.Prefabs/ElectricityParametersPrefab.cs`, `src/Game/Game.Prefabs/WaterPipeParametersPrefab.cs`.
 
 **A game mode rebuilds this topic's parameters on every load.**

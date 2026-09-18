@@ -1,6 +1,6 @@
 # Citizen lifecycle: aging, birth, death and household splits
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -105,17 +105,13 @@ Source: `src/Game/Game.Citizens/HealthProblemFlags.cs`, `src/Game/Game.Citizens/
 ## Leaving home, partnering, divorce
 
 `AgingSystem` stamps `LeaveHouseholdTag` on every new adult; `LeaveHouseholdSystem` makes the split conditional (`src/Game/Game.Simulation/LeaveHouseholdSystem.cs`).
-The old household must hold more than `2 * kNewHouseholdStartMoney` (`kNewHouseholdStartMoney = 2000`), and the citizen must already carry `Worker`.
+The citizen must carry `Worker`, the city must list a free home (`ResidentialPropertyData.m_MinFreeAskingRent > 0`) and hold more free residential properties than `EconomyParameterData.m_MinFreeResidentialProperties`, and the citizen's wage net of residential tax on earnings above the minimum must reach `ceil(m_MinFreeAskingRent * m_MoveOutIncomeToRentRatio)`.
 The new household entity is created from a household prefab flagged `m_DynamicHousehold` (`src/Game/Game.Prefabs/HouseholdPrefab.cs`), which also excludes such prefabs from random citizen spawning.
-With more than ten free residential properties the new household becomes a `PropertySeeker`; otherwise it converts to a commuter household and the citizen gains `CitizenFlags.Commuter`.
+The parents transfer `min(m_NewHouseholdStartMoney, their money / 2)` to it, and it is always enabled as a `PropertySeeker`.
 
 **The household split waits on a job.**
-The `Worker` requirement sits in the same guard as the money check, so the tag just stays until a job appears — though the divorce path below moves adults with no such test.
+The `Worker` requirement sits in the same guard as the housing-market and income-to-rent tests, so the tag just stays until a job appears and the city lists enough free homes, one of them cheap enough for that wage — though the divorce path below moves adults with no such test.
 Source: `src/Game/Game.Simulation/LeaveHouseholdSystem.cs`.
-
-**Splitting a household mints money.**
-`AddResources` accumulates, so the old buffer ends at twice its money minus 2000 while the new household separately receives 2000.
-Source: `src/Game/Game.Simulation/LeaveHouseholdSystem.cs`, `src/Game/Game.Economy/EconomyUtils.cs`.
 
 `LookForPartnerSystem` marks a candidate `CitizenFlags.LookingForPartner` at `CitizenParametersData.m_LookForPartnerRate`, picking a `PartnerType` (`Same, Other, Any`) from `m_LookForPartnerTypeRate` and the citizen's own `PartnerType` pseudo-random seed.
 The candidate must be adult or elderly and alive, the household moved in and neither tourist nor commuter, and the household must hold fewer than two adult-or-elderly members (`src/Game/Game.Simulation/LookForPartnerSystem.cs`).

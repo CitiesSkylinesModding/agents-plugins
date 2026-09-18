@@ -1,6 +1,6 @@
 # Roads and traffic
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -61,7 +61,7 @@ The road classes:
 | Per-segment state | `Road` (traffic flow, `Game.Net.RoadFlags`), `NetCondition { m_Wear }`, `LaneCondition` on lanes (`src/Game/Game.Net/`) | [congestion-and-blockage.md](congestion-and-blockage.md) |
 
 Which flags each road family carries is asset data the C# collects nowhere, so it is read live: `ecs_query` on `Game.Prefabs.RoadData`, named through `PrefabSystem.GetPrefabName`.
-Read at 1.6.0f1 the shape is: zoneable families carry `EnableZoning` and the larger of them add `PreferTrafficLights`; highway families carry `UseHighwayRules` and never `EnableZoning`; a one-way variant adds `DefaultIsForward`; the public-transport road (`RoadType.PublicTransport`) carries no flags.
+Read at 1.6.2f1 the shape is: zoneable families carry `EnableZoning` and the larger of them add `PreferTrafficLights`; highway families carry `UseHighwayRules` and never `EnableZoning`; a one-way variant adds `DefaultIsForward`; the public-transport road (`RoadType.PublicTransport`) carries no flags.
 (UNVERIFIED: whether any DLC road family breaks that pattern — one representative per family was read, and the query above reads them all.)
 `SeparatedCarriageways` and `HasStreetLights` are never authored: `NetCompositionSystem` derives them per composition, the latter from any `NetCompositionObject` whose prefab has `StreetLightData` (`src/Game/Game.Prefabs/NetCompositionSystem.cs`).
 

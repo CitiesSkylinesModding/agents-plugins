@@ -1,6 +1,6 @@
 # Zoning, buildings and land value
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -75,7 +75,7 @@ Each sibling carries further traps beside its listings.
 Source: `src/Game/Game.Prefabs/ZoneSystem.cs`, `src/Game/Game.Serialization/ResolvePrefabsSystem.cs`.
 
 **A field initializer on a prefab-authoring class is a Unity-serialized default, not the value.**
-`LandValuePrefab` and `ZonePreferencePrefab` initialize every field in C#, and every prefab-authoring class this file routes into carries the same shape: `ComponentBase`, the base of `PrefabBase` and of every such component, descends from `ScriptableObject`, so the shipped asset overwrites whatever a field carries and nothing in the decompile marks which initializer survived — read live at 1.6.0f1, many fields of both parameter components differ from their initializers, one family by three orders of magnitude.
+`LandValuePrefab` and `ZonePreferencePrefab` initialize every field in C#, and every prefab-authoring class this file routes into carries the same shape: `ComponentBase`, the base of `PrefabBase` and of every such component, descends from `ScriptableObject`, so the shipped asset overwrites whatever a field carries and nothing in the decompile marks which initializer survived — read live at 1.6.2f1, many fields of both parameter components differ from their initializers, one family by three orders of magnitude.
 Only a `const` or `static readonly` the code reads is citable as a number.
 Source: `src/Game/Game.Prefabs/ComponentBase.cs`, `src/Game/Game.Prefabs/LandValuePrefab.cs`, `src/Game/Game.Prefabs/ZonePreferencePrefab.cs`.
 

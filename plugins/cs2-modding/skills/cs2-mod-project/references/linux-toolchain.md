@@ -1,6 +1,6 @@
 # The toolchain on Linux
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 The game has no Linux build and runs under Proton, and its Options → Modding page cannot install the toolchain there: that installer downloads Windows programs and stores its settings as Windows user environment variables.
 This file sets the same toolchain up by hand.

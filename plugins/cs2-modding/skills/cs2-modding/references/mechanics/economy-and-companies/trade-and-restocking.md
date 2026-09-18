@@ -1,6 +1,6 @@
 # Trade and restocking
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -37,7 +37,7 @@ ResourceBuyerSystem.BuyJob, per queued sale:
       m_SellCost = lerp(m_SellCost, perUnit + buyer's m_SellCost, 0.5)
     buyer has a TradeCost buffer and is not an outside connection:
       m_BuyCost pulled toward perUnit + seller's m_BuyCost -- an improvement taken outright, a worsening lerped at 0.5
-  if the seller's stock of the resource is <= 0: abort the sale here -- the trade costs above have already moved, and nobody pays
+  if the sale is not ImportFromOC and the seller's stock of the resource is <= 0: abort the sale here -- the trade costs above have already moved, and nobody pays
   commercial seller (ServiceAvailable present) with a property:
     price *= GetServicePriceMultiplier(m_ServiceAvailable, m_MaxService)
              = lerp(0.7, 1.3, saturate(1 - available / max))

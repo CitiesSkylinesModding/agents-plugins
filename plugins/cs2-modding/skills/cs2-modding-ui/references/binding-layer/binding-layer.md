@@ -1,6 +1,6 @@
 # The binding layer
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Nearly every line here names a game type or a method on one, and the wire strings are checkable only against the shipped frontend bundle, so without the tree the kinds and their lifecycle still hold but no signature, log text or `__Type` spelling below can be confirmed.
@@ -233,10 +233,10 @@ Four asymmetries in those registrations, each a trap:
 
 **`long` and `ulong` have readers and no writers.**
 `new ValueBinding<long>(group, name, 0L)` throws at construction while `new TriggerBinding<long>(…)` works.
-The writer to pass is `LongWriter` (`ULongWriter` for `ulong`, identical encoding), which encodes two 32-bit halves as an array, index 0 the low bits and index 1 the high, because JavaScript numbers lose integers above 2^53.
+The writer to pass is `LongWriter` (`ULongWriter` for `ulong`, identical encoding), which encodes two 32-bit halves as an array, index 0 the low bits and index 1 the high, because JavaScript numbers lose integers above 2^53 — and `JsonWriter.Write(long)` itself binds `(double)value`, so a hand-written `IJsonWritable` calling it directly loses them too.
 The registered reader reads a plain number, while `LongReader` requires that array and throws on anything else, so the registered reader and the array writer disagree about representation.
 Pair `LongWriter` with an explicit `LongReader` (`ULongReader` for `ulong`), or use neither.
-Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/LongWriter.cs`, `LongReader.cs`, `ULongWriter.cs`, `ULongReader.cs`.
+Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/LongWriter.cs`, `LongReader.cs`, `ULongWriter.cs`, `ULongReader.cs`, `JsonWriter.cs`.
 
 **Enums resolve to nothing on either side.**
 `EnumWriter<T>` writes the int, `EnumNameWriter<T>` writes the member name, `EnumReader<T>` reads an int and casts; every one is passed explicitly, and the game does it both ways depending on what the frontend wants.
@@ -258,7 +258,7 @@ Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/ValueWritersStruct.cs`, `Nu
 `IJsonWritable` is one method, `void Write(IJsonWriter writer)`; `IJsonReadable` is `void Read(IJsonReader reader)`.
 Implementing the first makes `Create<T>()` resolve to `ValueWriter<T>`; implementing the second plus a public parameterless constructor resolves `ValueReader<T>`, which is constrained `where T : IJsonReadable, new()`.
 
-`IJsonWriter` declares a `debugName` and these writing members (`src/Colossal.UI.Binding/Colossal.UI.Binding/IJsonWriter.cs`): `TypeBegin(string)`/`TypeEnd()`, `MapBegin(uint)`/`MapEnd()`, `ArrayBegin(uint)`/`ArrayEnd()`, `PropertyName(string)`, `WriteNull()`, and `Write` for `bool`, `int`, `uint`, `long`, `ulong`, `float`, `double` and `string`.
+`IJsonWriter` declares a `debugName` and these writing members (`src/Colossal.UI.Binding/Colossal.UI.Binding/IJsonWriter.cs`): `TypeBegin(string)`/`TypeEnd()`, `MapBegin(uint)`/`MapEnd()`, `ArrayBegin(uint)`/`ArrayEnd()`, `PropertyName(string)`, `WriteNull()`, and `Write` for `bool`, `int`, `uint`, `long`, `ulong`, `float`, `double` and `string` — the `long` and `ulong` overloads losing integers above 2^53, as the trap above states.
 `JsonWriterExtensions` adds the `int`-taking begins, empty array and map, `string[]` and `int[]`, `Write<T>` over an `IJsonWritable` and over a nullable struct one, `WriteNullable<T>` for a class one, `IList<T>` and `IList<string>`, and three `IReadOnlyDictionary` overloads (VOLATILE: both member sets — those two files).
 
 The canonical shape is one `TypeBegin`, a `PropertyName` and value pair per field, one `TypeEnd`:

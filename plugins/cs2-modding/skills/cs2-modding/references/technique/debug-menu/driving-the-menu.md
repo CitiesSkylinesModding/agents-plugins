@@ -1,6 +1,6 @@
 # Driving the developer menu from outside
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The routes hold without one, but the binding endpoints named below are checkable only there, and the frontend claims only against the install's shipped UI bundle.
@@ -30,7 +30,7 @@ The general operating manual — connecting, clicking, filling, waiting on a liv
 | `debug.selectPanel` | `TriggerBinding<int>` |
 | `debug.selectPreviousPanel`, `debug.selectNextPanel` | `TriggerBinding` |
 
-The shared widget action triggers land in the same group through `WidgetBindings`: `debug.invoke`, `debug.setValue`, `debug.setExpanded`, the list operations and `debug.setCurrentPageIndex`.
+The shared widget action triggers land in the same group through `WidgetBindings`: `debug.invoke`, `debug.setValue`, `debug.setExpanded`, the list operations, `debug.setCurrentPageIndex` and `debug.setSearchQuery`.
 (VOLATILE: every binding name above — `Game.UI.Debug.DebugUISystem`'s binding declarations and `Game.UI.Widgets.WidgetBindings`.)
 
 ## Reading and triggering

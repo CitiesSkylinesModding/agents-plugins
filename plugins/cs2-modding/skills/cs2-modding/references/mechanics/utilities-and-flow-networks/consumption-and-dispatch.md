@@ -1,6 +1,6 @@
 # Consumption and dispatch
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -35,7 +35,7 @@ FlowUtils.GetRenterConsumptionMultiplier:
   return 5 * n / (level + 0.5 * (edu / n))
 ```
 
-Sampled live at 1.6.0f1, the temperature curve is a U — flat at 1 in a comfort band, rising to a cap on both sides, clamped beyond; evaluating the singleton's curve is the re-check.
+Sampled live at 1.6.2f1, the temperature curve is a U — flat at 1 in a comfort band, rising to a cap on both sides, clamped beyond; evaluating the singleton's curve is the re-check.
 
 `AdjustWaterConsumptionSystem` is the same shape with four differences: no temperature term, no district modifier, `Inactive` applying first as `m_WaterConsumption * 0.1f` where electricity divides the rounded integer by 10 after, and the fee terms swapped to the water fee's — `m_WaterFeeConsumptionMultiplier`, `m_WaterFeeFactor`, `EfficiencyFactor.WaterFee`.
 The load-bearing fifth: the single `wanted` is written to both `m_FreshCapacity` and `m_SewageCapacity` on the consumer edge — a building's sewage demand is identical to its fresh demand, always.

@@ -1,6 +1,6 @@
 # Patching the game for debugging
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 Paths throughout are Windows.
 On Linux, where the game runs under Proton, the edits are the same and only getting the library differs: [debug-patching-linux.md](debug-patching-linux.md) carries the commands.
 

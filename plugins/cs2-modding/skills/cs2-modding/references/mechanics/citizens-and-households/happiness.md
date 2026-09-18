@@ -1,6 +1,6 @@
 # Happiness: wellbeing and health
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -46,12 +46,8 @@ The producers hold surprises: air, ground and water pollution reach health alone
 The water fee's health half is computed, folded into the city average, and never added to any citizen's sum, so the panel reports a figure nobody received.
 The sickness penalty accumulates into the Healthcare factor's aggregate, so the reported healthcare average mixes coverage and sickness.
 
-**`GetConsumptionBonuses` is not the simulation's consumption rule.**
-The citizen job inlines `min(15, household.m_ShoppedValueLastDay / 50)`; the exported helper is a different formula for building-level UI estimates.
-Source: `src/Game/Game.Simulation/CitizenHappinessSystem.cs`.
-
 **The education factor never counts the children.**
-Its loop tests the scored citizen's own age instead of each member's, so `n` is the whole household size when the scored citizen is itself a child and zero for everyone else — the UI estimator counts the children per member, so panel and simulation disagree.
+It tests the scored citizen's own age instead of each member's, so `n` is the whole household size when the scored citizen is itself a child and zero for everyone else — the UI estimator counts the children per member, so panel and simulation disagree.
 Source: `src/Game/Game.Simulation/CitizenHappinessSystem.cs`.
 
 **A factor whose `m_LockedEntity` is still locked reports zero.**
@@ -65,16 +61,19 @@ All in `src/Game/Game.Simulation/CitizenHappinessSystem.cs`; the `m_*` fields li
 ```
 apartment    GetApartmentWellbeing(sizePerResident, level):
              0.8 * (4*(level-1) + 24.55531 - 70.21 / (1 + (sizePerResident/0.03690514)^25.2376)^0.01494523)
-             a homeless citizen is scored as GetApartmentWellbeing(0.01, 1)
+             scored only when the household's PropertyRenter property has a prefab; a Homeless-flagged
+             citizen, or a home that is not a spawnable residential building, scores GetApartmentWellbeing(0.01, 1)
 tax          GetTaxBonuses: (10 - residentialTaxRate), the TaxHappiness modifier, then * -multiplier, the multiplier per education level (m_TaxUneducatedMultiplier .. m_TaxHighlyEducatedMultiplier; the magnitude rises with education, scaling both the penalty and the bonus)
 welfare      GetWellfareBonuses: coverage * m_WelfareMultiplier * max(0, (50 - happiness) / 50) -- helps only citizens below 50, fading to nothing at 50
 unemployment GetUnemploymentBonuses: -min(m_MaxAccumulatedUnemployedWellbeingPenalty, m_UnemploymentTimeCounter * m_UnemployedWellbeingPenaltyAccumulatePerDay)
              zero for tourists
 sickness     GetSicknessBonuses: m_SicknessPenalty latched at m_Health / 2 on the first sick tick, applied to health until the problem clears
 death        GetDeathPenalty: any dead household member costs every member (-m_DeathHealthPenalty, -m_DeathWellbeingPenalty)
-homeless     GetHomelessBonuses: a flat (m_HomelessHealthEffect, m_HomelessWellbeingEffect)
+homeless     GetHomelessBonuses: a flat (m_HomelessHealthEffect, m_HomelessWellbeingEffect), on the same branch as that apartment floor
+             a household with no PropertyRenter property gets neither term
 leisure      GetLeisureBonuses: (m_LeisureCounter - 128) / 16 wellbeing; a flat +7 for a Tourist
-consumption  inline: min(15, household.m_ShoppedValueLastDay / 50) when positive
+consumption  GetWealthWellbeing(income, rent, familySize): 0 when income <= 0, else clamp(round(m_ConsumptionHappinessCurve(max(0, income - rent) / familySize)), -40, 40)
+             wellbeing only; income is Household.m_Income, rent the PropertyRenter.m_Rent or 0; zero for tourists
 traffic      m_PenaltyCounter decays 1 per pass; while non-zero adds m_PenaltyEffect to wellbeing
 education    GetEducationBonuses: sqrt(n) * m_EducationWellbeingMultiplier * (educationCoverage - m_NeutralEducation)
 ```

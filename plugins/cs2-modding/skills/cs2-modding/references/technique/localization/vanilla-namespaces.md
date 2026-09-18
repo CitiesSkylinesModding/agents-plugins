@@ -1,25 +1,25 @@
 # The vanilla key namespaces
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the game's string tables open.**
 The counts below are taken from those tables and the decompile carries none of them; [`localization`](localization.md) owns the C# behind a key lookup.
 They ship inside the install, which the toolchain's environment variables locate.
 
-The lookup behind [`localization`](localization.md)'s reuse section: every group the game's own shipped strings occupy, and how many keys each one holds.
+The lookup behind [`localization`](localization.md)'s reuse section: every group the base game's shipped strings occupy, and how many keys each one holds.
 
 Each row is a **group**: the segment before the first dot.
 **Ids** counts the distinct `Group.ID` pairs in the group, ignoring hash and index.
 **Entries** counts the actual rows, so a group whose ids are mostly hashed or indexed carries far more entries than ids — and the gap between the two columns is what tells you whether to look a key up or construct one.
 
-**75 groups, 2,153 ids, 22,120 entries**, counted in English, which is the fallback locale and therefore the set that defines what exists.
+**75 groups, 2,181 ids, 22,163 entries**, counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in these counts.
 
 | Group | Ids | Entries | Covers |
 | --- | ---: | ---: | --- |
 | `Achievements` | 2 | 82 | achievement `TITLE`/`DESCRIPTION`, both hashed by achievement id |
 | `AirPollutionInfoPanel` | 1 | 1 | the air-pollution info view's average readout |
 | `AnimationCurve` | 2 | 2 | axis labels on a curve editor |
-| `Assets` | 30 | 12028 | prefab display names and descriptions, citizen and vehicle name formats, address formats, themes, upgrades, and the indexed generated-name pools |
+| `Assets` | 30 | 12,030 | prefab display names and descriptions, citizen and vehicle name formats, address formats, themes, upgrades, and the indexed generated-name pools |
 | `BikesInfoPanel` | 2 | 2 | parked bikes and bike-parking availability |
 | `Budget` | 7 | 35 | budget-panel tooltips, including the tax breakdowns |
 | `Chirper` | 116 | 341 | every Chirper message, most of them indexed variants |
@@ -32,7 +32,7 @@ Each row is a **group**: the segment before the first dot.
 | `DefaultTool` | 1 | 15 | `INFOMODE_TOOLTIP` |
 | `DisasterInfoPanel` | 3 | 3 | shelter capacity and evacuation |
 | `EconomyPanel` | 114 | 373 | the whole economy panel: budget lines, taxation, loans, production |
-| `Editor` | 263 | 678 | the map and asset editors, end to end |
+| `Editor` | 284 | 701 | the map and asset editors, end to end |
 | `EditorTutorials` | 3 | 143 | editor tutorial scaffolding |
 | `EducationInfoPanel` | 7 | 20 | education availability and distribution |
 | `ElectricityInfoPanel` | 8 | 8 | electricity availability, trade, battery charge |
@@ -40,7 +40,7 @@ Each row is a **group**: the segment before the first dot.
 | `FireAndRescueInfoPanel` | 1 | 1 | average fire hazard |
 | `GameListScreen` | 39 | 70 | the save-game list and its city summary fields |
 | `GarbageInfoPanel` | 4 | 4 | garbage rate, landfill availability, processing |
-| `Glossary` | 8 | 521 | the in-game glossary: 48 categories, 229 sections with a title and a body each, 11 tabs |
+| `Glossary` | 8 | 523 | the in-game glossary: 48 categories, 230 sections with a title and a body each, 11 tabs |
 | `GroundPollutionInfoPanel` | 1 | 1 | average ground pollution |
 | `HealthcareInfoPanel` | 10 | 10 | health, cemetery and crematorium availability |
 | `InfoPanels` | 6 | 6 | labels shared across info panels — capacity, consumption, output, processing, production, stored |
@@ -51,13 +51,13 @@ Each row is a **group**: the segment before the first dot.
 | `LifePath` | 33 | 130 | the citizen life-path panel's event descriptions |
 | `Loading` | 2 | 39 | loading screen title and hint messages |
 | `Main` | 69 | 69 | the main toolbar and its per-button tooltips |
-| `Maps` | 4 | 49 | map titles, descriptions, outside connections |
+| `Maps` | 4 | 51 | map titles, descriptions, outside connections |
 | `MapTilePurchase` | 17 | 44 | the tile-purchase panel's resource summary |
 | `Menu` | 98 | 185 | main menu, achievements warnings, asset upload, notifications |
 | `NaturalResourcesInfoPanel` | 8 | 8 | fertility, ore, oil, fish availability |
 | `NoisePollutionInfoPanel` | 1 | 1 | average noise pollution |
 | `Notifications` | 2 | 142 | `TITLE`/`DESCRIPTION`, hashed by notification icon prefab name; not every icon prefab has one |
-| `Options` | 149 | 1588 | the whole options screen, including the mod-page keys the settings helpers generate |
+| `Options` | 149 | 1,595 | the whole options screen, including the mod-page keys the settings helpers generate |
 | `OutsideConnectionsInfoPanel` | 2 | 2 | top imports and exports |
 | `Overlay` | 19 | 19 | platform overlay actions and controller-disconnect prompts |
 | `Paradox` | 82 | 168 | account linking, the mods UI, playsets |
@@ -76,8 +76,8 @@ Each row is a **group**: the segment before the first dot.
 | `Statistics` | 2 | 214 | statistics panel title and per-statistic label |
 | `StatisticsPanel` | 4 | 441 | statistic titles and time-scale labels |
 | `SubServices` | 1 | 64 | `NAME` for an asset-category prefab |
-| `Toolbar` | 44 | 44 | the asset menu, theme and asset-pack panels, brush controls |
-| `ToolOptions` | 22 | 96 | the tool-options panel's titles and tooltips |
+| `Toolbar` | 45 | 45 | the asset menu, theme and asset-pack panels, brush controls |
+| `ToolOptions` | 28 | 102 | the tool-options panel's titles and tooltips |
 | `Tools` | 33 | 70 | tool tooltips — area size, resource yields, flow and consumption labels |
 | `TourismInfoPanel` | 4 | 4 | attractiveness, hotel price, tourism rate |
 | `Transport` | 27 | 69 | transport overlay legends and line UI |

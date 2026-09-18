@@ -1,6 +1,6 @@
 # What a mod build does
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 `Mod.props` and `Mod.targets`, which every mod csproj imports from `%CSII_TOOLPATH%`, own everything below.
 They are shared by every mod project on the machine, so a project changes the build through the hooks at the bottom of this file rather than by editing them.

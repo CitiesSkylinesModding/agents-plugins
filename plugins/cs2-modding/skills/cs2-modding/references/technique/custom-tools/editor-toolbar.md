@@ -1,6 +1,6 @@
 # Registering into the map editor's toolbar
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there; the tooltip key answers only to the install's own UI bundle.

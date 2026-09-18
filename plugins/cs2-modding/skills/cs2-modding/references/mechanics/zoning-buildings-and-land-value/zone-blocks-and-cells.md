@@ -1,6 +1,6 @@
 # Zone blocks, cells and the zone check
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -26,7 +26,7 @@ BlockSystem (SystemUpdatePhase.Modification4):
 `ZoneSpawnSystem`'s query requires `Owner` beside `Block` and `VacantLot` — a component the archetype above does not declare — and its scoring job returns before scoring any lot whose owner carries no `ResourceAvailability` buffer, so a mod-built block with the wrong owner is invisible to the spawner rather than an error — unless that owner carries a `ResourceAvailability` buffer without `Game.Net.LandValue`, a hand-made pair that faults in the Burst job.
 Source: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Zones/BlockSystem.cs`.
 
-**`NetZoneData` is dead at 1.6.0f1.**
+**`NetZoneData` is dead at 1.6.2f1.**
 The struct exists with no producer and no consumer outside its own file; the live path is the `RoadComposition.m_ZoneBlockPrefab` chain above, so do not chase it.
 Source: `src/Game/Game.Prefabs/NetZoneData.cs`, `src/Game/Game.Prefabs/RoadComposition.cs`.
 

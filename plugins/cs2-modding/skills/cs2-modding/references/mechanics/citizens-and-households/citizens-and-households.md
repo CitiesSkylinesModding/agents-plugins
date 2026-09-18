@@ -1,6 +1,6 @@
 # Citizens and households
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -43,10 +43,10 @@ Where the numbers live — the read is `GetSingleton<T>` unless the row says oth
 
 | Family of numbers | Component | Access shape |
 | --- | --- | --- |
-| Wages, benefits, minimum earnings, commuter multiplier, workday window, household consumption, the `m_TrafficReduction` trip damper, tourist wealth and consumption | `EconomyParameterData` (`src/Game/Game.Prefabs/EconomyParameterData.cs`) | singleton |
+| Wages, benefits, minimum earnings, commuter multiplier, workday window, household consumption, the `m_TrafficReduction` trip damper, tourist wealth and consumption, household-split start money, move-out income-to-rent ratio and minimum free residential properties | `EconomyParameterData` (`src/Game/Game.Prefabs/EconomyParameterData.cs`) | singleton |
 | Birth, divorce, partnering, job switching, home-seek tuning | `CitizenParametersData` (`src/Game/Game.Prefabs/CitizenParametersData.cs`) | singleton |
 | School-entry probabilities | `EducationParameterData` (`src/Game/Game.Prefabs/EducationParameterData.cs`) | singleton |
-| Happiness magnitudes: per-education tax multipliers, penalties, homeless effects, unemployment accumulation | `CitizenHappinessParameterData` (`src/Game/Game.Prefabs/CitizenHappinessParameterData.cs`) | singleton |
+| Happiness magnitudes: per-education tax multipliers, penalties, homeless effects, unemployment accumulation, the wealth-wellbeing curve and good-wealth threshold | `CitizenHappinessParameterData` (`src/Game/Game.Prefabs/CitizenHappinessParameterData.cs`) | singleton |
 | Per-factor display baselines and unlock gates | `HappinessFactorParameterData` (`src/Game/Game.Prefabs/HappinessFactorParameterData.cs`) | a buffer on its own singleton entity, indexed by `HappinessFactor` |
 | Trip priorities and the pathfind cost ceiling | `TripPriorityParametersData` (`src/Game/Game.Prefabs/TripPriorityParametersData.cs`) | singleton |
 | Fee defaults, caps, player-adjustability | `ServiceFeeParameterData`, entries of `FeeParameters { m_Default, m_Max, m_Adjustable }` (`src/Game/Game.Prefabs/ServiceFeeParameterData.cs`) | singleton — seeds the next row at city creation; the happiness relative-fee baselines and the utility consumption curves still read it live |
@@ -127,7 +127,7 @@ A moved-in household losing its `PropertyRenter` gains `HomelessHousehold`, lose
 | Money at spawn | `EconomyParameterData.m_TouristInitialWealthRange` and `Offset`, not the household prefab's band | the prefab's band (`src/Game/Game.Citizens/HouseholdInitializeSystem.cs`) |
 | Work and tax | never workable; the tax factor is skipped | wage times `m_CommuterWageMultiplier`; excluded from the residential tax accumulation |
 | Home | seeks a hotel via `LodgingSeeker`; exits as `TouristNoTarget` / `TouristNoHotel` / `TouristNoMoney` (`src/Game/Game.Agents/MoveAwayReason.cs`) | the outside connection in `CommuterHousehold.m_OriginalFrom` |
-| Happiness | the one exception to the `MovedIn` gate; the tourist leisure and unemployment terms are in [happiness.md](happiness.md) | — |
+| Happiness | the one exception to the `MovedIn` gate; the tourist leisure, unemployment and wealth terms are in [happiness.md](happiness.md) | — |
 | Consumption and leisure | consumption times `m_TouristConsumptionMultiplier`; the leisure counter decays at `m_ChanceTouristDecreaseLeisureCounter` | — |
 | Edge | no births, no bicycle | a commuter `Child` or `Elderly` is deleted outright by `CitizenBehaviorSystem`; no bicycle, no pets |
 

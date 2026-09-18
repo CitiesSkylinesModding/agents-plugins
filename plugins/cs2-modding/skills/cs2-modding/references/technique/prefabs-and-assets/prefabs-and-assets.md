@@ -1,6 +1,6 @@
 # Prefabs and assets
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -403,8 +403,8 @@ Doing so repoints the source's own component at your prefab, leaving the vanilla
 The game detects that condition and logs it, but only from `PrefabBase.OnEnable`, which has already run by then, and nothing re-checks it later.
 Source: `src/Game/Game.Prefabs/PrefabBase.cs` (`AddComponentFrom` and the `OnEnable` check), `src/Game/Game.Prefabs/ComponentBase.cs` (the back-pointer `GetComponent<T>` resolves through).
 
-When you copy a UI object across, **null its group** unless you want your prefab to join the original's toolbar group.
-Source: `src/Game/Game.Prefabs/UIObject.cs`.
+When you copy a UI object across, **null its group** unless you want your prefab to join the original's toolbar group, and leave `UIObjectOverrideGroup` behind for the same reason: its `LateInitialize` adds the entity to its own group.
+Source: `src/Game/Game.Prefabs/UIObject.cs`, `src/Game/Game.Prefabs/UIObjectOverrideGroup.cs`.
 
 (VOLATILE: `Clone`'s two stripped JSON keys and the `isBuiltin` / `isPackaged` / `isReadOnly` property chain — `PrefabBase` itself.)
 

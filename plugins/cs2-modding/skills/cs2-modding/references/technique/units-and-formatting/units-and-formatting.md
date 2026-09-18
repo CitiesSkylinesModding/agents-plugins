@@ -1,6 +1,6 @@
 # Units and formatting
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The C# types below are checkable there; the frontend behaviour is not, and its ground truth is the game's own UI bundle.

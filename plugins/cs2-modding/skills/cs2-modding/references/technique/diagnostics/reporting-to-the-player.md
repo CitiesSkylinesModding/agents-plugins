@@ -1,6 +1,6 @@
 # Reporting a problem to the player
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -65,7 +65,7 @@ Their queue is last-in-first-out, so a new error displaces the one on screen rat
 Source: `src/Game/Game.UI/ErrorDialogManager.cs`.
 
 An `ErrorDialog` built by hand is the way to raise the error dialog without logging an error.
-Its public fields are `severity` (`Warning` or `Error`), `actions`, `localizedTitle`, `localizedMessage` and `errorDetails`; `count` and `fingerprint` are filled in by the manager.
+Its public fields are `severity` (`Warning` or `Error`), `actions`, `localizedTitle`, `localizedMessage` and `errorDetails`; `count` and `serial` are filled in by the manager.
 The action bits are `Continue = 1`, `Ignore = 2`, `Mute = 0x100`, `SaveAndContinue = 0x200`, `SaveAndQuit = 0x400`, `Quit = 0x20000` and `Rename = 0x40000`.
 
 **The set you pass is not the set the player sees, and the difference can quit their game.**

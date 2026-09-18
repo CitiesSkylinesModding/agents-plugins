@@ -14,7 +14,7 @@ A game update, a stale decompile, or "does this still match my game" is the refr
 An unavailable debug menu or UI debugging port is step 3 alone — the developer launch options — with nothing else run.
 A UI bundle copy to create is step 5's readable-copy extra alone; one that exists but is stale is the refresh branch.
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 Where a command differs by platform, it is given for Windows (PowerShell) and for Linux (bash), where the game runs under Proton.
 A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's steps and references on anything they own — or at the very least grep them before acting on a remembered path, version or flag, because every value here is recorded or readable from the machine and the remembered one is the one that has drifted.**
@@ -35,7 +35,7 @@ Fixed keys, one per line, `(none)` for anything not provisioned:
 # cs2-modding setup
 
 Game install: C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II
-Game version: 1.6.0f1
+Game version: 1.6.2f1
 Unity version: 2022.3.71f1
 Decompile root: C:\Users\<user>\Documents\cs2-decompile
 Decompiled: 2026-08-01

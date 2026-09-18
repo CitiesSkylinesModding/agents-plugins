@@ -1,6 +1,6 @@
 # The developer menu
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there, and the few claims naming the shipped UI bundle answer only to the install's own copy.
@@ -23,8 +23,8 @@ The bindings the flag turns on, read off the `Debug` action map:
 | Action | Bindings |
 | --- | --- |
 | `Debug UI` | `Tab`, gamepad right shoulder |
-| `Debug Prefab Tool` | `O` |
-| `Debug Multiplier` | `Shift` |
+| `Debug Prefab Tool` | `Home` |
+| `Debug Multiplier` | `Shift`, gamepad west button |
 
 (VOLATILE: the map name, the three action names and their bindings — the input action asset inside `Cities2_Data/resources.assets`, or a live read of `InputManager.instance.FindActionMap("Debug")`.)
 
@@ -112,7 +112,8 @@ It builds a real `EntityQuery` from three user-assembled component sets — All,
 With `Deep search` off it stops at the first match and remembers where it stopped, so pressing Apply again resumes the scan; `Must have transform` filters the results, which page as buttons.
 **Running a search moves the player's camera whether or not they click anything.**
 Clicking a result — and Apply itself, on the first result — sets `ToolSystem.selected`, points the orbit camera controller at the entity, sets rotation and zoom from the prefab's `ObjectGeometryData` bounds, and makes the orbit controller the active one.
-Source: `src/Game/Game.Debug/DebugSystemSearch.cs`.
+Above the string search, `Entity ID` and `Locate entity` take an entity index instead: the button clears `ToolSystem.selected`, then sets it to the entity with that index among those carrying `PrefabRef` if one exists, and moves no camera.
+Source: `src/Game/Game.Debug/DebugSystemSearch.cs`, `src/Game/Game.Debug/DebugSystem.cs` (`SelectEntity(string)`).
 
 **Nothing in the menu enumerates the components of one entity.**
 The only component-type reads in the debug namespace are over archetypes, so there is no vanilla "inspect this entity" view to find.
@@ -241,12 +242,12 @@ The system list rebuilds only on the tab's `Refresh System List` button, so a sy
 The tab's builder is a hard-coded list of `AddSystemGizmoField<T>` calls, one per vanilla system, with no reflection anywhere; there is no registry the base class writes itself into.
 Source: `src/Game/Game.Debug/DebugSystem.cs`.
 
-What `BaseDebugSystem` buys is the content of a gizmo entry, not its display: an option list built by the protected `AddOption(displayName, defaultEnabled)`, the `OnEnabled(DebugUI.Container)` / `OnDisabled(DebugUI.Container)` hooks for extra widgets, and a `JobHandle OnUpdate(JobHandle)` override point.
+What `BaseDebugSystem` buys is the content of a gizmo entry, not its display: an option list built by the protected `AddOption(displayName, defaultEnabled)`, the `OnEnabled(DebugUI.Container)` / `OnDisabled(DebugUI.Container)` hooks and `AddDebugWidgets(DebugUI.Container, Action onChanged)` for extra widgets, and a `JobHandle OnUpdate(JobHandle)` override point.
 Running it also takes a phase: the vanilla gizmo systems live in `SystemUpdatePhase.DebugGizmos`, driven after `LateUpdate`, and a mod placing a system there needs [`mod-lifecycle-and-ordering`](../mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md)'s imperative phase registration.
 
 Two display routes are open to a mod:
 
-- Render the toggle yourself into your own panel: one `DebugUI.EnumField` switching `system.Enabled`, with the system's options beneath it while enabled — the same shape `AddSystemGizmoField` builds for the vanilla tab.
+- Render the toggle yourself into your own panel: one `DebugUI.EnumField` switching `system.Enabled`, with the system's options beneath it while enabled — the same shape `AddSystemGizmoField` builds for the vanilla tab, which also calls `AddDebugWidgets` with a callback that rebuilds the tab for an enabled system with at least one option.
 - Declare `[DebugTab("gizmos")]`, case-varied on purpose, and let the name merge append your widgets to the vanilla tab — the exact spelling `[DebugTab("Gizmos")]` hits `DebugSystem`'s ordinal bookkeeping and only one of the two widget lists survives, by scan order (the panel-name trap above).
   (UNVERIFIED: that the case-varied tab's widgets render beside the vanilla gizmo rows — every step of the merge says they must, but nobody has declared one; a test mod carrying `[DebugTab("gizmos")]` and a read of `debug.children` with that tab selected would settle it.)
 

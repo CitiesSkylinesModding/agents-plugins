@@ -1,6 +1,6 @@
 # Travel: trips, purposes and pathfind weights
 
-Verified against game version 1.6.0f1.
+Verified against game version 1.6.2f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -70,7 +70,7 @@ A priority buys pathfind cost budget through `GetMaxCost` — purposes are never
 ## The idle loop
 
 `CitizenBehaviorSystem` (interval 16, UpdateFrame bucket) is what a citizen does with no `TravelPurpose` (`src/Game/Game.Simulation/CitizenBehaviorSystem.cs`).
-It checks in order: dead, imprisoned (skipped entirely), moving away (sent to an outside connection with `Purpose.MovingAway`, stripping `Worker`, `Student` and `Leisure`); then resolves the citizen's home — rented property, homeless temp home, tourist hotel, or an outside connection for a commuter — and continues: meeting, work or study hours, sleep, shopping, leisure.
+It checks in order: dead, imprisoned (skipped entirely), moving away (sent to an outside connection with `Purpose.MovingAway`, stripping `Worker`, `Student` and `Leisure`); then resolves the citizen's home — rented property, tourist hotel, an outside connection for a commuter, or the homeless temp home — and continues: meeting, work or study hours, sleep, shopping, leisure.
 Its constants: `kMinLeisurePossibility = 80`, `kLeisureSeekerCooldownFrames = 20000`, `kMaxPathfindCost = 17000`.
 The leisure counter's decay is rolled inside the happiness job, at the chance fields on `LeisureParametersData` (`src/Game/Game.Simulation/CitizenHappinessSystem.cs`).
 
