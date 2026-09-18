@@ -144,6 +144,11 @@ description = "Diff the gameface skill's baked version timeline against the live
 # Network-dependent, so deliberately not part of `mise check` / CI, run manually now and then.
 run = "bun scripts/check-skill-changelog.ts"
 
+[tasks."research:cite-audit"]
+description = "Check the docs' line cites into the decompile by text identity across a game update (the cs2-game-update sweep's cite step)."
+# Reads a local decompile checkout, so it cannot run in CI; pass --decompile and --old.
+run = "bun scripts/research-cite-audit.ts"
+
 # VENDOR TASKS
 # ============
 
