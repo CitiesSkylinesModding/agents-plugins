@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import {
   SUPPORTED_PSEUDOS,
   SUPPORTED_SUMMARY,
@@ -14,20 +14,18 @@ function rejection(selector: string): string {
 }
 
 /**
- * Every construct the supported-set sentence names, backticked or not, with the bare `()` that
- * prose puts on `:nth-child()` taken back off.
- * Read off the sentence rather than the assembled message, so the prose around it stays free to
+ * Every construct a sentence names, backticked or not, with the bare `()` that prose puts on
+ * `:nth-child()` taken back off.
+ * Read off a sentence rather than an assembled message, so the prose around it stays free to
  * mention a construct as an example of one that throws.
  */
-function claimedBySummary(): ReadonlySet<string> {
+function claimsIn(prose: string): ReadonlySet<string> {
   // A backticked claim is taken whole, spaces included, so an argument written `( 2n )` is judged
   // as the caller would write it rather than truncated at the space.
-  const quoted = [...SUPPORTED_SUMMARY.matchAll(/`(?<claim>[^`]*)`/gu)].map(
-    match => match.groups?.claim ?? ''
-  );
+  const quoted = [...prose.matchAll(/`(?<claim>[^`]*)`/gu)].map(match => match.groups?.claim ?? '');
   // Anything colon-opening the prose left unbackticked counts too, so an entry added in the
   // surrounding plain text is checked rather than overlooked.
-  const bare = [...SUPPORTED_SUMMARY.replaceAll(/`[^`]*`/gu, ' ').matchAll(/::?[^\s,]+/gu)].map(
+  const bare = [...prose.replaceAll(/`[^`]*`/gu, ' ').matchAll(/::?[^\s,]+/gu)].map(
     match => match[0]
   );
 
@@ -364,16 +362,16 @@ describe(`the generic fallback`, () => {
   });
 
   test(`names every construct the detector itself clears`, () => {
+    const claimed = claimsIn(SUPPORTED_SUMMARY);
+
     for (const pseudo of SUPPORTED_PSEUDOS) {
       // A pseudo-element is written once, in its double-colon spelling, and stands for both keys.
-      const named = claimedBySummary().has(pseudo) || claimedBySummary().has(`:${pseudo}`);
-
-      expect(named).toBe(true);
+      expect(claimed.has(pseudo) || claimed.has(`:${pseudo}`)).toBe(true);
     }
   });
 
   test(`claims no construct the detector would flag`, () => {
-    const claimed = claimedBySummary();
+    const claimed = claimsIn(SUPPORTED_SUMMARY);
 
     expect(claimed.size).toBeGreaterThan(0);
 
@@ -390,3 +388,137 @@ describe(`the generic fallback`, () => {
     }
   });
 });
+
+/**
+ * The shipped prose repeating this module's whitelist, one entry per skill, resolved from this
+ * file so the pair travels with it.
+ * Read off disk rather than imported: the drift guarded against here is an edit to the sentence an
+ * agent reads, which nothing the server links against can see.
+ */
+const SKILL_WHITELISTS: ReadonlyArray<readonly [string, string]> = [
+  ['gameface-driving', '../../skills/gameface-driving/SKILL.md'],
+  ['gameface', '../../skills/gameface/references/scripting-data-binding.md']
+];
+
+/**
+ * The phrases locating the passage inside a skill file.
+ * Each has to reach exactly one line: a reworded sentence is drift in its own right, and an empty
+ * clause would clear every check below in silence.
+ */
+const SUPPORTED_ANCHOR = 'are what is verified to work';
+const THROWN_ANCHOR = 'are verified to throw';
+const NTH_CHILD_ANCHOR = '`:nth-child()` itself takes';
+
+/**
+ * An `:nth-child()` argument the prose spells out in full, as against the `an`/`an+b` placeholders
+ * it names the shapes with: only a concrete form can be fed to the detector.
+ */
+const CONCRETE_NTH_ARGUMENT = /^(?:[+-]?\d+|even|odd|[+-]?\d*n(?:[+-]\d+)?)$/iu;
+
+interface WhitelistPassage {
+  readonly supported: string;
+  readonly thrown: string;
+  readonly nthChild: string;
+}
+
+describe(`the skills' copies of the whitelist`, () => {
+  for (const [skill, skillPath] of SKILL_WHITELISTS) {
+    describe(skill, () => {
+      // Assigned once by the hook below: the tests below judge one read of the file.
+      let passage: WhitelistPassage;
+
+      beforeAll(async () => {
+        passage = await whitelistPassage(skillPath);
+      });
+
+      test(`names every construct the module's summary claims`, () => {
+        const named = claimsIn(passage.supported);
+
+        expect([...claimsIn(SUPPORTED_SUMMARY)].filter(claim => !named.has(claim))).toEqual([]);
+      });
+
+      test(`claims no construct the module's summary leaves out`, () => {
+        const claimed = claimsIn(SUPPORTED_SUMMARY);
+        const named = claimsIn(passage.supported);
+
+        expect(named.size).toBeGreaterThan(0);
+        expect([...named].filter(claim => !claimed.has(claim))).toEqual([]);
+      });
+
+      test(`lists as throwing only constructs the detector flags`, () => {
+        const thrown = claimsIn(passage.thrown);
+
+        expect(thrown.size).toBeGreaterThan(0);
+
+        for (const construct of thrown) {
+          expect(diagnosisOf(`div${construct}`)).toContain(`\`${construct}\` falls outside`);
+        }
+      });
+
+      test(`states the :nth-child() argument rule the detector enforces`, () => {
+        const clauses = passage.nthChild.split(';');
+
+        // A third clause would be read as neither half, and could state anything unjudged.
+        expect(clauses.length).toBe(2);
+
+        const [takes = '', throws = ''] = clauses;
+        const accepted = concreteArguments(takes);
+        const rejected = concreteArguments(throws);
+
+        // The keywords alone would leave the integer and the step shapes unjudged.
+        expect(accepted.some(form => /^[+-]?\d+$/u.test(form))).toBe(true);
+        expect(accepted.some(form => /n$/iu.test(form))).toBe(true);
+        expect(rejected.length).toBeGreaterThan(0);
+
+        for (const form of accepted) {
+          expect(diagnosisOf(`li:nth-child(${form})`)).not.toContain('falls outside');
+        }
+
+        for (const form of rejected) {
+          expect(diagnosisOf(`li:nth-child(${form})`)).toContain(
+            `\`:nth-child(${form})\` falls outside`
+          );
+        }
+      });
+    });
+  }
+});
+
+/**
+ * A skill's whitelist passage, cut into the clause claiming support, the clause claiming rejection,
+ * and the `:nth-child()` argument sentence beside them.
+ */
+async function whitelistPassage(skillPath: string): Promise<WhitelistPassage> {
+  const prose = await Bun.file(`${import.meta.dir}/${skillPath}`).text();
+  const lines = prose.split('\n');
+  const [supported = '', rest = ''] = soleLineContaining(lines, SUPPORTED_ANCHOR).split(
+    SUPPORTED_ANCHOR
+  );
+
+  expect(rest).toContain(THROWN_ANCHOR);
+
+  const [thrown = ''] = rest.split(THROWN_ANCHOR);
+
+  return { supported, thrown, nthChild: soleLineContaining(lines, NTH_CHILD_ANCHOR) };
+}
+
+/**
+ * The one line an anchor reaches, with the count asserted so a miss names the anchor that stopped
+ * matching rather than failing later as an empty clause.
+ */
+function soleLineContaining(lines: readonly string[], anchor: string): string {
+  const matched = lines.filter(line => line.includes(anchor));
+
+  expect({ anchor, lines: matched.length }).toEqual({ anchor, lines: 1 });
+
+  return matched[0] ?? '';
+}
+
+/**
+ * The argument forms a clause names concretely enough to put in front of the detector.
+ */
+function concreteArguments(clause: string): string[] {
+  return [...clause.matchAll(/`(?<form>[^`]*)`/gu)]
+    .map(match => match.groups?.form ?? '')
+    .filter(form => CONCRETE_NTH_ARGUMENT.test(form));
+}
