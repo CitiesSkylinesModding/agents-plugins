@@ -9,7 +9,8 @@ import path from 'node:path';
 // documentation of one and has no other automated coverage: no runtime, no server, no tests.
 // The rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md, which is
 // why this check names that plugin instead of discovering every plugin the way
-// check-plugin-sync.ts does. Exits nonzero (via a failed assertion) on the first violation.
+// check-plugin-sync.ts does. The gameface skills take the two rules named beside their root below
+// and no other. Exits nonzero (via a failed assertion) on the first violation.
 //
 // The matching logic here is itself untested: the repository's only TypeScript tests are the
 // benchmark's (bench/, run by `mise bench:test`), and this check is not wired into them. Each rule
@@ -23,6 +24,11 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
 
 const pluginRoot = 'plugins/cs2-modding';
 const skillsRoot = `${pluginRoot}/skills`;
+
+// The gameface skills borrow two of that contract's tokens, the volatility marker and the baseline
+// line, and the sweep that maintains them finds both by grep, so those two rules reach this tree.
+const gamefaceSkillsRoot = 'plugins/coherent-gameface/skills';
+const gamefaceBaselinePattern = /^Verified against Cohtml (?<version>[\d.]*\d)\.$/u;
 
 // The setup skill's provisioning catalog is the single place a mod may be named, so it is both the
 // source of the name list and the one file exempt from the no-leak rule.
@@ -69,6 +75,11 @@ checkPointersResolve(shippedFiles);
 checkDisclosedFilesAreReachable(shippedFiles);
 checkMechanicsProseBudget(shippedFiles);
 checkTechniqueProseBudget(shippedFiles);
+
+const gamefaceSkillFiles = listFilesRecursively(gamefaceSkillsRoot);
+
+checkVolatilityMarkers(gamefaceSkillFiles);
+checkGamefaceBaselines(gamefaceSkillFiles);
 
 // The mods corpus is input, never output: knowledge prose states a technique on its own authority
 // and never credits the mod it was learned from. One forgetful authoring pass is all it takes to
@@ -195,6 +206,35 @@ function checkVersionBaselines(files: readonly string[]): void {
         `line reading "Verified against game version <version>."`
     );
   }
+}
+
+// The gameface baseline belongs to a skill as a whole, where a cs2-modding one belongs to each
+// reference: one engine version moves every gameface claim at once. Two versions across the tree
+// are legitimate only mid-sweep, which is never a state to commit.
+function checkGamefaceBaselines(files: readonly string[]): void {
+  const versions = new Set<string>();
+
+  for (const file of files.filter(candidate => path.basename(candidate) == 'SKILL.md')) {
+    const baselines = readShippedLines(file).flatMap(
+      line => gamefaceBaselinePattern.exec(line)?.groups?.version ?? []
+    );
+
+    assert.equal(
+      baselines.length,
+      1,
+      `${file} carries ${baselines.length} version baselines; a gameface skill states exactly ` +
+        `one line reading "Verified against Cohtml <version>."`
+    );
+
+    versions.add(baselines[0] ?? '');
+  }
+
+  assert.equal(
+    versions.size,
+    1,
+    `The gameface skills state ${versions.size} Cohtml baselines (${[...versions].join(', ')}); ` +
+      `they move together, last, when a sweep closes.`
+  );
 }
 
 // Placement is asserted by line, not by substring. A file carrying the words anywhere at all --

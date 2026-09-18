@@ -34,8 +34,10 @@ pre-commit:
     skill-content:
       # The cs2-modding plugin's shipped prose is a deliverable with no other automated coverage;
       # the check reads the whole skills tree, so any staged file in it triggers a full pass.
+      # The gameface skills take its marker and baseline rules.
       glob:
         - "plugins/cs2-modding/skills/**/*"
+        - "plugins/coherent-gameface/skills/**/*"
         - "scripts/check-skill-content.ts"
       run: mise exec bun -- bun scripts/check-skill-content.ts
     oxlint:

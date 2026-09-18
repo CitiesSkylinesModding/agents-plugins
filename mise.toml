@@ -74,7 +74,7 @@ description = "Checks that the Claude and Codex plugin manifests stay in sync."
 run = "bun scripts/check-plugin-sync.ts"
 
 [tasks."check:skill-content"]
-description = "Checks the cs2-modding plugin's shipped prose against its own content rules."
+description = "Checks the cs2-modding plugin's shipped prose against its own content rules, and the gameface skills' markers and baseline lines."
 run = "bun scripts/check-skill-content.ts"
 
 # No check:cs: jb cleanupcode (the C# formatter, see fix:cs) has no read-only/dry-run mode, and C#

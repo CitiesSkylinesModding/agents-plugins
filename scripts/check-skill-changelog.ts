@@ -8,7 +8,7 @@ import path from 'node:path';
 // The gameface skill's version-gating.md timeline is immutable history and only rots
 // by omission: releases newer than its recorded ceiling are simply missing.
 // This script fetches the live Gameface feature changelog and lists every release version above the
-// ceiling, so the timeline (and the ceiling marker) can be appended by hand.
+// ceiling.
 // Exits nonzero when the timeline is stale. Network-dependent: run manually, not in CI.
 
 const CHANGELOG_URL = 'https://docs.coherent-labs.com/cpp-gameface/changelog/feature/';
@@ -35,8 +35,8 @@ for (const version of newerVersions) {
 }
 
 console.error(
-  `Append their notable web-platform entries to ${TIMELINE_PATH} ` +
-    `and bump the timeline-ceiling marker.`
+  `Run the gameface-update skill: its timeline step appends them to ${TIMELINE_PATH} ` +
+    `and bumps the timeline-ceiling marker.`
 );
 
 process.exit(1);
