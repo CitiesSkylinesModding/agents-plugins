@@ -8,10 +8,11 @@ pre-commit:
   commands:
     build-bundle:
       # Keep the committed bundle in sync with the sources; stage_fixed would only re-add the
-      # staged src files, so the freshly built bundle is staged explicitly.
-      root: "plugins/coherent-gameface/mcp/"
+      # staged src files, so the freshly built bundle is staged explicitly. It runs from the repo
+      # root and names the bundle by its full path: from a git worktree, an add run inside a
+      # subfolder stages the path as if that subfolder were the root.
       glob: "plugins/coherent-gameface/mcp/src/*.ts"
-      run: mise build:gameface && git add dist/server.mjs
+      run: mise build:gameface && git add plugins/coherent-gameface/mcp/dist/server.mjs
     dotnet-test:
       # The unity-devtools server ships as a NuGet dotnet tool (no committed artifact); staged C#
       # changes just need to compile and pass the offline test suite.
