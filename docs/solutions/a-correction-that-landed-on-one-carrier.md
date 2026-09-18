@@ -6,7 +6,9 @@ symptoms:
   - 'a claim is corrected and the next round finds the same claim standing elsewhere'
   - 'a dated correction note itself states what the correction retired'
   - 'a feature ships and the marketplace or package description still sells the product without it'
+  - 'a claim is corrected and the replacement turns out to be false in its own right'
 tags: [prose, correction, sweep, carriers, review-gate]
+updated: 2026-09-18
 ---
 
 # A correction that landed on one carrier
@@ -32,6 +34,9 @@ A claim lives in more places than its sentence, and the other places do not read
 - **The bridge paragraph in the matching `docs/research/` file**, which is what the next authoring pass runs on.
 - **A supersede note that itself asserts what the correction overturned** — appending a note is not editing the original, and the note is new prose that can be wrong in its own right.
 - **A pointer's promise**: "`performance-and-memory` owns that trade in full" is a claim about another file's contents.
+- **The site a convention file names as the authority for the mechanism.** `AGENTS.md` says the bound lives where the wait is and points at `Invoker`; a later loop corrected the session's docblock, its refusal message and that `AGENTS.md` line, and left `Invoker`'s own docblock still claiming the invoke path was bounded. You correct OUTWARD from the authority site, because it is the one you trust, so it is the one you never re-read.
+- **An ADR's present-tense aside.** The record reads frozen, so a sweep skips it, but the sentence around the decision is live: "the server-lifetime watchdogs still are" outlived the change that ported them.
+- **A badge.** `platform-Windows` is a claim inside a URL, and no prose grep reaches it.
 - **A capability sentence in shipped metadata**, where adding a tool restates it ten times: both harness `plugin.json` files, both marketplace files, the package project's `<Description>` AND its own header comment, the plugin README's headline and tool table, the ROOT README's row for that plugin, and the roadmap's section intro for it. `check:plugin-sync` compares two of the ten, so a sweep that stops at prose leaves every install-decision surface selling the plugin without the thing it just gained.
 
 ## Fix
@@ -44,3 +49,5 @@ Treat a correction as landing on a *set* of carriers and enumerate the set befor
 The check that catches the most for the least: read the corrected passage top to bottom as a stranger, because a heading contradicting its body is invisible in a diff and obvious in a read.
 
 Where a claim spans two references, correct both in the pass that found it — deferring drops it, and the two then disagree in the tree until someone notices.
+
+Verify the REPLACEMENT, not just the claim being retired. A comment reading "NOT_SUSPENDED is a post-attach transient" was corrected to "retried like every other wire operation", which is also false, and `sdb-round-trips-are-not-equal-cost.md` had already settled that subject under its own what-didn't-work. The replacement is new material: search the store for the doc that owns the subject before writing it, and hold it to the evidence the original would have needed.
