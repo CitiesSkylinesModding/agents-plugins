@@ -13,19 +13,19 @@ The missing state is **`HouseholdFlags.MovedIn`**, a flag on the `Household` com
 
 **One simulation system writes it: `CitizenTravelPurposeSystem`**, in the `ArriveType.Resident` arm of `ArriveJob`:
 
-- `src/Game/Game.Simulation/CitizenTravelPurposeSystem.cs:354` — `					case ArriveType.Resident:`
-- `:368` — `						value.m_Flags |= HouseholdFlags.MovedIn;`
-- `:369` — `							m_Households[household] = value;`
+- `src/Game/Game.Simulation/CitizenTravelPurposeSystem.cs:361` — `					case ArriveType.Resident:`
+- `:375` — `						value.m_Flags |= HouseholdFlags.MovedIn;`
+- `:376` — `							m_Households[household] = value;`
 
-**The guard is the whole of this line**, at `:357`:
+**The guard is the whole of this line**, at `:364`:
 
 `						if (m_PropertyRenters.HasComponent(household) && m_PropertyRenters[household].m_Property == present.m_Target)`
 
-That is: the arriving citizen's household must carry a `PropertyRenter` whose `m_Property` is the very building being arrived at. The nearby `HasBuffer(household) && (value.m_Flags & HouseholdFlags.MovedIn) == 0` test at `:360` gates only the `CitizensMovedIn` statistics event, not the flag write. The arrival itself is enqueued by the same system at `:156` when a citizen with `Purpose.GoingHome` has its `Arrived` enabled.
+That is: the arriving citizen's household must carry a `PropertyRenter` whose `m_Property` is the very building being arrived at. The nearby `HasBuffer(household) && (value.m_Flags & HouseholdFlags.MovedIn) == 0` test at `:367` gates only the `CitizensMovedIn` statistics event, not the flag write. The arrival itself is enqueued by the same system at `:156` when a citizen with `Purpose.GoingHome` has its `Arrived` enabled.
 
 Nothing anywhere in the decompile ever clears the flag — there is no `&= ~HouseholdFlags.MovedIn`. The only other write of the value at all is `Household.Deserialize` at `Game.Citizens/Household.cs:55`, restoring the whole flags byte from a save.
 
-The consequences named in the prompt all check out, though the census link is two-hop: `ApplyValidCitizenJob` stamps or clears `CitizenFlags.ValidCitizen` from the flag (`CountHouseholdDataSystem.cs:315`, `:323`, `:339`) and `CountCitizensJob` then filters on `ValidCitizen` (`:540`), so the flag's reach extends to everything reading that. Happiness skips the citizen at `CitizenHappinessSystem.cs:294` with a `CitizenFlags.Tourist` carve-out; school application gates at `ApplyToSchoolSystem.cs:127` through `CitizenUtils.HasMovedIn`; and the pathfind money weight is multiplied by 0.1 at `CitizenUtils.cs:87` until the flag is set.
+The consequences named in the prompt all check out, though the census link is two-hop: `ApplyValidCitizenJob` stamps or clears `CitizenFlags.ValidCitizen` from the flag (`CountHouseholdDataSystem.cs:315`, `:323`, `:339`) and `CountCitizensJob` then filters on `ValidCitizen` (`:540`), so the flag's reach extends to everything reading that. Happiness skips the citizen at `CitizenHappinessSystem.cs:312` with a `CitizenFlags.Tourist` carve-out; school application gates at `ApplyToSchoolSystem.cs:127` through `CitizenUtils.HasMovedIn`; and the pathfind money weight is multiplied by 0.1 at `CitizenUtils.cs:87` until the flag is set.
 
 So a mod creating a household from code must either drive a real `GoingHome` arrival at the rented property or set the flag itself.
 

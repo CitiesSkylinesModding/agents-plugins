@@ -12,13 +12,13 @@ In a running Cities: Skylines II city, a mod raises the residential upkeep level
 
 It is a pure function of its arguments, reading exactly three economy parameters — `m_ResidentialUpkeepLevelExponent` (`:232`), `m_IndustrialUpkeepLevelExponent` (`:237`) and `m_CommercialUpkeepLevelExponent` (`:240`) — and returning `round(pow(level, exponent) * baseUpkeep * lotSize)`, halved for storage buildings (`:244`).
 
-**It runs once, at prefab initialisation.** It has exactly one call site in the whole decompile, `src/Game/Game.Prefabs/BuildingInitializeSystem.cs:1076`:
+**It runs once, at prefab initialisation.** It has exactly one call site in the whole decompile, `src/Game/Game.Prefabs/BuildingInitializeSystem.cs:1075`:
 
 `						reference.m_Upkeep = PropertyRenterSystem.GetUpkeep(level, zoneServiceConsumptionData.m_Upkeep, lotSize, value4.m_AreaType, ref economyParameterData, isStorage);`
 
-That system's query is `Created` + `PrefabData` (`:757`), so this is per prefab entity at initialisation — not per tick, and not per building instance. The economy parameters are sampled right there, at `:1075`. Three guards skip the bake, at `:1066`: the chunk must carry `ConsumptionData`, the prefab must not author its own `ServiceConsumption`, and the zone prefab must have `ZoneServiceConsumptionData`. A prefab with no zone prefab at all is skipped earlier, at `:1016`.
+That system's query is `Created` + `PrefabData` (`:756`), so this is per prefab entity at initialisation — not per tick, and not per building instance. The economy parameters are sampled right there, at `:1074`. Three guards skip the bake, at `:1065`: the chunk must carry `ConsumptionData`, the prefab must not author its own `ServiceConsumption`, and the zone prefab must have `ZoneServiceConsumptionData`. A prefab with no zone prefab at all is skipped earlier, at `:1015`.
 
-**The result is stored in the building prefab's `ConsumptionData.m_Upkeep`** — `reference` at `:1069` is an element of the chunk's `ConsumptionData` array.
+**The result is stored in the building prefab's `ConsumptionData.m_Upkeep`** — `reference` at `:1068` is an element of the chunk's `ConsumptionData` array.
 
 **Why the mod's change does nothing:** the value was baked from the economy parameters as they stood at prefab initialisation, and nothing recomputes it afterwards. The per-tick `BuildingUpkeepSystem` never calls `GetUpkeep`; it holds `ConsumptionData` `[ReadOnly]` (`Game.Simulation/BuildingUpkeepSystem.cs:127-128`) and only slices the baked figure:
 

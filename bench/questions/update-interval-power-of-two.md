@@ -13,15 +13,15 @@ A Cities: Skylines II code mod registers a system in its `OnLoad` with `updateSy
 
 That check is on the **registration** path, not the update path: `GetInterval` is called from both private `Register` overloads (`:256` and `:263`), and `UpdateAt<SystemType>` is `Register(++m_AddIndex, base.World.GetOrCreateSystemManaged<SystemType>(), phase);` at `:143`. So the throw happens synchronously inside the `UpdateAt<T>` call in `OnLoad`, in every phase, before the system ever runs.
 
-**The failure takes the whole mod, not just the system.** The exception unwinds out of `IMod.OnLoad`, so nothing the mod registers after that line is reached. `ModManager.ModInfo.Load` catches it, sets `state = State.GeneralError` (`src/Game/Game.Modding/ModManager.cs:140`) and rethrows (`:142`); `InitializeMods`' own catch then calls `modInfo2.Dispose()` (`:453`) and logs `"Error initializing mod {0} ({1})"` (`:454`).
+**The failure takes the whole mod, not just the system.** The exception unwinds out of `IMod.OnLoad`, so nothing the mod registers after that line is reached. `ModManager.ModInfo.Load` catches it, sets `state = State.GeneralError` (`src/Game/Game.Modding/ModManager.cs:141`) and rethrows (`:143`); `InitializeMods`' own catch then calls `modInfo2.Dispose()` (`:456`) and logs `"Error initializing mod {0} ({1})"` (`:457`).
 
-Worth knowing for debugging, though not required by the question: `Dispose()` overwrites the state with `State.Disposed` at `:172`, and the reporting loop at `:270` skips any mod whose state is below `IsNotModWarning`, so the player gets no failure notification and no error dialog — only that log line.
+Worth knowing for debugging, though not required by the question: `Dispose()` overwrites the state with `State.Disposed` at `:173`, and the reporting loop at `:271` skips any mod whose state is below `IsNotModWarning`, so the player gets no failure notification and no error dialog — only that log line.
 
-**With 8 the mod loads, and the interval is ignored anyway.** The interval is consulted only by the three-argument `UpdateSystem.Update(SystemUpdatePhase phase, uint updateIndex, int iterationIndex)` (`:206`), which gates each system at `:224`:
+**With 8 the mod loads, and the interval is ignored anyway.** The interval is consulted only by the three-argument `UpdateSystem.Update(SystemUpdatePhase phase, uint updateIndex, int iterationIndex)` (`UpdateSystem.cs:206`), which gates each system at `UpdateSystem.cs:224`:
 
 `				if ((updateIndex & (uint)(systemData.m_Interval - 1)) != (uint)systemData.m_Offset)`
 
-That overload has exactly three call sites in the decompile, all in `Game.Simulation.SimulationSystem`: `:173` for `LoadSimulation`, `:282` for `EditorSimulation`, `:286` for `GameSimulation`. Every other phase is driven by the one-argument `Update(SystemUpdatePhase)` at `:166`, whose loop body never mentions `m_Interval` — including `UIUpdate`, driven from `Game.UI/UIUpdateSystem.cs:19`. A `UIUpdate` system therefore runs on every pass of the phase whatever its interval says.
+That overload has exactly three call sites in the decompile, all in `Game.Simulation.SimulationSystem`: `SimulationSystem.cs:173` for `LoadSimulation`, `:282` for `EditorSimulation`, `:286` for `GameSimulation`. Every other phase is driven by the one-argument `Update(SystemUpdatePhase)` at `UpdateSystem.cs:166`, whose loop body never mentions `m_Interval` — including `UIUpdate`, driven from `Game.UI/UIUpdateSystem.cs:19`. A `UIUpdate` system therefore runs on every pass of the phase whatever its interval says.
 
 (`GameSystemBase.GetUpdateInterval(SystemUpdatePhase phase)` at `Game/GameSystemBase.cs:131` is the only signature; it defaults to `1` and is called on every registration in every phase, which is why `10` throws even in a phase that will not honour it.)
 

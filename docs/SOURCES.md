@@ -46,12 +46,12 @@ What the single line genuinely blocks is reading around a match and citing one, 
 
 ## 4. The game's compiled locale data
 
-`Cities2_Data/Content/Game/Locale.cok`, a plain zip holding most locales, and `Cities2_Data/StreamingAssets/uk-UA.loc`, the one that ships loose beside it, under `%CSII_INSTALLATIONPATH%`.
-Reading only the package silently misses that last one.
+`Cities2_Data/Content/Game/Locale.cok`, a plain zip holding the base game's strings in every locale, and each content pack's own `Cities2_Data/Content/<pack>/Locale.cok`, holding that pack's strings in the same locales, under `%CSII_INSTALLATIONPATH%`.
+Reading only the base package silently misses every pack's keys.
 **Authoritative for every vanilla string and for the localization-key namespace table.**
 A `.loc` payload is a flat `BinaryWriter` stream with no compression, no checksum and no table of contents, so a zip reader and a `BinaryReader` get the whole of it.
 That the payload is uncompressed and the package stored also means a raw byte-grep over the `.cok` finds a key by name with no decoding at all — use it to settle whether a key exists and to enumerate a key family, and the decoder for counts and for the whole table.
-It is also a first-party enumeration of any prefab family whose strings are keyed by prefab name — `Policy.TITLE[…]`, `Notifications.DESCRIPTION[…]` — and it ships every content pack's strings whether or not the pack is installed, so it lists what exists across all content where a live query lists what this install has. The locale is the cheapest cross-check on a swept roster.
+It is also a first-party enumeration of any prefab family whose strings are keyed by prefab name — `Policy.TITLE[…]`, `Notifications.DESCRIPTION[…]` — and read across the base package and every pack package it lists what the install's locale data names, which need not match what a live query finds loaded. The locale is the cheapest cross-check on a swept roster.
 
 ## 5. The game's packaged content
 
@@ -59,8 +59,8 @@ The `.cok` set under `Cities2_Data/Content/Game/`, plus the DLC and radio-pack d
 **Every `.cok` is a plain zip**, stored rather than deflated, one entry per asset beside a `.cid` sibling. A zip reader opens the largest of them without unpacking it.
 What is in them splits by kind, and the split is the entry's whole point:
 
-- **Art assets** — `Blob*.cok`, `VT*.cok`, `MidMips*.cok`. Materials, geometry, surfaces, textures, animations. `Blob.cok` alone is 27,910 entries and holds not one prefab.
-- **Prefabs, but only for content packs** — a `Prefabs*.cok` in each DLC directory and `Prefabs_FreeUpdate02.cok` in `Game/`. 1,571 `.Prefab` entries across the eight of them. Each is a **self-describing binary key/value stream**: UTF-16LE type names and field names inline, values inline, so a small reader gets `m_Upkeep`, `m_ElectricityConsumption` and the rest by name without a schema.
+- **Art assets** — `Blob*.cok`, `VT*.cok`, `MidMips*.cok`. Materials, geometry, surfaces, textures, animations. `Blob.cok` alone is 28,109 entries and holds not one prefab.
+- **Prefabs, but only for content packs** — a `Prefabs*.cok` in each of the nine DLC directories and `Prefabs_FreeUpdate02.cok` in `Game/`. 2,044 `.Prefab` entries across the ten of them. Each is a **self-describing binary key/value stream**: UTF-16LE type names and field names inline, values inline, so a small reader gets `m_Upkeep`, `m_ElectricityConsumption` and the rest by name without a schema.
 - **Neither: the base game's own prefabs.** Every road, service building, zoned building and vehicle is a Unity serialized object in `Cities2_Data/resources.assets`, which carries type names and **no field names**. Reading a value there needs a Unity serialized-file parser driven by the field order of the decompiled class — a derivation, not a read. The input action asset (`Resources.Load<InputActionAsset>("Input/InputActions")`) is in the same file and under the same limit.
 
 So this source answers a content-pack prefab question cheaply and a base-game one expensively; where the base game is the subject and a value is what you want, the running game (source 8) is the shorter road.
