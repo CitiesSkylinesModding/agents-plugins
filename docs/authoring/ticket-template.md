@@ -56,6 +56,7 @@ The `Blocked by` side is the record the loop config reads; a `Blocks` line is de
 > - [ ] `mise check` passes.
 
 The last one names the project's checks by command; a "tests pass" that names no command gates nothing.
+A criterion on a hand-off walks from the trigger to the step it promises: "the message names the skill" passes a pointer whose target stops the run before that step.
 
 **The trap** section is optional and earns its place where the spec already knows the likely failure — name the temptation, then the rule that beats it:
 

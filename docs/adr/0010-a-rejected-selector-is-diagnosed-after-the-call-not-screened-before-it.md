@@ -47,8 +47,8 @@ version safety, and it is the cost of the call it was going to make anyway.
 
 The engine facts live in the server as well as in the two skills, since the diagnosis has to
 answer a client that loads neither. Re-probing a new engine version updates all three, which
-`plugins/coherent-gameface/AGENTS.md` records; a test binds the module's two copies to each other,
-and nothing binds the skills.
+`plugins/coherent-gameface/AGENTS.md` records; a test binds the module's two copies to each other
+and to the skills' sentences, read off disk.
 
 Any tool that can surface an engine exception to its caller inherits the diagnosis by routing
 through `explainException` rather than `formatException`. That reach is wider than the selector
