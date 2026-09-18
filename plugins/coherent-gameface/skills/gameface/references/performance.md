@@ -63,6 +63,7 @@ Rules the docs give content developers:
   Record, then read Cohtml markers per stage; hovering layer/paint markers highlights the responsible DOM node, and the Summary tab links it to the Elements panel: that is the attribution workflow.
 - Checkboxes add texture counters, GPU memory tracks, and per-frame screenshots.
   Higher trace levels (L2/L3) identify individual nodes and data-binding attributes but degrade performance and can produce traces of hundreds of MB; start at L1.
-- Marker names drift across versions; treat them as approximate labels, and expect a 1.x-era game (CS2) to expose fewer panels and markers than the 3.x docs describe.
+- Marker names drift across versions; treat them as approximate labels, and expect a 1.x-era target to expose fewer panels and markers than the 3.x docs describe.
+  (VOLATILE: whether the target is still 1.x-era, and which panels and markers it exposes — the `gameface` skill's baseline line, and the DevTools window against the running target.)
 - Source maps must be INLINED for the inspector (it cannot fetch `coui://` URLs).
 - The Cohtml DevTools panel (More Tools > Cohtml) holds paint flashing, cache statistics and sizing, and metadata emission for GPU debuggers.

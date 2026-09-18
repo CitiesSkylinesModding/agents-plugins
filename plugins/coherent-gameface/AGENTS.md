@@ -24,7 +24,7 @@ The plugin wears two hats, with distinct names:
 ## Conventions
 
 - **One tier per fact.** Traps every caller needs go in the tool descriptions (always in context once the tools load, and all a standalone MCP client gets); interpretation and procedure go in the skill.
-- **Skills and docs stay generic.** State what holds for any Gameface UI. The engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain; a particular game's use of it is not. Where a CS2 specific genuinely aids understanding, demote it to a labelled example ("verified on CS2: …") instead of letting it frame the section — and prefer none at all in general procedure.
+- **Skills and docs stay generic.** State what holds for any Gameface UI. The engine itself (Cohtml/Coherent APIs, `engine.trigger`) is in-domain; a particular game's use of it is not. Where a CS2 specific genuinely aids understanding, demote it to a labelled example ("verified on the reference target: …") instead of letting it frame the section — and prefer none at all in general procedure.
 - **One sentence per line** in `skills/**` markdown, never wrapped at 100 chars: fewer tokens in context, line-granular diffs.
 - **Report the size that predicts the cost.** A tool returning text takes a character budget with a default (`game_dom`'s `maxHtml`, `game_debug_source`'s `maxChars`) and marks what it clipped; a line or element count lets a caller walk into a megabyte.
 
@@ -42,9 +42,10 @@ Harness wiring: Claude Code's `.mcp.json` launches the bundle through `${GAMEFAC
 
 The verified matrix — CDP domain support, in-page DOM API availability, input dispatch, the JS debugger, view-reload detection — lives in `skills/gameface/` and `skills/gameface-driving/`, which are the canonical source and teach it to agents at runtime.
 The selector whitelist is the one fact the server also holds, in `mcp/src/selectors.ts`, because the diagnosis has to answer a standalone MCP client that loads no skill.
-Re-probing it for a new engine version updates that module and, in each of the two skills, both the whitelist sentence and the `:nth-child()` argument sentence beside it: a test binds the module's two copies to each other, and nothing binds the skills.
+Re-probing it for a new engine version updates that module and, in each of the two skills, both the whitelist sentence and the `:nth-child()` argument sentence beside it: a test binds all three copies, reading the skills' sentences off disk.
+A `VOLATILE:` marker in either skill follows the marker policy the `cs2-modding` trunk skill states, labelling a claim the engine version moves; the skills define the marker alone and promise nothing of unmarked lines ([why](../../docs/solutions/a-complement-claim-shipped-beside-a-partial-marking-pass.md)).
 Server-side consequences are commented where they are implemented (`cdp.ts` for discovery, `tools.ts` for page-context functions).
-Verification context: Cohtml 1.64.0.7, V8 9.4, CDP 1.3.
+Verification context: the Cohtml version each skill's baseline line states, V8 9.4, CDP 1.3.
 
 ## Preferred agent behavior
 

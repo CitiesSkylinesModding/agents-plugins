@@ -36,7 +36,8 @@ Pair with mock game data (see `scripting-data-binding.md`) to emulate the game s
   Coherent's `vite-gameface` plugin fixes hydration markers and empty text nodes.
   The official Solid router is incompatible; Coherent's GamefaceUI component kit provides routing and widgets.
 - **Svelte**: officially supported with Svelte 5 since 2.2.0, where whitespace nodes joined the DOM.
-  On older engines (CS2's 1.64), fine-grained-reactivity frameworks that index into `childNodes` hit the shared-whitespace-node hazard (whitespace text nodes are absent from `childNodes`, so indices shift against browser expectations): probe carefully before committing to one.
+  On older engines (the reference target's included), fine-grained-reactivity frameworks that index into `childNodes` hit the shared-whitespace-node hazard (whitespace text nodes are absent from `childNodes`, so indices shift against browser expectations): probe carefully before committing to one.
+  (VOLATILE: whether the target is still on the older whitespace regime — a `game_eval` read of `childNodes` over whitespace-separated markup on the running target.)
   Known issue: reactive variables directly setting text content of SVG/HTML elements.
 - **Tailwind** (`content_development/tailwindsupport/`): a per-utility compat table exists, but the root causes predict it: color utilities fail (CSS variables inside color functions, and `currentcolor`, are unsupported), `space-*`/`divide-*` fail (`:not()`), the grid category fails (`display: grid`), responsive `sm:`/`md:` prefixes fail (media-query form), `ring-*`/`shadow-*` fail (box-shadow variables).
   Spacing, sizing, flex, transforms, transitions, and gradient utilities work.
@@ -53,6 +54,7 @@ Two rules when using them:
 
 Beyond polyfills, Coherent's open-source GameUIComponents library ships restylable game widgets (dropdown, slider, modal, grid, scrollable container, ...) plus an interaction manager (keyboard/gamepad spatial navigation, drag and drop).
 Shadow DOM (1.61+) covers `customElements.define`, `<template>`, `attachShadow`, slots, `:host` (simple selectors), and `::slotted`; `::part` arrives in 1.67.
+(VOLATILE: whether `::part` has reached the target — the `gameface` skill's baseline line.)
 
 ## Linters and type checking
 

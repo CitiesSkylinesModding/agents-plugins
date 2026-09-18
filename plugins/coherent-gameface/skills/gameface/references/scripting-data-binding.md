@@ -77,6 +77,7 @@ Structural pitfalls:
 - `data-bind-for` over collections of primitives is unsupported; wrap items in objects.
 - Identical `{{expressions}}` evaluate once per synchronization (deduplicated).
 - Binding over shadow-DOM-containing subtrees needs `attachShadow({clonable: true})` (2.2+).
+  (VOLATILE: whether the target has reached 2.2 — the `gameface` skill's baseline line.)
 
 ## Developing without the game (mock data)
 
@@ -91,18 +92,22 @@ Dispatch real bubbling DOM events; a UI framework's delegated handlers receive t
 
 - `el.dispatchEvent(new MouseEvent('click', {bubbles: true, ...}))` works; `HTMLElement.click()` does not exist.
 - `PointerEvent` and `InputEvent` constructors are missing: dispatch `pointer*` names as `MouseEvent`, and `new Event('input', {bubbles: true})` for input events.
+  (VOLATILE: whether `HTMLElement.click()`, `PointerEvent` and `InputEvent` are still missing — a `game_eval` presence probe of each against the running target.)
 - `KeyboardEvent` and `MouseEvent` constructors exist, as does the native `HTMLInputElement.value` setter (set value natively, then dispatch `input`).
 - Real input reaches the page only when the game forwards it; hover state and `mouseenter/over/leave/out` update exclusively on game-fed mouse-move/scroll events.
 
 ## DOM and JS quirks
 
 - Element lookup APIs: `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined; scan `querySelectorAll` results and filter on `textContent` instead.
-  The JS query APIs (`querySelector*`, `closest`, `matches`) answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on CS2, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; anything in neither list is untested rather than supported.
-  `:nth-child()` itself takes an integer, `even`, `odd`, or a bare `an` step there; an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+  (VOLATILE: whether each of the four is still absent — a `game_eval` presence probe of each member against the running target.)
+  The JS query APIs (`querySelector*`, `closest`, `matches`) answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; anything in neither list is untested rather than supported.
+  `:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`) there; an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+  (VOLATILE: which side of those two lists each construct falls on, and the `:nth-child()` argument forms — a `game_eval` `document.querySelector` probe of each construct against the running target.)
   Stylesheet selector support is a separate matter, with its own unsupported set.
 - `event.target` and `event.currentTarget` are valid only inside the dispatching call stack; a stored event object has them nulled afterwards.
 - Whitespace text nodes are virtualized through ONE shared internal node, materialized on access (pre-2.2 engines): never store a whitespace node reference, and avoid hardcoded `childNodes[i]` indexing (`innerHTML`-parsed markup shows no whitespace text nodes in `childNodes` at all).
   From 2.2, whitespace nodes are real DOM nodes (indices shift).
+  (VOLATILE: which of the two regimes the target is on — a `game_eval` read of `childNodes` over whitespace-separated markup on the running target.)
 - `parentNode`/`parentElement` are not guaranteed for detached, unreferenced nodes.
 - `getElementsByTagName/ClassName` return live `HTMLCollection`s only since 1.52.1.
 - `window.onerror` receives a single event object (the standard 5-argument signature is not used), on V8 platforms only.
@@ -117,7 +122,9 @@ Dispatch real bubbling DOM events; a UI framework's delegated handlers receive t
 
 - `fetch()` has never existed; use `XMLHttpRequest` or the `whatwg-fetch` polyfill.
 - `window.postMessage` is missing from the engine (`postmessage-polyfill` when a dev server needs it; some game bundles, CS2's included, polyfill it themselves); `setInterval` requires an explicit delay argument before 2.0; `btoa`/`atob` and `navigator.platform` are missing (assign `navigator.platform` before loading libraries that sniff it).
-- Also absent on CS2 (probe per title): `sessionStorage`, `URLSearchParams` (`URL` itself is native and works), `FormData`, `File`/`FileReader`, `TextEncoder`/`TextDecoder`, `IndexedDB`, `document.cookie`, `requestIdleCallback`, `setImmediate`.
+  (VOLATILE: whether `setInterval` still needs its explicit delay — the 2.0.0 entry in the feature changelog at `changelog/feature/`; and whether `postMessage`, `btoa`/`atob` and `navigator.platform` are still missing from the engine — a `game_eval` presence probe of each against the running target.)
+- Also absent on the reference target (probe per title): `sessionStorage`, `URLSearchParams` (`URL` itself is native and works), `FormData`, `File`/`FileReader`, `TextEncoder`/`TextDecoder`, `IndexedDB`, `document.cookie`, `requestIdleCallback`, `setImmediate`.
+  (VOLATILE: which of these the target still lacks — a `game_eval` `typeof` probe of each against the running target.)
   `navigator` is minimal (`userAgent` and `getGamepads()`); `location`/`history` work without top-level navigation.
 - `XMLHttpRequest` and `localStorage` exist but are served by the game's resource layer (`coui://` scheme and storage handler), so reachability and persistence are whatever the game wired.
   Cohtml extends XHR with `responseArrayBuffer()`/`responseBlob()`.

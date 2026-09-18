@@ -47,7 +47,10 @@ Notable property limits (the current tables have the full lists):
   Flex `gap` (2.2+) on older engines: space children with margins.
   Percentage `width`/`height` on inline images are unsupported: size the container instead.
 
-Layout-bug workarounds (undocumented, observed on 1.64):
+(VOLATILE: the version gates in the list above, `space-evenly` and flex `gap` among them, and whether the margin workaround is still needed — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
+
+Layout-bug workarounds (undocumented, observed at the reference target's baseline):
+(VOLATILE: whether each still reproduces — the layout fixes in the feature changelog at `changelog/feature/`, and a reproduction on the running target measured a frame after it is built, as the next section describes.)
 
 - Animating `width`/`height` from 0 to `auto` fails: transition `max-width`/`max-height` instead.
 - An image refusing to stretch to its flex container's height: set an explicit `height` on the container.
@@ -78,6 +81,7 @@ Layout is deferred and runs once per frame (`content_development/immediatelayout
   Changing the `media` attribute from JS after creation has no effect.
 - Custom media features (1.51+): the game defines flags via `View::SetCustomMediaFeature`, CSS queries them as `@media (myFeature: myValue)`; numeric comparisons since 3.0.2.
   Toggling one triggers a full style recalculation.
+  (VOLATILE: whether numeric comparisons in custom media features have reached the target — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
 
 ## Scaling the UI (`content_development/scalableui/`)
 
@@ -137,6 +141,8 @@ The documented pattern is rem-based: size everything in `rem`, set a base `html 
   All are subject to the stale `getComputedStyle` lag.
 - `aspect-ratio` (2.2+): keep constraint units consistent (mixing `%` with lengths breaks the ratio); works for non-replaced elements, raster images, and SVGs.
 
+(VOLATILE: the 2.2 gates in this section — `transition-behavior: allow-discrete`, `@starting-style` and `aspect-ratio` — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
+
 ## SVG (`content_development/supported_features_tables/svgsupport/`)
 
 Subset of SVG 2 usable inline, as `<img>`, as `background-image`, and as `border-image-source`.
@@ -166,3 +172,4 @@ The canvas support page is the one table that writes explicit NO statuses.
   Transparent video (alpha channel, `yuva420p`) works for overlay and particle effects.
 - Base64 data-URI images work since 1.40.
 - Supported image formats include DDS, TGA, PNG, JPEG, BMP, PSD, ASTC, PKM, KTX; WebP only since 1.67.
+  (VOLATILE: whether WebP has reached the target — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)

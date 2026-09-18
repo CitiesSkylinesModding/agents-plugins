@@ -9,7 +9,11 @@ Gameface renders game UI from HTML/CSS/JS.
 It is powered by Cohtml (the HTML engine) and Renoir (the rendering engine), proprietary technology that is not WebKit, Chromium, or Gecko, and not a WebView.
 JavaScript runs on V8.
 Gameface implements a deliberate subset of HTML5/CSS3 chosen for game-UI performance: an unsupported HTML element is not an error, it lays out as a generic unstyled flex box with no semantics, and unsupported CSS is silently ignored.
-(The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.) This skill is written against docs v3.0.3.1, with Cities: Skylines II (CS2) as the worked example throughout.
+(The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.)
+This skill is written against docs v3.0.3.1, with Cities: Skylines II (CS2) as the reference target and worked example throughout.
+
+Verified against Cohtml 1.64.0.7.
+A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## The map and the territory
 
@@ -18,7 +22,7 @@ Three rules keep them straight:
 
 1. **The docs describe the latest Gameface only.** Support tables carry no "since version" annotations.
    A YES in today's docs is an upper bound, not a fact about your game.
-2. **Version-gate every feature claim.** A game embeds a Cohtml version frozen at ship time (CS2: 1.64.0.7, while the docs describe a 3.x release).
+2. **Version-gate every feature claim.** A game embeds a Cohtml version frozen at ship time (the reference target's is the one the baseline line above states, while the docs describe a 3.x release).
    A feature exists in the game iff the changelog introduced it at or below the game's version.
    [references/version-gating.md](references/version-gating.md) has the lookup procedure, a baked version-to-feature timeline, and the list of features that never existed at all.
 3. **Probe the territory.** Two games on the same Cohtml version can still differ: per-game compatibility flags and embedder choices gate complex-selector styling, WebSockets, localization, text-transform, and more.
@@ -49,6 +53,7 @@ Layout and styling:
   Overflow scrolls but draws no scrollbar; scrollbars are built or polyfilled.
 - Stylesheet combinators (`>`, `+`, `~`, descendant space) only match when the game enables complex-selector styling (the per-game `EnableComplexCSSSelectorsStyling` flag): probe before relying on them.
   `:not()`, `::placeholder`, and `:nth-of-type()` are unsupported; `::before`/`::after` exist since 1.19.
+  (VOLATILE: whether a stylesheet still drops each of the three — a rule per construct read back through `cssRules` against the running target.)
 - `user-select` defaults to `none`; text selection is opt-in.
 - CSS variables work, except inside `@keyframes` and as `var()` fallback values.
   `calc()` cannot mix `%` with other units.
@@ -70,13 +75,16 @@ JS and DOM:
 - The global `engine` (defined by cohtml.js; gate startup on `engine.whenReady`) is the only JS-to-game bridge: `engine.call(name, ...)` returns a Promise from the single C++ handler, `engine.trigger`/`engine.on` are N-handler events, and models flow through `engine.createJSModel` / `engine.updateWholeModel` / `engine.synchronizeModels` plus `data-bind-*` attributes.
 - `fetch()`, `IntersectionObserver`, Web Workers, iframes, `<audio>`, `<dialog>`, and `contenteditable` have never existed.
   XHR and `localStorage` exist (`sessionStorage` is absent), served by the game's resource layer (`coui://` scheme) rather than a network stack.
+  (VOLATILE: whether `sessionStorage` is still absent — a `game_eval` presence probe against the running target.)
   WebSocket exists only when the game wired a socket transport.
   V8 is 9.4 (ES2021) since Cohtml 1.26, with no later bump recorded.
 - `event.target`/`currentTarget` are null once the dispatch call stack unwinds.
   `DOMContentLoaded` exists only since 1.27; `load` fires after fonts load.
-- `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined (verified on CS2).
+- `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined (verified on the reference target).
+  (VOLATILE: whether each of the four is still absent — a `game_eval` presence probe of each member against the running target.)
   Find elements by scanning `querySelectorAll` results and filtering on `textContent`.
 - `HTMLElement.click()` does not exist, and `PointerEvent`/`InputEvent` constructors are missing.
+  (VOLATILE: whether each of the three is still missing — a `game_eval` presence probe of each against the running target.)
   Simulate input by dispatching bubbling `MouseEvent`, `KeyboardEvent`, and `Event('input')` events.
 
 ## Looking things up

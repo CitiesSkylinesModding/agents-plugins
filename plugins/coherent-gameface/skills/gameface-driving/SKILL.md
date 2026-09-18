@@ -6,8 +6,11 @@ description: 'Operating manual for driving a live Gameface UI with the game_* MC
 # Driving a Gameface UI
 
 This skill records the procedure for the `game_*` tools: the facts the tool schemas cannot tell you.
-Facts that may be game-specific are labeled; the reference target is Cities: Skylines II (CS2, Cohtml 1.64.0.7).
+Facts that may be game-specific are labeled; the reference target is Cities: Skylines II (CS2).
 For what the engine itself supports (layout, events, missing platform APIs), load the `gameface` skill; this one stays operational.
+
+Verified against Cohtml 1.64.0.7.
+A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## Session start and triage
 
@@ -31,8 +34,10 @@ When a selector is non-unique but the match order is known, the input tools' `in
 Narrow with `game_query`, then read the one element you settled on with `game_dom`.
 For a predicate no selector can express here (computed state, or picking a parent by what its children are, since `:has()` throws), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
-The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on CS2, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; treat anything in neither list as untested rather than as supported.
-`:nth-child()` itself takes an integer, `even`, `odd`, or a bare `an` step; an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+(VOLATILE: whether each of the three is still absent — a `game_eval` presence probe of each member against the running target.)
+The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; treat anything in neither list as untested rather than as supported.
+`:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`); an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+(VOLATILE: which side of those two lists each construct falls on, and the `:nth-child()` argument forms — a `game_eval` `document.querySelector` probe of each construct against the running target.)
 Every selector-taking tool names the construct it suspects and a rewrite when it hits the rejection, `game_eval` and `game_debug_evaluate` included, falling back to the supported set when it can pin no construct: act on what it names rather than retrying the selector.
 `game_console` is the exception, streaming page exceptions as the engine wrote them, so a rejection surfacing there arrives bare.
 

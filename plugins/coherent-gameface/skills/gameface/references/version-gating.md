@@ -11,8 +11,9 @@ Repo-side, `mise skills:check-changelog` diffs this ceiling against the live cha
 
 ## Detect the game's version
 
-- `game_status` reports the engine version: the CDP endpoint's `GET /json/version` answers with `Browser: "Cohtml/1.64.0.7"` style values.
-- Page JS has no version global, but `navigator.userAgent` carries the version in an undocumented, stable shape: `Cohtml/<version> (<platform>; Native) cohtml/<version> (Coherent Labs)`, which `/cohtml\/([\d.]+)/i` parses (verified on CS2: `Cohtml/1.64.0.7 (Windows; Native) cohtml/1.64.0.7 (Coherent Labs)`).
+- `game_status` reports the engine version: the CDP endpoint's `GET /json/version` answers with `Browser: "Cohtml/x.y.z"` style values.
+- Page JS has no version global, but `navigator.userAgent` carries the version in an undocumented, stable shape: `Cohtml/<version> (<platform>; Native) cohtml/<version> (Coherent Labs)`, which `/cohtml\/([\d.]+)/i` parses (verified on the reference target, whose platform slot reads `Windows`).
+  (VOLATILE: whether the `userAgent` still takes that shape — `navigator.userAgent` through `game_eval` against the running target.)
   It is the one version probe a page-context script can reach, and it answers which engine, never which features: feature-detect those.
   Handy probes for `game_eval`:
   - `typeof ResizeObserver` defined: >= 1.47
@@ -20,11 +21,14 @@ Repo-side, `mise skills:check-changelog` diffs this ceiling against the live cha
   - `'append' in Element.prototype`: >= 1.56
   - `'attachShadow' in Element.prototype`: >= 1.61
   - whitespace text nodes present in `childNodes`: >= 2.2
+
+  (VOLATILE: these probe-to-version thresholds, and which releases above the target still lack a discriminating probe — the feature changelog at `changelog/feature/`.)
 - `CSS.supports` does not exist (the changelog never mentions it; the `CSS` global is the Typed OM unit factories, `CSS.px(4)` and friends).
   Feature-detect CSS with a style round-trip: `el.style.setProperty(prop, value)` then read it back; the parser rejects unsupported declarations, so they read back empty.
   The round-trip proves the parser accepts the declaration, not that rendering implements it; pair it with the changelog.
 - Distinguish engine APIs from the game's own polyfills with `String(fn)`: engine-provided functions print `[native code]`, polyfills print JS source.
-  CS2's bundle polyfills `window.postMessage`, so a bare `typeof` probe there measures the game, not the engine.
+  The reference target's bundle polyfills `window.postMessage`, so a bare `typeof` probe there measures the game, not the engine.
+  (VOLATILE: whether the target's bundle still carries that polyfill — `String(window.postMessage)` through `game_eval` against the running target.)
 
 ## The lookup procedure
 
@@ -78,13 +82,16 @@ Dates are release dates.
 - **1.27.0** (May 2022): `DOMContentLoaded` (only from here), `animationstart`, `transitionstart`, `propertyName`/`animationName` on events.
 - **1.29.2** (Jun 2022): CSS parser recovers after invalid rules.
 - **1.34.0** (Nov 2022): window `error` event on V8 platforms.
-- **1.34.2** (Nov 2022): `text-decoration` family, `text-underline-offset`/`-position` (text-decoration exists only from late 2022; as of 1.64, `text-decoration-style` accepts only `solid`).
+- **1.34.2** (Nov 2022): `text-decoration` family, `text-underline-offset`/`-position` (text-decoration exists only from late 2022; at the reference target's baseline, `text-decoration-style` accepts only `solid`).
+  (VOLATILE: which `text-decoration-style` values the target accepts — a `game_eval` style round-trip against the running target.)
 - **1.35.0** (Dec 2022): dynamic `import()` and `import.meta.url`.
 - **1.37.0** (Feb 2023): VS Code debugging, `movementX`/`movementY`, multi-argument `classList.add/remove`.
 - **1.39.0** (Apr 2023): `animationiteration`/`animationcancel`/`transitionrun`/ `transitioncancel`.
 - **1.40.0** (May 2023): base64 data-URI images.
 
-### 1.42 to 1.64 (Jun 2023 to Mar 2025), the Cities: Skylines II range
+### 1.42 to 1.64 (Jun 2023 to Mar 2025), the reference target's range
+
+(VOLATILE: this range's upper bound, and the baseline note under its last release — the `gameface` skill's baseline line.)
 
 - **1.42.0** (Jun 2023): SVG `<image>` element, linear-color rendering pipeline.
 - **1.43.0** (Jul 2023): HTML `<template>` element, `CSSStyleDeclaration.removeProperty`.
@@ -105,9 +112,11 @@ Dates are release dates.
 - **1.61.0** (Dec 2024): **Shadow DOM**, `<slot>`, `::slotted`, `:host`, COLRv0 color emoji, safe data binding.
 - **1.63.0** (Jan 2025): `addEventListener` options objects (`{once, ...}`), COLRv1 emoji.
 - **1.64.0** (Mar 2025): data-binding synchronization optimizations.
-  **CS2 ships 1.64.0.7.**
+  **The reference target's baseline release; the `gameface` skill's baseline line states the exact version it ships.**
 
-### After 1.64 (absent from Cities: Skylines II)
+### After 1.64 (absent from the reference target)
+
+(VOLATILE: where the target's version now falls in this list — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
 
 - **1.65.0** (Apr 2025): inline ES6 modules (`<script type="module">` with inline body), `rem` units in SVG lengths.
 - **1.67.0** (Jun 2025): WebP images, `::part`/`exportparts`, `CharacterData.before/after`, SVG `pathLength`.
@@ -121,6 +130,8 @@ Dates are release dates.
 
 ## Never existed (as of the ceiling above)
 
+(VOLATILE: whether a release above the ceiling introduced any of these — the feature changelog at `changelog/feature/`, against the timeline-ceiling marker.)
+
 CSS Grid, `:has()`, `:is()`/`:where()`, `fetch()`, `IntersectionObserver`, `position: sticky`, `requestIdleCallback`, Web Workers, `<dialog>`, `<iframe>`, `<audio>`, `contenteditable`.
 Present since before 1.0 and safe at any version: `MutationObserver`, `XMLHttpRequest`, `history`, canvas 2D basics, CSS animations/keyframes.
 
@@ -133,6 +144,8 @@ Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
 
 ## Breaking changes worth knowing
 
+(VOLATILE: the breaking changes of releases above the ceiling — the feature changelog at `changelog/feature/`, against the timeline-ceiling marker.)
+
 - **1.17**: custom properties/attributes renamed with the `coh-` prefix.
 - **1.49**: stringified property values lose trailing zeros.
 - **1.52.1**: custom elements V0 API removed.
@@ -142,8 +155,9 @@ Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
 - **2.2.0**: whitespace nodes join the DOM (`childNodes` indices shift), BODY scroll redirects to HTML per standard, `<img>` natural aspect ratio by default, `coh-scrgb` replaced by `color(srgb ...)`.
 - **3.0.0**: compatibility-flags system introduced (per-game legacy toggles, removed at the next major); several deprecated font and view APIs removed.
 
-## Worked example: Cities: Skylines II
+## Worked example: the reference target
 
-CS2 embeds **Cohtml 1.64.0.7** (confirm with `game_status`).
-Everything at or below 1.64 applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50).
+The reference target embeds the version the `gameface` skill's baseline line states (confirm with `game_status`).
+Everything at or below that version applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50).
 Absent, so design around them: inline `<script type="module">` bodies (1.65), WebP (1.67), `::part`/`exportparts` (1.67), flex `gap` (2.0/2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), whitespace nodes in `childNodes` (2.2), `box-sizing: content-box` (3.0), flex auto margins (3.0), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
+(VOLATILE: which features sit in the present list and which in the absent one — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
