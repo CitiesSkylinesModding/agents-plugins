@@ -5,7 +5,7 @@ symptoms:
   - "an eval reports 'The vm is not suspended' while a trivial expression still evaluates"
   - 'a live experiment reproduces nothing and the claim it was testing was true'
   - 'suspend returns heldSuspends 1 and state reads still fail'
-tags: [unity, sdb, live-verification, experiment-design, false-negative, wedged-main-thread]
+tags: [unity, sdb, live-verification, experiment-design, false-negative, not-suspended]
 ---
 
 # A live experiment came back negative and the experiment was the broken part
@@ -23,7 +23,7 @@ faulted never ran. The withdrawal was worse than the original error — it retra
 turned out to be right, on evidence incapable of testing it. The maintainer caught it, not the
 experiment.
 
-**Reading a failed suspend as a debugger problem.** When state reads began failing, the first guess
+**Reading the refused reads as a debugger problem.** When state reads began failing, the first guess
 was a suspend left held by an earlier call. `debug_status` reported `heldSuspends: 0`, and taking an
 explicit suspend returned `heldSuspends: 1` while reads kept failing.
 
@@ -33,11 +33,13 @@ explicit suspend returned `heldSuspends: 1` while reads kept failing.
 looks identical over a debugger connection either way. `SimulationSystem.frameIndex` is the tell: it
 stops advancing.
 
-**`"The vm is not suspended"` on state reads means the game's main thread is wedged**, not that the
-session is misconfigured. Mono can only suspend at a safepoint; a thread spinning in native or Burst
-code never reaches one, so the suspend request is recorded and never serviced. Arithmetic keeps
-evaluating because it touches no VM state, which is what makes the failure look selective and
-therefore look like a tooling bug.
+**`"The vm is not suspended"` on state reads means the main thread has not parked yet**, not that the
+session is misconfigured. A suspend that returns has flagged the thread; one flagged inside native
+code keeps running it and parks where an invoke can run only on re-entering managed code. Arithmetic
+keeps evaluating because it needs no invoke, which is what makes the failure look selective and
+therefore look like a tooling bug. The mechanism, the measured park latencies and the wait that now
+absorbs them:
+[`a-suspend-that-landed-on-an-unparked-thread.md`](a-suspend-that-landed-on-an-unparked-thread.md).
 
 ## Fix
 
@@ -48,9 +50,9 @@ var ss = world.GetExistingSystemManaged<Game.Simulation.SimulationSystem>();
 $"frame={ss.frameIndex} speed={ss.selectedSpeed}"
 ```
 
-Two identical readings mean the experiment tested nothing. On the wedge signature, release any
-suspend taken and stop — the process is not recoverable from the debugger, and the remaining
-evidence is in the log rather than in the VM.
+Two identical readings mean the experiment tested nothing. On the not-suspended signature, send the
+call again rather than rebuilding the session around it: the park it was waiting on arrives on its
+own.
 
 ## Prevention
 

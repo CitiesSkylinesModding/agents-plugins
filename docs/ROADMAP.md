@@ -172,12 +172,14 @@ persistent lazy-attach session.
 
 Discovery no longer stands in the way: `BeaconListener` joins the multicast group through
 `NetworkInterface`, and the server ships as a platform-agnostic NuGet dotnet tool, so distribution
-needs no per-RID artifacts. What remains is the pair of server-lifetime watchdogs, both Windows-only
-— `ParentWatchdog` reads the parent pid through a Win32 call and `StdinWatchdog` watches the pipe
-with `PeekNamedPipe`. Elsewhere the stdio transport's own shutdown is the only lifetime tie, so an
-MCP reconnect can strand the previous server still holding the exclusive SDB slot
-(`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`). Port those two. A live attach from
-Linux is verified, against a game running under Proton; nothing here has ever run on macOS.
+needs no per-RID artifacts. Both server-lifetime watchdogs now carry a Unix branch beside their
+Windows one — `getppid` reparenting for `ParentWatchdog`, `poll`'s POLLHUP for `StdinWatchdog` —
+each verified on Linux, so a reconnect no longer strands the previous server holding the exclusive
+SDB slot (`docs/solutions/unity-mcp-server-stranded-on-reconnect.md`).
+
+What remains is macOS, which nothing here has ever run on. Both Unix branches are POSIX rather than
+Linux-specific and should hold, which is a prediction and not a verification; a live attach from
+Linux to a game under Proton is the only non-Windows evidence there is.
 
 ### A network interface that appears after the server did
 
@@ -202,6 +204,42 @@ life without ever ending that port's listen, so the port names itself in no `Fau
 apart from a lone hiccup, and the ports carrying no traffic never complete a receive to reset a
 counter on, so the bound has to be the elapsed time a socket has spent failing without a gap. The
 timed receive above supplies exactly that clock, which is why the two belong in one change.
+
+### Wedge detection on wire progress rather than on age
+
+`UnitySession.Break` decides whether to sever the operation holding the gate by how long it has held
+it, refusing anything younger than `wedgeAfter`. No value there can be right. An operation is any
+number of bounded waits — the greeting poll, a suspend, N invokes each carrying its own park and
+invoke bounds, a resume — so a healthy `eval` walking a large expression and a session stuck on a
+wait that never fired are indistinguishable by age, and the threshold is honest today only because
+its docblock says it is a speed bump against a reflex retry rather than a diagnosis. Its magnitude
+is undecidable; only its ORDER is derived, from the gate wait it has to outlast, and a replacement
+has to keep that or the ration stops firing on the one route the tools teach.
+
+Last wire progress is the quantity that separates them: a timestamp bumped whenever the connection
+completes a reply, against the largest single wait any one operation can legally sit in. Silence
+longer than that is a wedge by construction, whatever the operation's total age, and it retires both
+`wedgeAfter` and the ask-twice dance the refusal currently leans on. It would also give `status` a
+field that means liveness — `busySeconds` reports age, which reads like health and is not.
+
+The cost is where the stamp has to live. Every command funnels through the vendored
+`Connection.SendReceive` and its reply path, so the natural site is another anchored patch in
+`scripts/update-vendored-sdb.ts` plus its `VENDOR.md` bullet, beside the reply-deadline one already
+there. Weigh that against surfacing it from `SdbSession` instead and accepting a coarser signal,
+since every added patch is one more anchor that can fail to apply on the next re-vendor.
+
+The same pass should close the one wait that is still unbounded, since a progress stamp does not
+reach it. `Connection.Send`'s async reply path invokes its callback without checking the reply's
+error code, and `Thread_GetFrameInfo`'s callback assumes a success payload — so an error reply
+strands `ThreadMirror.FetchFrames`' latch and leaves `GetFrames` waiting untimed on an event nothing
+will set. Every invoke ends in that frame refresh, so it is not an obscure corner. An error-code
+check in the callback wrapper is the smaller of the two fixes and probably the right one;
+`docs/solutions/a-wedged-session-that-swallowed-its-own-escape-hatch.md` has the chain.
+
+Worth settling in the same pass: the sever branch ships unexecuted. `gateWait` took a constructor
+override so a test could drive the refusal, and `detachWait` now derives from it, but nothing
+reaches `Break`'s `Abort()` without waiting out `wedgeAfter` for real. A progress stamp is
+straightforward to drive from a test in a way an age is not.
 
 ### Finding a Unity Editor
 
@@ -357,9 +395,9 @@ last presented frame is exactly what an agent inspecting a breakpoint hit wants,
 route structurally cannot give it. It also pairs with the deferred downscale knob: both want pixels
 held server-side, which is why the shipped tool has no size lever.
 
-Three costs. It is Windows-only, in a plugin whose only remaining Windows-only code is the pair of
-watchdogs above, and unlike those it would be a user-visible feature that simply does not exist
-elsewhere. It needs a dependency and carries a trap: `BitBlt`/`PrintWindow` commonly return black
+Three costs. It is Windows-only, and the plugin no longer has any Windows-only code — the watchdogs
+above each carry a Unix branch now — so this would be its first, and a user-visible feature that
+simply does not exist elsewhere rather than a platform detail nobody sees. It needs a dependency and carries a trap: `BitBlt`/`PrintWindow` commonly return black
 for GPU-composited or exclusive-fullscreen games, which is most builds worth screenshotting, so
 doing it properly means `Windows.Graphics.Capture` (Win10 1803+) and its capture-border quirk,
 against the two package references `mcp/` carries today. And it does not escape the debugger: the

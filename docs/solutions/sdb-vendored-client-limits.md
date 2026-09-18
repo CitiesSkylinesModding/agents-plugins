@@ -33,8 +33,12 @@ The vendored sources predate .NET Core's removal of remoting-era APIs.
 
 - Connect **synchronously** through the internal `TcpConnection` (`SdbSession`), never the `Begin*`
   helpers.
-- Patch `Connection.cs`'s reply dispatch at build time: the `PatchVendoredConnection` target in
-  `sdb.csproj` patches into `obj/`, leaving the vendored tree pristine.
+- Patch `Connection.cs`'s reply dispatch as the sources are FETCHED, not as they are built:
+  `scripts/update-vendored-sdb.ts` carries the anchored patches and applies them on the way in, so
+  the committed tree is what the build compiles and no build step reproduces anything. Each patch is
+  anchored on exact upstream text and an update that cannot find one writes nothing, so a divergence
+  cannot silently lapse. The patch list and the reasoning behind each live in
+  [`plugins/unity-devtools/vendor/mono-debugger-soft/VENDOR.md`](../../plugins/unity-devtools/vendor/mono-debugger-soft/VENDOR.md).
 - `LocaleShim`/`RemotingShims` supply the missing runtime pieces.
 - Leave `ENABLE_CECIL` undefined: live mirrors and invokes cover everything, and defining it would drag
   in Mono.Cecil.

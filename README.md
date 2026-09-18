@@ -45,8 +45,11 @@ technology, with Cities: Skylines II as the reference target where everything is
 ## Install
 
 Add the marketplace once, then install the plugin(s) you want. Each plugin that carries an MCP
-server autoloads it from a committed artifact: no installation step, works offline, version-locked
-to the plugin. `cs2-modding` carries none and is skills only.
+server autoloads it, version-locked to the plugin, with no setup step of your own. How it gets
+there differs: `coherent-gameface` runs a bundle committed alongside the plugin, so it needs
+nothing but Node and works offline. `unity-devtools` needs the .NET 10 SDK and fetches its server
+from NuGet the first time it launches, then caches it. `cs2-modding` carries no server and is
+skills only.
 
 ### Claude Code
 

@@ -40,4 +40,6 @@ firewall or a VPN interface can prevent, so the group is joined on every interfa
 carries the recovery. A listener that cannot come up must still leave a working server, since the
 escape hatch ships inside it. One advertising game is assumed: a second beacon is not modelled, and
 whichever the listener holds is the target. `netstat` is gone, which removes the Windows-only cause
-without making the plugin cross-platform: the server-lifetime watchdogs still are.
+without, as of this record, making the plugin cross-platform: the server-lifetime watchdogs were
+still Windows-only then. They are no longer — each carries a Unix branch now, and nothing in the
+plugin is Windows-bound; see `docs/ROADMAP.md`'s cross-platform entry.
