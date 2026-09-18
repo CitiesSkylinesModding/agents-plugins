@@ -5,10 +5,12 @@ using System.Threading;
 namespace UnityDevtools.Mcp;
 
 /// <summary>
-/// Last-resort termination for shutdown paths that can stall forever: disposing the SDB session
-/// performs synchronous wire round-trips with no timeout, which block indefinitely when the
-/// debuggee stops replying while its socket stays open (e.g. a crash handler froze the game
-/// process with every thread suspended).
+/// Last-resort termination for shutdown paths that outlast any patience for them: disposing the
+/// SDB session performs synchronous wire round-trips, and a debuggee that stops replying while its
+/// socket stays open (e.g. a crash handler froze the game process with every thread suspended)
+/// makes each one sit out its full reply bound. Those waits are bounded now, so the stall ends by
+/// itself -- but the teardown sends several commands, and their sum runs far past any grace a
+/// client waiting to reconnect will give it.
 /// A stalled survivor holds the exclusive SDB slot and, in dev, file locks on its own build
 /// output, so it must die once its client is gone.
 /// <see cref="Environment.Exit(int)"/> cannot serve here: it runs ProcessExit handlers, and the

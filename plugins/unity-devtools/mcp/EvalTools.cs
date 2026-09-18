@@ -86,7 +86,10 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
         };
       }
       catch (EvalFailedException e) {
-        throw new McpException(EvalTools.FailureReport(e));
+        // The cause travels with the report: this runs INSIDE the session's operation, and what
+        // the session does next -- discard a connection this call just dropped, or keep one it
+        // did not -- it reads off the chain.
+        throw new McpException(EvalTools.FailureReport(e), e);
       }
     }
   }

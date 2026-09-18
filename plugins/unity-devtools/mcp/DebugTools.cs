@@ -262,7 +262,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
               };
             }
             catch (EvalFailedException ex) {
-              throw new McpException(EvalTools.FailureReport(ex));
+              // Inside the session's operation, so the cause travels: see EvalTools.
+              throw new McpException(EvalTools.FailureReport(ex), ex);
             }
           }
         );
@@ -419,7 +420,9 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     it: the "let the simulation react, then verify" primitive. Requires a held suspension.
     A game's OWN pause (e.g. a simulation-speed setting) is game logic no SDB operation can lift;
     pass before/after eval snippets to flip it. Snippets use the eval grammar and the `_` slot.
-    Other tools block for the whole window by design.
+    Other tools wait out the whole window by design; one that waits too long is refused rather
+    than queued forever, and told this call's age. Slow before/after snippets, not the window,
+    are what push a call that far: each carries its own wait on top of the seconds asked for.
     If a breakpoint hits during the window, the pause holds after advance returns
     (pausedDuringAdvance=true); inspect it before resuming.
     """
@@ -515,7 +518,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
           return interpreter.Run(program, state).Formatted;
         }
         catch (EvalFailedException ex) {
-          throw new McpException(EvalTools.FailureReport(ex));
+          // Inside the session's operation, so the cause travels: see EvalTools.
+          throw new McpException(EvalTools.FailureReport(ex), ex);
         }
       }
     );

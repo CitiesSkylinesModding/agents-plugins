@@ -11,7 +11,7 @@ agent.
 
 [![nuget](https://img.shields.io/nuget/v/UnityDevtools.Mcp?label=nuget)](https://www.nuget.org/packages/UnityDevtools.Mcp)
 [![dotnet](https://img.shields.io/badge/.NET-10-blueviolet)](#requirements)
-[![platform](https://img.shields.io/badge/platform-Windows-lightgrey)](#requirements)
+[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
 
 [Install](#install) · [See it in action](#what-it-looks-like-in-practice) ·
@@ -133,8 +133,8 @@ the next call. The `attach` tool is there for the cases the beacon cannot cover.
 - **A Unity game running as a development Mono build**, launched with `player-connection-debug=1`
   so its SDB agent is live; a retail build exposes no SDB port and cannot be driven.
 - **Windows or Linux.** Discovery is platform-agnostic, and a live attach is verified on both, on
-  Linux to a game running under Proton. The server-lifetime watchdogs are still Windows-only, so
-  on Linux a server stuck mid-call can outlive its client.
+  Linux to a game running under Proton. The server-lifetime watchdogs work on both too, so a
+  reconnect does not leave the old server holding the debugger slot.
 - **The .NET 10 SDK** to launch the server. No build step: the plugin launches the
   [`UnityDevtools.Mcp`](https://www.nuget.org/packages/UnityDevtools.Mcp)
   NuGet dotnet tool through `dotnet dnx`, version-pinned to the plugin (downloaded on first
@@ -191,12 +191,15 @@ beacon, so pass it again for as long as it is still needed.
   `resume` and ask again.
 - **A beacon with `debuggerEnabled: false`**: the game is running, but was launched without
   `player-connection-debug=1`. Relaunch it with that option.
-- **"sent no Mono debugger greeting"**: something is listening on that port and it is not a Mono
-  debugger agent, so the port is wrong. A refused connection is the other half of that pair:
-  nothing accepted you there at all.
+- **"sent no Mono debugger greeting"**: something accepted the connection and then said nothing.
+  A debugger agent serves one client and stays silent to any other, so the usual cause is that the
+  slot is already taken. If nothing is attached anywhere, the game's own debugger has stopped
+  accepting, which only restarting the game clears — don't keep retrying, because each attempt
+  costs the game a socket it won't get back.
+  A refused connection is the other half of that pair: nothing accepted you there at all.
 - **Attach fails while your IDE debugger is connected**: the SDB slot is exclusive. Detach the IDE
-  (or call `detach` before attaching the IDE); it looks like a connection refusal, not a "slot
-  is taken" message.
+  (or call `detach` before attaching the IDE). You will not see a "slot is taken" message — it
+  arrives as one of the two shapes above, usually the silent one.
 - **Read the MCP server logs**: Claude Code records each server's connection attempts and stderr
   to per-project `.jsonl` files under the Claude CLI cache, in an `mcp-logs-unity/` folder keyed
   by the project path; the newest `.jsonl` shows why a launch failed:

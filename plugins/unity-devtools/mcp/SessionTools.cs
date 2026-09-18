@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using JetBrains.Annotations;
 using ModelContextProtocol.Server;
@@ -86,6 +87,10 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
     Resume the game fully and detach the debugger session, freeing the single SDB debugger slot
     (e.g. so an IDE can attach).
     The next tool that needs the VM reattaches automatically.
+    This is also the way out when another call reports the debugger held: it frees the session
+    without queueing behind the operation holding it. The first such call is refused, with that
+    operation's age and by when to ask again - severing a live connection costs the game a resource
+    it only reclaims on restart, so asking twice is what separates meaning it from retrying.
     """
   )]
   [UsedImplicitly]
@@ -131,7 +136,8 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
       Port = snapshot.Port,
       VmVersion = snapshot.VmVersion,
       Protocol = snapshot.Protocol,
-      HeldSuspends = snapshot.HeldSuspends
+      HeldSuspends = snapshot.HeldSuspends,
+      BusySeconds = snapshot.BusyFor is {} busy ? Math.Round(busy.TotalSeconds, 1) : null
     };
 }
 
@@ -211,6 +217,18 @@ public sealed record SessionInfo {
 
   /// <summary>Suspensions currently held via the suspend tool (game frozen while &gt; 0).</summary>
   public required int HeldSuspends { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// How long the operation holding the debugger has been running, null when none is. In
+  /// <c>status</c>, which holds nothing itself, that is always some OTHER call; in <c>attach</c>'s
+  /// own answer it is that attach, so read a number there as the cost of the call you just made.
+  /// Every other tool waits behind the holder for a while and is then refused rather than queued
+  /// forever, so a number here explains both a slow answer and a refusal naming it; one that keeps
+  /// growing past the seconds an operation takes says it is stuck, and detach is what frees it.
+  /// Detach refuses the first such ask and names the age to come back at, so freeing a live
+  /// session takes two.
+  /// </summary>
+  public required double? BusySeconds { [UsedImplicitly] get; init; }
 }
 
 /// <summary>Result of the <c>detach</c> tool.</summary>

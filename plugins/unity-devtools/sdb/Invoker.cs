@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -15,9 +16,12 @@ namespace UnityDevtools.Sdb;
 /// Mirror-level plumbing shared by the ECS commands: type/method resolution, method invocation on
 /// any mirror kind, value construction, and value formatting.
 /// All invokes run on the game's main thread (thread-safety: ECS writes from another thread could
-/// trip the Entities safety system mid-frame); this holds during breakpoint pauses too, because a
-/// suspended main thread still parks at a managed safe point where invokes work (frame-context
-/// evaluation reads/writes frame slots via plain wire commands, which need no invoke thread).
+/// trip the Entities safety system mid-frame), breakpoint pauses included -- where the pause is on
+/// the event thread, the invoke still routes to the main one.
+/// Routing there is not the same as being able to run there. A suspend FLAGS a thread; it parks
+/// where an invoke can run only on re-entering managed code, so an invoke may wait
+/// (<see cref="ParkWait"/>) whatever the session believes it has stopped. Frame-context reads and
+/// writes are plain wire commands and need no invoke thread, which is why they answer throughout.
 /// </summary>
 public sealed class Invoker(VirtualMachine vm) {
   public VirtualMachine Vm { get; } = vm;
@@ -301,20 +305,117 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
-  /// Retries while the agent reports NOT_SUSPENDED: right after attach the main thread can still be
-  /// in native engine code, and it only parks at a suspendable safe point once it re-enters managed
-  /// code during the frame.
+  /// How long an invoke waits for the main thread to PARK before giving up.
+  /// A suspend returns once the agent has flagged every thread, and a thread flagged inside native
+  /// code is only treated as suspended: it keeps running that code, and parks where an invoke can
+  /// run on it -- a managed safe point -- when it next re-enters managed code. So the window is
+  /// open and the game is stopped while the main thread is still out of reach, for as long as the
+  /// frame it is in takes to come back to managed code.
+  /// The budget is sized above the park tail, which runs to seconds when the engine drags a frame
+  /// out, because waiting beats failing: the game is already stopped, and the caller's only other
+  /// move is to send the same call again.
+  /// </summary>
+  private static readonly TimeSpan ParkWait = TimeSpan.FromSeconds(15);
+
+  /// <summary>
+  /// The gap between two attempts at that park, sized against the median park (tens of
+  /// milliseconds, one frame's worth).
+  /// </summary>
+  private static readonly TimeSpan ParkPoll = TimeSpan.FromMilliseconds(25);
+
+  /// <summary>
+  /// What the gap becomes once the park has outlasted <see cref="ParkPollsFast"/> of them. A park
+  /// that long is a dragged-out frame rather than the next one, and a refused invoke is not free:
+  /// it re-encodes the call and costs a round trip taken from the debuggee that is trying to park.
+  /// </summary>
+  private static readonly TimeSpan ParkPollSlow = TimeSpan.FromMilliseconds(250);
+
+  /// <summary>
+  /// How many attempts keep the frame-rate gap before backing off to the slow one.
+  /// </summary>
+  private const int ParkPollsFast = 40;
+
+  /// <summary>
+  /// How long an invoke already handed to the debuggee is waited for.
+  /// The client completes an invoke from its REPLY and from nothing else: a dropped connection
+  /// fails every plain command waiting on one, and leaves an invoke waiting forever. That wait is
+  /// what a wedged session is made of, since it holds the session gate while it lasts, so every
+  /// later call queues behind it.
+  /// Generous, because an invoke runs the game's own code and a slow method is not a fault; what
+  /// it bounds is the reply wait that would otherwise never end.
+  /// It does NOT bound the whole invoke. The receiver's End refreshes the thread's frames, and that
+  /// refresh rides the vendored client's async reply path, which is untimed and unguarded -- see
+  /// <see cref="Awaited"/>. Only a severed transport ends that one.
+  /// </summary>
+  private static readonly TimeSpan InvokeWait = TimeSpan.FromSeconds(60);
+
+  /// <summary>
+  /// Waits for an invoke the debuggee has been handed, and gives up rather than waiting forever
+  /// (<see cref="InvokeWait"/>); returns it ready for the receiver's own End, whose per-mirror
+  /// work (a struct receiver's field write-back) is why this bounds the wait instead of replacing
+  /// the call.
+  /// The bound ends HERE, at the reply. That End then refreshes the thread's frames, on the
+  /// vendored client's async reply path -- which checks no error code and waits untimed, so an
+  /// error reply to that refresh strands the caller past this bound with only a severed transport
+  /// to free it. Adding a bound to an invoke therefore did not make the invoke path bounded:
+  /// docs/solutions/a-wedged-session-that-swallowed-its-own-escape-hatch.md has the chain.
+  /// </summary>
+  private static IAsyncResult Awaited(IAsyncResult pending) {
+    return pending.AsyncWaitHandle.WaitOne(Invoker.InvokeWait)
+      ? pending
+      : throw new InvokeNeverAnsweredException(Invoker.InvokeWait);
+  }
+
+  /// <summary>
+  /// Runs one invoke on the main thread under that bound, whatever mirror kind receives it.
+  /// </summary>
+  private Value Bounded(
+    IInvokable on,
+    MethodMirror method,
+    Value[] args,
+    InvokeOptions options = InvokeOptions.None
+  ) =>
+    on.EndInvokeMethod(
+      Invoker.Awaited(on.BeginInvokeMethod(this.MainThread, method, args, options, null, null))
+    );
+
+  /// <summary>
+  /// <see cref="Bounded"/>, keeping the out-parameter values the invoke produced.
+  /// </summary>
+  private InvokeResult BoundedWithResult(
+    IInvokable on,
+    MethodMirror method,
+    Value[] args,
+    InvokeOptions options
+  ) =>
+    on.EndInvokeMethodWithResult(
+      Invoker.Awaited(on.BeginInvokeMethod(this.MainThread, method, args, options, null, null))
+    );
+
+  /// <summary>
+  /// Retries while the agent reports NOT_SUSPENDED, which says the main thread has not parked yet
+  /// (<see cref="ParkWait"/>) rather than that anything is wrong.
+  /// The wait is paid by the first invoke of a window alone: a thread that has parked stays parked
+  /// until the window closes, so every later invoke in it lands on the first attempt.
   /// </summary>
 
   // CA1822: instance member by design (see FindMethods); part of the invoke plumbing.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   private T Retrying<T>(Func<T> invoke) {
-    for (var attempt = 0;; attempt++) {
+    var started = Stopwatch.GetTimestamp();
+    var refused = 0;
+
+    while (true) {
       try {
         return invoke();
       }
-      catch (VMNotSuspendedException) when (attempt < 20) {
-        Thread.Sleep(50);
+      catch (VMNotSuspendedException) when (Stopwatch.GetElapsedTime(started) < Invoker.ParkWait) {
+        Thread.Sleep(
+          refused++ < Invoker.ParkPollsFast ? Invoker.ParkPoll : Invoker.ParkPollSlow
+        );
+      }
+      catch (VMNotSuspendedException) {
+        throw new MainThreadNotParkedException(Invoker.ParkWait);
       }
     }
   }
@@ -351,9 +452,7 @@ public sealed class Invoker(VirtualMachine vm) {
     try {
       var getter = this.FindMethodOrNull(thrown.Type, "get_Message", 0);
 
-      return this.Retrying(() =>
-        (thrown.InvokeMethod(this.MainThread, getter, []) as StringMirror)?.Value
-      );
+      return this.Retrying(() => (this.Bounded(thrown, getter, []) as StringMirror)?.Value);
     }
     catch (Exception ex) when (!UnitySession.IsDisconnect(ex)) {
       return null;
@@ -370,16 +469,8 @@ public sealed class Invoker(VirtualMachine vm) {
     MethodMirror method,
     params Value[] args
   ) {
-    return this.Invoking(() => type.EndInvokeMethodWithResult(
-        type.BeginInvokeMethod(
-          this.MainThread,
-          method,
-          args,
-          InvokeOptions.ReturnOutArgs,
-          null,
-          null
-        )
-      )
+    return this.Invoking(
+      () => this.BoundedWithResult(type, method, args, InvokeOptions.ReturnOutArgs)
     );
   }
 
@@ -392,25 +483,12 @@ public sealed class Invoker(VirtualMachine vm) {
   /// </summary>
   public InvokeResult InvokeWithOutArgs(Value target, MethodMirror method, params Value[] args) {
     return this.Invoking(() => target switch {
-        ObjectMirror o => o.EndInvokeMethodWithResult(
-          o.BeginInvokeMethod(
-            this.MainThread,
-            method,
-            args,
-            InvokeOptions.ReturnOutArgs,
-            null,
-            null
-          )
-        ),
-        StructMirror s => s.EndInvokeMethodWithResult(
-          s.BeginInvokeMethod(
-            this.MainThread,
-            method,
-            args,
-            InvokeOptions.ReturnOutArgs | InvokeOptions.ReturnOutThis,
-            null,
-            null
-          )
+        ObjectMirror o => this.BoundedWithResult(o, method, args, InvokeOptions.ReturnOutArgs),
+        StructMirror s => this.BoundedWithResult(
+          s,
+          method,
+          args,
+          InvokeOptions.ReturnOutArgs | InvokeOptions.ReturnOutThis
         ),
         _ => throw new InvalidOperationException(
           $"cannot invoke with out args on {target.GetType().Name}"
@@ -420,8 +498,34 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>Constructs a debuggee-side instance through the given constructor.</summary>
-  public Value NewInstance(TypeMirror type, MethodMirror ctor, params Value[] args) =>
-    this.Invoking(() => type.NewInstance(this.MainThread, ctor, args));
+  /// <remarks>
+  /// Driven through the shared invoke path rather than <c>TypeMirror.NewInstance</c>, which is
+  /// that same call with an untimed wait; a constructor is debuggee code like any other and gets
+  /// the same bound.
+  /// </remarks>
+  public Value NewInstance(TypeMirror type, MethodMirror ctor, params Value[] args) {
+    // The guard TypeMirror.NewInstance applied, kept with it: invoking a non-constructor through
+    // this path would build nothing and answer a value the caller would use as an instance.
+    if (!ctor.IsConstructor) {
+      throw new InvalidOperationException($"{type.Name}.{ctor.Name} is not a constructor");
+    }
+
+    return this.Invoking(() => ObjectMirror.EndInvokeMethodInternal(
+        Invoker.Awaited(
+          ObjectMirror.BeginInvokeMethod(
+            this.Vm,
+            this.MainThread,
+            ctor,
+            null,
+            args,
+            InvokeOptions.None,
+            null,
+            null
+          )
+        )
+      )
+    );
+  }
 
   /// <summary>
   /// Invokes an instance method on whatever mirror kind the target is.
@@ -431,19 +535,15 @@ public sealed class Invoker(VirtualMachine vm) {
   /// </summary>
   public Value Invoke(Value target, MethodMirror method, params Value[] args) {
     return this.Invoking(() => target switch {
-        ObjectMirror o => o.InvokeMethod(this.MainThread, method, args),
-        StructMirror s => s.EndInvokeMethodWithResult(
-            s.BeginInvokeMethod(
-              this.MainThread,
-              method,
-              args,
-              InvokeOptions.ReturnOutThis,
-              null,
-              null
-            )
+        ObjectMirror o => this.Bounded(o, method, args),
+        StructMirror s => this.Bounded(s, method, args, InvokeOptions.ReturnOutThis),
+
+        // Not an IInvokable, though it carries the same three methods.
+        PrimitiveValue p => p.EndInvokeMethod(
+          Invoker.Awaited(
+            p.BeginInvokeMethod(this.MainThread, method, args, InvokeOptions.None, null, null)
           )
-          .Result,
-        PrimitiveValue p => p.InvokeMethod(this.MainThread, method, args),
+        ),
         _ => throw new InvalidOperationException($"cannot invoke on {target.GetType().Name}")
       }
     );
@@ -456,7 +556,7 @@ public sealed class Invoker(VirtualMachine vm) {
     this.InvokeStatic(type, this.FindMethod(type, method, args.Length), args);
 
   public Value InvokeStatic(TypeMirror type, MethodMirror method, params Value[] args) =>
-    this.Invoking(() => type.InvokeMethod(this.MainThread, method, args));
+    this.Invoking(() => this.Bounded(type, method, args));
 
   /// <summary>Reads a property through its getter (works on all mirror kinds).</summary>
   public Value GetProperty(Value target, string name) =>
@@ -578,8 +678,11 @@ public sealed class Invoker(VirtualMachine vm) {
       return read;
     }
 
-    // Retried like every other wire operation: NOT_SUSPENDED right after attach is a normal
-    // transient, and a caller that memoizes this answer must not memoize one.
+    // The wrap is inherited, not load-bearing: these are PLAIN wire commands, which answer whether
+    // or not the main thread has parked, so the one exception Retrying catches is not one they
+    // raise -- see docs/solutions/sdb-round-trips-are-not-equal-cost.md, which files this shape
+    // under what did not work. It costs nothing and is left where it is; what it must not do is
+    // convince a caller that the answer is durable enough to memoize.
     var values = this.Retrying(() => type.GetValues(fields));
 
     for (var i = 0; i < fields.Length; i++) {

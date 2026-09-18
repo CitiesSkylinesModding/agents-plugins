@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace UnityDevtools.Sdb.IntegrationTests;
@@ -42,21 +43,19 @@ public sealed class UnitySessionAttachTests : IDisposable {
   public void AGivenPortGovernsItsOwnAttachAndNoLaterOne() {
     Skip.If(MonoDebuggee.SkipReason is not null, MonoDebuggee.SkipReason);
 
-    // The assertion is the beacon failure a reattach produces, so a game advertising itself here
-    // would be attached to instead: an effect on someone's running game rather than a test. A
-    // listener that never came up fails the same assertion on its own wording, and the multicast
-    // suite is what reports that host anyway.
-    // On Listening rather than on Fault, which a lost idle port sets on a listener that still
-    // discovers games perfectly well: skipping on that would park this case for good, and a skip
-    // reads exactly like a pass.
-    Skip.If(
-      !this.beacons.Listening || this.beacons.Wait() is not null,
-      "this machine advertises a Unity game, or receives no beacon at all"
-    );
-
     var (_, port) = this.StartDebuggee();
 
-    using var session = new UnitySession(this.beacons);
+    // A listener whose sightings are stale the instant they arrive, so the reattach below finds
+    // nothing however many games this machine advertises. Skipping on a live beacon instead put
+    // the case at the mercy of one: a game that started advertising after the check was attached
+    // to and read, which is an effect on someone's running game rather than a test.
+    using var deaf = new BeaconListener(TimeSpan.Zero);
+
+    // A listener that never came up answers the reattach in its OWN words, which this case is not
+    // about; the multicast suite is what reports a host that cannot receive the beacon at all.
+    Skip.If(!deaf.Listening, "this machine cannot listen for the PlayerConnection beacon");
+
+    using var session = new UnitySession(deaf);
 
     Assert.True(session.Attach(port).Attached);
     Assert.True(session.Detach());
@@ -67,6 +66,97 @@ public sealed class UnitySessionAttachTests : IDisposable {
     var failure = Assert.ThrowsAny<Exception>(() => session.Run(ctx => ctx.Vm.Version.VMVersion));
 
     Assert.Contains("advertising itself", failure.Message, StringComparison.Ordinal);
+  }
+
+  [SkippableFact]
+  public async Task DetachRefusesToSeverAnOperationStillInsideItsOwnTimeouts() {
+    Skip.If(MonoDebuggee.SkipReason is not null, MonoDebuggee.SkipReason);
+
+    var (_, port) = this.StartDebuggee();
+
+    using var deaf = new BeaconListener(TimeSpan.Zero);
+    using var session = new UnitySession(deaf);
+
+    Assert.True(session.Attach(port).Attached);
+
+    using var holding = new ManualResetEventSlim();
+    using var release = new ManualResetEventSlim();
+
+    // ReSharper disable AccessToDisposedClosure - awaited before the scope ends.
+    var holder = Task.Run(() => session.Exclusive(() => {
+          holding.Set();
+
+          return release.Wait(TimeSpan.FromSeconds(10)) ? 1 : 0;
+        }
+      )
+    );
+
+    Assert.True(holding.Wait(TimeSpan.FromSeconds(10)), "the holder never took the gate");
+
+    // Severing costs the debuggee a descriptor it never reclaims, so a young operation is left to
+    // finish: it is inside the bounds its own waits carry and will let go on its own.
+    var refused = Assert.Throws<InvalidOperationException>(() => session.Detach());
+
+    release.Set();
+
+    _ = await holder;
+
+    // Refused for a reason the caller can act on: it is likely to end by itself, and here is how
+    // to insist. The hedge is load-bearing -- one wait it can be inside is not bounded, so a
+    // promise here would be a promise the session cannot keep.
+    Assert.Contains("end by itself", refused.Message, StringComparison.Ordinal);
+    Assert.Contains("detach again", refused.Message, StringComparison.Ordinal);
+
+    // The whole point: the connection the caller nearly lost is still there.
+    Assert.True(session.Snapshot().Attached);
+    Assert.True(session.Detach());
+  }
+
+  [SkippableFact]
+  public async Task BreakingAGateHeldOverADeadPeerReportsTheNothingItFreed() {
+    Skip.If(MonoDebuggee.SkipReason is not null, MonoDebuggee.SkipReason);
+
+    var (debuggee, port) = this.StartDebuggee();
+
+    using var deaf = new BeaconListener(TimeSpan.Zero);
+    using var session = new UnitySession(deaf);
+
+    Assert.True(session.Attach(port).Attached);
+
+    using var holding = new ManualResetEventSlim();
+    using var release = new ManualResetEventSlim();
+
+    // ReSharper disable AccessToDisposedClosure - awaited before the scope ends.
+    var holder = Task.Run(() => session.Exclusive(() => {
+          holding.Set();
+
+          return release.Wait(TimeSpan.FromSeconds(10)) ? 1 : 0;
+        }
+      )
+    );
+
+    Assert.True(holding.Wait(TimeSpan.FromSeconds(10)), "the holder never took the gate");
+
+    // The gate is held and the peer is gone, which is the one shape that reaches past the refusal
+    // without waiting a threshold out: a connection with nothing left to spend is not rationed.
+    // What this pins is the ANSWER, not the sever -- a dead peer's transport is already gone, so
+    // closing it again changes nothing observable, and this case cannot hold that line. Only a
+    // LIVE holder older than the sever threshold can, which no test waits out; the roadmap's
+    // wire-progress entry carries that gap.
+    MonoDebuggee.Kill(debuggee);
+
+    for (var deadline = DateTime.UtcNow.AddSeconds(10); session.Snapshot().Attached &&
+      DateTime.UtcNow < deadline;) {
+      Thread.Sleep(25);
+    }
+
+    // False, not true: the peer was already dead, so this freed the nothing it had become -- the
+    // same answer the gate-free path gives for the same state.
+    Assert.False(session.Detach());
+
+    release.Set();
+
+    _ = await holder;
   }
 
   [SkippableFact]

@@ -1794,6 +1794,8 @@ namespace Mono.Debugger.Soft
 			int packetId = id;
 
 			/* Wait for the reply packet */
+			var reply_timeout = TimeSpan.FromSeconds (30);
+			var reply_clock = Stopwatch.StartNew ();
 			while (true) {
 				lock (reply_packets_monitor) {
 					byte[] reply;
@@ -1812,7 +1814,10 @@ namespace Mono.Debugger.Soft
 						}
 					} else {
 						disconnected_check ();
-						Monitor.Wait (reply_packets_monitor);
+						var reply_left = reply_timeout - reply_clock.Elapsed;
+						if (reply_left <= TimeSpan.Zero)
+							throw new IOException ("the debuggee took a debugger command and did not answer it within " + reply_timeout.TotalSeconds + "s");
+						Monitor.Wait (reply_packets_monitor, reply_left);
 					}
 				}
 			}

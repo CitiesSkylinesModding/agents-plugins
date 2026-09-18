@@ -35,6 +35,31 @@ const connectionPatches = [
     // stderr rather than being suppressed.
     anchor: 'Console.WriteLine (ex);',
     replacement: 'Console.Error.WriteLine (ex);'
+  },
+  {
+    // The wait for a command's reply is untimed, so a debuggee that takes a command and never
+    // answers it blocks the caller forever -- and that caller holds the session's gate, so every
+    // later tool call queues behind it. The deadline spans the whole wait rather
+    // than one Monitor.Wait, since any other reply arriving pulses the monitor and restarts it.
+    anchor: '\t\t\t/* Wait for the reply packet */\n',
+    replacement:
+      '\t\t\t/* Wait for the reply packet */\n' +
+      '\t\t\tvar reply_timeout = TimeSpan.FromSeconds (30);\n' +
+      '\t\t\tvar reply_clock = Stopwatch.StartNew ();\n'
+  },
+  {
+    // The deadline's other half; an IOException so UnitySession reads it as the lost connection it
+    // amounts to, discards the attach and lets the next call reattach.
+    // Judged BEFORE the wait rather than from its return value: a reply landing as the wait times
+    // out still gets inserted, and Monitor.Wait reports false either way, so throwing on false
+    // would discard an answer the loop's own TryGetValue is about to find.
+    anchor: '\t\t\t\t\t\tMonitor.Wait (reply_packets_monitor);\n',
+    replacement:
+      '\t\t\t\t\t\tvar reply_left = reply_timeout - reply_clock.Elapsed;\n' +
+      '\t\t\t\t\t\tif (reply_left <= TimeSpan.Zero)\n' +
+      '\t\t\t\t\t\t\tthrow new IOException ("the debuggee took a debugger command and did not ' +
+      'answer it within " + reply_timeout.TotalSeconds + "s");\n' +
+      '\t\t\t\t\t\tMonitor.Wait (reply_packets_monitor, reply_left);\n'
   }
 ] as const;
 

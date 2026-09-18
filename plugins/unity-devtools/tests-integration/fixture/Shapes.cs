@@ -1,6 +1,7 @@
 // ReSharper disable UnusedMember.Global UnusedType.Global UnusedParameter.Global NotAccessedField.Global
 
 using System;
+using System.Threading;
 
 namespace TestFixture;
 
@@ -103,6 +104,35 @@ public static class Ticker {
     Ticker.LastLabel = label;
 
     TickBox.Instance.Bump(n);
+  }
+
+  // A main thread no invoke can reach, on demand: a debugger writes StallMs (a field write is a
+  // plain wire command, so it lands on the very thread it is about), and the loop then spends that
+  // long inside ONE native wait, which holds no managed safe point for an invoke to run at.
+  // Both fields are volatile because the writer is outside the process entirely.
+  public static volatile int StallMs;
+
+  // Whether the loop is inside such a wait right now, so a test times its call against the stall
+  // rather than against the race to enter it.
+  public static volatile bool Stalling;
+
+  public static void MaybeStall() {
+    var ms = Ticker.StallMs;
+
+    if (ms <= 0) {
+      return;
+    }
+
+    // Cleared first: the stall is one-shot, and the thread cannot clear it while it sleeps.
+    Ticker.StallMs = 0;
+    Ticker.Stalling = true;
+
+    try {
+      Thread.Sleep(ms);
+    }
+    finally {
+      Ticker.Stalling = false;
+    }
   }
 
   // Thrown AND caught, so exception-break tests always have a throw to catch within a second while

@@ -85,9 +85,9 @@ public sealed class ScreenshotTests {
   }
 
   [Fact]
-  public void CaptureAbsorbsAGameTooBusyEncodingToBeSuspended() {
-    // Reproduced live: a capture large enough to encode slowly keeps the game's main thread busy,
-    // and the suspend the next read needs answers NOT_SUSPENDED past the invoker's retries. It is
+  public void CaptureAbsorbsAGameTooBusyEncodingToPark() {
+    // Reproduced live: a capture large enough to encode slowly keeps the game's main thread out of
+    // managed code, so the next read's invoke answers NOT_SUSPENDED past the invoker's wait. It is
     // the same lateness a missing file is, so the budget covers it rather than the caller seeing
     // a wire word for a capture that only needed another window.
     var debuggee = new ScriptedDebuggee {
@@ -101,7 +101,7 @@ public sealed class ScreenshotTests {
   }
 
   [Fact]
-  public void ACaptureRequestTheGameIsTooBusyToTakeSaysSoRatherThanQuotingTheWire() {
+  public void ACaptureRequestTheMainThreadIsTooBusyToTakeSaysSoRatherThanQuotingTheWire() {
     // The request runs before any window, so there is none to spend against a busy main thread:
     // the caller retries instead, and must be told that rather than handed NOT_SUSPENDED.
     var debuggee = new ScriptedDebuggee {
@@ -111,8 +111,14 @@ public sealed class ScreenshotTests {
     var failure =
       Assert.Throws<InvalidOperationException>(() => new Screenshot(debuggee).Capture());
 
-    Assert.Contains("too busy", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("never parked", failure.Message, StringComparison.Ordinal);
     Assert.Contains("capture again", failure.Message, StringComparison.Ordinal);
+
+    // The cause speaks for itself after the capture's own words, and what it says is the invoker's
+    // diagnosis rather than the wire's: the test's own name is the rule, and appending the bare
+    // "The vm is not suspended." would break it while still reading like a cause.
+    Assert.Contains("engine or native code", failure.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("The vm is not suspended.", failure.Message, StringComparison.Ordinal);
 
     // Nothing was asked of the game beyond the request, and the hold went back.
     Assert.Equal(0, debuggee.WindowsSpent);
@@ -158,6 +164,41 @@ public sealed class ScreenshotTests {
 
     // Bounded: a game that will never render must not hold the call open window after window.
     Assert.Equal(2, debuggee.WindowsSpent);
+  }
+
+  [Fact]
+  public void ABudgetSpentEntirelyOnAnUnreachableMainThreadSaysThatRatherThanBlamingTheEncode() {
+    var debuggee = new ScriptedDebuggee {
+      BusyForWindows = int.MaxValue,
+      LandsAfterWindows = int.MaxValue
+    };
+
+    var failure =
+      Assert.Throws<InvalidOperationException>(() => new Screenshot(debuggee).Capture());
+
+    // Nothing was ever read, so the engine's writing schedule explains none of it, and the two
+    // causes that do are indistinguishable from here: the message names both and asserts neither.
+    Assert.Contains("out of reach for every window", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("still encoding", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("no longer advancing frames", failure.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("minimized", failure.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void OneWindowThatDidReadKeepsTheBudgetsAnswerOffTheUnreachableThread() {
+    // The distinction the count exists for: window 1 cannot reach the thread, window 2 reads
+    // perfectly well and simply finds no file. A thread that answered once is not out of reach,
+    // so the budget's answer is the one the reading window earned.
+    var debuggee = new ScriptedDebuggee {
+      BusyForWindows = 1,
+      LandsAfterWindows = int.MaxValue
+    };
+
+    var failure =
+      Assert.Throws<InvalidOperationException>(() => new Screenshot(debuggee).Capture());
+
+    Assert.Contains("wrote no screenshot", failure.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("out of reach", failure.Message, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -393,13 +434,13 @@ public sealed class ScreenshotTests {
     public int PartialBytes { get; init; } = 32;
 
     /// <summary>
-    /// How many windows the game spends too busy encoding for a suspend to land, answering
-    /// NOT_SUSPENDED the way the wire does when the main thread will not stop.
+    /// How many windows the main thread spends too busy encoding to park, answering NOT_SUSPENDED
+    /// the way the wire does while no invoke can run on it.
     /// </summary>
     public int BusyForWindows { get; init; }
 
     /// <summary>
-    /// Whether the game is too busy to be stopped for the capture REQUEST, which is what a
+    /// Whether the main thread is too busy to park for the capture REQUEST, which is what a
     /// previous capture still encoding does to the one after it.
     /// </summary>
     public bool BusyForRequest { get; init; }
@@ -443,12 +484,30 @@ public sealed class ScreenshotTests {
       return this.PauseAfterWindow;
     }
 
+    /// <summary>
+    /// NOT_SUSPENDED in the shape a capture really meets it, which is two dressings deep: the
+    /// invoker turns the wire's own answer into a <see cref="MainThreadNotParkedException"/> once
+    /// its park wait expires, and every statement the evaluator runs comes back inside an
+    /// <see cref="EvalFailedException"/>. A fake raising the bare wire type would hold its guard
+    /// against a shape the live path never produces.
+    /// </summary>
+    private static Exception NotParked() {
+      var unparked = new MainThreadNotParkedException(TimeSpan.FromSeconds(15));
+
+      return new EvalFailedException(unparked.Message, unparked) {
+        StatementIndex = 0,
+        StatementSource = "<capture>",
+        Position = 0,
+        Locals = []
+      };
+    }
+
     public string Evaluate(string code) {
       this.Programs.Add(code);
 
       if (code.Contains("CaptureScreenshot")) {
         if (this.BusyForRequest) {
-          throw new VMNotSuspendedException();
+          throw ScriptedDebuggee.NotParked();
         }
 
         return $"\"{this.TempDirectory}unity-devtools-screenshot.png\"";
@@ -456,7 +515,7 @@ public sealed class ScreenshotTests {
 
       if (code.Contains("File.Exists")) {
         if (this.WindowsSpent <= this.BusyForWindows) {
-          throw new VMNotSuspendedException();
+          throw ScriptedDebuggee.NotParked();
         }
 
         // Mono renders a bool the way .NET's ToString does, capitalized.

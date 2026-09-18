@@ -30,6 +30,25 @@ public sealed class SdbSession : IDisposable {
   /// </summary>
   public bool IsAlive => !this.Vm.conn.DisconnectedEvent.WaitOne(0);
 
+  /// <summary>
+  /// Closes the transport WITHOUT speaking to the debuggee, for a caller breaking a session whose
+  /// wire has stopped answering: an orderly <see cref="Dispose"/> sends commands, and every one of
+  /// them would join the wait it is trying to break.
+  /// The receiver thread sees the closed socket and fails every command waiting on a reply, and the
+  /// debuggee resumes the game on the dropped connection.
+  /// It does not reach an INVOKE already handed over: the client completes one from its reply and
+  /// from nothing else, so that wait ends on its own bound rather than on this close. A caller
+  /// breaking a session gets an END to the wait, not an immediate one.
+  /// </summary>
+  public void Abort() {
+    try {
+      this.Vm.conn.ForceDisconnect();
+    }
+    catch {
+      // Already gone; the caller wanted it gone either way.
+    }
+  }
+
   public void Dispose() {
     try {
       // Any armed breakpoint would re-suspend the game after we resume and detach; clear every
@@ -74,9 +93,21 @@ public sealed class SdbSession : IDisposable {
       // It also reads nothing, leaving the greeting for the handshake: Mono's agent treats a failed
       // handshake as fatal and exits, so a half-read one would kill the game.
       if (!socket.Poll(wait, SelectMode.SelectRead)) {
+        // A Mono agent serves ONE client and answers a second with silence, not a refusal, so this
+        // is what a taken debugger slot looks like from here -- and reading it as "nothing speaks
+        // the protocol" sends the caller to the game's launch options over a game that is already
+        // debuggable.
+        // The other reading it must not invite is a wrong port: the remaining cause is an agent
+        // that has stopped accepting anyone, and the port is the one thing already proven right by
+        // the connection this message is about. Hunting for another one spends the descriptors
+        // that exhausted it.
         throw new InvalidOperationException(
           $"{host}:{port} accepted the connection but sent no Mono debugger greeting within " +
-          $"{wait.TotalSeconds:0.#}s; nothing there is speaking the Soft Debugger protocol"
+          $"{wait.TotalSeconds:0.#}s; a debugger agent takes one client at a time and stays " +
+          "silent to any other, so something is probably already attached (an IDE, or another " +
+          "copy of this server) - free that first. With nothing attached anywhere, the game's " +
+          "own agent has stopped accepting and only a game restart clears it, so do not retry " +
+          "to find out: every attempt costs the game a socket it never reclaims"
         );
       }
 

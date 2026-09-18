@@ -43,8 +43,9 @@ var host = builder.Build();
 host.Services.GetRequiredService<BeaconListener>();
 
 // EVERY stop gets the hard-exit failsafe, whoever triggered it (the transport's own stdin-EOF
-// handling included): graceful shutdown disposes the SDB session, which can stall forever against
-// an unresponsive debuggee (see HardExit).
+// handling included): graceful shutdown disposes the SDB session, whose commands each sit out
+// their full reply bound against an unresponsive debuggee, summing to far longer than a client
+// waiting to reconnect will give it (see HardExit).
 host.Services.GetRequiredService<IHostApplicationLifetime>()
   .ApplicationStopping.Register(HardExit.Arm);
 

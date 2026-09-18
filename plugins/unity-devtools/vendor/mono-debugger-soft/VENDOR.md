@@ -1,6 +1,6 @@
 # Vendored: Mono.Debugger.Soft
 
-The Mono Soft Debugger client, copied from Unity's mono fork — verbatim but for the two patches to `Connection.cs` recorded below.
+The Mono Soft Debugger client, copied from Unity's mono fork — verbatim but for the patches to `Connection.cs` recorded below.
 
 | | |
 |---|---|
@@ -18,12 +18,13 @@ These files are committed directly. The tree they come from is a full mono check
 
 ## Local patches
 
-`Connection.cs` is the one file that diverges from upstream. `scripts/update-vendored-sdb.ts` applies both patches as it fetches, so what the build compiles is what this directory holds and no build step has to reproduce it:
+`Connection.cs` is the one file that diverges from upstream. `scripts/update-vendored-sdb.ts` applies every patch as it fetches, so what the build compiles is what this directory holds and no build step has to reproduce it:
 
 - The client dispatches an invoke reply through `cb.BeginInvoke (r, null, null)`, which throws on modern .NET. It becomes a `Task.Run`.
 - The receiver thread reports a failed receive with `Console.WriteLine (ex)`. In the MCP server stdout carries JSON-RPC and nothing else, so a debuggee dying abruptly would write a stack trace into the protocol stream and break the session. The diagnostic is worth keeping, so it moves to `Console.Error`.
+- `SendReceive` waits for a command's reply untimed, so a debuggee that takes a command and never answers it blocks its caller forever — and that caller holds the session's gate, so every later tool call queues behind it. Two anchors give the wait a 30-second deadline spanning the whole loop (one `Monitor.Wait` is not the wait: any other reply pulses the monitor and restarts it) and raise an `IOException`, which `UnitySession` already reads as a lost connection. The deadline is judged on a `Stopwatch` before each wait rather than on the wait's return value: a wall clock lets an NTP step expire a healthy command, and a reply landing as the wait times out is still inserted while `Monitor.Wait` reports false either way, so throwing on false would discard an answer the loop is about to find.
 
-Both are anchored on the exact upstream text. An update that no longer finds one fails and writes nothing, so the divergence can never silently lapse.
+Each is anchored on the exact upstream text. An update that no longer finds one fails and writes nothing, so the divergence can never silently lapse.
 
 ## Updating
 

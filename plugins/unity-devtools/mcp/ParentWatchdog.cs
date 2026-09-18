@@ -17,15 +17,30 @@ namespace UnityDevtools.Mcp;
 /// still holding the exclusive SDB debugger slot (and, in dev, file locks on its build output).
 /// It never touches another process, so concurrent servers (two games, two harnesses) stay
 /// unaffected.
+/// Each platform answers "is the wrapper still there" its own way -- Windows waits on the process,
+/// Unix watches for the reparenting that follows its death -- because a tie that exists on one of
+/// them is no tie at all on the other, where killing the wrapper leaves stdin held open by the
+/// client and the server with nothing to notice.
 /// </summary>
-internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : BackgroundService {
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime)
+  : LifetimeWatchdog(lifetime) {
+  protected override string Severed => "launching wrapper exited";
+
+  protected override Task<bool> Watch(CancellationToken stoppingToken) =>
+    OperatingSystem.IsWindows()
+      ? ParentWatchdog.WatchOnWindows(stoppingToken)
+      : ParentWatchdog.WatchOnUnix(stoppingToken);
+
+  /// <summary>
+  /// Waits on the parent process itself, which Windows lets a child do directly.
+  /// </summary>
+  private static async Task<bool> WatchOnWindows(CancellationToken stoppingToken) {
     using var self = Process.GetCurrentProcess();
 
-    // An unknown parent (non-Windows, or a failed pid query) must NOT shut a healthy server down;
-    // the stdio transport's own shutdown is the only tie then.
+    // A failed pid query must NOT shut a healthy server down; the stdio transport's own shutdown
+    // is the only tie then.
     if (ParentWatchdog.ParentPid(self) is not {} parentPid) {
-      return;
+      return false;
     }
 
     try {
@@ -39,7 +54,7 @@ internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : Backgr
     }
     catch (OperationCanceledException) {
       // The host is stopping on its own; nothing left to watch.
-      return;
+      return false;
     }
     catch (ArgumentException) {
       // The parent already exited: this server is stale right from startup; shut down below.
@@ -50,26 +65,41 @@ internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime) : Backgr
       // the whole host (BackgroundServiceExceptionBehavior.StopHost).
       await Console.Error.WriteLineAsync($"parent watchdog disabled: {ex.Message}");
 
-      return;
+      return false;
     }
 
-    // Arm first, stop second, log last: graceful shutdown can stall in SDB disposal (a survivor
-    // would keep the exclusive SDB slot, the very situation this watchdog exists to prevent),
-    // and a stderr write can block forever when the client stops draining the pipe, so nothing
-    // blockable may precede the failsafe or the stop request.
-    HardExit.Arm();
-
-    lifetime.StopApplication();
-
-    // stderr only, best-effort: stdout carries the MCP protocol.
-    await Console.Error.WriteLineAsync("launching wrapper exited; shutting down");
+    return true;
   }
 
-  private static int? ParentPid(Process self) {
-    if (!OperatingSystem.IsWindows()) {
-      return null;
+  /// <summary>
+  /// Watches the parent pid instead of the parent process: a Unix child is REPARENTED when its
+  /// parent dies, so <c>getppid</c> changing is the event, and it needs no permission, no handle
+  /// and no /proc.
+  /// Only a change counts. A server that starts out reparented already cannot tell an orphan from
+  /// a launcher that happens to be the init process, and a watchdog that guessed there would shut
+  /// healthy servers down inside containers.
+  /// </summary>
+  private static async Task<bool> WatchOnUnix(CancellationToken stoppingToken) {
+    var launcher = ParentWatchdog.GetParentPid();
+
+    while (await LifetimeWatchdog.Naps(stoppingToken)) {
+      if (ParentWatchdog.GetParentPid() != launcher) {
+        return true;
+      }
     }
 
+    return false;
+  }
+
+  [DllImport("libc", EntryPoint = "getppid")]
+  private static extern int GetParentPid();
+
+  /// <summary>
+  /// The parent pid Windows records on the process, or null when the query fails.
+  /// Windows-only: the Unix watch reads <c>getppid</c>, whose whole point is that it answers the
+  /// question again later.
+  /// </summary>
+  private static int? ParentPid(Process self) {
     var info = default(ProcessBasicInformation);
 
     var status = ParentWatchdog.NtQueryInformationProcess(

@@ -55,8 +55,8 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
 
   /// <summary>
   /// Windows one capture may spend. Two: one more than it takes covers every way a capture is
-  /// merely late rather than impossible -- the file not landed, the game too busy encoding to be
-  /// suspended, the file still being written -- while a game that will never render must not hang
+  /// merely late rather than impossible -- the file not landed, the main thread too busy encoding
+  /// to park, the file still being written -- while a game that will never render must not hang
   /// the call. A cause that needs a third window needs a retry from the caller instead, which is
   /// what the failure message asks for.
   /// Together with <see cref="Window"/> this bounds how long a capture runs the game, a figure
@@ -182,14 +182,19 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
     try {
       path = this.Answer(Screenshot.RequestProgram);
     }
-    catch (VMNotSuspendedException) {
+    catch (Exception ex) when (UnitySession.CauseOf<VMNotSuspendedException>(ex) is {} unparked) {
       // The same busy main thread the loop below absorbs, one statement earlier: a previous
       // capture still encoding is what makes back-to-back captures meet it here. No window can be
       // spent against it, since nothing has been asked of the game yet and the request is what
       // would have asked -- so the caller gets the retry the loop's own failure would have named.
+      // The cause speaks after it, rather than being replaced by it: it carries how long the park
+      // was waited for, which is the one thing said here that the capture's own words cannot say.
+      // Which cause it was stays open -- a previous capture still encoding and a game no longer
+      // advancing frames reach this identically.
       throw new InvalidOperationException(
-        "the game's main thread was too busy to be stopped for the capture request, which a " +
-        "previous capture still encoding will do; capture again"
+        "the game's main thread never parked to run the capture request, which a previous " +
+        $"capture still encoding will do; capture again. ({unparked.Message})",
+        ex
       );
     }
 
@@ -198,10 +203,11 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
     var windows = 0;
     var paused = false;
     var partial = false;
+    var notParked = 0;
 
     // The budget absorbs every way a capture arrives late, since the caller cannot tell them apart
-    // and none is a failure worth surfacing: no file yet, a game too busy encoding for the next
-    // read's suspend to land, and a file the engine is still writing.
+    // and none is a failure worth surfacing: no file yet, a main thread too busy encoding to park
+    // where the next read's invoke can run, and a file the engine is still writing.
     // A pause ends the loop instead, because a stopped game will not finish either.
     while (png is null && !paused && windows < Screenshot.WindowBudget) {
       paused = debuggee.SpendWindow();
@@ -219,12 +225,20 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
 
         candidate = Screenshot.Decode(this.Answer($"System.Convert.ToBase64String({read})"));
       }
-      catch (VMNotSuspendedException) {
-        // The game's own main thread is what encodes the PNG, and a suspend cannot land while it
-        // is busy doing so: the wire answers NOT_SUSPENDED past the invoker's retries, which is
-        // reachable on a capture large enough to encode slowly. It says what a missing file says
-        // -- the capture is not ready -- so the budget absorbs it rather than handing the caller
-        // a wire word for the one cause the failure message already tells them to retry.
+      catch (Exception ex) when (UnitySession.CauseOf<VMNotSuspendedException>(ex) is not null) {
+        // The game's own main thread is what encodes the PNG, and it parks nowhere an invoke can
+        // run while it is busy doing so: the wire answers NOT_SUSPENDED past the invoker's wait,
+        // which is reachable on a capture large enough to encode slowly. It says what a missing
+        // file says -- the capture is not ready -- so the budget absorbs it rather than handing
+        // the caller a wire word for the one cause the failure message already tells them to
+        // retry.
+        // Counted, because absorbing it is not the same as it never happening: a budget spent
+        // ENTIRELY on a thread that never parked has a different answer from one spent waiting on
+        // a file, and the caller acts on which. Counted rather than flagged for the reason the
+        // partial case is ordered ahead of it -- one window that did read proves the thread parks,
+        // and the answer for the budget is then the one the other windows earned.
+        notParked++;
+
         continue;
       }
 
@@ -244,7 +258,9 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
     }
 
     if (png is null) {
-      throw new InvalidOperationException(Screenshot.NoImageMessage(windows, paused, partial));
+      throw new InvalidOperationException(
+        Screenshot.NoImageMessage(windows, paused, partial, notParked == windows)
+      );
     }
 
     var (width, height) = Screenshot.Dimensions(png);
@@ -342,7 +358,7 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
   /// Why the budget ran out, in the terms the caller acts on: each cause has a different next
   /// move, and "no image" on its own is the dead end this tool exists to remove.
   /// </summary>
-  private static string NoImageMessage(int windows, bool paused, bool partial) {
+  private static string NoImageMessage(int windows, bool paused, bool partial, bool neverParked) {
     if (paused) {
       return Screenshot.PausedMessage;
     }
@@ -350,10 +366,28 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
     var ran = (Screenshot.Window * windows).TotalSeconds
       .ToString("0.0#", CultureInfo.InvariantCulture);
 
-    return partial
-      ? $"the game was still writing its screenshot after running {ran} s, so only part of the " +
-      "file came back; capture again, and expect it to cost more on a game this slow to encode"
-      : $"the game wrote no screenshot after running {ran} s: the engine starts writing only " +
+    // Ahead of the not-parked case, since bytes coming back prove the thread parked at least once:
+    // a partial file is the more specific story of the two.
+    if (partial) {
+      return $"the game was still writing its screenshot after running {ran} s, so only part of " +
+        "the file came back; capture again, and expect it to cost more on a game this slow to " +
+        "encode";
+    }
+
+    // Which of the two causes it was cannot be told apart from here: the invoker turns every
+    // NOT_SUSPENDED into the same answer once its wait expires, so this names both rather than
+    // sending the caller after one of them.
+    // No duration here, unlike the branches around it: every window was spent waiting out the
+    // invoker's park budget rather than running the game, so the seconds the game ran are the one
+    // figure that does NOT describe what this call cost.
+    if (neverParked) {
+      return "the game's main thread stayed out of reach for every window spent, so no read " +
+        "that would have collected the capture could run. A previous capture still encoding does " +
+        "that, and so does a game no longer advancing frames: capture again, and check the game " +
+        "is running if it fails the same way";
+    }
+
+    return $"the game wrote no screenshot after running {ran} s: the engine starts writing only " +
       "once it has encoded the frame, so capture again first -- a large screen, or one drawing " +
       "too slowly to finish a frame, may need longer. If that fails too, its window may be " +
       "minimized on a build that does not run in the background, or the build may have no screen " +
