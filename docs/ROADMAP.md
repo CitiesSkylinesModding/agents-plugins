@@ -138,13 +138,18 @@ sends the agent to probe. Coherent Labs derived theirs the other way round, from
 sweep against a live engine: per-property forbidden *values* (`align-items` rejects `baseline`,
 `position` rejects `sticky`), selectors that parse but never match, and missing JS globals down to
 per-class property counts — evidence no changelog carries. Their sweep ran against 3.x and does not
-ship, and the interesting version is the one a modder actually has. Ship a probe script beside
-`scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection: CSS property and
-value acceptance by style round-trip, selector acceptance by `querySelector` try/catch, and JS
-global and per-class property presence. Running it against the 2.2 engine CS2 ships as of 1.6.2f1
-(`src/cohtml.Net/Properties/AssemblyInfo.cs:16`) turns the reference's inferred claims into probed
-ones for the reference target, while the script stays generic enough for anyone
-to point at their own game.
+ship, and the interesting version is the one a modder actually has.
+
+For the reference target the mechanism is now the repo-only `gameface-update` skill and the probe
+catalogue beside it (`.agents/skills/gameface-update/probes.md`): every claim the plugin rests on a
+probe, re-run through the `game_*` tools whenever the target's engine moves, as it did to the 2.2
+line CS2 ships as of 1.6.2f1 (`src/cohtml.Net/Properties/AssemblyInfo.cs:16`). The catalogue's own
+as-of line says whether its answers have been probed yet or are still the plugin's inferred claims.
+What remains beyond that is the part anyone can point at their own game: a probe script beside the
+`gameface` skill's `scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection —
+CSS property and value acceptance by style round-trip, selector acceptance by `querySelector`
+try/catch, and JS global and per-class property presence — exhaustive where the catalogue covers
+only what the plugin already states.
 
 ### Console call sites
 
