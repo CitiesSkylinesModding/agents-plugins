@@ -25,7 +25,7 @@ A verifier then confirmed the first reading. It was handed the pattern the claim
 
 ## Root cause
 
-`TypeManager.ConstructComponentFromBuffer` has two overloads: `(TypeIndex, void*)` at `TypeManager.cs:1662`, whose body is `GCHandle.Alloc(obj, GCHandleType.Pinned)` plus a `MemCpy`, and `(void*, int)` at `:2488`, which fronts the codegen registry's generated `switch`.
+`TypeManager.ConstructComponentFromBuffer` has two overloads: `(TypeIndex, void*)` at `TypeManager.cs:1662`, whose body is `GCHandle.Alloc(obj, GCHandleType.Pinned)` plus a `MemCpy`, and `(void*, int)` at `:2487`, which fronts the codegen registry's generated `switch`.
 
 The call site passes `(TypeIndex, byte*)` (`DebuggerDataAccess.cs:180`), which **cannot** bind to the second: `TypeIndex` converts only to and from `int` (`TypeIndex.cs:212`, `:217`) and never to a pointer, and `byte*` has no implicit conversion to `int`.
 

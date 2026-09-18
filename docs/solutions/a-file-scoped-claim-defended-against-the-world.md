@@ -14,7 +14,7 @@ tags: [review, prose, quantifier, warning-block]
 
 ## What didn't work
 
-Both defenses checked the world instead of the sentence: the decompile does contain the code producing the file's signals (`GameManager.GetVersionsInfo` at `GameManager.cs:2090` builds the first log line), so "the decompile is relevant here" felt like confirmation. Relevance of the source is not what the sentence asserts.
+Both defenses checked the world instead of the sentence: the decompile does contain the code producing the file's signals (`GameManager.GetVersionsInfo` at `GameManager.cs:2105` builds the first log line), so "the decompile is relevant here" felt like confirmation. Relevance of the source is not what the sentence asserts.
 
 ## Root cause
 

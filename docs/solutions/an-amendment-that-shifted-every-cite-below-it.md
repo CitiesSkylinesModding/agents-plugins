@@ -6,7 +6,7 @@ symptoms:
   - 'a quote attributed to a line sits one or two lines below it'
   - 'a dated correction re-points a cite past the end of the file'
 tags: [citations, line-numbers, sources, amendment, correction]
-updated: 2026-08-26
+updated: 2026-09-17
 ---
 
 # An amendment that shifted every cite below it
@@ -39,7 +39,13 @@ This is worse than drift, because the correction arrives dated and therefore loo
 
 Open the line before re-citing it, exactly as the original derivation had to. A citation is a claim like any other, and a correction to one earns the same opening.
 
+## A cite can also be broken by naming the file on another
+
+Added 2026-09-17. A bare `:<line>` belongs to the nearest cite before it, so naming the file on one bare cite re-anchors every bare cite after it until the next named one.
+In the 1.6.2f1 sweep, fixers named files on hundreds of bare cites one at a time; a cite left bare after a newly named one landed in the wrong file, and review rounds kept finding them (a `SurfaceWater.cs:5-12` cite re-anchored the `:955-957` and `:1089` meant for `WaterSystem.cs` onto a 12-line file).
+Naming a file is an edit to the whole run of bare cites that follows it: re-read that run and name the file wherever the meaning changes.
+
 ## Prevention
 
 Prefer same-line amendments to SOURCES.md; when a new line is unavoidable, the sweep above is part of the amendment, not a follow-up.
-Re-cite only from an opened line, whether the cite is new, drifted, or being corrected.
+Re-cite only from an opened line, whether the cite is new, drifted, or being corrected, and re-read the bare cites after any file you name.

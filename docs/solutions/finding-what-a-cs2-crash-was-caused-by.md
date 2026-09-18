@@ -43,7 +43,7 @@ the first message that reaches its logger — `Open()` is called only from `Inte
 file is not evidence that the mod logged nothing.** Three things keep the file from ever being
 opened while messages still flow: the mod logging through `UnityEngine.Debug` instead of a logger, a
 logger with `redirectToDefault` set (`CustomLogHandler.cs:88-91` returns before the write), and an
-open that failed and was swallowed by an untyped `catch` around an unvalidated path (`:374-386`) —
+open that failed and was swallowed by an untyped `catch` around an unvalidated path (`UnityLogger.cs:374-386`) —
 the last of which also NREs on the writer that was never built, once per message. Read `Player.log`
 before concluding a mod was silent. `Player.log` itself is native and none of this applies to it.
 

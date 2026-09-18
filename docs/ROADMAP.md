@@ -24,6 +24,18 @@ carry a standing directive to every client. Two sentences here — reach for `ga
 fails, and act on the construct a rejected selector names — would close the gap as a pointer rather
 than a duplicate, leaving one tier per fact intact.
 
+### Two surfaces a driver reaches for that this engine does not have
+
+`element.click()` does not exist: `btns[1].click()` throws `TypeError: … is not a function`, so an
+agent driving a button gets a type error rather than a silent no-op, and the working form is the one
+`game_click` already uses internally — `dispatchEvent(new MouseEvent('mousedown' | 'mouseup' |
+'click', { bubbles: true }))`. `CSS.escape` is undefined too, so composing a selector from a hashed
+class name has to fall back to an attribute selector, `[class~='<name>']`. Both cost a round trip
+apiece while driving a developer UI through `game_eval`, and both are one-line facts an agent needs
+*before* it writes the call, which puts them in `skills/gameface-driving/` rather than in a tool
+description. They are also the first two results the probed support matrix below would have
+produced without anyone having to hit them.
+
 ### Removing a breakpoint the UI is paused at
 
 `game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
@@ -129,8 +141,9 @@ per-class property counts — evidence no changelog carries. Their sweep ran aga
 ship, and the interesting version is the one a modder actually has. Ship a probe script beside
 `scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection: CSS property and
 value acceptance by style round-trip, selector acceptance by `querySelector` try/catch, and JS
-global and per-class property presence. Running it against CS2's 1.64 turns the reference's inferred
-claims into probed ones for the reference target, while the script stays generic enough for anyone
+global and per-class property presence. Running it against the 2.2 engine CS2 ships as of 1.6.2f1
+(`src/cohtml.Net/Properties/AssemblyInfo.cs:16`) turns the reference's inferred claims into probed
+ones for the reference target, while the script stays generic enough for anyone
 to point at their own game.
 
 ### Console call sites
@@ -286,6 +299,10 @@ expression — a discovery pass read 55 prefab components in seven such calls, t
 by statement count. The exclusions landed in the tool description, and with the recipe in the
 `unity-driving` skill, on 2026-08-10; what remains open is an `ecs_get_component` mode accepting
 several entities in one call, which would beat the recipe outright.
+The 1.6.2f1 live-read sweep hit the same wall from the query side: reading `m_Cost` across all 71
+`DevTreeNodeData` entities was impractical by hand, so the claim stayed a 15-node sample rather than
+a census. An `ecs_query` option projecting a named component field per match would close that class
+of read in one call.
 
 ### A buffer filter on `ecs_query`
 
@@ -296,6 +313,60 @@ at a time: `Game.Rendering.Emissive` twice, `Game.Net.ArrowPosition`, `Game.Rend
 all length 0 — before `Game.Net.LabelPosition` came back with 51. Either report the length beside
 each listed entity when a queried type is a buffer, or take a minimum-length filter; the first is
 cheaper and answers the same question.
+
+### Reading a log file off the game machine
+
+The game's own logs are the primary evidence for a whole class of diagnostics claims — the version
+block, the modding runtime line, the debugger-port lines, the absence of a warning — and no tool
+reads them. `System.IO.File.ReadAllText` through `eval` covers `Logs/*.log`, but `Player.log` is
+held open by the player and answers `Sharing violation`; the 1.6.2f1 sweep's workaround was
+`new FileStream(path, Open, Read, FileShare.ReadWrite)` wrapped in a `StreamReader`, which is a lot
+of incantation for "show me the log". A read-file or tail-N-lines verb, sharing-mode correct by
+construction, would serve every such claim directly.
+
+### A system's query descriptor
+
+`ecs_query` builds its own query and cannot be pointed at one a system already holds, so reading
+what `SerializerSystem.m_Query` or `ClearSystem.m_ClearQuery` actually matches took reflection plus
+`GetEntityQueryDesc()` and then hand-indexed reads of a 19-element `ComponentType[]` — no loops, so
+two calls and some 600 characters to list one query. A verb reporting a named system's queries with
+All/Any/None resolved to type names would collapse roughly six round trips per query to one, and the
+same read recurs whenever a claim is about what a vanilla system sees.
+
+### `find_types` reports no statics
+
+With `members: true` the tool lists instance fields and properties and omits static ones, so
+`Game.Version` came back with empty `fields` and `properties` and the sweep had to guess
+`Game.Version.current` rather than discover it. Statics are exactly where a game keeps its
+singletons and version surfaces, which makes them the members an orienting agent most needs.
+
+### Reaching a prefab by name
+
+`ecs_query`'s `label` annotates each listed entity through a managed system's method, but nothing
+filters on what it produces, and no tool takes a prefab name. Reading eight named
+`NotificationIconData` prefabs out of 160 during the 1.6.2f1 live-read sweep therefore meant listing
+all 160 with labels and reading the indices back off the dump. The C# route is closed too, though
+not for the reason it first appears: `Game.Prefabs.PrefabID` declares
+`PrefabID(string type, string name, Hash128 hash = default(Hash128))`
+(`src/Game/Game.Prefabs/PrefabID.cs:38`), so `new PrefabID(type, name)` is legal C# and it is `eval`
+that rejects it, per the default-argument entry below. Either let `label` double as a filter, or
+take a name pattern beside the component list.
+
+### `ecs_query` ANDs its components, with no any and no none
+
+The tool matches entities carrying ALL the listed types, so the two other shapes the engine's own
+`EntityQuery` vocabulary carries — `WithAny` and `WithNone` — have no expression. In the same sweep
+the post-facility census (`PostFacilityData` or `MailBoxData`) took two queries and a hand-reconciled
+overlap, and counting owned map tiles (`MapTile` without `Native`) took two queries and a
+subtraction. An `any` and a `none` list beside `components` makes both one call.
+
+### Predefined type aliases in `eval`
+
+The grammar accepts fully-qualified names but not the C# aliases, so `string.Join(...)` fails with
+`parse error: unsupported: predefined type` and wants `System.String.Join(...)`. Agents type the
+alias by reflex, and every occurrence costs a round trip: two separate live-read agents hit it in
+the 1.6.2f1 sweep. An alias table mapping `string`, `int`, `bool` and their siblings to their
+framework types is the whole fix.
 
 ### What a failed `eval` reports
 
@@ -350,6 +421,57 @@ further", so the next move is to doubt the argument instead of splitting the cal
 Start at `FindMethods`' filtering rather than at the binder, since the candidate never reaches it.
 This is the same overload-matching seam as the enum-binding entry above; settling them together is
 likely cheaper than either alone.
+
+### `eval` matches no default arguments
+
+`new Game.Prefabs.PrefabID("ZonePrefab", name)` fails against a constructor whose third parameter is
+`Hash128 hash = default(Hash128)` — legal C#, and the one spelling an agent writes. The error
+compounds it by reporting only the *other* constructor, `(PrefabBase, Hash128)`, as tried, which
+points at the argument types rather than at the arity, and a session chased the wrong fix for two
+calls before reading the decompiled signature. Binding the omitted parameters to their declared
+defaults is the fix; listing every candidate in the message is the cheaper half and helps the whole
+overload-matching class above.
+
+### `eval` cannot build an `EntityQuery`, so there is no aggregate
+
+Two independent walls, both hit reaching for `ToComponentDataArray`. User-defined implicit
+conversions are not applied, so `new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp)`
+fails and the explicit cast is rejected as well (`cannot cast Allocator to AllocatorHandle`); the
+workaround is to construct the target type by hand,
+`new AllocatorManager.AllocatorHandle { Index = 2, Version = 0 }`. Past that, chaining
+`WithAll<T>()` throws `BadImageFormatException: Cannot box IsByRefLike type
+'Unity.Entities.EntityQueryBuilder'`, which no workaround reaches. With no loops and no array
+creation either, a whole-set field census degrades to one hand-written `GetComponentData` per
+entity: the sweep's 60-carrier pipe census took a script-generated ~11 KB `eval`, the 83-recipe
+re-derivation five ~9 KB ones. Either honour `ref struct` receivers, or — cheaper and it answers the
+same question — let `ecs_query` project a named component field per match.
+
+### `ecs_query`'s `label` is empty for prefab entities
+
+`label` with `Game.UI.NameSystem:GetRenderedLabelName` returns `""` for every prefab entity, so a
+prefab census comes back as bare indices with nothing to match a name against. Naming 126 prefabs
+took four batched `eval`s calling `PrefabSystem.GetPrefabName` per entity. A `label` that falls back
+to `PrefabSystem` when the name system has nothing, or a `names: true` flag that does, collapses
+that to one call — and it is the same read the prefab-by-name entry above wants to filter on.
+
+### `eval` cannot read an iterator-backed property
+
+`ProxyAction.bindings` is unreachable: `.Count` fails on the compiler-generated iterator type and
+nothing can enumerate it. The read only completed by falling back to the private `m_Bindings` field
+behind it. Enumerating a returned `IEnumerable` into a rendered list is the general fix; short of
+that, "a private backing field is the escape hatch" is a fact the `unity-driving` skill should
+carry, because the failure gives no hint that one exists.
+
+### The `eval` grammar's type-name surface
+
+Two rejections in the same family, both costing a round trip to discover. A *generic* `typeof` with
+a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives `parse error at
+offset 15: unsupported: qualified name` — while a non-generic qualified `typeof` works, so the
+grammar handles qualified names and generic arguments but not their combination. And a nested type
+is unreachable through C# `.` syntax, which made every job-attribute check in the sweep go through
+`System.Type.GetType("Outer+Nested, Game")`. The same `System.Type.GetType("Ns.Type, Asm")` string
+is the workaround for both, which is the tell that one resolver handles the string form and the
+grammar does not reach it.
 
 ### `advance` drops its `after` snippet's failure
 
@@ -482,6 +604,16 @@ Skills and references teaching an agent to write Cities: Skylines II code mods, 
 decompiled game, the wiki and a corpus of open-source mods. Knowledge only: no MCP server, no
 runtime, and no shipped code artifacts.
 
+### A check for the cites research files make into each other
+
+`docs/research/README.md` lets a file cite a sibling as `<name>.md:<line>`, and those rot the moment
+the target gains a line above the target — which every authoring pass and every sweep does. The
+1.6.2f1 review found 32 of them landing on blank or out-of-range lines; a sampling reviewer found 6
+of the 32, and a twenty-line script found all of them in a second. The check is mechanical: resolve
+each cite against the citing file's own directory, open the line, fail on empty or out of range.
+It belongs beside `check-skill-content.ts` in `mise check`, where nothing external is needed — unlike
+`research:cite-audit`, which reads a local decompile and so cannot run in CI.
+
 ### Extracting the shipped localization dictionaries
 
 The game's compiled `.loc` assets are the only first-party, version-known source for the vanilla
@@ -501,7 +633,7 @@ publisher's copyrighted text, which is the line the recipe file states and any s
 Two constraints that would shape it. The plugin ships no executable content by decision, so a script
 here is repository tooling of the kind `scripts/` already holds, not something the marketplace copies
 into a user's install; that makes it a maintenance tool for regenerating a shipped table, which is
-the honest framing rather than a user-facing feature. And two shipped files carry trailing bytes past
+the honest framing rather than a user-facing feature. And every base locale file carries trailing bytes past
 their declared end, so end-of-file is not end-of-data and the decoder has to stop on the counts.
 
 ### Marker namespace lint

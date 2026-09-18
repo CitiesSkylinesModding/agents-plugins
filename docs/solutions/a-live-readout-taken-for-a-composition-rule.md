@@ -41,7 +41,7 @@ hashSet.Add(...) }` (`src/Game/Game.Serialization/SerializerSystem.cs:171-209`).
 `ISerializable` or `IEmptySerializable` whose `type.Assembly != assembly`
 (`src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs:42/50-56/73-79`),
 and `ModManager.AfterLoadAssembly` calls `SerializerSystem.SetDirty()` precisely so a mod's types
-enter it (`src/Game/Game.Modding/ModManager.cs:146-150`).
+enter it (`src/Game/Game.Modding/ModManager.cs:147-151`).
 
 So the eighteen was the union's empty case. A set assembled at runtime reads identically to a fixed
 one whenever the variable half happens to be empty, and nothing in the readout marks which it is.
@@ -51,7 +51,7 @@ one whenever the variable half happens to be empty, and nothing in the readout m
 Read the code that _builds_ the set, not only the set. Where that is not available, vary the input
 and read twice: enabling one mod that declares serializable components moved the query from eighteen
 `Any` to twenty-one, the three additions resolving through `TypeManager.GetType` to that mod's own
-components in its own assembly, while the clear query stayed at nineteen throughout.
+components in its own assembly, while the clear query stayed at nineteen throughout (twenty at 1.6.2f1, `ClearSystem.cs:25`).
 
 ## Prevention
 

@@ -38,8 +38,8 @@ Two component families with near-identical names.
 
 `Game.Prefabs.SchoolData` sits on the **prefab** and holds the unscaled design figure, written once
 at authoring (`Game.Prefabs/School.cs:56-64`). `Game.Buildings.School` sits on the **building
-entity** and is what the simulation consumes — `CitizenHappinessSystem.cs:175` declares
-`ComponentLookup<Game.Buildings.School>`, and `:324-332` reads it for the `Buildings` happiness
+entity** and is what the simulation consumes — `CitizenHappinessSystem.cs:172` declares
+`ComponentLookup<Game.Buildings.School>`, and `:352-360` reads it for the `Buildings` happiness
 factor. `SchoolAISystem.cs:145-146` writes the instance each pass as
 `clamp(round(efficiency * combinedPrefabValue), -100, 100)`. `PrisonAISystem.cs:333-334` and
 `HospitalAISystem.cs:249` are the same shape; the hospital adds a resource-shortage penalty and

@@ -124,3 +124,15 @@ _because_ attached.** Two rounds running, the fact and every count beside it re-
 causal clause was wrong — which is exactly why it survived, since a reviewer checking the sentence
 finds most of it true. Where a rationale was not itself verified, cut it: the instruction almost never
 needs it, and it is the half a reader will generalise from.
+
+**Across a game update the mode is a confound that mimics the patch.** The 1.6.2f1 sweep re-read live
+values on `NormalMode` where the originals came from an `EasyMode` save, and recorded the difference
+as the game having moved: `Creditworthiness` halved (`MilestonesMode.m_LoanLimit`), the cloudiness
+penalty went 0.1 to 0.25 and battery charge 0.5 to 0.1 (`ElectricityParametersMode`), happiness
+penalties doubled (`CitizenHappinessParameterMode`), connection capacities fell a fifth
+(`ElectricityConnectionGlobalMode`). Every one was the mode pass, and one shipped verdict flipped on
+it — the wiki's loan ceiling read as "exactly right" when on the other mode it is wrong by 100%.
+The tell is a uniform multiplier; the check is to enumerate every `componentData.<field> =` assignment
+in each `ApplyModeData` under `src/Game/Game.Prefabs.Modes/`, which is the whole mode-sensitive field
+set. A re-read that changes a value on one of those fields records its mode, or it records nothing.
+

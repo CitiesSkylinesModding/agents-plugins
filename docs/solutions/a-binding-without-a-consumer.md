@@ -15,7 +15,7 @@ tags: [research, decompile, frontend, bindings, verification]
 to mods, so a derivation read them as the elevation arrows' disabled state. Three finders and an
 authoring pass accepted the claim from the C# read alone. The arrows' disabled state actually comes
 from a different binding pair (`elevation` against `elevationRange`), and the two cited bindings are
-read by no frontend component at all (`src-ui/source.js:46100-46101`, declared and re-exported,
+read by no frontend component at all (`src-ui/source.js:46156-46157`, declared and re-exported,
 consumed nowhere).
 
 ## Root cause
@@ -23,7 +23,7 @@ consumed nowhere).
 The C#↔frontend seam is a declaration boundary, and each side can declare what the other never
 consumes. A C# binding proves only that a value is published; whether a control shows it is the
 bundle's decision. The reverse holds too: the editor screen registers a `"Change Elevation"` action
-handler (`source.js:132826`), which proves nothing about the input being bound or enabled — the
+handler (`source.js:137909`), which proves nothing about the input being bound or enabled — the
 install's input asset decides that, and it is not in the decompile.
 
 ## Fix
