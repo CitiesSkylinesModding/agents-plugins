@@ -167,8 +167,8 @@ const MAX_WAIT_MS = 60_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 8000;
 
 /**
- * Reload waits default higher: the trigger latency of an application-side file watcher can run tens
- * of seconds (CS2's mtime poll ticks every ~15-20s) before the first context swap.
+ * Reload waits default higher: what triggers the reload is usually a rebuild still running when the
+ * wait starts, and its duration sets the latency before the first context swap.
  */
 const DEFAULT_RELOAD_WAIT_TIMEOUT_MS = 30_000;
 
