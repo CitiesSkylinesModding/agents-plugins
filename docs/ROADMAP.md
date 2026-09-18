@@ -330,6 +330,27 @@ overload matching — likely the argument arriving as the enum type where the pa
 its underlying integer, or the reverse. It blocked settling a runtime question in its general form
 and left only the field types the game happens to ship as evidence.
 
+### `eval` picks one overload by shape and stops
+
+`em.AddComponentData<Unity.Transforms.LocalTransform>(e, value)` fails with `no overload of
+EntityManager.AddComponentData accepts these arguments; tried: AddComponentData(EntityQuery,
+NativeArray`1): Unity.Entities.Entity is not assignable to Unity.Entities.EntityQuery`. The
+overload it wants — `AddComponentData<T>(Entity, T)` — exists, and the message shows it was never
+tried. That one candidate is the tell: a `CreateEntityQuery` miss in the same session reported all
+three candidates it tried, so the reporting lists the set it considered, and here the set was
+missing the member that binds. The failure is therefore in FINDING the overload, not in ranking the
+ones found — which is where to look first, and is not what the message suggests.
+
+It is the first call an agent writing a component reaches for, and the workaround costs an extra
+invoke on the main thread: `em.AddComponent<T>(e)` then `em.SetComponentData<T>(e, value)`, which
+works and round-trips correctly. The message is the worse half — naming an `EntityQuery` overload
+the caller never mentioned reads as "you passed the wrong thing" rather than "I did not look
+further", so the next move is to doubt the argument instead of splitting the call.
+
+Start at `FindMethods`' filtering rather than at the binder, since the candidate never reaches it.
+This is the same overload-matching seam as the enum-binding entry above; settling them together is
+likely cheaper than either alone.
+
 ### `advance` drops its `after` snippet's failure
 
 `advance` takes care of the window and of what surrounds it: a `before` snippet that ran and then a
