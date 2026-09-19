@@ -8,7 +8,7 @@ symptoms:
   - 'a feature ships and the marketplace or package description still sells the product without it'
   - 'a claim is corrected and the replacement turns out to be false in its own right'
 tags: [prose, correction, sweep, carriers, review-gate]
-updated: 2026-09-18
+updated: 2026-09-19
 ---
 
 # A correction that landed on one carrier
@@ -37,6 +37,7 @@ A claim lives in more places than its sentence, and the other places do not read
 - **The site a convention file names as the authority for the mechanism.** `AGENTS.md` says the bound lives where the wait is and points at `Invoker`; a later loop corrected the session's docblock, its refusal message and that `AGENTS.md` line, and left `Invoker`'s own docblock still claiming the invoke path was bounded. You correct OUTWARD from the authority site, because it is the one you trust, so it is the one you never re-read.
 - **An ADR's present-tense aside.** The record reads frozen, so a sweep skips it, but the sentence around the decision is live: "the server-lifetime watchdogs still are" outlived the change that ported them.
 - **A badge.** `platform-Windows` is a claim inside a URL, and no prose grep reaches it.
+- **The checklist that enumerates the carriers.** A sweep skill's step, or an `AGENTS.md` invariant, listing the sites a re-probe must edit is itself a site the correction lands on. It fails in both directions: a round that adds a carrier and not the checklist leaves the next sweep blind to it, and a round that REMOVES a carrier leaves the checklist pointing at a site that no longer says anything.
 - **A capability sentence in shipped metadata**, where adding a tool restates it ten times: both harness `plugin.json` files, both marketplace files, the package project's `<Description>` AND its own header comment, the plugin README's headline and tool table, the ROOT README's row for that plugin, and the roadmap's section intro for it. `check:plugin-sync` compares two of the ten, so a sweep that stops at prose leaves every install-decision surface selling the plugin without the thing it just gained.
 
 ## Fix
@@ -47,6 +48,8 @@ After a correction lands, before the round closes, re-read the *whole section* �
 
 Treat a correction as landing on a *set* of carriers and enumerate the set before editing any of it.
 The check that catches the most for the least: read the corrected passage top to bottom as a stranger, because a heading contradicting its body is invisible in a diff and obvious in a read.
+
+Where a correction adds or removes a carrier, edit the checklist that enumerates them in the same pass, and record why a site is deliberately NOT a carrier — a bare absence reads as an oversight, and the next sweep re-adds it on the same reasoning that put it there the first time.
 
 Where a claim spans two references, correct both in the pass that found it — deferring drops it, and the two then disagree in the tree until someone notices.
 

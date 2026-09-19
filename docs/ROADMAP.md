@@ -46,28 +46,31 @@ the rest of the debugger surface refuses to do on the agent's behalf.
 
 ### The CDP surface across engine versions
 
-Two load-bearing findings here rest on one engine version and are written as flat facts about
-Gameface. Coherent Labs' server, built for 3.1.2+, assumes the opposite of both.
+Two questions stand open about the CDP surface, both of them cases where Coherent Labs' server,
+built for 3.1.2+, assumes the opposite of what this plugin measured or never exercised at all.
 
-Input is the sharp one. `tools.ts` records that Gameface accepts `Input.dispatchMouseEvent` but
-never routes it into the Cohtml DOM event system — "(verified: handlers never fire)", with no
-version attached, though the plugin's verification context is 1.64 alone. That finding is why every
-input tool here dispatches bubbling DOM events instead, and why `game_hover` warns that the CSS
-`:hover` state stays unset. Their input path rests on `Input.dispatchMouseEvent`,
-`Input.dispatchTouchEvent` and `Input.insertText`, and their hover is commented as triggering the
-`:hover` state. Either CDP input works on a 3.x Player and our claim needs a version and a host
-qualifier, or their interaction tools do not work — and only one of those readings leaves our
-shipped prose correct.
+Input is settled on our side. A raw CDP session at Cohtml 2.2.1.3 re-ran what 1.64 had shown:
+`Input.dispatchMouseEvent`, `Input.dispatchKeyEvent` and `Input.insertText` each answer with an
+empty result and no error, and no DOM handler fires (the probe catalogue's CDP entry holds the
+session and its controls). That is why every input tool here
+dispatches bubbling DOM events instead, and why `game_hover` warns that the CSS `:hover` state
+stays unset. What stays open is their side: their input path rests on `Input.dispatchMouseEvent`,
+`Input.dispatchTouchEvent` and `Input.insertText` — the touch one probed at neither version here —
+and their hover is commented as triggering `:hover`, so either CDP input works on a 3.x Player and
+our claim needs a host qualifier rather than only the two versions it now carries, or their
+interaction tools do not work.
 
-The DOM domain is the other. They report `DOM.resolveNode` returning an empty object,
+The DOM domain is the second. They report `DOM.resolveNode` returning an empty object,
 `DOM.setAttributeValue` silently no-opping and `DOM.performSearch` never returning a `searchId`,
 while `DOM.getBoxModel` and `Runtime.evaluate` both work. Every tool here reaches the page through
-`Runtime.evaluate`, so that surface has never been exercised against 1.64 at all. The answer gates
-whether a `nodeId`-addressed path is available here — the addressing their assertions and DOM search
-depend on.
+`Runtime.evaluate`, so that surface has never been exercised on the reference target at all. The
+answer gates whether a `nodeId`-addressed path is available here — the addressing their assertions
+and DOM search depend on.
 
-One probe session against a running game answers both, and the result belongs in `skills/gameface/`
-carrying the version and host it was verified on rather than stated flat.
+One probe session against a running game answers the DOM question, and the result belongs in
+`skills/gameface/` carrying the version and host it was verified on. The input question needs a
+host this repo does not have: it closes on a 3.x Player, or on Coherent Labs answering for their
+own tools, and until then the claim keeps the two versions it carries.
 
 ### Computed styles as a tool
 
@@ -84,10 +87,10 @@ Coherent Labs' `perf_lint` walks the rendered tree for six shapes their docs nam
 `display: simple` children that are not absolutely positioned, inline `data:`/SVG assets that defeat
 Instaload, `:root`-scoped custom properties, and `opacity` on an element with children where
 `coh-simple-opacity` would do. Three are already prose in
-`skills/gameface/references/performance.md`; the other three name 3.x features and mean nothing on a
-1.x engine until gated. Gate them first, which improves the reference whatever follows, and let the
-surviving set decide whether a lint tool earns its place — a rule that fails gating is a false
-positive waiting to fire.
+`skills/gameface/references/performance.md`; the other three name 3.x features and mean nothing on
+the reference target's engine until gated. Gate them first, which improves the reference whatever
+follows, and let the surviving set decide whether a lint tool earns its place — a rule that fails
+gating is a false positive waiting to fire.
 
 Frame-timing measurement is a separate idea and does not port. rAF ticks inside the host's per-frame
 `View::Advance`, so inter-frame deltas measure the game's frame rate rather than the UI's
@@ -168,8 +171,8 @@ a trap, since a stylesheet merely containing `coh-custom-effect` reverts the who
 synchronous style solving. Both plausibly bear on a mod shipping translated UI or a styled panel.
 Scope before writing, and take the facts one at a time under
 [ADR 0011](adr/0011-coherent-labs-documentation-corpus-stays-out-of-the-gameface-skill.md): the
-subset that survives gating against a 1.x engine may be small enough to fold into the existing
-references rather than earn new ones.
+subset that survives gating against the reference target's engine may be small enough to fold into
+the existing references rather than earn new ones.
 
 ### Network inspection
 

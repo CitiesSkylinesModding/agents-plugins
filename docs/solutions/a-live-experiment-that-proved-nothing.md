@@ -6,6 +6,7 @@ symptoms:
   - 'a live experiment reproduces nothing and the claim it was testing was true'
   - 'suspend returns heldSuspends 1 and state reads still fail'
 tags: [unity, sdb, live-verification, experiment-design, false-negative, not-suspended]
+updated: 2026-09-19
 ---
 
 # A live experiment came back negative and the experiment was the broken part
@@ -56,10 +57,18 @@ own.
 
 ## Prevention
 
-A negative live result is evidence only when the experiment could have produced a positive one, so
-record what proves that alongside the result — a rising frame index, an armed exception break that
+A live result is evidence only when the experiment could have produced the other answer, and that
+holds in both directions. A negative result needs proof a positive was reachable, so record what
+proves it alongside the result — a rising frame index, an armed exception break that
 did not fire, a query that matched. A run without it is not a refutation and must not be used to
 withdraw a standing claim.
+
+A matching result is the same trap facing the other way: state what the probe would have returned
+against the regime you are ruling out, and where the two answer alike it has confirmed nothing. A
+`childNodes` nodeType sequence read identically whether the whitespace nodes were real or one shared
+node materialized per slot, and that reading alone retired a still-true warning from shipped prose
+([`a-support-set-built-from-what-did-not-throw.md`](a-support-set-built-from-what-did-not-throw.md)
+is the same failure in a capability probe).
 
 State a causal attribution as a hypothesis until an experiment separates it from the alternatives.
 A clean timeline plus a plausible mechanism is neither.
