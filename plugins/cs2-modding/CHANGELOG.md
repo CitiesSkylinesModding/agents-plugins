@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.1.0...cs2-modding-v1.2.0) (2026-09-19)
+
+
+### Features
+
+* **cs2-modding:** carry the references onto game 1.6.2f1 ([5937dea](https://github.com/CitiesSkylinesModding/agents-plugins/commit/5937dea49f599109f8ada08099913e3e170c2f86))
+* **cs2-modding:** keep the decompile in git so every game update can be diffed ([99db14e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/99db14ec2f6c85eb5ddc06e7ff9dd4b98cfd3080))
+
+
+### Bug Fixes
+
+* **cs2-modding:** confirm publishing from Linux, whose sign-in needs no CSII_PDXCACHEPATH ([56ad09f](https://github.com/CitiesSkylinesModding/agents-plugins/commit/56ad09f5636ac8613a7f07a4c12cee099c6140f3))
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.0.0...cs2-modding-v1.1.0) (2026-09-10)
 
 
