@@ -62,7 +62,13 @@ function formatRelease(release: Release): string {
   // its blank lines would render as gaps between the releases.
   const lines = release.body
     .split(/\r?\n/u)
-    .filter(line => line.trim() !== '' && !line.startsWith('## '));
+    .filter(line => line.trim() !== '' && !line.startsWith('## '))
+    .map(line =>
+      line.replace(
+        / \(\[[0-9a-f]+\]\(https:\/\/github\.com\/[^/]+\/[^/]+\/commit\/[0-9a-f]+\)\)$/u,
+        ''
+      )
+    );
 
   return [`## ${component}: [${version}](${release.html_url})`, ...lines].join('\n');
 }
