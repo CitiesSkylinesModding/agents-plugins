@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.0...coherent-gameface-v1.2.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** move every probed claim to Cohtml 2.2.1.3, and repair the input tools the sweep caught ([4f3cf38](https://github.com/CitiesSkylinesModding/agents-plugins/commit/4f3cf381305ffcb356dc80395658d77481f64047))
+* **coherent-gameface:** state the engine version once and mark every claim it moves ([29ab975](https://github.com/CitiesSkylinesModding/agents-plugins/commit/29ab975c2af403b69a6c3ee2e83ee786fa9ce058))
+
 ## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.1.1...coherent-gameface-v1.2.0) (2026-09-10)
 
 

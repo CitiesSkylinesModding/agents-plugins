@@ -9,7 +9,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!-- x-release-please-start-version -->
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <!-- x-release-please-end -->
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

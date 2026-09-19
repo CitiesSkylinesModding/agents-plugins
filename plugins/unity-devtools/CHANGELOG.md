@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.0.1...unity-devtools-v1.1.0) (2026-09-19)
+
+
+### Features
+
+* **unity-devtools:** let an agent see the game without loading a skill first ([d15567a](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d15567a530463c7a008f4f183c50035d5028a1ca))
+
+
+### Bug Fixes
+
+* **unity-devtools:** wait out the main thread's park, and bound the waits that could hang a session ([3175614](https://github.com/CitiesSkylinesModding/agents-plugins/commit/31756146dc3e6980e4e956a048653cad488c2eec))
+
 ## [1.0.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.0.0...unity-devtools-v1.0.1) (2026-08-15)
 
 
