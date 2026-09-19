@@ -1,6 +1,6 @@
 # Version-gating: does the game have feature X?
 
-The docs describe the latest Gameface only; a game's embedded Cohtml is frozen at ship time.
+The docs describe the latest Gameface only; a game's embedded Cohtml moves only when the game updates, so it sits behind them.
 Gate every feature claim through this file, then probe the running game when one is connected.
 
 <!-- timeline-ceiling: 3.1.2 -->
@@ -21,6 +21,8 @@ Repo-side, `mise skills:check-changelog` diffs this ceiling against the live cha
   - `'append' in Element.prototype`: >= 1.56
   - `'attachShadow' in Element.prototype`: >= 1.61
   - whitespace text nodes present in `childNodes`: >= 2.2
+  - `box-sizing: content-box` surviving a style round-trip: >= 3.0
+  - `justify-content: space-evenly` surviving a style round-trip: >= 3.1.1
 
   (VOLATILE: these probe-to-version thresholds, and which releases above the target still lack a discriminating probe — the feature changelog at `changelog/feature/`.)
 - `CSS.supports` does not exist (the changelog never mentions it; the `CSS` global is the Typed OM unit factories, `CSS.px(4)` and friends).
@@ -89,7 +91,7 @@ Dates are release dates.
 - **1.39.0** (Apr 2023): `animationiteration`/`animationcancel`/`transitionrun`/ `transitioncancel`.
 - **1.40.0** (May 2023): base64 data-URI images.
 
-### 1.42 to 1.64 (Jun 2023 to Mar 2025), the reference target's range
+### 1.42 to 2.2 (Jun 2023 to Jan 2026), the reference target's range
 
 (VOLATILE: this range's upper bound, and the baseline note under its last release — the `gameface` skill's baseline line.)
 
@@ -112,18 +114,19 @@ Dates are release dates.
 - **1.61.0** (Dec 2024): **Shadow DOM**, `<slot>`, `::slotted`, `:host`, COLRv0 color emoji, safe data binding.
 - **1.63.0** (Jan 2025): `addEventListener` options objects (`{once, ...}`), COLRv1 emoji.
 - **1.64.0** (Mar 2025): data-binding synchronization optimizations.
-  **The reference target's baseline release; the `gameface` skill's baseline line states the exact version it ships.**
-
-### After 1.64 (absent from the reference target)
-
-(VOLATILE: where the target's version now falls in this list — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
-
 - **1.65.0** (Apr 2025): inline ES6 modules (`<script type="module">` with inline body), `rem` units in SVG lengths.
 - **1.67.0** (Jun 2025): WebP images, `::part`/`exportparts`, `CharacterData.before/after`, SVG `pathLength`.
 - **1.68.0** (Jul 2025): blending UI with game content, `white-space: nowrap` grouping.
 - **1.69.0** (Aug 2025): rewritten high-performance `backdrop-filter`.
 - **2.0.0** (Oct 2025): flex `gap` behind the `--use-compatibility-yoga` flag, int64-to-BigInt binding modes, `setInterval` default delay 0, large `el.style` standardization pass.
 - **2.2.0** (Dec 2025): **`aspect-ratio` CSS property**, new flex algorithm with real `gap`, `@starting-style` and discrete-property transitions (`display` animates), `vertical-align: baseline`, whitespace nodes join the DOM (BREAKING for `childNodes` counts), `<img>` keeps its natural aspect ratio by default (layout-changing), `color(srgb ...)` replaces `coh-scrgb`, Svelte 5 support.
+- **2.2.1** (Jan 2026): `data-bind-class-toggle` applies when the class is already on the element.
+  **The reference target's baseline release; the `gameface` skill's baseline line states the exact version it ships.**
+
+### After 2.2 (absent from the reference target)
+
+(VOLATILE: where the target's version now falls in this list — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
+
 - **3.0.0** (Apr 2026): **`box-sizing: content-box`** (before 3.0 everything is effectively border-box), auto margins in flex, web-standard flex mode, dynamic SDF text, compatibility-flags system.
 - **3.0.2** (Jun 2026): numeric comparisons in custom media features.
 - **3.1.1** (Jul 2026): `space-evenly` for `justify-content` and `align-content`, full `pointer-events` support, `elementFromPoint`/`elementsFromPoint` also return SVG nodes, shape-based hit testing for SVG, linear rendering pipeline deprecated (gamma with sRGB is now the default, so a game still authored for linear needs migrating).
@@ -158,6 +161,6 @@ Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
 ## Worked example: the reference target
 
 The reference target embeds the version the `gameface` skill's baseline line states (confirm with `game_status`).
-Everything at or below that version applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50).
-Absent, so design around them: inline `<script type="module">` bodies (1.65), WebP (1.67), `::part`/`exportparts` (1.67), flex `gap` (2.0/2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), whitespace nodes in `childNodes` (2.2), `box-sizing: content-box` (3.0), flex auto margins (3.0), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
+Everything at or below that version applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50), inline `<script type="module">` bodies (1.65), WebP and `::part`/`exportparts` (1.67), flex `gap` (2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), and whitespace nodes in `childNodes` (2.2).
+Absent, so design around them: `box-sizing: content-box` (3.0), flex auto margins (3.0), numeric comparisons in custom media features (3.0.2), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
 (VOLATILE: which features sit in the present list and which in the absent one — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)

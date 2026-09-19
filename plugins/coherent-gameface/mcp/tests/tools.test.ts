@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Window } from 'happy-dom';
 import type { CdpClient } from '../src/cdp';
-import { fillFn, gameFill, gameType, typeFn } from '../src/tools';
+import { clickFn, fillFn, gameFill, gameType, hoverFn, typeFn } from '../src/tools';
 
 /**
  * The page functions read the DOM off globals, since that is what they get once serialized into
@@ -13,6 +13,7 @@ const DOM_GLOBALS = [
   'Event',
   'FocusEvent',
   'KeyboardEvent',
+  'MouseEvent',
   'HTMLInputElement',
   'HTMLTextAreaElement'
 ] as const;
@@ -150,6 +151,73 @@ test('the commit still fires on an engine without the FocusEvent constructor', (
   expect(result).toMatchObject({ found: true, value: 'hello' });
   expect(seen.events.at(-1)).toBe('focusout');
   expect(seen.bubbledCommits).toBe(1);
+});
+
+/**
+ * The engine's MouseEvent constructor ignores the init's `clientX`/`clientY` and fills all four
+ * coordinates from `screenX`/`screenY`, so the pointer page functions must carry the point in the
+ * screen pair. happy-dom honours the client pair like a browser, which is exactly why these assert
+ * on `screenX`/`screenY`: an assertion on `clientX` passes with the screen pair removed and would
+ * guard nothing.
+ */
+describe('pointer coordinates', () => {
+  const RECT = { x: 400, y: 300, width: 200, height: 100 };
+  const CENTRE = { x: RECT.x + RECT.width / 2, y: RECT.y + RECT.height / 2 };
+
+  function target(): MouseEvent[] {
+    const el = document.createElement('div');
+
+    el.id = 'pointer-target';
+    el.getBoundingClientRect = () => ({ ...RECT, toJSON: () => RECT }) as DOMRect;
+    document.body.append(el);
+
+    const received: MouseEvent[] = [];
+
+    const types = [
+      'pointerdown',
+      'pointerup',
+      'pointerover',
+      'pointerenter',
+      'mousedown',
+      'mouseup',
+      'mouseover',
+      'mouseenter',
+      'mousemove',
+      'click'
+    ];
+
+    for (const type of types) {
+      el.addEventListener(type, event => {
+        received.push(event as MouseEvent);
+      });
+    }
+
+    return received;
+  }
+
+  test('clickFn puts the element centre in the screen pair of every mouse event', () => {
+    const received = target();
+
+    clickFn('#pointer-target', 0);
+
+    expect(received.length).toBeGreaterThan(0);
+
+    for (const event of received) {
+      expect({ x: event.screenX, y: event.screenY }).toEqual(CENTRE);
+    }
+  });
+
+  test('hoverFn puts the element centre in the screen pair of every mouse event', () => {
+    const received = target();
+
+    hoverFn('#pointer-target', 0);
+
+    expect(received.length).toBeGreaterThan(0);
+
+    for (const event of received) {
+      expect({ x: event.screenX, y: event.screenY }).toEqual(CENTRE);
+    }
+  });
 });
 
 /**

@@ -12,7 +12,7 @@ Gameface implements a deliberate subset of HTML5/CSS3 chosen for game-UI perform
 (The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.)
 This skill is written against docs v3.0.3.1, with Cities: Skylines II (CS2) as the reference target and worked example throughout.
 
-Verified against Cohtml 1.64.0.7.
+Verified against Cohtml 2.2.1.3.
 A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## The map and the territory
@@ -22,11 +22,11 @@ Three rules keep them straight:
 
 1. **The docs describe the latest Gameface only.** Support tables carry no "since version" annotations.
    A YES in today's docs is an upper bound, not a fact about your game.
-2. **Version-gate every feature claim.** A game embeds a Cohtml version frozen at ship time (the reference target's is the one the baseline line above states, while the docs describe a 3.x release).
+2. **Version-gate every feature claim.** A game embeds whatever Cohtml its last update shipped, which trails the docs and jumps several versions at a time (the reference target's is the one the baseline line above states, while the docs describe a 3.x release).
    A feature exists in the game iff the changelog introduced it at or below the game's version.
    [references/version-gating.md](references/version-gating.md) has the lookup procedure, a baked version-to-feature timeline, and the list of features that never existed at all.
 3. **Probe the territory.** Two games on the same Cohtml version can still differ: per-game compatibility flags and embedder choices gate complex-selector styling, WebSockets, localization, text-transform, and more.
-   When a game is reachable, `game_status` reports the engine version (the CDP endpoint answers `Browser: "Cohtml/x.y.z"`), and `game_eval` settles support questions in one probe: `typeof ResizeObserver` for APIs, a style round-trip for CSS (`el.style.setProperty('gap', '4px')` then read it back; the parser rejects unsupported values, so they read back empty).
+   When a game is reachable, `game_status` reports the engine version (the CDP endpoint answers `Browser: "Cohtml/x.y.z"`), and `game_eval` settles support questions in one probe: `typeof ResizeObserver` for APIs, a style round-trip for CSS (`el.style.setProperty('display', 'grid')` then read it back; the parser rejects unsupported values, so they read back empty).
    `CSS.supports` does not exist (the `CSS` global is only unit factories like `CSS.px`).
    Page JS has no version global, but `navigator.userAgent` carries the engine version; sniff it for the version, feature-detect everything else.
 
@@ -53,7 +53,7 @@ Layout and styling:
   Overflow scrolls but draws no scrollbar; scrollbars are built or polyfilled.
 - Stylesheet combinators (`>`, `+`, `~`, descendant space) only match when the game enables complex-selector styling (the per-game `EnableComplexCSSSelectorsStyling` flag): probe before relying on them.
   `:not()`, `::placeholder`, and `:nth-of-type()` are unsupported; `::before`/`::after` exist since 1.19.
-  (VOLATILE: whether a stylesheet still drops each of the three — a rule per construct read back through `cssRules` against the running target.)
+  (VOLATILE: whether a stylesheet still drops each of the three — one sheet per construct against the running target, each holding a known-kept control rule beside the construct's, compared by rule count.)
 - `user-select` defaults to `none`; text selection is opt-in.
 - CSS variables work, except inside `@keyframes` and as `var()` fallback values.
   `calc()` cannot mix `%` with other units.

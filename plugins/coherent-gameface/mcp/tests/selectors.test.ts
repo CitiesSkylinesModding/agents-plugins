@@ -7,7 +7,7 @@ import {
 } from '../src/selectors';
 
 /**
- * The engine's rejection, verbatim from Cohtml 1.64.0.7.
+ * The engine's rejection, verbatim from Cohtml 2.2.1.3.
  */
 function rejection(selector: string): string {
   return `SyntaxError: Invalid CSS selector (${selector}) in QuerySelector!`;
@@ -522,3 +522,33 @@ function concreteArguments(clause: string): string[] {
     .map(match => match.groups?.form ?? '')
     .filter(form => CONCRETE_NTH_ARGUMENT.test(form));
 }
+
+/**
+ * The constructs the engine answers WRONGLY rather than rejecting. They are absent from
+ * SUPPORTED_PSEUDOS, so the exhaustive whitelist tests above never reach them, and the diagnosis
+ * must still never offer one as a suspect: a rejection cannot be their doing.
+ * The argument rule is the other half — the engine rejects `::part` and `::slotted` bare and empty,
+ * so only those spellings stay suspects, while `::selection` takes no argument and never is one.
+ */
+describe(`the wrongly-answered constructs`, () => {
+  for (const [selector, token] of [
+    ['div::slotted(i)', '::slotted(i)'],
+    ['div::part(x)', '::part(x)'],
+    ['div::selection', '::selection'],
+    ['div::selection(x)', '::selection(x)']
+  ] as const) {
+    test(`${selector} is never named as the suspect`, () => {
+      // The rejection is raised over `:not(.a)`, which is what the diagnosis has to name instead.
+      const together = `${selector}:not(.a)`;
+
+      expect(diagnosisOf(together)).not.toContain(token);
+      expect(diagnosisOf(together)).toContain('`:not(.a)`');
+    });
+  }
+
+  for (const selector of ['div::part', 'div::part()', 'div::slotted', 'div::slotted()'] as const) {
+    test(`${selector} stays a suspect, since the engine rejects that spelling`, () => {
+      expect(diagnosisOf(selector)).toContain(selector.slice('div'.length));
+    });
+  }
+});

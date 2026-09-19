@@ -16,8 +16,8 @@ Pair with mock game data (see `scripting-data-binding.md`) to emulate the game s
 - The game (or Player) serves a Chrome DevTools endpoint when the integration enables the debugger (conventional port 9444).
   Connect from Google Chrome; every View is a target.
   The same endpoint is what the `game_*` MCP tools speak CDP to.
-- Panel support grows per release and "anything not mentioned is not yet supported": Elements, Console, and Sources (JS debugging) are solid on desktop; the Performance tab is partial; the Network tab is partial; Data Binding tabs and the Models panel exist in newer SDKs only.
-  A 1.x-era game exposes less than the current docs describe.
+- Panel support grows per release and "anything not mentioned is not yet supported": Elements, Console, and Sources (JS debugging) are solid on desktop; the Performance tab is partial (its Performance Monitor since 2.0, data-binding trace events since 2.0); the Network tab is partial; the data-binding panels and the model import tab arrive in 2.2.
+  A game below a panel's release exposes less than the current docs describe.
 - After a page reload or navigation the Sources panel goes stale; refresh the DevTools window.
 - Source maps work only when INLINED in the bundle (the inspector cannot fetch `coui://`).
 - VS Code attaches as a Chrome debugger (`"type": "chrome"`, `"port": 9444`, `content_development/debuggingwithvscode/`).
@@ -35,9 +35,10 @@ Pair with mock game data (see `scripting-data-binding.md`) to emulate the game s
   Mandatory compiler flags in vite-plugin-solid: `omitLastClosingTag: false`, `omitNestedClosingTags: false`, `omitQuotes: false` (Gameface requires strictly valid HTML).
   Coherent's `vite-gameface` plugin fixes hydration markers and empty text nodes.
   The official Solid router is incompatible; Coherent's GamefaceUI component kit provides routing and widgets.
-- **Svelte**: officially supported with Svelte 5 since 2.2.0, where whitespace nodes joined the DOM.
-  On older engines (the reference target's included), fine-grained-reactivity frameworks that index into `childNodes` hit the shared-whitespace-node hazard (whitespace text nodes are absent from `childNodes`, so indices shift against browser expectations): probe carefully before committing to one.
-  (VOLATILE: whether the target is still on the older whitespace regime — a `game_eval` read of `childNodes` over whitespace-separated markup on the running target.)
+- **Svelte**: officially supported with Svelte 5 since 2.2.0, where whitespace nodes joined `childNodes` (the reference target is on that regime), which retires the index shift older engines gave frameworks that count children.
+  The shared-whitespace-node hazard itself stands at 2.2, and fine-grained reactivity is the style that meets it, since it stores whitespace nodes as insertion anchors ([scripting-data-binding.md](scripting-data-binding.md) has what a stored gap does, and which anchors are safe).
+  Probe how a framework builds its anchors before committing to one.
+  (VOLATILE: which whitespace regime the target is on — a `game_eval` read of `childNodes` over whitespace-separated markup on the running target.)
   Known issue: reactive variables directly setting text content of SVG/HTML elements.
 - **Tailwind** (`content_development/tailwindsupport/`): a per-utility compat table exists, but the root causes predict it: color utilities fail (CSS variables inside color functions, and `currentcolor`, are unsupported), `space-*`/`divide-*` fail (`:not()`), the grid category fails (`display: grid`), responsive `sm:`/`md:` prefixes fail (media-query form), `ring-*`/`shadow-*` fail (box-shadow variables).
   Spacing, sizing, flex, transforms, transitions, and gradient utilities work.
@@ -53,8 +54,7 @@ Two rules when using them:
 - Tab order: `HTMLElement.tabIndex` (the property) does not exist; test with `el.hasAttribute('tabindex')`, and sequential Tab focus needs the tabindex polyfill.
 
 Beyond polyfills, Coherent's open-source GameUIComponents library ships restylable game widgets (dropdown, slider, modal, grid, scrollable container, ...) plus an interaction manager (keyboard/gamepad spatial navigation, drag and drop).
-Shadow DOM (1.61+) covers `customElements.define`, `<template>`, `attachShadow`, slots, `:host` (simple selectors), and `::slotted`; `::part` arrives in 1.67.
-(VOLATILE: whether `::part` has reached the target — the `gameface` skill's baseline line.)
+Shadow DOM (1.61+) covers `customElements.define`, `<template>`, `attachShadow`, slots and `:host` (simple selectors); `::slotted` arrives with it and `::part` in 1.67, but from the JS query APIs both are answered wrongly rather than rejected — select a slotted or exposed node by its own class or attribute ([scripting-data-binding.md](scripting-data-binding.md) has what each returns).
 
 ## Linters and type checking
 

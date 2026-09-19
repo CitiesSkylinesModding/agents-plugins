@@ -30622,12 +30622,16 @@ var SUPPORTED_PSEUDOS = new Set([
   ":before",
   ":after",
   "::before",
-  "::after"
+  "::after",
+  ":host"
 ]);
+var ANSWERED_NOT_REJECTED = new Set(["::slotted", "::part", "::selection"]);
+var ARGUMENTLESS_ANSWERED = new Set(["::selection"]);
 var SUPPORTED_SUMMARY = import_common_tags2.oneLine`
   type, class, id and attribute selectors, combinators, \`:first-child\`, \`:last-child\`,
-  \`:only-child\`, \`:nth-child()\`, \`:root\`, \`:hover\`, \`:focus\`, \`:active\`, \`::before\`
-  and \`::after\`
+  \`:only-child\`, \`:nth-child()\`, \`:root\`, \`:hover\`, \`:focus\`, \`:active\`, \`::before\`,
+  \`::after\`, and \`:host\` matched off the element alone rather than from a scoped query, which
+  answers nothing
 `;
 var NTH_CHILD_ARGUMENT = /^\s*(?:[+-]?\d+|even|odd|[+-]?\d*n)\s*$/iu;
 var PSEUDO_TOKEN = /(?<colons>::?)(?<name>[a-z][a-z-]*)(?:\((?<argument>[^()]*)\))?/giu;
@@ -30723,6 +30727,9 @@ function maskLiterals(selector) {
   return LITERAL_SPANS.reduce((masked, span) => masked.replace(span, (literal3) => MASK_FILLER.repeat(literal3.length)), selector);
 }
 function isSupported(key, argument) {
+  if (ANSWERED_NOT_REJECTED.has(key)) {
+    return ARGUMENTLESS_ANSWERED.has(key) || argument != null && argument.trim() != "";
+  }
   if (!SUPPORTED_PSEUDOS.has(key)) {
     return false;
   }
@@ -32503,6 +32510,8 @@ function clickFn(sel, index) {
     cancelable: true,
     view: window,
     button: 0,
+    screenX: cx,
+    screenY: cy,
     clientX: cx,
     clientY: cy
   };
@@ -32606,14 +32615,10 @@ function typeFn(sel, textToType, index, commit) {
       key: ch,
       view: window
     };
-    try {
-      el.dispatchEvent(new KeyboardEvent("keydown", opts));
-    } catch {}
+    sendKey("keydown", ch, opts);
     setValue(current() + ch);
     el.dispatchEvent(new Event("input", { bubbles: true }));
-    try {
-      el.dispatchEvent(new KeyboardEvent("keyup", opts));
-    } catch {}
+    sendKey("keyup", ch, opts);
     typed++;
   }
   el.dispatchEvent(new Event("change", { bubbles: true }));
@@ -32627,6 +32632,38 @@ function typeFn(sel, textToType, index, commit) {
     el.dispatchEvent(event);
   }
   return { found: true, count, typed, value: current() };
+  function sendKey(type, ch, init) {
+    try {
+      const ev = new KeyboardEvent(type, init);
+      force(ev, "key", ch);
+      const legacy = codeForChar(ch);
+      if (legacy) {
+        force(ev, "code", legacy.code);
+        force(ev, "keyCode", legacy.keyCode);
+        force(ev, "which", legacy.keyCode);
+      }
+      el.dispatchEvent(ev);
+    } catch {}
+  }
+  function codeForChar(ch) {
+    const SPACE_KEY_CODE = 32;
+    if (ch == " ") {
+      return { code: "Space", keyCode: SPACE_KEY_CODE };
+    }
+    if (/^[a-zA-Z]$/u.test(ch)) {
+      const upper = ch.toUpperCase();
+      return { code: `Key${upper}`, keyCode: upper.codePointAt(0) ?? 0 };
+    }
+    if (/^[0-9]$/u.test(ch)) {
+      return { code: `Digit${ch}`, keyCode: ch.codePointAt(0) ?? 0 };
+    }
+    return;
+  }
+  function force(ev, prop, value) {
+    try {
+      Object.defineProperty(ev, prop, { get: () => value, configurable: true });
+    } catch {}
+  }
   function current() {
     if (editable) {
       return el.textContent ?? "";
@@ -32661,6 +32698,8 @@ function hoverFn(sel, index) {
     bubbles: true,
     cancelable: true,
     view: window,
+    screenX: cx,
+    screenY: cy,
     clientX: cx,
     clientY: cy
   };

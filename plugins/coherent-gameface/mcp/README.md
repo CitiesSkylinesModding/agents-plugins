@@ -148,10 +148,11 @@ Or in `.vscode/mcp.json` (note the `servers` key, not `mcpServers`):
 
 > [!IMPORTANT]
 > **Input is done via DOM events, not CDP `Input`.** Gameface accepts `Input.dispatchMouseEvent` /
-> `dispatchKeyEvent` but never delivers them to the UI. So `game_click`, `game_fill`, `game_type`,
-> `game_key`, and `game_hover` dispatch real DOM events in the page. These reach the UI's own JS
-> handlers, but not any input the game routes at the native/engine level (e.g. Escape-to-close is
-> often handled natively and will not respond to a dispatched key).
+> `dispatchKeyEvent` but never delivers them to the UI — the mouse command measured on Cohtml 1.64
+> and 2.2, the key and text ones on 2.2, with a 3.x Player untested. So `game_click`, `game_fill`,
+> `game_type`, `game_key`, and `game_hover` dispatch real DOM events in the page. These reach the
+> UI's own JS handlers, but not any input the game routes at the native/engine level (e.g.
+> Escape-to-close is often handled natively and will not respond to a dispatched key).
 
 ### JS debugger tools
 

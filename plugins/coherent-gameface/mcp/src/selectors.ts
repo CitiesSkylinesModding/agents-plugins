@@ -44,7 +44,10 @@ const SELECTOR_TAIL = /\) in \w+!/gu;
  * The pseudo-classes and pseudo-elements the JS query APIs (`querySelector*`, `closest`,
  * `matches`) are verified to answer.
  * The pseudo-elements match zero elements rather than throwing, which is why they belong here.
- * Verified live against Cohtml 1.64.0.7.
+ * Membership is answering CORRECTLY, not merely answering: `:host` earns its place by matching a
+ * shadow host and nothing else, while everything in ANSWERED_NOT_REJECTED is answered and stays
+ * out.
+ * Verified live against Cohtml 2.2.1.3.
  * Stylesheet selector support is a different, wider fact family and must not be read off this set.
  */
 export const SUPPORTED_PSEUDOS: ReadonlySet<string> = new Set([
@@ -59,8 +62,28 @@ export const SUPPORTED_PSEUDOS: ReadonlySet<string> = new Set([
   ':before',
   ':after',
   '::before',
-  '::after'
+  '::after',
+  ':host'
 ]);
+
+/**
+ * The constructs the engine answers but answers WRONGLY, which is why they are in neither set above
+ * nor in the summary: `::slotted(x)` and `::selection` both degenerate to the compound they trail,
+ * matching every element it selects, and `::part(x)` matches nothing at all, even against a real
+ * `part="x"` node.
+ * They are tracked because a rejection can never be their doing, so the diagnosis must not offer
+ * one as the suspect; a caller reaching for any of them needs the skills' warning, not this
+ * message.
+ * Verified live against Cohtml 2.2.1.3.
+ */
+const ANSWERED_NOT_REJECTED: ReadonlySet<string> = new Set(['::slotted', '::part', '::selection']);
+
+/**
+ * Which of those the engine answers with no argument at all.
+ * `::slotted` and `::part` are rejected bare and empty, so only a non-empty argument clears them;
+ * `::selection` takes none and is answered either way.
+ */
+const ARGUMENTLESS_ANSWERED: ReadonlySet<string> = new Set(['::selection']);
 
 /**
  * The same support, as the fallback message spells it out for a caller with no skill loaded.
@@ -72,16 +95,16 @@ export const SUPPORTED_PSEUDOS: ReadonlySet<string> = new Set([
  */
 export const SUPPORTED_SUMMARY = oneLine`
   type, class, id and attribute selectors, combinators, \`:first-child\`, \`:last-child\`,
-  \`:only-child\`, \`:nth-child()\`, \`:root\`, \`:hover\`, \`:focus\`, \`:active\`, \`::before\`
-  and \`::after\`
+  \`:only-child\`, \`:nth-child()\`, \`:root\`, \`:hover\`, \`:focus\`, \`:active\`, \`::before\`,
+  \`::after\`, and \`:host\` matched off the element alone rather than from a scoped query, which
+  answers nothing
 `;
 
 /**
  * What `:nth-child()` accepts: an integer, `even`/`odd`, or a bare `an` step.
  * An `an+b` offset throws exactly like an unsupported pseudo-class, so the token being whitelisted
  * is not enough to clear it.
- * The forms probed live are `2`, `even`, `odd`, `2n` and `n`, against `n+2` and `-n+3`; the rest of
- * the rule is read off those, so a re-probe starts by widening that list.
+ * Every shape this pattern rules on was probed live; the catalogue holds the roster.
  */
 const NTH_CHILD_ARGUMENT = /^\s*(?:[+-]?\d+|even|odd|[+-]?\d*n)\s*$/iu;
 
@@ -124,7 +147,10 @@ const MASK_FILLER = '#';
 const SCAN_PATTERN = scanPattern();
 
 /**
- * The answer both selector-list shorthands get: the engine has no list to distribute over.
+ * The answer both selector-list shorthands get.
+ * A comma-separated list does parse, but the engine walks it branch by branch: the results come
+ * back in branch order rather than document order, and an element matching two branches comes back
+ * once per branch, so the caller merges rather than the engine.
  */
 const BRANCH_PER_QUERY = `run one query per branch of the list and merge the results.`;
 
@@ -319,6 +345,13 @@ function maskLiterals(selector: string): string {
  * Whether the engine is verified to answer this token, arguments included.
  */
 function isSupported(key: string, argument: string | undefined): boolean {
+  // Cleared for the reason ANSWERED_NOT_REJECTED's own docblock gives, but only with an argument
+  // where the construct takes one: `::part(x)` is answered while the bare `::part` and the empty
+  // `::part()` are rejected, so those stay suspects.
+  if (ANSWERED_NOT_REJECTED.has(key)) {
+    return ARGUMENTLESS_ANSWERED.has(key) || (argument != null && argument.trim() != '');
+  }
+
   if (!SUPPORTED_PSEUDOS.has(key)) {
     return false;
   }

@@ -9,7 +9,7 @@ This skill records the procedure for the `game_*` tools: the facts the tool sche
 Facts that may be game-specific are labeled; the reference target is Cities: Skylines II (CS2).
 For what the engine itself supports (layout, events, missing platform APIs), load the `gameface` skill; this one stays operational.
 
-Verified against Cohtml 1.64.0.7.
+Verified against Cohtml 2.2.1.3.
 A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## Session start and triage
@@ -35,7 +35,9 @@ Narrow with `game_query`, then read the one element you settled on with `game_do
 For a predicate no selector can express here (computed state, or picking a parent by what its children are, since `:has()` throws), scan manually from `game_eval`: `[...document.querySelectorAll('button')].find(el => ...)`, then tag the node with `el.setAttribute('data-probe', '1')` and target `[data-probe]` when you need a unique selector, removing it after.
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
 (VOLATILE: whether each of the three is still absent — a `game_eval` presence probe of each member against the running target.)
-The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; treat anything in neither list as untested rather than as supported.
+The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before`, `::after` and `:host` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked`, `:disabled`, `:focus-within`, `:focus-visible`, `:target`, `:lang()`, `:link`, `:visited` and `::placeholder` are verified to throw; treat anything in neither list as untested rather than as supported.
+`::slotted()`, `::part()` and `::selection` do neither — the engine answers them wrongly rather than throwing, so nothing surfaces to tell you — and a slotted or exposed node is reached by its own class or attribute instead (`::selection` styles selected text and has no query use at all).
+`:host` answers off the element rather than off the shadow root's scope, so `hostEl.matches(':host')` is what identifies a shadow host, while the standard `root.querySelectorAll(':host')` returns nothing and reads exactly like an absent host.
 `:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`); an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
 (VOLATILE: which side of those two lists each construct falls on, and the `:nth-child()` argument forms — a `game_eval` `document.querySelector` probe of each construct against the running target.)
 Every selector-taking tool names the construct it suspects and a rewrite when it hits the rejection, `game_eval` and `game_debug_evaluate` included, falling back to the supported set when it can pin no construct: act on what it names rather than retrying the selector.
@@ -60,6 +62,7 @@ A dispatched key reaches the UI's JS `onKeyDown` handlers, but not any input the
 Games commonly route global navigation and hotkeys (Escape/back, closing a menu or settings screen, tool cancel) through the host's own input system rather than the DOM, so a dispatched key such as `Escape` fires page listeners yet has no effect on that native handling; test per application before relying on a key doing more than reaching a DOM handler.
 The result's `preventDefault` flag is a hint, not proof: confirm the observable effect you care about, not the dispatch.
 Do not hand-roll a `KeyboardEvent` in `game_eval` and expect `.key` to read back: Cohtml derives `key` from the event's `keyCode` and ignores the constructor's `key`, so a handler sees the wrong key unless you `Object.defineProperty` it; `game_key` already forces `key`/`code`/`keyCode`/`which` on every event, so reach for it instead of rolling your own.
+A hand-rolled `MouseEvent` has the matching trap, which bites when you need a point rather than an element's centre (a slider track, a canvas, a drag): the constructor ignores `clientX`/`clientY` and fills all four coordinates from `screenX`/`screenY`, so carry the point in the screen pair or the handler reads `0, 0` and nothing errors.
 When a key is handled natively and has no DOM path, do not try to fake it: invoke the action the UI's own JS runs for that key instead.
 If the application drives its UI through Gameface's data-binding bridge, that action is usually a binding you can call from `game_eval` (`engine.trigger('<group>.<name>', ...)` or `engine.call`), for example the binding a screen uses to close or navigate.
 Binding names are per-application; discover them by searching the UI's JS bundles or the application's source, and note there is no JS seam to simulate a raw key/input action or inject a trusted engine key event.

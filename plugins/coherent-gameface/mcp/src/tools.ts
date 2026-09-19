@@ -1387,12 +1387,14 @@ function queryFn(args: QueryArgs): QueryResult | { error: string } {
 }
 
 /**
- * Gameface ACCEPTS CDP Input.dispatchMouseEvent but does NOT route it into the Cohtml DOM event
- * system (verified: handlers never fire). So we click by dispatching real, bubbling DOM events on
- * the element, which the UI's delegated event listeners pick up.
+ * Gameface ACCEPTS CDP Input commands but does NOT route them into the Cohtml DOM event system:
+ * each answers with an empty result and no error, and no handler fires. So we click by dispatching
+ * real, bubbling DOM events on the element, which the UI's delegated event listeners pick up.
+ * Measured for dispatchMouseEvent on Cohtml 1.64, and for dispatchMouseEvent, dispatchKeyEvent and
+ * insertText on 2.2; the rest of the domain is untested.
  * Note: `HTMLElement.click()` does not exist in Cohtml either.
  */
-function clickFn(sel: string, index: number): ClickResult {
+export function clickFn(sel: string, index: number): ClickResult {
   const nodes = document.querySelectorAll(sel);
 
   if (nodes.length == 0) {
@@ -1418,6 +1420,12 @@ function clickFn(sel: string, index: number): ClickResult {
     // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
     view: window,
     button: 0,
+    // The engine's MouseEvent constructor ignores clientX/clientY and fills all four coordinates
+    // from screenX/screenY, so a handler reading event.clientX sees 0 unless the screen pair
+    // carries the point. Both are set, and kept equal, since the view has no screen offset of its
+    // own and a browser reading this code should see the coordinates it expects.
+    screenX: cx,
+    screenY: cy,
     clientX: cx,
     clientY: cy
   };
@@ -1598,21 +1606,13 @@ export function typeFn(
       view: window
     };
 
-    try {
-      el.dispatchEvent(new KeyboardEvent('keydown', opts));
-    } catch {
-      /* No KeyboardEvent in this engine. */
-    }
+    sendKey('keydown', ch, opts);
 
     setValue(current() + ch);
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
 
-    try {
-      el.dispatchEvent(new KeyboardEvent('keyup', opts));
-    } catch {
-      /* No KeyboardEvent in this engine. */
-    }
+    sendKey('keyup', ch, opts);
 
     typed++;
   }
@@ -1633,6 +1633,64 @@ export function typeFn(
   }
 
   return { found: true, count, typed, value: current() };
+
+  // Dispatches one key event for a typed character. Cohtml's KeyboardEvent derives `key` from the
+  // init `keyCode` and ignores the init `key`, so an event built from the init alone reaches
+  // handlers as key "" with keyCode 0; we force the fields on the instance the way keyFn does, and
+  // a standard engine that honoured the init reads the same values.
+  // Only letters, digits and space get a legacy keyCode, for keyFn's reason: below 48 the codes are
+  // the navigation keys, so deriving one from a punctuation character's code point would dispatch
+  // `!` as PageUp (33) or `-` as Insert (45) into a handler that switches on keyCode.
+  function sendKey(type: string, ch: string, init: KeyboardEventInit): void {
+    try {
+      const ev = new KeyboardEvent(type, init);
+
+      force(ev, 'key', ch);
+
+      const legacy = codeForChar(ch);
+
+      if (legacy) {
+        force(ev, 'code', legacy.code);
+        force(ev, 'keyCode', legacy.keyCode);
+        force(ev, 'which', legacy.keyCode);
+      }
+
+      el.dispatchEvent(ev);
+    } catch {
+      /* No KeyboardEvent in this engine. */
+    }
+  }
+
+  // The `code`/`keyCode` pair for a typed character, or undefined where no legacy code applies.
+  function codeForChar(ch: string): { code: string; keyCode: number } | undefined {
+    const SPACE_KEY_CODE = 32;
+
+    if (ch == ' ') {
+      return { code: 'Space', keyCode: SPACE_KEY_CODE };
+    }
+
+    if (/^[a-zA-Z]$/u.test(ch)) {
+      const upper = ch.toUpperCase();
+
+      return { code: `Key${upper}`, keyCode: upper.codePointAt(0) ?? 0 };
+    }
+
+    if (/^[0-9]$/u.test(ch)) {
+      return { code: `Digit${ch}`, keyCode: ch.codePointAt(0) ?? 0 };
+    }
+
+    return undefined;
+  }
+
+  // A getter, matching keyFn's own force: the engine defines these as prototype accessors, and a
+  // getter shadows one on any engine that refuses a plain data property over it.
+  function force(ev: KeyboardEvent, prop: string, value: string | number): void {
+    try {
+      Object.defineProperty(ev, prop, { get: () => value, configurable: true });
+    } catch {
+      /* Property not redefinable here; keep the constructed value. */
+    }
+  }
 
   function current(): string {
     if (editable) {
@@ -1659,7 +1717,7 @@ export function typeFn(
  * is what delegated handlers key off).
  * `enter`/`leave` do not bubble.
  */
-function hoverFn(sel: string, index: number): HoverResult {
+export function hoverFn(sel: string, index: number): HoverResult {
   const nodes = document.querySelectorAll<HTMLElement>(sel);
 
   if (nodes.length == 0) {
@@ -1685,6 +1743,11 @@ function hoverFn(sel: string, index: number): HoverResult {
     cancelable: true,
     // oxlint-disable-next-line unicorn/prefer-global-this -- Browser page context; MouseEventInit.view wants the Window.
     view: window,
+    // The screen pair carries the point: the engine's MouseEvent constructor ignores clientX and
+    // clientY and fills all four coordinates from it. The client pair is set and kept equal for a
+    // standards-correct host, which reads that one instead.
+    screenX: cx,
+    screenY: cy,
     clientX: cx,
     clientY: cy
   };

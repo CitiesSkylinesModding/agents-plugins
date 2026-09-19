@@ -17,7 +17,7 @@ Gameface has one real layout engine (flexbox) plus two opt-in modes:
 3. **`cohinline`** (non-standard attribute on `<p>`, `content_development/inlinelayout/`).
    Browser-like paragraph layout where text plus inline elements wrap between words.
    Gaps: `text-align: justify` and `text-overflow: ellipsis` inoperative; box decorations (background/border/mask) on child elements unsupported; `aspect-ratio` unsupported inside.
-   `vertical-align` works only here (`baseline`, `text-top`, `middle`, `text-bottom`); all baseline content shares one baseline from the line's largest font; images/SVGs align to the line-box bottom by default.
+   `vertical-align` works only here (`text-top`, `middle`, `text-bottom`, plus `baseline` since 2.2); all baseline content shares one baseline from the line's largest font; images/SVGs align to the line-box bottom by default.
    Vertical centering pattern: set the `<p>` line-height equal to the child height.
 
 ## Default styles that differ from browsers
@@ -44,12 +44,13 @@ Notable property limits (the current tables have the full lists):
 - The `skew(x, y)` two-argument form is unsupported (`skewX`/`skewY` work); `transform-origin` has no z-offset; `mask-image` takes a single PNG with alpha; `clip-path` takes basic shapes only.
 - Wholly unsupported families: `list-style-*`, multi-column `column-*`, table layout properties, CSS counters and `quotes`, `outline`, `will-change`, `scroll-behavior`, `touch-action`, `resize`, `zoom`.
 - `object-fit` does not exist: for cover-fit images use a `<div>` with `background-size: cover`.
-  Flex `gap` (2.2+) on older engines: space children with margins.
+  Flex `gap` and its `row-gap`/`column-gap` longhands lay out since 2.2, with early support in 2.0 behind the `--use-compatibility-yoga` developer option; before that, space children with margins.
   Percentage `width`/`height` on inline images are unsupported: size the container instead.
 
 (VOLATILE: the version gates in the list above, `space-evenly` and flex `gap` among them, and whether the margin workaround is still needed — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
 
-Layout-bug workarounds (undocumented, observed at the reference target's baseline):
+Layout-bug workarounds, undocumented and observed on the reference target at Cohtml 1.64.0.7.
+The `width`/`height` animation still reproduces at 2.2.1.3; the rest went unmeasured there, so try each before believing it on a 2.2 engine.
 (VOLATILE: whether each still reproduces — the layout fixes in the feature changelog at `changelog/feature/`, and a reproduction on the running target measured a frame after it is built, as the next section describes.)
 
 - Animating `width`/`height` from 0 to `auto` fails: transition `max-width`/`max-height` instead.
@@ -171,5 +172,4 @@ The canvas support page is the one table that writes explicit NO statuses.
   Gameface extensions: `cohFastSeek`, `cohGetKeyframeTimestamps()`, `cohPrebufferKeyframe(t)`, and the `cohplaybackstalled`/`cohplaybackresumed` events.
   Transparent video (alpha channel, `yuva420p`) works for overlay and particle effects.
 - Base64 data-URI images work since 1.40.
-- Supported image formats include DDS, TGA, PNG, JPEG, BMP, PSD, ASTC, PKM, KTX; WebP only since 1.67.
-  (VOLATILE: whether WebP has reached the target — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
+- Supported image formats include DDS, TGA, PNG, JPEG, BMP, PSD, ASTC, PKM, KTX; WebP since 1.67, and so on the reference target.

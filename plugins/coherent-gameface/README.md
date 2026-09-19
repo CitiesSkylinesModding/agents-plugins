@@ -44,7 +44,7 @@ It also ships two skills.
 > [!IMPORTANT]
 > **How is this different from Coherent Labs' own Gameface MCP?** Theirs is built and documented
 > around a `Player.exe` from a licensed Gameface SDK, and targets Cohtml 3.1.2+. This one attaches
-> to a **game that is already running**, on whatever engine it froze at ship time, and adds a JS
+> to a **game that is already running**, on whatever engine its last update shipped, and adds a JS
 > debugger, view-reload tracking and wait primitives for a UI that will not hold still.
 > [**Read the full comparison →**](WHY.md)
 

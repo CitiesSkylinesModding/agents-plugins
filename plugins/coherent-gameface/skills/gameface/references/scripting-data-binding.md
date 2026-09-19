@@ -76,15 +76,14 @@ Structural pitfalls:
   For heavily dynamic structure, drive the DOM with a framework and bind leaf values only.
 - `data-bind-for` over collections of primitives is unsupported; wrap items in objects.
 - Identical `{{expressions}}` evaluate once per synchronization (deduplicated).
-- Binding over shadow-DOM-containing subtrees needs `attachShadow({clonable: true})` (2.2+).
-  (VOLATILE: whether the target has reached 2.2 — the `gameface` skill's baseline line.)
+- Binding over shadow-DOM-containing subtrees needs `attachShadow({clonable: true})`, present since 2.2 and so on the reference target.
 
 ## Developing without the game (mock data)
 
 `content_development/mockgamedata/`: create the models the game would provide with `engine.createJSModel`, then `engine.mockEvent(name, handler)` / `engine.mockCall(name, handler)` register mock handlers that fire only when no real game handler exists, so the same bundle runs in the Player and in the game.
 Availability depends on the game's bundled cohtml.js (CS2's lacks both); probe before relying on them.
 Mocked call returns representing bound C++ types need `__Type`.
-The DevTools Data Binding Models panel (newer SDKs) exports and imports model snapshots as JSON.
+The DevTools Data Binding Models panel (2.2+) exports and imports model snapshots as JSON.
 
 ## Simulating input from JS
 
@@ -94,22 +93,33 @@ Dispatch real bubbling DOM events; a UI framework's delegated handlers receive t
 - `PointerEvent` and `InputEvent` constructors are missing: dispatch `pointer*` names as `MouseEvent`, and `new Event('input', {bubbles: true})` for input events.
   (VOLATILE: whether `HTMLElement.click()`, `PointerEvent` and `InputEvent` are still missing — a `game_eval` presence probe of each against the running target.)
 - `KeyboardEvent` and `MouseEvent` constructors exist, as does the native `HTMLInputElement.value` setter (set value natively, then dispatch `input`).
+- The `MouseEvent` constructor ignores `clientX`/`clientY` and fills all four coordinates from `screenX`/`screenY`, so an event built with the client pair alone reaches handlers reading `0, 0`: set `screenX`/`screenY` to the point you mean.
+  (VOLATILE: whether the constructor still reads the screen pair only — a `game_eval` dispatch carrying each pair against the running target.)
 - Real input reaches the page only when the game forwards it; hover state and `mouseenter/over/leave/out` update exclusively on game-fed mouse-move/scroll events.
 
 ## DOM and JS quirks
 
 - Element lookup APIs: `document.evaluate` (XPath), `createTreeWalker`, and `innerText` do not exist, and `document.title` is undefined; scan `querySelectorAll` results and filter on `textContent` instead.
   (VOLATILE: whether each of the four is still absent — a `game_eval` presence probe of each member against the running target.)
-  The JS query APIs (`querySelector*`, `closest`, `matches`) answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before` and `::after` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked` and `:disabled` are verified to throw; anything in neither list is untested rather than supported.
-  `:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`) there; an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
+  The JS query APIs (`querySelector*`, `closest`, `matches`) answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before`, `::after` and `:host` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked`, `:disabled`, `:focus-within`, `:focus-visible`, `:target`, `:lang()`, `:link`, `:visited` and `::placeholder` are verified to throw; anything in neither list is untested rather than supported.
+  `:host` answers off the element, not off the shadow root's scope: `hostEl.matches(':host')` identifies a shadow host, while the standard `root.querySelectorAll(':host')` returns nothing.
+  `::slotted()`, `::part()` and `::selection` are answered wrongly rather than thrown on: `::slotted(x)` and `::selection` match every element the compound they trail selects, and `::part(x)` matches nothing even against a real `part="x"` node.
+  Reach a slotted or exposed node by its own class or attribute instead; `::selection` styles selected text and has no query use, so a match from it is meaningless whatever it returns.
+  (VOLATILE: whether the three are still answered wrongly — a `game_eval` comparing each against the set it should match on the running target, since an engine that fixed one would answer it correctly rather than start throwing.)
+  `:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`); an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
   (VOLATILE: which side of those two lists each construct falls on, and the `:nth-child()` argument forms — a `game_eval` `document.querySelector` probe of each construct against the running target.)
+  A comma-separated selector list parses, but the engine walks it branch by branch: `querySelectorAll` returns each branch's matches in turn rather than in document order, an element matching two branches comes back once per branch, and `querySelector` answers with the first branch's first match (verified on the reference target).
   Stylesheet selector support is a separate matter, with its own unsupported set.
 - `event.target` and `event.currentTarget` are valid only inside the dispatching call stack; a stored event object has them nulled afterwards.
-- Whitespace text nodes are virtualized through ONE shared internal node, materialized on access (pre-2.2 engines): never store a whitespace node reference, and avoid hardcoded `childNodes[i]` indexing (`innerHTML`-parsed markup shows no whitespace text nodes in `childNodes` at all).
-  From 2.2, whitespace nodes are real DOM nodes (indices shift).
-  (VOLATILE: which of the two regimes the target is on — a `game_eval` read of `childNodes` over whitespace-separated markup on the running target.)
+- Whitespace text nodes occupy `childNodes` since 2.2, from the page-load parser, `innerHTML` and `<template>` content alike, so counts and indices read as a browser's.
+  Every gap in the document is ONE shared node the engine materializes on access, so a gap is not an identity and cannot be located by one: address a gap only as an index into its parent's `childNodes`, read at the moment you need it, and build insertion anchors from elements, comment nodes or `createTextNode`, which all give real distinct nodes.
+  A write through a stored gap reaches every other gap in the page and outlives the call, and its `nodeValue` reads `" "` whatever the source held.
+  Pre-2.2 engines keep whitespace out of `childNodes` altogether, so indexing built against browser counts lands one node off per gap there.
+  (VOLATILE: whether the gaps are still one shared node, and whether they occupy `childNodes` — a `game_eval` over whitespace-separated markup on the running target, comparing two gaps for identity and reading each one's `nodeValue`. A gap's `data`/`length` carry whatever last wrote through the shared node, so they settle nothing.)
 - `parentNode`/`parentElement` are not guaranteed for detached, unreferenced nodes.
-- `getElementsByTagName/ClassName` return live `HTMLCollection`s only since 1.52.1.
+- A `<style>` element exposes no `sheet` property: find its stylesheet by `ownerNode` in `document.styleSheets`, which holds it as soon as `appendChild` returns.
+  Its `cssRules` gives a correct `length` but every index reads back `undefined` and there is no `item()`, so a rule count is all a script learns about what the parser kept (verified on the reference target).
+- `getElementsByTagName/ClassName` return live `HTMLCollection`s only since 1.52.1, and only while the searched root is in the document: a collection taken from a detached subtree stays frozen until that root is attached, then tracks normally (verified on the reference target), so re-query after building a fragment rather than reading the collection while it is still detached.
 - `window.onerror` receives a single event object (the standard 5-argument signature is not used), on V8 platforms only.
 - `DOMContentLoaded` exists since 1.27; prefer `load` (which also waits for fonts).
 - `document.createComment` and comments parsed via `innerHTML` produce real comment nodes; whether the page-load HTML parser keeps source comments is unverified, so keep framework comment anchors out of static markup.

@@ -18,14 +18,14 @@ list. It's what each tool was built and documented to point at.
   install and drives the UI you're authoring in it. The README calls the SDK a hard prerequisite,
   and the tools assume Cohtml 3.1.2+ behaviour throughout.
 - **Ours is game-shaped.** It attaches to a **game that's already running**, shipped and retail and
-  most likely someone else's, then drives the UI on screen right now, on whatever engine that game
-  froze at ship time.
+  most likely someone else's, then drives the UI on screen right now, on whatever engine that
+  game's last update shipped.
 
 To be fair about it: their `connect_browser` will technically attach to a retail game. It takes a
 host and a port, and the guard only checks that the page reports `cohtml`. What it hasn't been
-built or tested for is what it finds once it gets there, which is a 1.x engine, `nodeId` addressing
-on a DOM domain their own README documents as partly broken, and an interaction layer resting on
-CDP input.
+built or tested for is what it finds once it gets there, which is an engine behind the one they
+target, `nodeId` addressing on a DOM domain their own README documents as partly broken, and an
+interaction layer resting on CDP input.
 
 ## The short version
 
@@ -34,7 +34,7 @@ CDP input.
 | **What it connects to** | Any reachable Gameface CDP endpoint: a retail game, a dev build, a Player | A `Player.exe` it launches, or a running Player it attaches to |
 | **Needs the Gameface SDK?** | **No** | **Yes.** Their README states it cannot ship one |
 | **Needs a Gameface licence?** | **No** | Yes, in practice |
-| **Engine versions** | Any. Field-verified down to **Cohtml 1.64** (on Cities: Skylines II) | Targets **Cohtml 3.1.2+** |
+| **Engine versions** | Any. Field-verified on **Cohtml 1.64** and **2.2** (Cities: Skylines II) | Targets **Cohtml 3.1.2+** |
 | **JS debugger** | **Yes.** Breakpoints, conditionals, stepping, frame locals, source search | No |
 | **Waits for the UI to settle** | **Yes.** `game_wait` on a selector, a predicate, or a view reload | Navigation only |
 | **Survives a UI reload** | **Yes.** Reload tracking, race-free `sinceReloads` | Not tracked |
@@ -61,11 +61,12 @@ A modder has none of it. No SDK, no licence, and the UI you care about only exis
 that's already running. Ours finds that game's CDP endpoint, resolves its page target, and starts
 driving, with nothing installed but Node.
 
-### Work against an engine from 2021
+### Work against the engine a shipped game actually runs
 
-A game freezes its Cohtml version at ship time, and then it stays frozen. Cities: Skylines II, our
-reference target, runs 1.64.0.7, while the current Gameface docs describe a 3.x release. Their
-tooling and their documentation corpus are built for 3.x, and say so.
+A game's Cohtml moves only when the game itself updates, so it trails the SDK by months or years,
+then jumps. Cities: Skylines II, our reference target, runs 2.2.1.3 as of game version 1.6.2f1,
+while the current Gameface docs describe a 3.x release. Their tooling and their documentation
+corpus are built for 3.x, and say so.
 
 We treat that gap as the core problem rather than a footnote. The `gameface` skill ships a
 [version-gating reference](skills/gameface/references/version-gating.md) with a lookup procedure, a
@@ -157,7 +158,7 @@ Credit where it's due. Four things their server has that ours doesn't:
 - **A large documentation corpus.** Roughly 6,400 lines distilled from the Gameface docs,
   searchable, exposed as MCP resources. Ours is a smaller curated set plus a live docs extractor,
   which is a deliberate trade of density for freshness: their corpus describes 3.x with no version
-  gating anywhere, and would mislead badly against a 1.x game.
+  gating anywhere, and would mislead badly against a game on an older engine.
 
 ## Which should you use?
 
@@ -167,7 +168,7 @@ Credit where it's due. Four things their server has that ours doesn't:
   designed for exactly that, and its assertions and performance tooling are real advantages. Ours
   still works, since you can point it at any CDP endpoint including the Player's, and it adds the
   debugger and the wait primitives. Worth knowing that our input and `:hover` findings were
-  established on 1.64 and aren't gated for 3.x yet.
+  established on 1.64, re-probed on 2.2, and aren't gated for 3.x yet.
 - **Both** is fine. They register under different names and don't conflict.
 
 ## Provenance
