@@ -575,10 +575,7 @@ grammar does not reach it.
 
 `em.SetComponentData(e, value)` fails with `method EntityManager.SetComponentData/2 not found`:
 `Invoker.FindMethods` drops generic definitions, so a generic method called without its type
-arguments reads as absent rather than as generic. Recovery costs one retry adding `<T>`. The `eval` tool description and the
-`unity-driving` skill both teach this exact failing form for persisting a component copy, and the
-skill's "method not found usually means wrong arity or wrong declaring type" sends the reader the
-wrong way. Inferring `T` from an argument whose parameter is plain `T` covers every case seen; short
+arguments reads as absent rather than as generic. Recovery costs one retry adding `<T>`. Inferring `T` from an argument whose parameter is plain `T` covers every case seen; short
 of that, a miss that finds a generic definition should say it wants type arguments, which is cheap.
 
 ### What a wrong type or member name reports
