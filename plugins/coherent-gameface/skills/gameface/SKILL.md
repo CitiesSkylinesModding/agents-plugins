@@ -86,6 +86,8 @@ JS and DOM:
 - `HTMLElement.click()` does not exist, and `PointerEvent`/`InputEvent` constructors are missing.
   (VOLATILE: whether each of the three is still missing — a `game_eval` presence probe of each against the running target.)
   Simulate input by dispatching bubbling `MouseEvent`, `KeyboardEvent`, and `Event('input')` events.
+- `CSS.escape` does not exist: select by a class name through the attribute form `[class~='<name>']`.
+  (VOLATILE: whether `CSS.escape` is still missing — a `game_eval` presence probe against the running target.)
 
 ## Looking things up
 
