@@ -129,4 +129,13 @@ public sealed class EvalParserConstructTests {
 
     Assert.Contains("unsupported: await", error.Message);
   }
+
+  [Theory]
+  [InlineData("Foo.Bar(ref a)", "unsupported: ref argument")]
+  [InlineData("Foo.Bar(in a)", "unsupported: in argument")]
+  public void RejectedArgumentModesNameTheirKeyword(string code, string expected) {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse(code));
+
+    Assert.Contains(expected, error.Message);
+  }
 }

@@ -375,7 +375,10 @@ public static class EvalParser {
     }
 
     if (!argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword)) {
-      throw EvalParser.Unsupported(argument);
+      throw new EvalParseException(
+        $"unsupported: {argument.RefKindKeyword.Text} argument",
+        argument.SpanStart
+      );
     }
 
     switch (argument.Expression) {
