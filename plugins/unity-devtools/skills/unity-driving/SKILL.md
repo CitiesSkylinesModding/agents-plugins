@@ -59,15 +59,15 @@ An entity you WRITE is never resolved: a component field, a buffer `set`, and ev
 
 `eval` runs a C# statement sequence on the game's main thread, like an IDE debugger: `var` declarations, expression statements, and assignments; the final expression's value is the result (its trailing semicolon is optional).
 Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
-Generic methods take explicit type arguments: `em.GetComponentData<MyGame.Citizens.HouseholdMember>(entity(123, 1))`.
+Generic methods take explicit type arguments: `em.GetComponentData<MyGame.Movement.Speed>(entity(123, 1))`.
 Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.NameSystem)).SetCustomName(entity(123, 1), "New Name")`.
-Structs build with initializer syntax (`new MyGame.Citizens.HouseholdMember { m_Household = h }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
+Structs build with initializer syntax (`new MyGame.Movement.Speed { m_Value = 5f }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData<MyGame.Movement.Speed>(entity(...), copy)`.
 `out var x` declares a local the call writes; later statements can read it: `MyGame.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`.
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 A bulk read is `ecs_query` for the entity list, then one `eval` per batch of entities closing on a single interpolated final expression.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
-Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity or wrong declaring type, and `find_types` with `members` settles both.
+Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity, wrong declaring type, or a generic method called without its type arguments; `find_types` with `members` settles the first two.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
 ## Seeing the game

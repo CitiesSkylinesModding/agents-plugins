@@ -39,7 +39,7 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     Struct writes follow C# lvalue semantics: chained writes through object fields and array
     elements persist; a struct temporary returned by a method or property is rejected; a component
     fetched into a `var` local stays a client-side copy, so persist it with
-    em.SetComponentData(entity(...), copy).
+    em.SetComponentData<ComponentType>(entity(...), copy).
     The whole sequence runs in one suspend window; combine with the suspend tool for consistency
     across several eval calls.
     """
