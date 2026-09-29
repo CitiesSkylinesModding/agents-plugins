@@ -33,7 +33,7 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 
 ## Names and types
 
-Every type parameter wants a fully qualified name (`MyGame.Citizens.Citizen`, not `Citizen`).
+Every type parameter wants a fully qualified name (`MyGame.Movement.Speed`, not `Speed`).
 `find_types` answers naming from either end: `search` turns a concept you can only describe (a mechanic, a system's job) into names harvested from the running process, and `fullName` resolves one you already hold.
 Start broad and narrow on `count`: only the first search pays the harvest, which is the longest single freeze these tools cause, so iterating on a pattern afterwards costs only your reading.
 The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools).
@@ -44,7 +44,7 @@ Before writing, run `find_types` with `members`: live field names and types are 
 An entity is `index[:version]`, read identically by every ECS tool: a bare `index` resolves to whatever is live at that index, an explicit `index:version` is verified and fails loudly when stale rather than reading the entity that recycled the index.
 Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
-`label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system, typically the game's name system (`MyGame.UI.NameSystem:GetRenderedLabelName`).
+`label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system, typically the game's name system (`MyGame.UI.LabelSystem:GetLabel`).
 State on an entity carrying Unity's `Prefab` or `Disabled` tag is invisible to `ecs_query`, and so is an entity whose queried enableable component is currently disabled (the engine's own default `EntityQuery` filtering) — but a game's prefab-like entities are excluded only when they actually carry the tag, so try the query before concluding the state is unreachable, and chase what it cannot see by following a reference into the tool below.
 `ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
 Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
@@ -60,9 +60,9 @@ An entity you WRITE is never resolved: a component field, a buffer `set`, and ev
 `eval` runs a C# statement sequence on the game's main thread, like an IDE debugger: `var` declarations, expression statements, and assignments; the final expression's value is the result (its trailing semicolon is optional).
 Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
 Generic methods take explicit type arguments: `em.GetComponentData<MyGame.Movement.Speed>(entity(123, 1))`.
-Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.NameSystem)).SetCustomName(entity(123, 1), "New Name")`.
+Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.LabelSystem)).SetLabel(entity(123, 1), "New Name")`.
 Structs build with initializer syntax (`new MyGame.Movement.Speed { m_Value = 5f }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData<MyGame.Movement.Speed>(entity(...), copy)`.
-`out var x` declares a local the call writes; later statements can read it: `MyGame.Buildings.BuildingUtils.GetAddress(em, e, out var road, out var number)`.
+`out var x` declares a local the call writes; later statements can read it: `MyGame.Navigation.PathUtils.TryGetEndpoints(em, e, out var start, out var end)`.
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 A bulk read is `ecs_query` for the entity list, then one `eval` per batch of entities closing on a single interpolated final expression.

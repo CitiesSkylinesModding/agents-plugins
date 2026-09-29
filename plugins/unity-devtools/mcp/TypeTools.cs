@@ -41,7 +41,7 @@ public sealed class TypeTools(UnitySession session) {
   public FindTypesResult FindTypes(
     [Description(
       """
-      Exact fully-qualified name, case-insensitive (e.g. MyGame.Citizens.Citizen): one cheap lookup,
+      Exact fully-qualified name, case-insensitive (e.g. MyGame.Movement.Speed): one cheap lookup,
       for a name you already hold rather than one you are composing.
       A name a search returned is already in this form and pastes straight in.
       """

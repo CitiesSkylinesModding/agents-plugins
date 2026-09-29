@@ -11,16 +11,16 @@ public sealed class EvalParserConstructTests {
   [Fact]
   public void ParsesNewWithArgsAndInitializers() {
     var expr = Assert.IsType<NewExpr>(
-      EvalParserMemberCallTests.ParseSingle("new Game.Citizens.HouseholdMember { m_Household = h }")
+      EvalParserMemberCallTests.ParseSingle("new MyGame.Movement.Speed { m_Value = v }")
     );
 
-    Assert.Equal("Game.Citizens.HouseholdMember", expr.TypeName);
+    Assert.Equal("MyGame.Movement.Speed", expr.TypeName);
     Assert.Empty(expr.Args);
 
     var init = Assert.Single(expr.Initializers);
 
-    Assert.Equal("m_Household", init.Name);
-    Assert.Equal("h", Assert.IsType<NameExpr>(init.Value).Name);
+    Assert.Equal("m_Value", init.Name);
+    Assert.Equal("v", Assert.IsType<NameExpr>(init.Value).Name);
   }
 
   [Fact]
@@ -37,10 +37,10 @@ public sealed class EvalParserConstructTests {
   [Fact]
   public void ParsesACast() {
     var cast = Assert.IsType<CastExpr>(
-      EvalParserMemberCallTests.ParseSingle("(Game.Simulation.Season) 2")
+      EvalParserMemberCallTests.ParseSingle("(MyGame.Weather.Season) 2")
     );
 
-    Assert.Equal("Game.Simulation.Season", cast.TypeName);
+    Assert.Equal("MyGame.Weather.Season", cast.TypeName);
     Assert.Equal(2, Assert.IsType<LiteralExpr>(cast.Operand).Value);
   }
 
@@ -54,10 +54,10 @@ public sealed class EvalParserConstructTests {
   [Fact]
   public void ParsesTypeof() {
     var expr = Assert.IsType<TypeofExpr>(
-      EvalParserMemberCallTests.ParseSingle("typeof(Game.Citizens.Citizen)")
+      EvalParserMemberCallTests.ParseSingle("typeof(MyGame.Units.Unit)")
     );
 
-    Assert.Equal("Game.Citizens.Citizen", expr.TypeName);
+    Assert.Equal("MyGame.Units.Unit", expr.TypeName);
   }
 
   [Fact]

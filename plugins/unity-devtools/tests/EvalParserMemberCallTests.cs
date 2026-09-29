@@ -56,7 +56,7 @@ public sealed class EvalParserMemberCallTests {
   [Fact]
   public void ParsesADottedMemberChain() {
     var chain = Assert.IsType<MemberExpr>(
-      EvalParserMemberCallTests.ParseSingle("Game.SceneFlow.GameManager.instance")
+      EvalParserMemberCallTests.ParseSingle("MyGame.Core.GameManager.instance")
     );
 
     Assert.Equal("instance", chain.Name);
@@ -65,21 +65,21 @@ public sealed class EvalParserMemberCallTests {
 
     Assert.Equal("GameManager", gameManager.Name);
 
-    var sceneFlow = Assert.IsType<MemberExpr>(gameManager.Target);
+    var core = Assert.IsType<MemberExpr>(gameManager.Target);
 
-    Assert.Equal("SceneFlow", sceneFlow.Name);
-    Assert.Equal("Game", Assert.IsType<NameExpr>(sceneFlow.Target).Name);
+    Assert.Equal("Core", core.Name);
+    Assert.Equal("MyGame", Assert.IsType<NameExpr>(core.Target).Name);
   }
 
   [Fact]
   public void ParsesAGenericMethodCallWithAQualifiedTypeArgument() {
     var call = Assert.IsType<CallExpr>(
-      EvalParserMemberCallTests.ParseSingle("em.GetComponentData<Game.Citizens.HouseholdMember>(e)")
+      EvalParserMemberCallTests.ParseSingle("em.GetComponentData<MyGame.Movement.Speed>(e)")
     );
 
     Assert.Equal("GetComponentData", call.Name);
     Assert.Equal("em", Assert.IsType<NameExpr>(call.Target).Name);
-    Assert.Equal(["Game.Citizens.HouseholdMember"], call.TypeArgs);
+    Assert.Equal(["MyGame.Movement.Speed"], call.TypeArgs);
 
     var arg = Assert.Single(call.Args);
 
