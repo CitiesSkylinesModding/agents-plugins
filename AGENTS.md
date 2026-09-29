@@ -19,7 +19,6 @@ New plugins get a sibling directory and an entry in both marketplace files.
 
 - [mise-en-place](https://mise.jdx.dev): dev tools, env vars and tasks.
 - Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` and `bench/` import; the gameface `mcp/` is the only workspace package, and `bun.lock` lives at the root.
-  The root tsconfig types against Node, since the scripts share its program with the mcp; `bench/` overrides that with its own nested tsconfig typing against Bun, which it runs on exclusively.
 - .NET 10 SDK: the unity-devtools C# projects, grouped by `agents-plugins.slnx` at the repo root.
 
 ## Repository structure
@@ -27,8 +26,8 @@ New plugins get a sibling directory and an entry in both marketplace files.
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
 - `.mcp.json` (root): LOCAL DEV ONLY, wiring both MCP servers for sessions in this repo (gameface from its committed bundle, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
 - `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules, plus the marker spelling and the baseline lines of the gameface skills), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `research-cite-audit.ts` (`mise research:cite-audit`, the `cs2-game-update` sweep's cite step, reads a local decompile so not in CI).
-- `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint and oxfmt ignore `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
-- `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` is the `cs2-modding` version sweep: the `VOLATILE:` markers and the baseline lines are its checklist, and it edits `docs/research/` and `docs/SOURCES.md`, which is why it cannot ship. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it.
+- `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint ignores `.agents/hooks` and oxfmt all of `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
+- `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` is the `cs2-modding` version sweep: the `VOLATILE:` markers and the baseline lines are its checklist, and it edits `docs/research/` and `docs/SOURCES.md`, which is why it cannot ship. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it. `scan-mcp-failures` mines this machine's transcripts for failed gameface and unity calls, and feeds the **Hits** of `docs/ROADMAP.md` entries.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
 - `docs/authoring/`: standing authoring contracts. The ticket template any spec's tickets take, pointed at from `docs/agents/cantrips-loop.md`'s publish-tickets verb; and the `cs2-modding` reference pipeline's own — one shape doc per reference family and the reference-ticket protocol — disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches them. `check-skill-content.ts` enforces both families' prose-line budgets.
 - `docs/SOURCES.md`: every source the `cs2-modding` pipeline may read, what each settles, and how to locate it. Other files point at it; keep it pointing at as few as possible.
@@ -101,7 +100,8 @@ An `AGENTS.md` line that restates a comment, a tool description, or plainly read
 Propose updates whenever you detect drift.
 
 `.scratch/` is working material and gitignored, so nothing tracked may cite a path inside it — a pointer from `docs/` or from a plugin into a scratch file dangles the moment the feature closes and its folder goes. Move the fact into one of the five stores instead.
-For the same reason a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
+The exception is machine-local state a tracked script writes there and recreates when missing, such as the `scan-mcp-failures` ledger: that path cannot dangle.
+Because it is gitignored, a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
 Such a sweep edits what it finds there: a live spec and its tickets are the instructions the next authoring pass runs on, so one still teaching a rule a decision has retired is a defect like any other, and a review that parks it as out of scope leaves the sweep half done.
 A sweep correcting shipped `cs2-modding` prose covers `docs/research/` too: those files are the next authoring pass's inputs, and a retired teaching surviving there walks straight back into the reference.
 Any edit to shipped `cs2-modding` prose also re-points the research files' line cites into it, since a line added or removed shifts every cite below it.

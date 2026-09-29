@@ -5,10 +5,11 @@ import { defineConfig } from 'oxlint';
 // oxlint-disable-next-line import/no-default-export - oxlint interface
 export default defineConfig({
   extends: [all, agnostic],
-  // .agents holds assets synced verbatim from other repos (rules, and the hooks run by
-  // .claude/settings.json); they live outside the tsconfig program, so type-aware rules only see
-  // `error` types there, and fixing them in place would break the next sync.
-  ignorePatterns: ['dist', '.agents'],
+  // .agents/hooks is synced verbatim from another repo and lives outside the tsconfig program, so
+  // type-aware rules only see `error` types there, and fixing them in place would break the next
+  // sync. .claude holds symlinks into linted trees and the full checkouts of agent worktrees, both
+  // outside the program too.
+  ignorePatterns: ['dist', '.agents/hooks', '.claude'],
   rules: {
     // The server is Node/Bun-only (page-context code is kept self-contained by design and cannot
     // import anything anyway), so Node builtins are fine.

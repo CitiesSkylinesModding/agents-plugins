@@ -4,6 +4,12 @@ Planned facets for the `csmodding` marketplace plugins. The two toolkits are gen
 verified against Cities: Skylines II but application-agnostic; `cs2-modding` is knowledge about that
 game specifically.
 
+Every entry opens with a triage line: **Priority** (high, medium, low) and **Cost** as the code reads
+at triage (trivial, cheap, moderate, large), either one `unsure` when nobody has judged it yet. An
+entry that recorded tool failures bear on adds **Hits**: the running count of those failures, dated
+by the last `scan-mcp-failures` run that added to it. Entry prose carries no hit count: **Hits** is the
+only one kept current.
+
 ## coherent-gameface
 
 Drive a running Coherent Gameface UI over CDP; the MCP server (`gameface-devtools-mcp`, published
@@ -12,10 +18,9 @@ planned. When these land they become standard plugin components: `commands/`, `a
 `skills/` directories auto-discovered by the plugin manifest (`skills/` already ships the
 `gameface` and `gameface-driving` skills).
 
-Entries in this section run **best payoff per unit of effort first**. Place a new one by that
-ranking rather than appending it to the end.
-
 ### Standing instructions for clients that load no skill
+
+**Priority:** medium · **Cost:** trivial
 
 Procedure lives in `skills/`, which a standalone npm consumer of
 `@csmodding/gameface-devtools-mcp` never loads: they get the tool descriptions and nothing else.
@@ -24,19 +29,19 @@ carry a standing directive to every client. Two sentences here — reach for `ga
 fails, and act on the construct a rejected selector names — would close the gap as a pointer rather
 than a duplicate, leaving one tier per fact intact.
 
-### Two surfaces a driver reaches for that this engine does not have
+### A `game_eval` promise that never settles
 
-`element.click()` does not exist: `btns[1].click()` throws `TypeError: … is not a function`, so an
-agent driving a button gets a type error rather than a silent no-op, and the working form is the one
-`game_click` already uses internally — `dispatchEvent(new MouseEvent('mousedown' | 'mouseup' |
-'click', { bubbles: true }))`. `CSS.escape` is undefined too, so composing a selector from a hashed
-class name has to fall back to an attribute selector, `[class~='<name>']`. Both cost a round trip
-apiece while driving a developer UI through `game_eval`, and both are one-line facts an agent needs
-*before* it writes the call, which puts them in `skills/gameface-driving/` rather than in a tool
-description. They are also the first two results the probed support matrix below would have
-produced without anyone having to hit them.
+**Priority:** medium · **Cost:** cheap · **Hits:** 3 as of 2026-09-29
+
+With `awaitPromise`, `game_eval` awaits the returned promise, and one that never settles surfaces as `CDP call
+'Runtime.evaluate' timed out after 15000ms` — seen awaiting an XHR against an `assetdb://` URL. The message names the transport rather than the cause, so the agent cannot tell a
+hung engine from its own unresolved promise. Say that the call timed out while awaiting the promise:
+either it never settled or the engine stopped answering. A per-call `timeoutMs` on `game_eval` is the larger half, since `GAMEFACE_CALL_TIMEOUT_MS`
+is server-wide; wait for its hits to grow before building it.
 
 ### Removing a breakpoint the UI is paused at
+
+**Priority:** low · **Cost:** cheap
 
 `game_debug_remove_breakpoint` removes the registration and reports success, saying nothing about a
 pause still standing at that very breakpoint, which leaves the UI frozen with the thing that froze
@@ -45,6 +50,8 @@ result, and route to `game_debug_step`. Worth weighing whether removal should of
 the rest of the debugger surface refuses to do on the agent's behalf.
 
 ### The CDP surface across engine versions
+
+**Priority:** low · **Cost:** unsure
 
 Two questions stand open about the CDP surface, both of them cases where Coherent Labs' server,
 built for 3.1.2+, assumes the opposite of what this plugin measured or never exercised at all.
@@ -74,6 +81,8 @@ own tools, and until then the claim keeps the two versions it carries.
 
 ### Computed styles as a tool
 
+**Priority:** medium · **Cost:** cheap
+
 Reading resolved styles means hand-writing `getComputedStyle` through `game_eval` and knowing to
 wrap it in two nested rAFs, since a computed value settles two to three frames after the change that
 caused it: the `gameface` skill teaches the idiom and nothing enforces it. A tool taking a selector
@@ -81,6 +90,8 @@ and an optional property list would fold that wait in and return the resolved va
 Coherent Labs' `get_computed_styles` does — with the frame discipline theirs has no reason to carry.
 
 ### Gate the documented performance rules, then decide on a lint
+
+**Priority:** low · **Cost:** moderate
 
 Coherent Labs' `perf_lint` walks the rendered tree for six shapes their docs name as expensive:
 `align-items: stretch` on a flex container, flex items with no explicit `flex-basis`,
@@ -100,6 +111,8 @@ markers, and is its own investigation.
 
 ### Value-binding reads
 
+**Priority:** medium · **Cost:** cheap
+
 Reading a C# value binding from the page means hand-writing the subscribe dance through
 `game_eval` — `engine.on("<group>.<name>.update", cb)`, then `engine.trigger("<group>.<name>.subscribe")`,
 then the matching unsubscribe — which the cs2-modding research pipeline ran to reach
@@ -108,6 +121,8 @@ A `game_binding` tool would make it one call: subscribe, capture the first paylo
 return it.
 
 ### Layout assertions
+
+**Priority:** medium · **Cost:** moderate
 
 Verifying a layout costs a screenshot the agent has to eyeball, or a hand-written
 `getBoundingClientRect` comparison through `game_eval`: the first is expensive in context and the
@@ -126,6 +141,8 @@ means updating those links; they resolve silently to the top of the page rather 
 
 ### Expanded values in the debugger tools
 
+**Priority:** medium · **Cost:** moderate
+
 `game_debug_pause_state` and `game_debug_evaluate` render an object local as its bare description
 (`Object`), the defect `game_console` no longer has: `mcp/src/console.ts` owns a page-context
 serializer, a stored value tree and a depth-aware renderer, none of it coupled to console capture.
@@ -135,6 +152,8 @@ width and the DOM-node idiom, so the same object prints differently depending on
 it.
 
 ### A probed support matrix for the engine the game actually ships
+
+**Priority:** low · **Cost:** moderate
 
 `skills/gameface/references/version-gating.md` infers what a game supports from the changelog, then
 sends the agent to probe. Coherent Labs derived theirs the other way round, from a feature-detection
@@ -154,7 +173,20 @@ CSS property and value acceptance by style round-trip, selector acceptance by `q
 try/catch, and JS global and per-class property presence — exhaustive where the catalogue covers
 only what the plugin already states.
 
+### Addressing an input target by expression
+
+**Priority:** low · **Cost:** moderate · **Hits:** 3 as of 2026-09-29
+
+`game_click` and `game_screenshot` take a CSS selector, so an element only a construct the engine
+rejects can reach — `button:has(img[src$="connect.svg"])` — costs a round trip: tag it with a
+`data-*` attribute through `game_eval`, then address the tag. The rejection message already names
+the construct and the workaround, so each recovery costs exactly that extra call. A
+target mode taking a JS expression that returns the element would absorb the whole class rather than
+one selector.
+
 ### Console call sites
+
+**Priority:** low · **Cost:** moderate
 
 Every `consoleAPICalled` event carries a `stackTrace`, but its frame urls arrive empty, so naming
 the file:line a log came from needs a `scriptId → url` lookup. That means the `Debugger` domain
@@ -164,6 +196,8 @@ call site. Revisit as opportunistic resolution: when the debugger is already att
 existing script map answers, render the frame; otherwise print nothing.
 
 ### Localization and custom effects in the engine skill
+
+**Priority:** low · **Cost:** unsure
 
 Coherent Labs' documentation corpus covers two topics `skills/gameface/` does not: localization
 (text expansion, RTL mirroring) and custom effects, which `references/performance.md` names only as
@@ -175,6 +209,8 @@ subset that survives gating against the reference target's engine may be small e
 the existing references rather than earn new ones.
 
 ### Network inspection
+
+**Priority:** low · **Cost:** moderate
 
 Gameface implements the `Network` domain (observe + `getResponseBody` + cookies), but `Fetch` is
 missing (no request interception). Surface request/response observation as tools. Note what already
@@ -189,7 +225,12 @@ Drive a running Unity Mono development build from the outside over the Mono Soft
 read-write, breakpoint/pause debugging (`debug_*`, `advance`) and screen capture, through one
 persistent lazy-attach session.
 
+An entry growing the `eval` grammar amends the contract the plugin's `AGENTS.md` declares FROZEN,
+so it lands only once that decision is lifted.
+
 ### Cross-platform support
+
+**Priority:** low · **Cost:** unsure
 
 Discovery no longer stands in the way: `BeaconListener` joins the multicast group through
 `NetworkInterface`, and the server ships as a platform-agnostic NuGet dotnet tool, so distribution
@@ -203,6 +244,8 @@ Linux-specific and should hold, which is a prediction and not a verification; a 
 Linux to a game under Proton is the only non-Windows evidence there is.
 
 ### A network interface that appears after the server did
+
+**Priority:** medium · **Cost:** moderate
 
 `BeaconListener` enumerates interfaces once, in its constructor, and holds those multicast
 memberships for the process's life. A server started before the VPN connects, before WSL or a
@@ -227,6 +270,8 @@ counter on, so the bound has to be the elapsed time a socket has spent failing w
 timed receive above supplies exactly that clock, which is why the two belong in one change.
 
 ### Wedge detection on wire progress rather than on age
+
+**Priority:** medium · **Cost:** moderate
 
 `UnitySession.Break` decides whether to sever the operation holding the gate by how long it has held
 it, refusing anything younger than `wedgeAfter`. No value there can be right. An operation is any
@@ -264,6 +309,8 @@ straightforward to drive from a test in a way an age is not.
 
 ### Finding a Unity Editor
 
+**Priority:** medium · **Cost:** unsure
+
 A Unity Editor runs the same soft-debugger agent as a player and drives identically once attached.
 Whether it appears on the PlayerConnection beacon is unsettled: nothing recorded says it does not,
 and an Editor's own log prints its host string — `[Debug] 1` included — against 54997 and 34997,
@@ -289,6 +336,8 @@ the Editor. A process-anchored find therefore has to be re-runnable rather than 
 
 ### An `ecs_query` seam in the SDB library
 
+**Priority:** low · **Cost:** cheap
+
 Removing the query-scanning entity lookup left `ecs_query` the sole owner of the whole query
 lifecycle inside the MCP layer: create, `try`/`finally` dispose, paging, and the
 `"<systemTypeFullName>:<method>"` label calling convention, against sibling tools that are
@@ -298,6 +347,8 @@ into `Ecs` would give the next consumer of "list the entities matching these com
 to call.
 
 ### Batch component reads over an entity list
+
+**Priority:** high · **Cost:** moderate
 
 `eval` has no established route to construct an `EntityQuery` — entry 8 of `docs/SOURCES.md`
 records what failed and the one untried route. So the working recipe for "read one component
@@ -314,6 +365,8 @@ of read in one call.
 
 ### A buffer filter on `ecs_query`
 
+**Priority:** low · **Cost:** cheap
+
 `ecs_query` matches on component presence, so it cannot tell an entity whose `DynamicBuffer` holds
 elements from one whose buffer is empty. Settling whether the debug proxy's buffer read pins a
 `bool`-carrying element type needed a non-empty buffer, and finding one meant probing entities one
@@ -323,6 +376,8 @@ each listed entity when a queried type is a buffer, or take a minimum-length fil
 cheaper and answers the same question.
 
 ### Reading a log file off the game machine
+
+**Priority:** medium · **Cost:** cheap
 
 The game's own logs are the primary evidence for a whole class of diagnostics claims — the version
 block, the modding runtime line, the debugger-port lines, the absence of a warning — and no tool
@@ -334,6 +389,8 @@ construction, would serve every such claim directly.
 
 ### A system's query descriptor
 
+**Priority:** low · **Cost:** moderate
+
 `ecs_query` builds its own query and cannot be pointed at one a system already holds, so reading
 what `SerializerSystem.m_Query` or `ClearSystem.m_ClearQuery` actually matches took reflection plus
 `GetEntityQueryDesc()` and then hand-indexed reads of a 19-element `ComponentType[]` — no loops, so
@@ -343,12 +400,16 @@ same read recurs whenever a claim is about what a vanilla system sees.
 
 ### `find_types` reports no statics
 
+**Priority:** medium · **Cost:** trivial
+
 With `members: true` the tool lists instance fields and properties and omits static ones, so
 `Game.Version` came back with empty `fields` and `properties` and the sweep had to guess
 `Game.Version.current` rather than discover it. Statics are exactly where a game keeps its
 singletons and version surfaces, which makes them the members an orienting agent most needs.
 
 ### Reaching a prefab by name
+
+**Priority:** medium · **Cost:** cheap
 
 `ecs_query`'s `label` annotates each listed entity through a managed system's method, but nothing
 filters on what it produces, and no tool takes a prefab name. Reading eight named
@@ -362,6 +423,8 @@ take a name pattern beside the component list.
 
 ### `ecs_query` ANDs its components, with no any and no none
 
+**Priority:** medium · **Cost:** cheap
+
 The tool matches entities carrying ALL the listed types, so the two other shapes the engine's own
 `EntityQuery` vocabulary carries — `WithAny` and `WithNone` — have no expression. In the same sweep
 the post-facility census (`PostFacilityData` or `MailBoxData`) took two queries and a hand-reconciled
@@ -370,13 +433,17 @@ subtraction. An `any` and a `none` list beside `components` makes both one call.
 
 ### Predefined type aliases in `eval`
 
-The grammar accepts fully-qualified names but not the C# aliases, so `string.Join(...)` fails with
+**Priority:** medium · **Cost:** trivial · **Hits:** 5 as of 2026-09-29
+
+The grammar maps the C# aliases in type positions but not as an expression, so `string.Join(...)` fails with
 `parse error: unsupported: predefined type` and wants `System.String.Join(...)`. Agents type the
 alias by reflex, and every occurrence costs a round trip: two separate live-read agents hit it in
-the 1.6.2f1 sweep. An alias table mapping `string`, `int`, `bool` and their siblings to their
-framework types is the whole fix.
+the 1.6.2f1 sweep. A `TranslateExpr` case reusing `TranslateTypeName`'s alias mapping is the
+whole fix.
 
 ### What a failed `eval` reports
+
+**Priority:** medium · **Cost:** cheap · **Hits:** 5 as of 2026-09-29
 
 On failure `eval` reports the failing statement, the in-game exception, and every local evaluated so
 far, verbatim and uncapped. That dump is the tool's best diagnostic and also the one place a result
@@ -393,6 +460,8 @@ mirrors held across it — rather than a slot the caller never used.
 
 ### `eval` cannot cast to an array type
 
+**Priority:** medium · **Cost:** moderate · **Hits:** 4 as of 2026-09-29
+
 `(Game.Net.LabelPosition[])em.Debug.GetComponentBoxed(entity, type)` fails to parse:
 `unsupported: array type`. The workaround is `(System.Array)` plus `GetValue(int)`, which reads the
 elements back but renders each one truncated (`float3 {...}`), so a call returning an array is
@@ -402,6 +471,8 @@ cast grammar — and in `typeof` with it — closes a class of read rather than 
 
 ### `eval` will not bind an enum argument
 
+**Priority:** medium · **Cost:** unsure
+
 `System.Runtime.InteropServices.GCHandle.Alloc(o, System.Runtime.InteropServices.GCHandleType.Pinned)`
 returns `Incorrect number or types of arguments (Parameter 'arguments')`, with `o` already bound to
 a local by a preceding statement. The enum member access itself resolves, so the failure is in
@@ -410,6 +481,8 @@ its underlying integer, or the reverse. It blocked settling a runtime question i
 and left only the field types the game happens to ship as evidence.
 
 ### `eval` picks one overload by shape and stops
+
+**Priority:** high · **Cost:** cheap · **Hits:** 13 as of 2026-09-29
 
 `em.AddComponentData<Unity.Transforms.LocalTransform>(e, value)` fails with `no overload of
 EntityManager.AddComponentData accepts these arguments; tried: AddComponentData(EntityQuery,
@@ -426,11 +499,16 @@ works and round-trips correctly. The message is the worse half — naming an `En
 the caller never mentioned reads as "you passed the wrong thing" rather than "I did not look
 further", so the next move is to doubt the argument instead of splitting the call.
 
-Start at `FindMethods`' filtering rather than at the binder, since the candidate never reaches it.
-This is the same overload-matching seam as the enum-binding entry above; settling them together is
-likely cheaper than either alone.
+The cause is in `EvalInterpreter.BindCall`: a call with explicit type arguments resolves through
+`Invoker.FindMethod`, which returns the first definition of that name and generic arity, and
+instantiates only that one as the sole candidate. Building every such definition and handing them all
+to `SelectOverload` is the fix. Two cases have no workaround: `PrefabSystem.GetPrefab<T>(Entity)` and
+`AssetDatabase.GetAsset<T>(Hash128)` both lose to their first-declared sibling. This is the same overload-matching seam as the enum-binding entry above;
+settling them together is likely cheaper than either alone.
 
 ### `eval` matches no default arguments
+
+**Priority:** high · **Cost:** unsure · **Hits:** 19 as of 2026-09-29
 
 `new Game.Prefabs.PrefabID("ZonePrefab", name)` fails against a constructor whose third parameter is
 `Hash128 hash = default(Hash128)` — legal C#, and the one spelling an agent writes. The error
@@ -438,9 +516,12 @@ compounds it by reporting only the *other* constructor, `(PrefabBase, Hash128)`,
 points at the argument types rather than at the arity, and a session chased the wrong fix for two
 calls before reading the decompiled signature. Binding the omitted parameters to their declared
 defaults is the fix; listing every candidate in the message is the cheaper half and helps the whole
-overload-matching class above.
+overload-matching class above. `em.GetBuffer<T>(e)`, whose `isReadOnly` defaults, is the other
+common miss. Whether SDB exposes a parameter's declared default is what the cost turns on.
 
 ### `eval` cannot build an `EntityQuery`, so there is no aggregate
+
+**Priority:** high · **Cost:** large · **Hits:** 16 as of 2026-09-29
 
 Two independent walls, both hit reaching for `ToComponentDataArray`. User-defined implicit
 conversions are not applied, so `new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp)`
@@ -452,9 +533,12 @@ workaround is to construct the target type by hand,
 creation either, a whole-set field census degrades to one hand-written `GetComponentData` per
 entity: the sweep's 60-carrier pipe census took a script-generated ~11 KB `eval`, the 83-recipe
 re-derivation five ~9 KB ones. Either honour `ref struct` receivers, or — cheaper and it answers the
-same question — let `ecs_query` project a named component field per match.
+same question — let `ecs_query` project a named component field per match. The cost line prices the
+`ref struct` route; the implicit-conversion half alone reads cheaper.
 
 ### `ecs_query`'s `label` is empty for prefab entities
+
+**Priority:** medium · **Cost:** cheap
 
 `label` with `Game.UI.NameSystem:GetRenderedLabelName` returns `""` for every prefab entity, so a
 prefab census comes back as bare indices with nothing to match a name against. Naming 126 prefabs
@@ -464,6 +548,8 @@ that to one call — and it is the same read the prefab-by-name entry above want
 
 ### `eval` cannot read an iterator-backed property
 
+**Priority:** low · **Cost:** moderate
+
 `ProxyAction.bindings` is unreachable: `.Count` fails on the compiler-generated iterator type and
 nothing can enumerate it. The read only completed by falling back to the private `m_Bindings` field
 behind it. Enumerating a returned `IEnumerable` into a rendered list is the general fix; short of
@@ -471,6 +557,8 @@ that, "a private backing field is the escape hatch" is a fact the `unity-driving
 carry, because the failure gives no hint that one exists.
 
 ### The `eval` grammar's type-name surface
+
+**Priority:** medium · **Cost:** moderate · **Hits:** 5 as of 2026-09-29
 
 Two rejections in the same family, both costing a round trip to discover. A *generic* `typeof` with
 a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives `parse error at
@@ -481,7 +569,117 @@ is unreachable through C# `.` syntax, which made every job-attribute check in th
 is the workaround for both, which is the tell that one resolver handles the string form and the
 grammar does not reach it.
 
+### `eval` infers no type arguments
+
+**Priority:** high · **Cost:** moderate · **Hits:** 13 as of 2026-09-29
+
+`em.SetComponentData(e, value)` fails with `method EntityManager.SetComponentData/2 not found`:
+`Invoker.FindMethods` drops generic definitions, so a generic method called without its type
+arguments reads as absent rather than as generic. Recovery costs one retry adding `<T>`. The `eval` tool description and the
+`unity-driving` skill both teach this exact failing form for persisting a component copy, and the
+skill's "method not found usually means wrong arity or wrong declaring type" sends the reader the
+wrong way. Inferring `T` from an argument whose parameter is plain `T` covers every case seen; short
+of that, a miss that finds a generic definition should say it wants type arguments, which is cheap.
+
+### What a wrong type or member name reports
+
+**Priority:** high · **Cost:** cheap · **Hits:** 39 as of 2026-09-29
+
+A wrong type name or namespace gets a message that sends the agent away empty-handed. `type
+'Game.City.CitySystem' not found (names must be fully qualified)` blames qualification on a name that
+was fully qualified, just wrong, and `cannot resolve 'Colossal'` is as misleading on a real namespace.
+A member miss lists the type's instance fields only, so `List.Length` never shows the `Count` it
+wanted. Suggest near matches — types by simple name against `TypeCatalog`, members across fields and
+properties — which saves the `find_types` round trip each recovery spent.
+
+### A null receiver reports "no type for PrimitiveValue"
+
+**Priority:** medium · **Cost:** cheap · **Hits:** 7 as of 2026-09-29
+
+Reading a member off a local that holds null fails with `no type for PrimitiveValue`: the debuggee's
+null arrives as a `PrimitiveValue` with a null payload, which `MirrorTypeOf` does not treat as null.
+Each recovery costs 2–3 calls of bisecting the statement list. Report `cannot read 'isBuiltIn' on null` and name the local.
+
+### `ref` arguments in `eval`
+
+**Priority:** medium · **Cost:** cheap · **Hits:** 8 as of 2026-09-29
+
+`TerrainUtils.SampleHeight(ref hd, pos)` failed with `unsupported: argument`, which now names the
+keyword, and there is no workaround: every recorded hit ended with the agent giving up on the
+call. A `ref` to a local fits the write-back path `out` arguments already take through
+`Invoker.InvokeWithOutArgs`.
+
+### Format clauses in `eval` interpolation
+
+**Priority:** medium · **Cost:** cheap · **Hits:** 8 as of 2026-09-29
+
+`$"{x:F1}"` fails with `unsupported: interpolation alignment/format clause`, deliberately. Agents
+write it by reflex when rendering a result, then drop the clause on retry and read unrounded floats. Invoking `ToString(format)` on the value in the debuggee keeps
+C# semantics.
+
+### `params` expansion in `eval`
+
+**Priority:** medium · **Cost:** moderate · **Hits:** 7 as of 2026-09-29
+
+Overload matching takes a variadic method's array as one argument and array creation is outside the
+grammar, so `CreateEntityQuery(typeof(A), typeof(B))`, `String.Join(",", a, b)` and `Split('\n')`
+are all unreachable, recovered through `ecs_query` or not at all. Packing
+the trailing arguments into the parameter's array type when no exact-arity overload binds is the fix.
+
+### A beacon attach that fails reports a bare socket error
+
+**Priority:** medium · **Cost:** trivial · **Hits:** 9 as of 2026-09-29
+
+An attach through an explicit port wraps its failure with the port and what to do instead; one
+resolved from the beacon surfaces `Connection refused` raw. Wrap it the same way: name the endpoint the beacon advertised, and point at `status`
+and at a stale beacon after a crash.
+
+### Breakpoints in async methods
+
+**Priority:** medium · **Cost:** moderate · **Hits:** 1 as of 2026-09-29
+
+`debug_set_breakpoint` on an `async` method fails with `Cannot set breakpoint on the specified IL
+offset`, since the body lives in a compiler-generated state machine. A session found
+`+<Next>d__12` and its `MoveNext` by hand. Following `AsyncStateMachineAttribute` (and its iterator
+sibling) to `MoveNext` makes the method name the user sees the one that works.
+
+### Smaller `eval` grammar misses
+
+**Priority:** low · **Cost:** cheap · **Hits:** 5 as of 2026-09-29
+
+Three rejections that each cost a retry. `default(T)` has no parse case,
+though the interpreter can already build a default value for any type. A `return` statement is
+rejected without saying the final expression is the result. And an escaped `\"` inside an
+interpolation hole surfaces Roslyn's `Missing close delimiter '}'`, where a hint that the hole takes
+plain quotes would do.
+
+### Extension methods through instance syntax
+
+**Priority:** low · **Cost:** cheap · **Hits:** 3 as of 2026-09-29
+
+`gameMode.IsEditor()` fails with `method GameMode.IsEditor/0 not found`. The static form works
+(`TextureAssetExtensions.AddAsset(db, …)` recovered one such call), but agents mostly abandon the
+call instead. Naming the static form on a miss is the cheap half; resolving extension methods for the
+receiver is the rest.
+
+### `ecs_set_component` writes no vector fields
+
+**Priority:** low · **Cost:** unsure · **Hits:** 1 as of 2026-09-29
+
+`ecs_set_component` rejects a `Unity.Mathematics.float2` field with `unsupported target type`, so
+the write falls back to an `eval` get-modify-set. Worth doing only if the whole
+`Unity.Mathematics` vector family comes in one change.
+
+### A tool exception with an empty message
+
+**Priority:** low · **Cost:** trivial · **Hits:** 1 as of 2026-09-29
+
+`ToolGuard` forwards `ex.Message` as is, so an exception carrying none surfaced as `An error occurred
+invoking 'ecs_get_buffer'.` with nothing to act on. Fall back to the exception's type name.
+
 ### `advance` drops its `after` snippet's failure
+
+**Priority:** low · **Cost:** cheap
 
 `advance` takes care of the window and of what surrounds it: a `before` snippet that ran and then a
 window that failed comes back with the flip named and the after snippet run to undo it. The `after`
@@ -494,6 +692,8 @@ snippet could not do.
 
 ### Watching for a debuggee-side change costs a window per sample
 
+**Priority:** low · **Cost:** moderate
+
 `advance` clamps to 0.1 s and the `eval` grammar has no loop, so waiting on a state the game
 produces means one tool call per sample, each spending a full window whether or not the state
 arrived. Bracketing when `ScreenCapture.CaptureScreenshot` puts its file on disk took four calls and
@@ -503,6 +703,8 @@ collapses the loop into the one place that can run it without a round trip per t
 shape `debug_wait` already has for pauses.
 
 ### Injected in-game helper (exploratory, opt-in)
+
+**Priority:** low · **Cost:** large
 
 The next tier beyond the shipped client-side evaluator (which by design excludes lambdas, LINQ,
 loops, and control flow): compile client-side, load into the debuggee via an
@@ -535,6 +737,8 @@ leak actually bites.
 
 ### A native screen capture beside the engine route
 
+**Priority:** low · **Cost:** large
+
 `screenshot` drives the engine's own `ScreenCapture.CaptureScreenshot`, which is a request only a
 rendered frame fulfils, and everything awkward about the tool follows from that: it has to run the
 game to get its frame, so it spends up to 0.2 s of simulation inside a caller's suspend window,
@@ -564,10 +768,14 @@ session with the game.
 
 ### GameObject/MonoBehaviour tools
 
+**Priority:** unsure · **Cost:** large
+
 The current surface is ECS + expression evaluation; add tools for the classic Unity object model
 (scene hierarchy, GameObject/MonoBehaviour inspection and mutation).
 
 ### Unity on CoreCLR
+
+**Priority:** low · **Cost:** unsure
 
 Unity 6.7 LTS is the last release built on Mono and ships an experimental CoreCLR desktop player;
 6.8 removes Mono. CoreCLR is desktop-only, IL2CPP stays for consoles, mobile and web, and an IL2CPP
@@ -614,6 +822,8 @@ runtime, and no shipped code artifacts.
 
 ### A check for the cites research files make into each other
 
+**Priority:** medium · **Cost:** trivial
+
 `docs/research/README.md` lets a file cite a sibling as `<name>.md:<line>`, and those rot the moment
 the target gains a line above the target — which every authoring pass and every sweep does. The
 1.6.2f1 review found 32 of them landing on blank or out-of-range lines; a sampling reviewer found 6
@@ -623,6 +833,8 @@ It belongs beside `check-skill-content.ts` in `mise check`, where nothing extern
 `research:cite-audit`, which reads a local decompile and so cannot run in CI.
 
 ### Extracting the shipped localization dictionaries
+
+**Priority:** low · **Cost:** cheap
 
 The game's compiled `.loc` assets are the only first-party, version-known source for the vanilla
 localization key set, and decoding them is mechanical: `Locale.cok` is a plain stored zip, and the
@@ -646,12 +858,16 @@ their declared end, so end-of-file is not end-of-data and the decoder has to sto
 
 ### Marker namespace lint
 
+**Priority:** low · **Cost:** cheap
+
 A mechanics file's `VOLATILE:` marker lists the namespaces its names live in, and re-closing that
 list by hand drifted across six files in one review gate. `check-skill-content.ts` can enforce the
 mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
 file's marker. Types named without a path stay the reviewer's job.
 
 ### A source-first sweep of the shipped references
+
+**Priority:** medium · **Cost:** moderate
 
 Four of eight shipped claims sampled in one pass came back contradicted by the first-party source
 they describe: a mod-failure state the player is never shown, an upkeep share the game computes and
@@ -669,6 +885,8 @@ maintainer's time ruling on what comes back. What it buys is the first evidence 
 the corpus, against none today.
 
 ### A second benchmark question set
+
+**Priority:** low · **Cost:** moderate
 
 The first full `bench/` invocation scored 9.81 for the control arm against 10.00 for the treatment
 one, three of its four questions saturating at 10/10 in both: what the skill measurably buys on that

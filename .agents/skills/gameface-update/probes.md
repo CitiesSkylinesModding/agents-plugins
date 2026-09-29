@@ -26,6 +26,7 @@ These settle the whitelist triple: `mcp/src/selectors.ts`, `skills/gameface-driv
 | type, class, id | `'div.a#b'` | `ok` |
 | attribute | `'[class]'` | `ok` |
 | `[attr*=]` | `'[class*="a"]'` | `ok` |
+| `[attr~=]` | `'[class~="a"]'` | `ok` |
 | combinators | `'body > div + div ~ div div'` | `ok` |
 | `:first-child` | `'div:first-child'` | `ok` |
 | `:last-child` | `'div:last-child'` | `ok` |
@@ -88,6 +89,8 @@ All to `game_eval`.
 | `[typeof btoa, typeof atob, typeof navigator.platform]` | `["undefined", "undefined", "undefined"]`; a `"function"` counts only once native as in the `postMessage` row, and a `"string"` platform is the bundle's own assignment unless `'platform' in Navigator.prototype` | `scripting-data-binding.md` missing APIs |
 | `[typeof sessionStorage, typeof URLSearchParams, typeof FormData, typeof File, typeof FileReader, typeof TextEncoder, typeof TextDecoder, typeof indexedDB, typeof document.cookie, typeof requestIdleCallback, typeof setImmediate]` | every one `"undefined"`; a `"function"` counts as present only once `String(fn).includes('[native code]')`, as the `postMessage` row below checks | `scripting-data-binding.md` "Also absent on the reference target"; `skills/gameface/SKILL.md` `sessionStorage` |
 | `['click' in HTMLElement.prototype, typeof PointerEvent, typeof InputEvent]` | `[false, "undefined", "undefined"]`, a `"function"` counting only once native as above | `skills/gameface/SKILL.md` and `scripting-data-binding.md` "Simulating input from JS" |
+| `[typeof CSS, typeof CSS.escape]` | `["function", "undefined"]`: `CSS` is the native Typed OM namespace (`CSS.px`, `CSS.em`…), and an `escape` answering `"function"` counts only once native as in the `postMessage` row | `skills/gameface/SKILL.md` `CSS.escape`; `scripting-data-binding.md` "Also absent on the reference target" |
+| `(() => { const host = document.createElement('div'); host.style.display = 'none'; host.innerHTML = "<i class='a b'></i><i class='a-b'></i>"; document.body.appendChild(host); try { return [host.querySelectorAll("[class~='a']").length, host.querySelectorAll("[class*='a']").length]; } finally { host.remove(); } })()` | `[1, 2]` — `~=` matches whole class tokens, where the substring form also catches `a-b`. `[2, 2]` would mean it degenerated to a substring match | `skills/gameface/SKILL.md` `CSS.escape` (its `[class~='<name>']` fallback); the `[attr~=]` entry of both skills' selector lists |
 | `[typeof [].findLast, typeof structuredClone, typeof Object.groupBy, typeof Array.fromAsync, typeof ''.replaceAll]` | `["undefined", "undefined", "undefined", "undefined", "function"]` — post-9.4 absent, 9.4 present | the V8 ceiling: `version-gating.md` V8 section, `skills/gameface/SKILL.md` |
 | `'attachShadow' in Element.prototype` | `true` | Shadow DOM present (1.61+): `version-gating.md` probes, `tooling-workflow.md` Shadow DOM |
 | `(() => { const host = document.createElement('div'); try { return host.attachShadow({ mode: 'open', clonable: true }).clonable; } catch (error) { return String(error); } })()` | `true` — the option is honoured. What a pre-2.2 engine answers is unprobed, so the plugin's `2.2+` gate rests on its own claim rather than on this row | `scripting-data-binding.md` binding over shadow-DOM subtrees |

@@ -4,5 +4,5 @@
   "compilerOptions": {
     "types": ["bun"]
   },
-  "include": ["*.config.ts", "scripts/*.ts"]
+  "include": ["*.config.ts", "scripts/*.ts", ".agents/skills/*/*.ts"]
 }

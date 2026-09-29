@@ -46,11 +46,11 @@ run = [
   "mise check:skill-content"
 ]
 
-# Three programs, three type environments: the mcp and the root scripts compile against Node, the
-# benchmark against Bun. One tsc run cannot hold them, so each project is checked on its own and a
-# new one stays unchecked until it is named here.
+# Each program carries its own type environment (the shipped mcp against Node, the rest against Bun)
+# and scope. One tsc run cannot hold them, so each project is checked on its own and a new one stays
+# unchecked until it is named here.
 [tasks."check:tsc"]
-description = "Type-checks the server, the root scripts and the benchmark with tsc (read-only)."
+description = "Type-checks every TypeScript project with tsc (read-only)."
 raw = true
 run = [
   "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp",
