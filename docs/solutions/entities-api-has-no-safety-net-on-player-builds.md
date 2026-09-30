@@ -83,8 +83,11 @@ above, reached straight through the gate meant to prevent it -- and reachable fr
 archetype listing itself prints.
 
 So a path taking a type name from outside classifies the storage kind FIRST, off the type's marker
-interfaces, and reads only if that says component (`Ecs.Unfollowable`). The interfaces arrive as the
-transitive closure in one round trip, so a marker reached through a derived interface still counts.
+interfaces, and reads only if that says component. The check sits in the shared read and write path
+(`Ecs.RequireComponentStorage`), ahead of the presence gate, so every component read and write
+inherits it; the buffer path keeps its presence gate alone.
+The interfaces arrive as the transitive closure in one round trip, so a marker reached through a
+derived interface still counts.
 
 A chunk component bounds the rule: it IS a plain component type, so no interface check separates it,
 but the archetype holds it as a distinct `ComponentType` and `HasComponent<T>` answers no on the

@@ -334,34 +334,57 @@ Whatever finds it must also reattach to it: a domain reload — a script compile
 play mode — drops the connection, and the reattach resolves from the beacon, which may not describe
 the Editor. A process-anchored find therefore has to be re-runnable rather than one-shot.
 
-### An `ecs_query` seam in the SDB library
+### Several entities in one `ecs_get_component` call
 
-**Priority:** low · **Cost:** cheap
+**Priority:** medium · **Cost:** moderate
 
-Removing the query-scanning entity lookup left `ecs_query` the sole owner of the whole query
-lifecycle inside the MCP layer: create, `try`/`finally` dispose, paging, and the
-`"<systemTypeFullName>:<method>"` label calling convention, against sibling tools that are
-one-liners over `sdb/`. The layer is meant to hold little logic, and the dispose discipline and
-label convention currently have no home in the library and no integration-test seam. Moving them
-into `Ecs` would give the next consumer of "list the entities matching these components" something
-to call.
+`ecs_query`'s `select` reads component values off every entity a query lists, which served the
+censuses this entry used to record. What it cannot reach is an entity no query sees: `ecs_query`
+excludes entities tagged `Prefab` or `Disabled` and those whose queried enableable component is off,
+and an entity list can come from a buffer's elements or a `follow` hop rather than from a query. A
+multi-entity mode on `ecs_get_component` is the only batch route to those, and it should build on the
+row read `select` added to `Ecs`.
+Shape settled so far: a second parameter per axis (`entities` beside `entity`) rather than silently
+widening the existing one, and an entity-level failure reported as a row rather than failing the
+call. A "rectangle" tool merging this with `ecs_list_components` was rejected: one answers what is on
+an entity, the other what is in a component.
 
-### Batch component reads over an entity list
+### An array-level read route for `select`
 
-**Priority:** high · **Cost:** moderate
+**Priority:** low · **Cost:** moderate
 
-`eval` has no established route to construct an `EntityQuery` — entry 8 of `docs/SOURCES.md`
-records what failed and the one untried route. So the working recipe for "read one component
-off each of N entities" is
-`ecs_query` for the list, then one `eval` per batch of entities with a long interpolated final
-expression — a discovery pass read 55 prefab components in seven such calls, the batch size limited
-by statement count. The exclusions landed in the tool description, and with the recipe in the
-`unity-driving` skill, on 2026-08-10; what remains open is an `ecs_get_component` mode accepting
-several entities in one call, which would beat the recipe outright.
-The 1.6.2f1 live-read sweep hit the same wall from the query side: reading `m_Cost` across all 71
-`DevTreeNodeData` entities was impractical by hand, so the claim stayed a 15-node sample rather than
-a census. An `ecs_query` option projecting a named component field per match would close that class
-of read in one call.
+`select` reads per entity through the generic accessor, one invoke per distinct selected component
+per row plus its guards. `EntityQuery.ToComponentDataArray` would read a whole column in a constant
+number of invokes whatever the row count. It applies only to a component the query filters on, it
+reads every match whatever `limit` lists, and this plugin has never called it: its allocator argument
+has to be settled live, since `ToEntityArray` and `GetComponentTypes` already disagree on theirs on
+the same target. It wants a measured census whose freeze justifies it before it is built.
+
+### `Unity.Entities` stubs in the integration fixture
+
+**Priority:** low · **Cost:** large
+
+No test covers any ECS path: the integration fixture is a Mono console debuggee that cannot carry
+Unity Entities, so `ecs_query`'s row read, the presence gate and the storage-kind gate are all
+verified by hand against a running game. Stub types under the `Unity.Entities` names the library
+reaches — `World`, `EntityManager`, `ComponentType`, `TypeManager`'s flag constants, the generic
+accessors — would give every ECS tool a test seam.
+
+### The `eval` path passes no presence gate
+
+**Priority:** medium · **Cost:** cheap
+
+The ECS tools refuse a component the entity does not carry before any accessor runs. `eval` reaches
+the same accessors without that gate: `em.GetComponentData<T>(e)` is invoked as written. The
+storage-kind half is not open for a buffer element, which the accessor's own generic constraint
+refuses (`cannot be instantiated over`). `entity(index)` builds a client-side value with no
+check against the store's bound, the buffer accessor there lacks the read-only narrowing
+`ecs_get_buffer` applies, and the `eval` description uses the unguarded read as its example.
+`debug_evaluate` and breakpoint conditions share the interpreter, so both reach the same accessors.
+Candidate fixes: a bound check on `entity()` with the version still taken literally, and a disclosure
+in the `eval` description and the `unity-driving` skill. The all-zero answer for an absent component
+was measured through a direct accessor invoke and nothing records it for the `eval` path
+specifically, so the disclosure asserts the structural fact and not the symptom.
 
 ### A buffer filter on `ecs_query`
 
@@ -406,6 +429,17 @@ With `members: true` the tool lists instance fields and properties and omits sta
 `Game.Version` came back with empty `fields` and `properties` and the sweep had to guess
 `Game.Version.current` rather than discover it. Statics are exactly where a game keeps its
 singletons and version surfaces, which makes them the members an orienting agent most needs.
+
+### `find_types` cannot search by what a type implements
+
+**Priority:** low · **Cost:** cheap
+
+`search` matches names, so a type known only by its role is found by guessing. Needing one shared
+and one managed component to verify `ecs_query`'s refusals, a session guessed
+`Game.Common.UpdateFrame` (wrong namespace), searched `(Shared|Managed)` by name for fifteen
+unrelated hits, and guessed `Unity.Entities.CompanionLink`, which turned out a plain component; the
+managed case stayed unverified. A filter on an implemented interface, or on the storage kind the ECS
+tools already classify, would answer it in one call.
 
 ### Reaching a prefab by name
 
@@ -493,9 +527,9 @@ defaults is the fix; listing every candidate in the message is the cheaper half.
 `em.GetBuffer<T>(e)`, whose `isReadOnly` defaults, is the other
 common miss. Whether SDB exposes a parameter's declared default is what the cost turns on.
 
-### `eval` cannot build an `EntityQuery`, so there is no aggregate
+### `eval` cannot build an `EntityQuery`
 
-**Priority:** high · **Cost:** large · **Hits:** 16 as of 2026-09-29
+**Priority:** medium · **Cost:** large · **Hits:** 16 as of 2026-09-29
 
 Two independent walls, both hit reaching for `ToComponentDataArray`. User-defined implicit
 conversions are not applied, so `new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp)`
@@ -503,12 +537,10 @@ fails and the explicit cast is rejected as well (`cannot cast Allocator to Alloc
 workaround is to construct the target type by hand,
 `new AllocatorManager.AllocatorHandle { Index = 2, Version = 0 }`. Past that, chaining
 `WithAll<T>()` throws `BadImageFormatException: Cannot box IsByRefLike type
-'Unity.Entities.EntityQueryBuilder'`, which no workaround reaches. With no loops and no array
-creation either, a whole-set field census degrades to one hand-written `GetComponentData` per
-entity: the sweep's 60-carrier pipe census took a script-generated ~11 KB `eval`, the 83-recipe
-re-derivation five ~9 KB ones. Either honour `ref struct` receivers, or — cheaper and it answers the
-same question — let `ecs_query` project a named component field per match. The cost line prices the
-`ref struct` route; the implicit-conversion half alone reads cheaper.
+'Unity.Entities.EntityQueryBuilder'`, which no workaround reaches. The whole-set field census that
+drove both attempts is served by `ecs_query`'s `select`; what stays open is a query `eval` builds for
+itself, through honouring `ref struct` receivers. The cost line prices that route; the
+implicit-conversion half alone reads cheaper.
 
 ### `ecs_query`'s `label` is empty for prefab entities
 
