@@ -717,34 +717,44 @@ public sealed class EvalInterpreter(
       }
     }
 
-    List<MethodMirror> candidates;
-
-    if (call.TypeArgs.Count > 0) {
-      var typeArgs = call.TypeArgs.Select(name => this.ResolveType(name, call.Position)).ToArray();
-
-      var definition =
-        inv.FindMethodOrNull(declaringType, call.Name, argc, call.TypeArgs.Count) ??
-        throw Missed();
-
-      // A static method called through a value still runs, so only the reverse is a miss: an
-      // instance method has no receiver to run on when the call is written on the type.
-      // Checked before the instantiation, which costs a command an instance method would waste.
-      if (onType && !definition.IsStatic) {
-        throw Missed();
-      }
-
-      candidates = [inv.Instantiate(definition, typeArgs)];
-    }
-    else {
-      candidates = inv.FindMethods(declaringType, call.Name, argc);
-
-      if (onType) {
-        candidates = candidates.Where(c => c.IsStatic).ToList();
-      }
-    }
+    // A static method called through a value still runs, so only the reverse is a miss: an
+    // instance method has no receiver to run on when the call is written on the type.
+    // Filtered before any instantiation, which costs a command an instance method would waste.
+    var candidates = inv.FindMethods(declaringType, call.Name, argc, call.TypeArgs.Count)
+      .Where(c => !onType || c.IsStatic)
+      .ToList();
 
     if (candidates.Count is 0) {
       throw Missed();
+    }
+
+    var refused = new List<string>();
+
+    if (call.TypeArgs.Count > 0) {
+      var typeArgs = call.TypeArgs.Select(name => this.ResolveType(name, call.Position)).ToArray();
+      var definitions = candidates;
+
+      candidates = [];
+
+      // Every definition of the name is instantiated, since which one binds is only known once
+      // the arguments meet the parameters.
+      foreach (var definition in definitions) {
+        try {
+          candidates.Add(inv.Instantiate(definition, typeArgs));
+        }
+        catch (InvalidOperationException) {
+          // The agent refuses type arguments a definition's constraints rule out, and the client
+          // surfaces that with no message. A sibling may still bind, so the refusal is reported
+          // only if nothing does.
+          // The client throws the same exception for every other failure of the command, so
+          // this catch cannot tell a constraint from a momentary fault.
+          var written = string.Join(", ", call.TypeArgs);
+
+          refused.Add(
+            $"{EvalInterpreter.Signature(definition)}: cannot be instantiated over <{written}>"
+          );
+        }
+      }
     }
 
     var evaluated = new object[argc];
@@ -760,7 +770,8 @@ public sealed class EvalInterpreter(
       evaluated,
       $"{declaringType.Name}.{call.Name}",
       call.Position,
-      outIndexes.Count > 0 ? outIndexes.ToHashSet() : null
+      outIndexes.Count > 0 ? outIndexes.ToHashSet() : null,
+      refused
     );
 
     return (method, values, outIndexes);
@@ -787,15 +798,18 @@ public sealed class EvalInterpreter(
   /// an exact-type pass runs before a widening pass, so `M(int)` beats `M(long)` for an int
   /// argument regardless of enumeration order.
   /// Out-argument slots take client-built default placeholders and never coerce.
+  /// <paramref name="refused" /> carries the candidates that dropped out before reaching here, each
+  /// with its reason, so a miss reports them beside the ones tried.
   /// </summary>
   private (MethodMirror Method, Value[] Values) SelectOverload(
     List<MethodMirror> candidates,
     object[] args,
     string context,
     int position,
-    IReadOnlySet<int> outIndexes = null
+    IReadOnlySet<int> outIndexes = null,
+    IReadOnlyList<string> refused = null
   ) {
-    var failures = new List<string>();
+    var failures = new List<string>(refused ?? []);
 
     foreach (var allowWidening in new[] { false, true }) {
       // The widening pass tries candidates in ascending conversion cost, approximating C#'s
@@ -1597,9 +1611,13 @@ public sealed class EvalInterpreter(
             position
           );
 
-      case "System.Object" when allowWidening:
-        // Boxing happens debuggee-side on send for primitives.
-        return this.ToMirror(value, position);
+      case "System.Object" when allowWidening: {
+        var sent = this.ToMirror(value, position);
+
+        // The agent boxes a struct sent for an object parameter and rejects a primitive, so a
+        // primitive goes out already boxed.
+        return sent is PrimitiveValue primitive ? inv.Box(primitive) : sent;
+      }
     }
 
     var clr = Invoker.ClrPrimitiveOrNull(typeName);

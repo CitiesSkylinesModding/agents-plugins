@@ -1,3 +1,4 @@
+using UnityDevtools.Sdb.Eval;
 using Xunit;
 
 namespace UnityDevtools.Sdb.IntegrationTests;
@@ -63,6 +64,66 @@ public sealed class EvalCoreOpTests(MonoDebuggeeFixture fx) {
   [SkippableFact]
   public void OverloadBindsByteToCheapestWideningInt() {
     Assert.Equal("\"int\"", fx.Eval("TestFixture.Overloads.Pick((byte) 7)").Formatted);
+  }
+
+  [SkippableFact]
+  public void GenericOverloadBindsTheDefinitionDeclaredSecond() {
+    Assert.Equal("\"int:4\"", fx.Eval("TestFixture.Overloads.Tag<int>(3, 4)").Formatted);
+  }
+
+  [SkippableFact]
+  public void GenericOverloadStillBindsTheDefinitionDeclaredFirst() {
+    Assert.Equal(
+      "\"holder\"",
+      fx.Eval("TestFixture.Overloads.Tag<int>(new TestFixture.Holder(), 4)").Formatted
+    );
+  }
+
+  [SkippableFact]
+  public void GenericOverloadBindsPastASiblingItsConstraintRules() {
+    Assert.Equal("\"class\"", fx.Eval("TestFixture.Overloads.Only<string>(3, \"x\")").Formatted);
+  }
+
+  [SkippableFact]
+  public void GenericOverloadMissListsEveryDefinitionItTried() {
+    var ex = Assert.Throws<EvalFailedException>(() =>
+      fx.Eval("TestFixture.Overloads.Tag<int>(\"nope\", 4)")
+    );
+
+    Assert.Contains("Tag(Holder, Int32)", ex.Message);
+    Assert.Contains("Tag(Int32, Int32)", ex.Message);
+  }
+
+  [SkippableFact]
+  public void GenericOverloadMissNamesTheDefinitionItsConstraintRules() {
+    var ex = Assert.Throws<EvalFailedException>(() =>
+      fx.Eval("TestFixture.Overloads.Only<string>(new TestFixture.Holder(), \"x\")")
+    );
+
+    Assert.Contains("Only(Holder, T): cannot be instantiated over <System.String>", ex.Message);
+  }
+
+  [SkippableTheory]
+  [InlineData("TestFixture.Overloads.Pick(true)", "\"object\"")]
+  [InlineData("var o = 7; System.String.Concat(o, \"x\")", "\"7x\"")]
+  [InlineData("System.String.Concat(7, 8)", "\"78\"")]
+  public void PrimitiveArgumentBoxesForAnObjectParameter(string code, string expected) {
+    Assert.Equal(expected, fx.Eval(code).Formatted);
+  }
+
+  [SkippableTheory]
+  [InlineData("\"pin\"")]
+  [InlineData("new TestFixture.Point()")]
+  [InlineData("7")]
+  public void EnumMemberBindsBesideAnObjectParameter(string pinned) {
+    var outcome = fx.Eval(
+      $"var o = {pinned}; " +
+      "var h = System.Runtime.InteropServices.GCHandle.Alloc(" +
+      "o, System.Runtime.InteropServices.GCHandleType.Pinned); " +
+      "var allocated = h.IsAllocated; h.Free(); allocated"
+    );
+
+    Assert.Equal("True", outcome.Formatted);
   }
 
   [SkippableFact]

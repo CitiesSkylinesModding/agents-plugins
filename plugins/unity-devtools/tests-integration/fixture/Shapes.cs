@@ -32,6 +32,18 @@ public static class Overloads {
   public static byte TakesByte(byte value) => value;
 
   public static string TakesSmall(Small value) => value.ToString();
+
+  // Two generic definitions sharing a name, a parameter count, and a generic arity, the one an
+  // int argument binds declared second: a lookup stopping at the first never reaches it.
+  public static string Tag<T>(Holder owner, T value) => "holder";
+
+  public static string Tag<T>(int index, T value) => $"int:{value}";
+
+  // The same pair with constraints no single type argument satisfies on both, so one of the two
+  // cannot be instantiated whichever the caller means.
+  public static string Only<T>(Holder owner, T value) where T : struct => "struct";
+
+  public static string Only<T>(int index, T value) where T : class => "class";
 }
 
 public enum Small {

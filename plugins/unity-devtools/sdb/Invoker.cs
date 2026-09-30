@@ -205,15 +205,10 @@ public sealed class Invoker(VirtualMachine vm) {
   ) {
     for (var t = type; t is not null; t = t.BaseType) {
       foreach (var m in t.GetMethods()) {
-        if (m.Name != name || m.GetParameters().Length != argc) {
+        if (m.Name != name ||
+          m.GetParameters().Length != argc ||
+          !Invoker.HasGenericArity(m, genericArity)) {
           continue;
-        }
-
-        switch (genericArity) {
-          case 0 when m.IsGenericMethodDefinition:
-          case > 0 when !m.IsGenericMethodDefinition ||
-            m.GetGenericArguments().Length != genericArity:
-            continue;
         }
 
         if (paramTypes is not null &&
@@ -227,6 +222,15 @@ public sealed class Invoker(VirtualMachine vm) {
     }
 
     return null;
+  }
+
+  // Arity 0 asks for a non-generic method, anything above for a generic definition with that many
+  // type parameters.
+  private static bool HasGenericArity(MethodMirror method, int genericArity) {
+    return genericArity is 0
+      ? !method.IsGenericMethodDefinition
+      : method.IsGenericMethodDefinition &&
+      method.GetGenericArguments().Length == genericArity;
   }
 
   private readonly ConcurrentDictionary<TypeMirror, ObjectMirror> typeObjects = new();
@@ -274,22 +278,32 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
-  /// Finds every non-generic method matching name and arity, derived-first, so a caller can pick
-  /// the overload whose signature accepts its arguments.
+  /// Finds every method matching name and arity, derived-first, so a caller can pick the overload
+  /// whose signature accepts its arguments.
+  /// <paramref name="genericArity" /> selects as it does for <see cref="FindMethod" />: 0 matches
+  /// non-generic methods only, anything above only the generic definitions with that many type
+  /// parameters.
   /// </summary>
 
   // CA1822 (mark static): kept an instance member on purpose. It is part of Invoker's cohesive
   // invoke abstraction and is called as `this.inv.FindMethods(...)` across files; making it static
   // would churn every call site for no real gain.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
-  public List<MethodMirror> FindMethods(TypeMirror type, string name, int argc) {
+  public List<MethodMirror> FindMethods(
+    TypeMirror type,
+    string name,
+    int argc,
+    int genericArity = 0
+  ) {
     var matches = new List<MethodMirror>();
 
     for (var t = type; t is not null; t = t.BaseType) {
       matches.AddRange(
         t.GetMethods()
           .Where(m =>
-            m.Name == name && m.GetParameters().Length == argc && !m.IsGenericMethodDefinition
+            m.Name == name &&
+            m.GetParameters().Length == argc &&
+            Invoker.HasGenericArity(m, genericArity)
           )
       );
     }
@@ -589,6 +603,8 @@ public sealed class Invoker(VirtualMachine vm) {
   public PrimitiveValue Prim(object value) => this.Vm.CreateValue(value);
 
   public StringMirror Str(string s) => this.Vm.RootDomain.CreateString(s);
+
+  public ObjectMirror Box(PrimitiveValue value) => this.Vm.RootDomain.CreateBoxedValue(value);
 
   /// <summary>
   /// The nesting depth every tool that REPORTS a value to the caller renders at, so a component
