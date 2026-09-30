@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Mono.Debugger.Soft;
 using UnityDevtools.Sdb.Eval;
 using Xunit;
 

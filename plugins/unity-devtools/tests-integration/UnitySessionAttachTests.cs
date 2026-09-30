@@ -145,7 +145,8 @@ public sealed class UnitySessionAttachTests : IDisposable {
     // wire-progress entry carries that gap.
     MonoDebuggee.Kill(debuggee);
 
-    for (var deadline = DateTime.UtcNow.AddSeconds(10); session.Snapshot().Attached &&
+    for (var deadline = DateTime.UtcNow.AddSeconds(10);
+      session.Snapshot().Attached &&
       DateTime.UtcNow < deadline;) {
       Thread.Sleep(25);
     }

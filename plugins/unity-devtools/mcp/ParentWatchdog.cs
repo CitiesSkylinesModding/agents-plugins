@@ -82,7 +82,7 @@ internal sealed class ParentWatchdog(IHostApplicationLifetime lifetime)
   private static async Task<bool> WatchOnUnix(CancellationToken stoppingToken) {
     var launcher = ParentWatchdog.GetParentPid();
 
-    while (await LifetimeWatchdog.Naps(stoppingToken)) {
+    while (await ParentWatchdog.Naps(stoppingToken)) {
       if (ParentWatchdog.GetParentPid() != launcher) {
         return true;
       }

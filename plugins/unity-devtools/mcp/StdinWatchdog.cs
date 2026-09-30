@@ -66,7 +66,7 @@ internal sealed class StdinWatchdog(IHostApplicationLifetime lifetime)
         return false;
       }
 
-      if (!await LifetimeWatchdog.Naps(stoppingToken)) {
+      if (!await StdinWatchdog.Naps(stoppingToken)) {
         return false;
       }
     }
@@ -98,7 +98,7 @@ internal sealed class StdinWatchdog(IHostApplicationLifetime lifetime)
         return true;
       }
 
-      if (!await LifetimeWatchdog.Naps(stoppingToken)) {
+      if (!await StdinWatchdog.Naps(stoppingToken)) {
         return false;
       }
     }
