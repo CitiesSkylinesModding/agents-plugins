@@ -100,10 +100,7 @@ public sealed class TypeTools(UnitySession session) {
     var types = ctx.Vm.GetTypes(fullName, true);
 
     if (types.Count is 0) {
-      throw new McpException(
-        $"type '{fullName}' not found (fullName takes the exact fully-qualified name; when all " +
-        "you have is a fragment or a concept, pass it to search instead)"
-      );
+      throw new McpException(MissDiagnosis.TypeNotFound(ctx.Types, fullName));
     }
 
     return new FindTypesResult {

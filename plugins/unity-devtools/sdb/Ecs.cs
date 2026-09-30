@@ -22,9 +22,13 @@ public sealed class Ecs {
 
   private readonly EcsCatalog catalog;
 
-  public Ecs(Invoker inv, EcsCatalog catalog, string worldName = null) {
+  /// <summary>What a type name the caller got wrong is diagnosed against.</summary>
+  private readonly TypeCatalog types;
+
+  public Ecs(Invoker inv, EcsCatalog catalog, TypeCatalog types, string worldName = null) {
     this.inv = inv;
     this.catalog = catalog;
+    this.types = types;
 
     var world = catalog.WorldFor(worldName);
 
@@ -736,7 +740,7 @@ public sealed class Ecs {
       );
     }
 
-    var type = this.inv.ResolveType(parts[0]);
+    var type = this.types.ResolveNamed(parts[0]);
 
     if (Ecs.Unfollowable(type) is {} storage) {
       throw new InvalidOperationException(
@@ -877,7 +881,7 @@ public sealed class Ecs {
 
   /// <summary>Fetches a managed system instance from the world by type name.</summary>
   public Value GetSystem(string systemTypeFullName) {
-    var sysType = this.inv.ResolveType(systemTypeFullName);
+    var sysType = this.types.ResolveNamed(systemTypeFullName);
 
     var worldType = this.inv.TypeOf(this.World);
 

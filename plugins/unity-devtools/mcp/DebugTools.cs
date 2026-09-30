@@ -511,7 +511,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
 
         var interpreter = new EvalInterpreter(
           ctx.Invoker,
-          [new BuiltinScope(ctx.Invoker, () => ecs.Value, state)]
+          [new BuiltinScope(ctx.Invoker, () => ecs.Value, state)],
+          ctx.Types
         );
 
         try {

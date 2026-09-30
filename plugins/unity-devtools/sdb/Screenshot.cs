@@ -419,6 +419,7 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
           // No scopes: every expression a capture runs is rooted in a fully-qualified type, so
           // nothing here touches the em/world builtins, whose world selection would cost invokes
           // on behalf of a caller who never named a world.
+          // No catalog: the expressions are this plugin's own, so a type miss is its defect.
           var interpreter = new EvalInterpreter(ctx.Invoker, []);
 
           // The failure travels as its own message alone, never through the evaluator's locals

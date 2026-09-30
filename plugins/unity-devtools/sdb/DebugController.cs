@@ -18,7 +18,9 @@ namespace UnityDevtools.Sdb;
 /// Lives and dies with its attach: <see cref="UnitySession"/> discards it on disconnect, and
 /// <see cref="Dispose"/> clears every request so a detach never leaves the game re-freezing.
 /// </summary>
-public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDisposable {
+/// <param name="types">What a type name the caller got wrong is diagnosed against.</param>
+public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCatalog types)
+  : IDisposable {
   private const int MaxFrames = 30;
 
   /// <summary>Single monitor: registry + pause fields, and the pause signal for waiters.</summary>
@@ -115,7 +117,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
   /// The condition is parsed here so a bad expression fails at set time, not on the first hit.
   /// </summary>
   public IReadOnlyList<BreakpointBinding> AddBreakpoints(BreakpointSpec spec) {
-    var type = invoker.ResolveType(spec.TypeName);
+    var type = types.ResolveNamed(spec.TypeName);
 
     var methods = type.GetMethods().Where(m => m.Name == spec.MethodName).ToList();
 
@@ -208,7 +210,9 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
   /// "uncaught only" mode would never fire.
   /// </summary>
   public BreakpointBinding AddExceptionBreak(string exceptionType, bool includeSubclasses) {
-    var type = exceptionType is null ? null : invoker.ResolveType(exceptionType);
+    var type = exceptionType is null
+      ? null
+      : types.ResolveNamed(exceptionType);
 
     var request = vm.CreateExceptionRequest(type, true, true);
 
@@ -457,7 +461,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
 
     scopes.AddRange(tailScopes);
 
-    var interpreter = new EvalInterpreter(invoker, scopes);
+    var interpreter = new EvalInterpreter(invoker, scopes, types);
 
     return interpreter.Run(program, state);
   }
@@ -471,7 +475,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
     string methodName,
     string signatureContains
   ) {
-    var type = invoker.ResolveType(typeName);
+    var type = types.ResolveNamed(typeName);
 
     var methods = type.GetMethods().AsEnumerable();
 
@@ -779,6 +783,8 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker) : IDispo
         return true;
       }
 
+      // No catalog: this runs on the pump thread, outside the session's lock, where the invokes
+      // of a first harvest are not safe to make. A wrong type name reports plainly here.
       var interpreter = new EvalInterpreter(invoker, [new FrameScope(invoker, thread, 0)]);
 
       var outcome = interpreter.Run(record.Condition, new EvalState());

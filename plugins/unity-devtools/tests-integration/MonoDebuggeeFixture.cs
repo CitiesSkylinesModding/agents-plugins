@@ -80,9 +80,14 @@ public sealed class MonoDebuggeeFixture : IDisposable {
   /// has no ECS).
   /// Each call gets a fresh <see cref="EvalState"/> unless the test passes one to assert
   /// <c>_</c> persistence across evals.
+  /// The evaluator takes the suite's shared catalog, as production does;
+  /// <paramref name="catalog"/> false evaluates without one, the way a breakpoint condition does.
   /// </summary>
-  public EvalOutcome Eval(string code, EvalState? state = null) {
+  public EvalOutcome Eval(string code, EvalState? state = null, bool catalog = true) {
     var evalState = state ?? new EvalState();
+
+    // Read ahead of the window: the accessor builds the catalog on first use.
+    var types = catalog ? this.Types : null;
 
     // Parsing happens inside the window so that the skip check WithInvoker runs first stays the
     // first thing to fire: a parse error escaping ahead of it would fail a suite that must skip.
@@ -97,7 +102,8 @@ public sealed class MonoDebuggeeFixture : IDisposable {
               () => throw new InvalidOperationException("no ECS in the fixture debuggee"),
               evalState
             )
-          ]
+          ],
+          types
         );
 
         return interpreter.Run(program, evalState);
@@ -208,7 +214,7 @@ public sealed class MonoDebuggeeFixture : IDisposable {
       // the invoker's construction needs.
       var inv = this.Invoker;
 
-      return this.debug ??= new DebugController(this.session!.Vm, inv);
+      return this.debug ??= new DebugController(this.session!.Vm, inv, this.Types);
     }
   }
 

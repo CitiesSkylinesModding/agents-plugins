@@ -39,9 +39,24 @@ namespace TestFixture.Miss {
     public string Bark() => "woof";
   }
 
+  // The same simple name as Far.Twin, so a bare or misplaced "Twin" has two full names to offer.
+  public sealed class Twin;
+
+  // Holds "Twin" without being named it: a containing match, ranked behind the exact ones.
+  public sealed class TwinTower;
+
+  public sealed class Kennel {
+    // A nested type, suggested under the dotted spelling the evaluator resolves.
+    public sealed class Cage;
+  }
+
   public struct Paw {
     public int Claws;
 
     public bool IsLeft;
   }
+}
+
+namespace TestFixture.Miss.Far {
+  public sealed class Twin;
 }

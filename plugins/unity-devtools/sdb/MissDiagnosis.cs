@@ -146,6 +146,115 @@ public static class MissDiagnosis {
     );
   }
 
+  /// <summary>
+  /// The report for a full name that resolved to nothing, under the spelling the tools take
+  /// (a nested type joined to its declaring type with a '+').
+  /// </summary>
+  public static string TypeNotFound(TypeCatalog catalog, string fullName) {
+    return MissDiagnosis.Type(catalog, fullName.Split('.'), MissNames.Tool);
+  }
+
+  /// <summary>
+  /// Why a dotted name resolved to no type, and what it could have meant.
+  /// The longest leading run of segments that is a real namespace decides the cause: past it, the
+  /// next segment is the one that failed; with none, the root itself is what nothing knows.
+  /// Exact simple-name matches are looked up for every segment from the failed one on, since a
+  /// mistyped namespace leaves the type's own name intact further right.
+  /// Containing matches are looked up for ONE segment, the one most likely to be the type: the
+  /// last of a name written where a type is expected, the failed one of a chain, whose later
+  /// segments are members.
+  /// May run the catalog's first harvest.
+  /// </summary>
+  /// <param name="chainScope">
+  /// Non-null when the name is an expression chain, which can also start on a local and continue
+  /// into members: the locals and builtins its root could have been.
+  /// Null for a name written where only a type is expected.
+  /// </param>
+  public static string Type(
+    TypeCatalog catalog,
+    IReadOnlyList<string> segments,
+    MissNames names,
+    IReadOnlyList<string> chainScope = null
+  ) {
+    var isChain = chainScope is not null;
+    var known = catalog.NamespaceDepth(segments);
+    var whole = string.Join(".", segments);
+
+    if (known == segments.Count) {
+      return isChain
+        ? $"'{whole}' is a namespace, not a type or a value"
+        : $"type '{whole}' not found: it is a namespace";
+    }
+
+    var failed = segments[known];
+    var exact = segments.Skip(known).ToList();
+    var contained = isChain ? failed : segments[^1];
+
+    var candidates = catalog.Names(n =>
+      MissSuggestions.Matches(MissSuggestions.SimpleName(n), exact, contained)
+    );
+
+    var found = MissSuggestions.RankTypes(candidates, exact, contained);
+
+    var head = isChain
+      ? $"cannot resolve '{string.Join(".", segments.Take(known + 1))}'"
+      : $"type '{whole}' not found";
+
+    // Read off the names already fetched: the failed segment is one of the exact ones asked for.
+    // Case counts in a chain, where it does not for a suggestion: a root differing from a type by
+    // case alone is far more often a local that is gone than a type left unqualified.
+    var casing = isChain ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+    var isBareTypeName = candidates.Any(n =>
+      MissSuggestions.SimpleName(n.AsSpan()).Equals(failed, casing)
+    );
+
+    var inScope = chainScope is { Count: > 0 }
+      ? $"; in scope: {string.Join(", ", chainScope)}"
+      : "";
+
+    string cause;
+
+    if (known > 0) {
+      cause = $"namespace '{string.Join(".", segments.Take(known))}' exists but holds no type " +
+        $"or namespace named '{failed}'";
+    }
+    else if (isBareTypeName) {
+      cause = "type names must be fully qualified";
+    }
+    else if (segments.Count > 1) {
+      cause = $"'{failed}' is not a namespace{(isChain ? ", a type or a local" : " or a type")}" +
+        inScope;
+    }
+    else if (isChain) {
+      cause = $"not a local, a builtin or a type{inScope}";
+    }
+    else {
+      cause = "no type has that name";
+    }
+
+    string suggestions;
+
+    if (found.Total is 0) {
+      suggestions = $"no loaded type is named '{contained}' or contains it in its name " +
+        "(find_types with search matches a regex against every full name)";
+    }
+    else {
+      var listed = names is MissNames.Eval
+        ? found.Listed.Select(MissSuggestions.EvalName)
+        : found.Listed;
+
+      suggestions = $"did you mean: {string.Join(", ", listed)}";
+
+      if (found.Total > found.Listed.Count) {
+        suggestions += $" ({found.Listed.Count} of {found.Total} shown: find_types with search " +
+          "lists them all)";
+      }
+    }
+
+    return $"{head}: {cause}; {suggestions}";
+  }
+
   private static IEnumerable<TypeMirror> Chain(TypeMirror type) {
     for (var t = type; t is not null; t = t.BaseType) {
       yield return t;
@@ -225,4 +334,13 @@ public static class MissDiagnosis {
   }
 
   private static bool IsSpellable(string name) => !name.Contains('<') && !name.Contains('.');
+}
+
+/// <summary>Which spelling a suggested type name is printed under.</summary>
+public enum MissNames {
+  /// <summary>The evaluator's: a nested type follows its declaring type after a dot.</summary>
+  Eval,
+
+  /// <summary>Every other tool's: the runtime full name, a nested type after a '+'.</summary>
+  Tool
 }

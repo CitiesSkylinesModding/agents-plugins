@@ -74,7 +74,11 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
       // only touching em/world/entity pays for (and can fail on) world resolution.
       var ecs = new Lazy<Ecs>(() => ctx.Ecs(world));
 
-      var interpreter = new EvalInterpreter(inv, [new BuiltinScope(inv, () => ecs.Value, state)]);
+      var interpreter = new EvalInterpreter(
+        inv,
+        [new BuiltinScope(inv, () => ecs.Value, state)],
+        ctx.Types
+      );
 
       try {
         var outcome = interpreter.Run(program, state);

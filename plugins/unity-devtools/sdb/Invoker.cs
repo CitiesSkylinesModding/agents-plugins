@@ -48,6 +48,18 @@ public sealed class Invoker(VirtualMachine vm) {
   /// and for the same reason.
   /// </summary>
   public TypeMirror ResolveType(string fullName) {
+    return this.ResolveTypeOrNull(fullName) ??
+      throw new InvalidOperationException(
+        $"type '{fullName}' not found (use a fully-qualified name; find_types resolves one, and " +
+        "its search parameter finds it from a fragment)"
+      );
+  }
+
+  /// <summary>
+  /// <see cref="ResolveType" /> answering null on a miss, for the caller that reports one in its
+  /// own words.
+  /// </summary>
+  public TypeMirror ResolveTypeOrNull(string fullName) {
     if (this.looseTypeCache.TryGetValue(fullName, out var cached)) {
       return cached;
     }
@@ -55,10 +67,7 @@ public sealed class Invoker(VirtualMachine vm) {
     var types = this.Vm.GetTypes(fullName, true);
 
     if (types.Count is 0) {
-      throw new InvalidOperationException(
-        $"type '{fullName}' not found (use a fully-qualified name; find_types resolves one, and " +
-        "its search parameter finds it from a fragment)"
-      );
+      return null;
     }
 
     this.looseTypeCache[fullName] = types[0];
@@ -410,9 +419,7 @@ public sealed class Invoker(VirtualMachine vm) {
         return invoke();
       }
       catch (VMNotSuspendedException) when (Stopwatch.GetElapsedTime(started) < Invoker.ParkWait) {
-        Thread.Sleep(
-          refused++ < Invoker.ParkPollsFast ? Invoker.ParkPoll : Invoker.ParkPollSlow
-        );
+        Thread.Sleep(refused++ < Invoker.ParkPollsFast ? Invoker.ParkPoll : Invoker.ParkPollSlow);
       }
       catch (VMNotSuspendedException) {
         throw new MainThreadNotParkedException(Invoker.ParkWait);
@@ -469,8 +476,12 @@ public sealed class Invoker(VirtualMachine vm) {
     MethodMirror method,
     params Value[] args
   ) {
-    return this.Invoking(
-      () => this.BoundedWithResult(type, method, args, InvokeOptions.ReturnOutArgs)
+    return this.Invoking(() => this.BoundedWithResult(
+        type,
+        method,
+        args,
+        InvokeOptions.ReturnOutArgs
+      )
     );
   }
 

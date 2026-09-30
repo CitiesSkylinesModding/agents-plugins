@@ -248,7 +248,7 @@ public sealed class UnitySession(BeaconListener beacons, TimeSpan? gateWait = nu
             this.ecs ??= new EcsCatalog(this.invoker);
 
             lock (this.stateGate) {
-              this.debug ??= new DebugController(vm, this.invoker);
+              this.debug ??= new DebugController(vm, this.invoker, this.types);
             }
 
             return operation(new SdbContext(vm, this.invoker, this.debug, this.types, this.ecs));
@@ -880,5 +880,6 @@ public sealed class SdbContext(
   /// Builds the ECS surface for one operation, as a view over the attach's catalog: the world it
   /// selects is revalidated rather than resolved from scratch.
   /// </summary>
-  public Ecs Ecs(string worldName = null) => new(this.Invoker, this.EcsCatalog, worldName);
+  public Ecs Ecs(string worldName = null) =>
+    new(this.Invoker, this.EcsCatalog, this.Types, worldName);
 }

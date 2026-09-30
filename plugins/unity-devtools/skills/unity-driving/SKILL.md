@@ -102,7 +102,7 @@ Assume a throwaway save, and read state back after each mutation rather than cha
 
 ## When a call fails
 
-Error messages come from the server verbatim and usually name the fix (unknown type, missing field with the field list, entity not found).
+Error messages come from the server verbatim and usually name the fix (a wrong type or field name with the ones it could have meant, entity not found).
 "No Unity game is advertising itself" means no beacon arrived at all: the game is not running, is not a development Mono build, or its multicast is not reaching the server — `status` and the `attach` recovery above settle which.
 A refused connection means nothing accepted you there: the port is wrong, the game's agent never bound it (a relaunch fixes that), or an IDE debugger already holds the exclusive slot.
 "Sent no Mono debugger greeting" means something IS listening there and said nothing back. A debugger agent serves one client and answers any other with silence, so the usual cause is that the slot is taken — an IDE, or another copy of this server — and the next move is to free it rather than to hunt for a port. With nothing attached anywhere, it is instead the exhausted-agent state described above, which only a game restart clears: do not attach again to find out, since each attempt spends the budget that caused it.

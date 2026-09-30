@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Mono.Debugger.Soft;
 
 namespace UnityDevtools.Sdb.Eval;
@@ -13,6 +14,11 @@ public interface IEvalScope {
   bool TryResolveValue(string name, out object value);
 
   bool TryCall(string name, object[] args, out object result);
+
+  /// <summary>
+  /// What this scope resolves, as a caller writes it, for the report of a name nothing resolved.
+  /// </summary>
+  IEnumerable<string> Names { get; }
 
   /// <summary>
   /// Whether <see cref="TrySetValue"/> would accept this name; probed BEFORE the assignment's right
@@ -51,6 +57,8 @@ public sealed class EvalState {
 /// touching an ECS builtin fails.
 /// </summary>
 public sealed class BuiltinScope(Invoker inv, Func<Ecs> ecs, EvalState state) : IEvalScope {
+  public IEnumerable<string> Names => ["em", "world", "entity()", "_"];
+
   public bool TryResolveValue(string name, out object value) {
     switch (name) {
       case "em":

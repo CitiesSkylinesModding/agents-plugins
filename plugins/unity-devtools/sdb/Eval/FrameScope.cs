@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Mono.Debugger.Soft;
@@ -34,6 +35,19 @@ public sealed class FrameScope(Invoker inv, ThreadMirror thread, int frameIndex)
         : throw new EvalRuntimeException(
           $"frame {frameIndex} is gone (the thread's stack changed mid-evaluation)"
         );
+    }
+  }
+
+  public IEnumerable<string> Names {
+    get {
+      var frame = this.Frame;
+      var locals = FrameScope.Swallowing(frame.GetVisibleVariables) ?? [];
+
+      return [
+        "this",
+        .. locals.Where(v => !v.IsArg).Select(v => v.Name),
+        .. frame.Method.GetParameters().Select(p => p.Name)
+      ];
     }
   }
 

@@ -15,7 +15,16 @@ namespace UnityDevtools.Sdb.Eval;
 /// client-side, member reads/writes, and calls run through mirrors.
 /// Instances are per-evaluation: build one inside a suspend window and discard it.
 /// </summary>
-public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scopes) {
+/// <param name="catalog">
+/// What a wrong type name is diagnosed against; null for an evaluator that must never harvest
+/// (its first use runs invokes) or whose expressions are the plugin's own, and a type miss then
+/// reports plainly.
+/// </param>
+public sealed class EvalInterpreter(
+  Invoker inv,
+  IReadOnlyList<IEvalScope> scopes,
+  TypeCatalog catalog = null
+) {
   /// <summary>Locals in declaration order (failure reports list them as declared).</summary>
   private readonly OrderedDictionary<string, object> locals = [];
 
@@ -376,9 +385,21 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       }
     }
 
+    if (catalog is null) {
+      throw new EvalRuntimeException(
+        $"cannot resolve '{rootName}': not a local, a builtin (em, world, entity(), _), or " +
+        "the start of a fully-qualified type name",
+        rootPosition
+      );
+    }
+
     throw new EvalRuntimeException(
-      $"cannot resolve '{rootName}': not a local, a builtin (em, world, entity(), _), or " +
-      "the start of a fully-qualified type name",
+      MissDiagnosis.Type(
+        catalog,
+        segments.Select(s => s.Name).ToList(),
+        MissNames.Eval,
+        [.. this.locals.Keys, .. scopes.SelectMany(s => s.Names)]
+      ),
       rootPosition
     );
   }
@@ -1359,7 +1380,9 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   private TypeMirror ResolveType(string dotted, int position) {
     return this.ResolveTypeOrNull(dotted) ??
       throw new EvalRuntimeException(
-        $"type '{dotted}' not found (names must be fully qualified)",
+        catalog is null
+          ? $"type '{dotted}' not found (names must be fully qualified)"
+          : MissDiagnosis.Type(catalog, dotted.Split('.'), MissNames.Eval),
         position
       );
   }

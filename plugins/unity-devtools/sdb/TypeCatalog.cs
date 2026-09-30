@@ -155,6 +155,66 @@ public sealed class TypeCatalog {
   }
 
   /// <summary>
+  /// Every held full name the filter keeps, names alone: no hit is resolved back to a live type,
+  /// so answering costs the harvest and nothing per name.
+  /// A name two assemblies both declare is listed once.
+  /// </summary>
+  public IReadOnlyList<string> Names(TypeNameFilter keep) {
+    this.Refresh();
+
+    var names = new HashSet<string>(StringComparer.Ordinal);
+
+    foreach (var assembly in this.held.Values) {
+      foreach (var line in assembly.Types.AsSpan().EnumerateLines()) {
+        var name = TypeCatalog.FullName(line);
+
+        if (!name.IsEmpty && keep(name)) {
+          _ = names.Add(name.ToString());
+        }
+      }
+    }
+
+    return [.. names];
+  }
+
+  /// <summary>
+  /// How many leading segments of a dotted name form a namespace some held type lives in or
+  /// under, matching case as the evaluator's own type lookup does; 0 when not even the first does.
+  /// </summary>
+  public int NamespaceDepth(IReadOnlyList<string> segments) {
+    this.Refresh();
+
+    var prefixes = Enumerable.Range(1, segments.Count)
+      .Select(take => $"{string.Join(".", segments.Take(take))}.")
+      .ToArray();
+
+    var depth = 0;
+
+    foreach (var assembly in this.held.Values) {
+      foreach (var line in assembly.Types.AsSpan().EnumerateLines()) {
+        while (depth < prefixes.Length &&
+          line.StartsWith(prefixes[depth], StringComparison.Ordinal)) {
+          depth++;
+        }
+      }
+    }
+
+    return depth;
+  }
+
+  /// <summary>
+  /// Resolves a type a tool's CALLER named, answering a miss with its cause and the names that
+  /// were likely meant.
+  /// A name the plugin itself spells goes through <see cref="Invoker.ResolveType" /> instead: a
+  /// miss there is a plugin defect, which suggestions would dress as the caller's typo, and which
+  /// must never pay for a harvest.
+  /// </summary>
+  public TypeMirror ResolveNamed(string fullName) {
+    return this.inv.ResolveTypeOrNull(fullName) ??
+      throw new InvalidOperationException(MissDiagnosis.TypeNotFound(this, fullName));
+  }
+
+  /// <summary>
   /// The type's full name, as every other tool spells it.
   /// The harvest renders a generic definition with its type parameters ("Ns.Box`1[T]") where the
   /// full name stops at the arity, so cutting there is what makes the name matched, the name
@@ -363,6 +423,9 @@ public sealed class TypeCatalog {
     public string Reason { get; init; }
   }
 }
+
+/// <summary>Decides on a held full name without allocating it.</summary>
+public delegate bool TypeNameFilter(ReadOnlySpan<char> fullName);
 
 /// <summary>What one catalog search found: the exact count, and the capped listing.</summary>
 public sealed class TypeCatalogSearch {

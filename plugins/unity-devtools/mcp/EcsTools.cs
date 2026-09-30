@@ -63,7 +63,7 @@ public sealed class EcsTools(UnitySession session) {
 
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
-      var types = components.Select(inv.ResolveType).ToArray();
+      var types = components.Select(ctx.Types.ResolveNamed).ToArray();
       var query = ecs.CreateQuery(types);
 
       try {
@@ -207,7 +207,7 @@ public sealed class EcsTools(UnitySession session) {
     EcsComponentResult Operation(SdbContext ctx) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
-      var compType = inv.ResolveType(component);
+      var compType = ctx.Types.ResolveNamed(component);
       var e = ecs.ResolveEntity(entity);
 
       return new EcsComponentResult {
@@ -244,7 +244,7 @@ public sealed class EcsTools(UnitySession session) {
     EcsSetComponentResult Operation(SdbContext ctx) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
-      var compType = inv.ResolveType(component);
+      var compType = ctx.Types.ResolveNamed(component);
       var e = ecs.ResolveEntity(entity);
       var fieldInfo = Ecs.RequireField(compType, field);
       var current = (StructMirror) ecs.GetComponent(e, compType);
@@ -283,7 +283,7 @@ public sealed class EcsTools(UnitySession session) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
       var e = ecs.ResolveEntity(entity);
-      var buf = ecs.GetBuffer(e, inv.ResolveType(elementType), isReadOnly: true);
+      var buf = ecs.GetBuffer(e, ctx.Types.ResolveNamed(elementType), isReadOnly: true);
       var length = ecs.BufferLength(buf);
 
       var elements = new List<string>(length);
@@ -330,7 +330,7 @@ public sealed class EcsTools(UnitySession session) {
       var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
 
-      var elemType = inv.ResolveType(elementType);
+      var elemType = ctx.Types.ResolveNamed(elementType);
       var e = ecs.ResolveEntity(entity);
       var buf = ecs.GetBuffer(e, elemType, isReadOnly: false);
       var length = ecs.BufferLength(buf);
