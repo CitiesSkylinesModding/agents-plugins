@@ -628,6 +628,18 @@ offset`, since the body lives in a compiler-generated state machine. A session f
 `+<Next>d__12` and its `MoveNext` by hand. Following `AsyncStateMachineAttribute` (and its iterator
 sibling) to `MoveNext` makes the method name the user sees the one that works.
 
+### An invoke that throws while an exception break is armed never answers
+
+**Priority:** high · **Cost:** unsure
+
+With `debug_break_on_exception` armed on every exception, an invoke whose target throws in the game
+stops at the break instead of returning: the pump records an `exception` pause, the invoke waits out
+its 60 s limit, and the session is dropped. Reproduced in the fixture by harvesting a fresh
+`TypeCatalog` over an assembly whose `GetTypes` throws. Every invoke goes out with
+`InvokeOptions.None`, so a throwing `eval` should hang the same way, and a mistyped type name in a
+debug tool now reaches it through the catalog's first harvest. Suppressing breakpoints for the
+plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, untested.
+
 ### Smaller `eval` grammar misses
 
 **Priority:** low · **Cost:** cheap · **Hits:** 5 as of 2026-09-29
@@ -645,6 +657,24 @@ plain quotes would do.
 `gameMode.IsEditor()` fails, and the miss names the static form (`GameModeExtensions.IsEditor(gameMode)`)
 when a bounded lookup finds the declaring class. Resolving extension methods for the receiver, so the
 instance form just works, is what remains.
+
+### `eval` does not read an inherited static field
+
+**Priority:** low · **Cost:** cheap
+
+`Derived.Count` fails when `Count` is a static field its base type declares, though C# resolves it
+and an inherited static property already reads through the accessor lookup. The miss names the
+declaring type (`Base.Count`), so recovery costs one retry. The static field read and write look at
+the type written alone; walking the base chain there makes the expression work as written.
+
+### A constructor miss lists no signatures
+
+**Priority:** low · **Cost:** cheap
+
+`new T(1, 2)` on a type with no two-argument constructor says only `no T constructor takes 2
+argument(s)`, where a method called at the wrong arity lists the signatures that name has. Listing
+the constructors the same way, through the wording the method miss uses, saves the `find_types`
+round trip.
 
 ### `ecs_set_component` writes no vector fields
 
