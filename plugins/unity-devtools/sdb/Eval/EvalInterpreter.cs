@@ -448,18 +448,11 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
   }
 
   private Value ReadProperty(Value target, TypeMirror type, string name, int position) {
-    MethodMirror getter;
-
-    try {
-      getter = inv.FindMethod(type, $"get_{name}", 0);
-    }
-    catch (InvalidOperationException) {
+    var getter = inv.FindMethodOrNull(type, $"get_{name}", 0) ??
       throw new EvalRuntimeException(
-        $"'{name}' is not a field or readable property of {type.FullName}; fields: " +
-        Invoker.InstanceFieldNames(type),
+        MissDiagnosis.InstanceMember(type, name, writing: false, fields: false),
         position
       );
-    }
 
     return inv.Invoke(target, getter);
   }
@@ -512,8 +505,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
     }
 
     throw new EvalRuntimeException(
-      $"'{name}' is not a field or readable property of {type.FullName}; fields: " +
-      Invoker.InstanceFieldNames(type),
+      MissDiagnosis.InstanceMember(type, name, writing: false),
       position
     );
   }
@@ -539,7 +531,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     if (setter is null) {
       throw new EvalRuntimeException(
-        $"'{name}' is not a writable field or property of {type.FullName}",
+        MissDiagnosis.InstanceMember(type, name, writing: true),
         position
       );
     }
@@ -561,20 +553,15 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
       return type.GetValue(field);
     }
 
-    MethodMirror getter;
+    // An instance getter is a miss too: the type is no receiver for it to run on.
+    var getter = inv.FindMethodOrNull(type, $"get_{name}", 0);
 
-    try {
-      getter = inv.FindMethod(type, $"get_{name}", 0);
-    }
-    catch (InvalidOperationException) {
-      throw new EvalRuntimeException(
-        $"'{name}' is not a static field or property of {type.FullName}",
+    return getter is { IsStatic: true }
+      ? inv.InvokeStatic(type, getter)
+      : throw new EvalRuntimeException(
+        MissDiagnosis.StaticMember(type, name, writing: false),
         position
       );
-    }
-
-    // Outside the catch: a getter that throws is a real invoke failure, not a resolution miss.
-    return inv.InvokeStatic(type, getter);
   }
 
   private static object ReadClientMember(object target, string name, int position) {
@@ -590,7 +577,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
 
     return field is not null
       ? field.GetValue(target)
-      : throw new EvalRuntimeException($"'{name}' is not a member of {type.FullName}", position);
+      : throw new EvalRuntimeException(MissDiagnosis.ClientMember(type, name), position);
   }
 
   // ---- Calls ----
@@ -1168,8 +1155,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         }
 
         throw new EvalRuntimeException(
-          $"'{name}' is not a field or readable property of {structContainer.Type.FullName}; " +
-          $"fields: {Invoker.InstanceFieldNames(structContainer.Type)}",
+          MissDiagnosis.InstanceMember(structContainer.Type, name, writing: false),
           position
         );
       }
@@ -1198,8 +1184,7 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
         }
 
         throw new EvalRuntimeException(
-          $"'{name}' is not a field or readable property of {objectContainer.Type.FullName}; " +
-          $"fields: {Invoker.InstanceFieldNames(objectContainer.Type)}",
+          MissDiagnosis.InstanceMember(objectContainer.Type, name, writing: false),
           position
         );
       }
@@ -1248,7 +1233,14 @@ public sealed class EvalInterpreter(Invoker inv, IReadOnlyList<IEvalScope> scope
           return;
         }
 
-        var setter = inv.FindMethod(typeRef.Type, $"set_{name}", 1);
+        var setter = inv.FindMethodOrNull(typeRef.Type, $"set_{name}", 1);
+
+        if (setter is not { IsStatic: true }) {
+          throw new EvalRuntimeException(
+            MissDiagnosis.StaticMember(typeRef.Type, name, writing: true),
+            position
+          );
+        }
 
         inv.InvokeStatic(
           typeRef.Type,

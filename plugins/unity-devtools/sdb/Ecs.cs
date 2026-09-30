@@ -912,10 +912,7 @@ public sealed class Ecs {
   public static FieldInfoMirror RequireField(TypeMirror type, string name) {
     return Invoker.InstanceFields(type)
         .FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)) ??
-      throw new InvalidOperationException(
-        $"field '{name}' not found on {type.FullName}; " +
-        $"fields: {Invoker.InstanceFieldNames(type)}"
-      );
+      throw new InvalidOperationException(MissDiagnosis.Field(type, name));
   }
 
   /// <summary>
