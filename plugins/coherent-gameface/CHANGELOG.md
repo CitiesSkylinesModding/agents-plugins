@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.1...coherent-gameface-v1.2.2) (2026-09-30)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** tell agents CSS.escape is missing and how to select a class without it ([d402c7e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d402c7e0583e9536fd91819683b824c946cf5cd2))
+
 ## [1.2.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.0...coherent-gameface-v1.2.1) (2026-09-19)
 
 
