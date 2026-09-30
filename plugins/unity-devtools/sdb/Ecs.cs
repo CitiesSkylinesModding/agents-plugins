@@ -17,7 +17,7 @@ namespace UnityDevtools.Sdb;
 /// Whatever an ECS operation may remember for LONGER than that lives on the
 /// <see cref="EcsCatalog" /> this is a view over.
 /// </summary>
-public sealed class Ecs {
+public sealed partial class Ecs {
   private readonly Invoker inv;
 
   private readonly EcsCatalog catalog;
@@ -69,57 +69,6 @@ public sealed class Ecs {
     this.catalog.RememberComponentType(type, built);
 
     return built;
-  }
-
-  /// <summary>Builds an EntityQuery requiring all the given component types (ReadWrite).</summary>
-  public Value CreateQuery(TypeMirror[] componentTypes) {
-    var ctType = this.inv.ResolveType("Unity.Entities.ComponentType");
-
-    var cts = componentTypes.Select(Value (t) => this.ComponentTypeOf(t)).ToArray();
-
-    // ComponentType[] built debuggee-side via Array.CreateInstance + SetValues.
-    var arrayType = this.inv.ResolveType("System.Array");
-
-    var arr = (ArrayMirror) this.inv.InvokeStatic(
-      arrayType,
-      this.inv.FindMethod(arrayType, "CreateInstance", 2, paramTypes: ["Type", "Int32"]),
-      this.inv.TypeObject(ctType),
-      this.inv.Prim(componentTypes.Length)
-    );
-
-    arr.SetValues(0, cts);
-
-    return this.inv.Invoke(
-      this.EntityManager,
-      this.inv.FindMethod(
-        this.EntityManagerType,
-        "CreateEntityQuery",
-        1,
-        paramTypes: ["ComponentType[]"]
-      ),
-      arr
-    );
-  }
-
-  public int Count(Value query) =>
-    (int) ((PrimitiveValue) this.inv.Invoke(query, "CalculateEntityCount")).Value;
-
-  /// <summary>
-  /// Materializes the query's entities as a managed Entity[] in the debuggee (ToEntityArray with
-  /// the Temp allocator, then NativeArray.ToArray) and returns its mirror.
-  /// </summary>
-  public ArrayMirror EntityArray(Value query) {
-    var handleType = this.inv.ResolveType("Unity.Collections.AllocatorManager+AllocatorHandle");
-
-    var handle = this.inv.InvokeStatic(
-      handleType,
-      this.inv.FindMethod(handleType, "op_Implicit", 1, paramTypes: ["Allocator"]),
-      this.TempAllocator()
-    );
-
-    var native = this.inv.Invoke(query, "ToEntityArray", handle);
-
-    return (ArrayMirror) this.inv.Invoke(native, "ToArray");
   }
 
   /// <summary>

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
 using JetBrains.Annotations;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
@@ -57,61 +56,16 @@ public sealed class EcsTools(UnitySession session) {
     return ToolGuard.Run(() => session.Run(Operation));
 
     EcsQueryResult Operation(SdbContext ctx) {
-      if (components.Length is 0) {
-        throw new McpException("components must contain at least one type name");
-      }
-
-      var inv = ctx.Invoker;
       var ecs = ctx.Ecs(world);
-      var types = components.Select(ctx.Types.ResolveNamed).ToArray();
-      var query = ecs.CreateQuery(types);
+      var listing = ecs.Query(components, limit, label);
 
-      try {
-        var count = ecs.Count(query);
-
-        Value? labelSystem = null;
-        MethodMirror? labelMethod = null;
-
-        if (label is not null) {
-          var parts = label.Split(':');
-
-          if (parts.Length is not 2) {
-            throw new McpException("label expects \"<systemTypeFullName>:<method>\"");
-          }
-
-          labelSystem = ecs.GetSystem(parts[0]);
-          labelMethod = inv.FindMethod(inv.TypeOf(labelSystem), parts[1], 1);
-        }
-
-        var entities = new List<EcsEntityInfo>();
-
-        if (count > 0 && limit > 0) {
-          var arr = ecs.EntityArray(query);
-          var take = Math.Min(limit, arr.Length);
-
-          entities.AddRange(
-            arr.GetValues(0, take)
-              .Select(e => new EcsEntityInfo {
-                  Entity = inv.Format(e),
-                  Label = labelSystem is not null
-                    ? inv.Format(inv.Invoke(labelSystem, labelMethod, e))
-                    : null
-                }
-              )
-          );
-        }
-
-        return new EcsQueryResult {
-          World = ecs.WorldName,
-          Components = components,
-          Count = count,
-          Entities = entities,
-          Omitted = count - entities.Count
-        };
-      }
-      finally {
-        _ = inv.Invoke(query, "Dispose");
-      }
+      return new EcsQueryResult {
+        World = ecs.WorldName,
+        Components = components,
+        Count = listing.Count,
+        Entities = listing.Rows,
+        Omitted = listing.Count - listing.Rows.Count
+      };
     }
   }
 
@@ -407,17 +361,10 @@ public sealed record EcsQueryResult {
   /// <summary>Exact match count (independent of the listing limit).</summary>
   public required int Count { [UsedImplicitly] get; init; }
 
-  public required IReadOnlyList<EcsEntityInfo> Entities { [UsedImplicitly] get; init; }
+  public required IReadOnlyList<EcsQueryRow> Entities { [UsedImplicitly] get; init; }
 
   /// <summary>Matches not listed; raise the limit to see them.</summary>
   public required int Omitted { [UsedImplicitly] get; init; }
-}
-
-/// <summary>One listed entity, optionally annotated via the label system call.</summary>
-public sealed record EcsEntityInfo {
-  public required string Entity { [UsedImplicitly] get; init; }
-
-  public required string? Label { [UsedImplicitly] get; init; }
 }
 
 /// <summary>Result of the <c>ecs_list_components</c> tool: the entity's whole archetype.</summary>
