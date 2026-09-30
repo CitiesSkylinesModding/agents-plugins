@@ -641,7 +641,7 @@ public sealed class EvalInterpreter(
       _ => this.MirrorTypeOf(target, call.Position)
     };
 
-    var (method, values, outIndexes) = this.BindCall(declaringType, call);
+    var (method, values, outIndexes) = this.BindCall(declaringType, call, isStatic);
 
     if (outIndexes.Count is 0) {
       var result = isStatic
@@ -687,7 +687,8 @@ public sealed class EvalInterpreter(
 
   private (MethodMirror Method, Value[] Args, List<int> OutIndexes) BindCall(
     TypeMirror declaringType,
-    CallExpr call
+    CallExpr call,
+    bool onType
   ) {
     var argc = call.Args.Count;
 
@@ -721,19 +722,29 @@ public sealed class EvalInterpreter(
     if (call.TypeArgs.Count > 0) {
       var typeArgs = call.TypeArgs.Select(name => this.ResolveType(name, call.Position)).ToArray();
 
-      var definition = inv.FindMethod(declaringType, call.Name, argc, call.TypeArgs.Count);
+      var definition =
+        inv.FindMethodOrNull(declaringType, call.Name, argc, call.TypeArgs.Count) ??
+        throw Missed();
+
+      // A static method called through a value still runs, so only the reverse is a miss: an
+      // instance method has no receiver to run on when the call is written on the type.
+      // Checked before the instantiation, which costs a command an instance method would waste.
+      if (onType && !definition.IsStatic) {
+        throw Missed();
+      }
 
       candidates = [inv.Instantiate(definition, typeArgs)];
     }
     else {
       candidates = inv.FindMethods(declaringType, call.Name, argc);
 
-      if (candidates.Count is 0) {
-        throw new EvalRuntimeException(
-          $"method {declaringType.Name}.{call.Name}/{argc} not found",
-          call.Position
-        );
+      if (onType) {
+        candidates = candidates.Where(c => c.IsStatic).ToList();
       }
+    }
+
+    if (candidates.Count is 0) {
+      throw Missed();
     }
 
     var evaluated = new object[argc];
@@ -753,6 +764,22 @@ public sealed class EvalInterpreter(
     );
 
     return (method, values, outIndexes);
+
+    EvalRuntimeException Missed() {
+      var receiver = EvalInterpreter.TryFlattenChain(call.Target, out var segments)
+        ? string.Join(".", segments.Select(s => s.Name))
+        : "value";
+
+      return new EvalRuntimeException(
+        MissDiagnosis.Method(
+          inv,
+          catalog,
+          declaringType,
+          new MissedCall(call.Name, argc, call.TypeArgs.Count, onType, receiver)
+        ),
+        call.Position
+      );
+    }
   }
 
   /// <summary>

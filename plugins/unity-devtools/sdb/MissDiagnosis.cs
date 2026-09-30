@@ -17,6 +17,12 @@ public static class MissDiagnosis {
   private const string MemberPointer = "find_types with fullName and members lists them all";
 
   /// <summary>
+  /// How many candidate classes the extension lookup resolves and reads: each costs wire commands
+  /// for its method list, inside a call that has already failed.
+  /// </summary>
+  private const int ExtensionClassCap = 10;
+
+  /// <summary>
   /// A member name an instance does not have, reading or writing.
   /// The list covers what the lookup itself walks, the whole base chain, so it never omits a name
   /// that would have resolved.
@@ -255,6 +261,151 @@ public static class MissDiagnosis {
     return $"{head}: {cause}; {suggestions}";
   }
 
+  /// <summary>
+  /// A call no method of the receiver's type answers, diagnosed by what the type does have: the
+  /// name on the wrong side, the name wanting a type argument, the name at other arities, or no
+  /// such name at all.
+  /// Only that last case can be an extension method, so only it looks for one, and may run the
+  /// catalog's first harvest doing so.
+  /// </summary>
+  /// <param name="catalog">
+  /// Null skips the extension lookup, leaving its static form stated as a shape.
+  /// </param>
+  public static string Method(Invoker inv, TypeCatalog catalog, TypeMirror type, MissedCall call) {
+    var named = MissDiagnosis.Chain(type)
+      .SelectMany(t => t.GetMethods())
+      .Where(m => m.Name == call.Name)
+      .ToList();
+
+    if (named.Count is 0) {
+      return MissDiagnosis.UnknownMethod(inv, catalog, type, call);
+    }
+
+    if (call.OnType && named.All(m => !m.IsStatic)) {
+      return $"{call.Name} is an instance method of {type.FullName}: call it on a value of that " +
+        "type, not on the type itself";
+    }
+
+    var signatures = MissSuggestions.Listing(
+      [("it has", named.Select(MissDiagnosis.Signature).Distinct().ToList())],
+      MissSuggestions.SignatureCap,
+      MissDiagnosis.MemberPointer
+    );
+
+    if (call.TypeArgCount > 0) {
+      return $"no {call.Name} of {type.FullName} takes {call.TypeArgCount} type argument(s) " +
+        $"with {call.ArgCount} argument(s); {signatures}";
+    }
+
+    var generic = named.FirstOrDefault(m =>
+      m.IsGenericMethodDefinition && m.GetParameters().Length == call.ArgCount
+    );
+
+    return generic is not null
+      ? $"{call.Name} is generic and its type argument is not inferred: write it, as in " +
+      MissDiagnosis.Signature(generic)
+      : $"no {call.Name} of {type.FullName} takes {call.ArgCount} argument(s); {signatures}";
+  }
+
+  private static string UnknownMethod(
+    Invoker inv,
+    TypeCatalog catalog,
+    TypeMirror type,
+    MissedCall call
+  ) {
+    var rest = call.ArgCount > 0 ? ", ..." : "";
+
+    if (!call.OnType &&
+      catalog is not null &&
+      MissDiagnosis.FindExtension(inv, catalog, type, call.Name) is {} extension) {
+      var more = extension.GetParameters().Length > 1 ? ", ..." : "";
+      var declaring = MissSuggestions.EvalName(extension.DeclaringType.FullName);
+
+      return $"{type.FullName} has no method '{call.Name}', but {call.Name} is an extension " +
+        $"method: call it as {declaring}.{call.Name}({call.Receiver}{more})";
+    }
+
+    var side = call.OnType ? "static " : "";
+
+    // Most-derived first, so what every object inherits comes last and is what a cut drops.
+    var names = MissDiagnosis.Chain(type)
+      .SelectMany(t => t.GetMethods())
+      .Where(m => m.IsStatic == call.OnType && m.IsPublic && !m.IsSpecialName)
+      .Select(m => m.Name)
+      .ToList();
+
+    var listing = MissDiagnosis.MemberListing(call.Name, ($"{side}methods", names));
+
+    var message = $"{type.FullName} has no {side}method '{call.Name}'; {listing}";
+
+    return call.OnType
+      ? message
+      : $"{message}; if {call.Name} is an extension method, call its static form, " +
+      $"DeclaringClass.{call.Name}({call.Receiver}{rest}) (find_types with search finds the class)";
+  }
+
+  /// <summary>
+  /// Looks for the static method behind an extension call, without an index of methods to look in:
+  /// a bounded guess at where such a method is conventionally declared, a class named
+  /// "...Extensions" or "...Utils" that either carries the receiver's name or shares its namespace.
+  /// Classes naming the receiver are read first, so the cap drops the looser guesses.
+  /// </summary>
+  private static MethodMirror FindExtension(
+    Invoker inv,
+    TypeCatalog catalog,
+    TypeMirror receiver,
+    string name
+  ) {
+    var receiverName = MissSuggestions.SimpleName(receiver.FullName);
+    var inNamespace = $"{receiver.Namespace}.";
+
+    var classes = catalog.Names(fullName => {
+          var simple = MissSuggestions.SimpleName(fullName);
+
+          if (!simple.EndsWith("Extensions", StringComparison.Ordinal) &&
+            !simple.EndsWith("Utils", StringComparison.Ordinal)) {
+            return false;
+          }
+
+          return simple.Contains(receiverName, StringComparison.Ordinal) ||
+            (fullName.StartsWith(inNamespace, StringComparison.Ordinal) &&
+              fullName.Length == inNamespace.Length + simple.Length);
+        }
+      )
+      .OrderByDescending(n =>
+        MissSuggestions.SimpleName(n.AsSpan()).Contains(receiverName, StringComparison.Ordinal)
+      )
+      .ThenBy(n => n, StringComparer.Ordinal)
+      .Take(MissDiagnosis.ExtensionClassCap);
+
+    foreach (var fullName in classes) {
+      var found = inv.FindTypeOrNull(fullName)
+        ?.GetMethods()
+        .FirstOrDefault(m =>
+          m.Name == name &&
+          m.IsStatic &&
+          m.GetParameters() is { Length: > 0 } parameters &&
+          parameters[0].ParameterType.IsAssignableFrom(receiver)
+        );
+
+      if (found is not null) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  private static string Signature(MethodMirror method) {
+    var typeParameters = method.IsGenericMethodDefinition
+      ? $"<{string.Join(", ", method.GetGenericArguments().Select(t => t.Name))}>"
+      : "";
+
+    var parameters = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name));
+
+    return $"{(method.IsStatic ? "static " : "")}{method.Name}{typeParameters}({parameters})";
+  }
+
   private static IEnumerable<TypeMirror> Chain(TypeMirror type) {
     for (var t = type; t is not null; t = t.BaseType) {
       yield return t;
@@ -335,6 +486,20 @@ public static class MissDiagnosis {
 
   private static bool IsSpellable(string name) => !name.Contains('<') && !name.Contains('.');
 }
+
+/// <summary>A call that bound to no method, as the caller wrote it.</summary>
+/// <param name="OnType">The receiver is a type, so only a static method can answer.</param>
+/// <param name="Receiver">
+/// The receiver's own text where it is a plain name chain, a placeholder otherwise: what the
+/// static form of an extension call takes as its first argument.
+/// </param>
+public sealed record MissedCall(
+  string Name,
+  int ArgCount,
+  int TypeArgCount,
+  bool OnType,
+  string Receiver
+);
 
 /// <summary>Which spelling a suggested type name is printed under.</summary>
 public enum MissNames {

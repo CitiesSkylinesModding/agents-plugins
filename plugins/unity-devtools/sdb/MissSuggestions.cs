@@ -17,6 +17,8 @@ public static class MissSuggestions {
   /// <summary>Member and method names are short, so the cap only guards the huge type.</summary>
   public const int MemberCap = 30;
 
+  public const int SignatureCap = 5;
+
   /// <summary>
   /// How many of the type slots names matching another segment alone may hold against a full
   /// list of matches on the contained one.

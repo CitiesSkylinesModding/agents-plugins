@@ -50,6 +50,11 @@ namespace TestFixture.Miss {
     public sealed class Cage;
   }
 
+  // Found by the extension lookup: named after its receiver, and ending in "Extensions".
+  public static class DogExtensions {
+    public static string Fetch(this Dog dog, int times) => "fetched " + times;
+  }
+
   public struct Paw {
     public int Claws;
 
@@ -59,4 +64,9 @@ namespace TestFixture.Miss {
 
 namespace TestFixture.Miss.Far {
   public sealed class Twin;
+
+  // An extension the lookup cannot find: neither named after its receiver nor in its namespace.
+  public static class Tricks {
+    public static string Roll(this Dog dog) => "rolled";
+  }
 }

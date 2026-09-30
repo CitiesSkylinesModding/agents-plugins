@@ -67,7 +67,7 @@ Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 A bulk read is `ecs_query` for the entity list, then one `eval` per batch of entities closing on a single interpolated final expression.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
-Methods match by name, arity, and argument compatibility; "method not found" usually means wrong arity, wrong declaring type, or a generic method called without its type arguments; `find_types` with `members` settles the first two.
+Methods match by name, arity, and argument compatibility, and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
 ## Seeing the game
