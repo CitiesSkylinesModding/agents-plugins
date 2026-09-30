@@ -469,42 +469,16 @@ unusable at its natural type. Every `EntityManager.Debug` route that boxes a buf
 `object` over a `T[]`, and so does any game method returning an array, so accepting `T[]` in the
 cast grammar — and in `typeof` with it — closes a class of read rather than one call.
 
-### `eval` will not bind an enum argument
+### A cast to `object` does not steer overload choice
 
 **Priority:** medium · **Cost:** unsure
 
-`System.Runtime.InteropServices.GCHandle.Alloc(o, System.Runtime.InteropServices.GCHandleType.Pinned)`
-returns `Incorrect number or types of arguments (Parameter 'arguments')`, with `o` already bound to
-a local by a preceding statement. The enum member access itself resolves, so the failure is in
-overload matching — likely the argument arriving as the enum type where the parameter check wants
-its underlying integer, or the reverse. It blocked settling a runtime question in its general form
-and left only the field types the game happens to ship as evidence.
-
-### `eval` picks one overload by shape and stops
-
-**Priority:** high · **Cost:** cheap · **Hits:** 13 as of 2026-09-29
-
-`em.AddComponentData<Unity.Transforms.LocalTransform>(e, value)` fails with `no overload of
-EntityManager.AddComponentData accepts these arguments; tried: AddComponentData(EntityQuery,
-NativeArray`1): Unity.Entities.Entity is not assignable to Unity.Entities.EntityQuery`. The
-overload it wants — `AddComponentData<T>(Entity, T)` — exists, and the message shows it was never
-tried. That one candidate is the tell: a `CreateEntityQuery` miss in the same session reported all
-three candidates it tried, so the reporting lists the set it considered, and here the set was
-missing the member that binds. The failure is therefore in FINDING the overload, not in ranking the
-ones found — which is where to look first, and is not what the message suggests.
-
-It is the first call an agent writing a component reaches for, and the workaround costs an extra
-invoke on the main thread: `em.AddComponent<T>(e)` then `em.SetComponentData<T>(e, value)`, which
-works and round-trips correctly. The message is the worse half — naming an `EntityQuery` overload
-the caller never mentioned reads as "you passed the wrong thing" rather than "I did not look
-further", so the next move is to doubt the argument instead of splitting the call.
-
-The cause is in `EvalInterpreter.BindCall`: a call with explicit type arguments resolves through
-`Invoker.FindMethod`, which returns the first definition of that name and generic arity, and
-instantiates only that one as the sole candidate. Building every such definition and handing them all
-to `SelectOverload` is the fix. Two cases have no workaround: `PrefabSystem.GetPrefab<T>(Entity)` and
-`AssetDatabase.GetAsset<T>(Hash128)` both lose to their first-declared sibling. This is the same overload-matching seam as the enum-binding entry above;
-settling them together is likely cheaper than either alone.
+Reproduced in the fixture: `TestFixture.Overloads.Pick((object) o)` with an int `o` returns
+`"int"` where C# binds `Pick(object)`. A reference cast on a client-side value is a no-op, so the
+argument reaches overload matching as the int it was. The call succeeds and runs the wrong method,
+which is the one outcome the eval contract rules out — an edge may diverge, but loudly. Carrying
+the cast's static type to `SelectOverload`, or boxing at the cast, would make the written type the
+one that binds; which is cheaper is what the cost turns on.
 
 ### `eval` matches no default arguments
 
@@ -515,8 +489,8 @@ settling them together is likely cheaper than either alone.
 compounds it by reporting only the *other* constructor, `(PrefabBase, Hash128)`, as tried, which
 points at the argument types rather than at the arity, and a session chased the wrong fix for two
 calls before reading the decompiled signature. Binding the omitted parameters to their declared
-defaults is the fix; listing every candidate in the message is the cheaper half and helps the whole
-overload-matching class above. `em.GetBuffer<T>(e)`, whose `isReadOnly` defaults, is the other
+defaults is the fix; listing every candidate in the message is the cheaper half.
+`em.GetBuffer<T>(e)`, whose `isReadOnly` defaults, is the other
 common miss. Whether SDB exposes a parameter's declared default is what the cost turns on.
 
 ### `eval` cannot build an `EntityQuery`, so there is no aggregate
