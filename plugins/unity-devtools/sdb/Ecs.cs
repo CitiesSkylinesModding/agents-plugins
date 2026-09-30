@@ -229,30 +229,46 @@ public sealed partial class Ecs {
     string hasMethod,
     EcsKind kind
   ) {
-    var id = Ecs.Id(entity);
-    var key = (id.Index, id.Version, Type: type, Kind: kind);
-
-    if (this.carried.Contains(key)) {
+    if (this.Carries(entity, type, hasMethod, kind)) {
       return;
     }
 
-    var has = this.Accessor(hasMethod, 1, type);
-
-    if ((bool) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, has, entity)).Value) {
-      _ = this.carried.Add(key);
-
-      return;
-    }
+    var (index, version) = Ecs.Id(entity);
 
     throw new InvalidOperationException(
-      $"entity {key.Index}:{key.Version} has no {type.FullName} {kind.Wire}"
+      $"entity {index}:{version} has no {type.FullName} {kind.Wire}"
     );
   }
 
   /// <summary>
-  /// Records a type as carried without asking the game, for the one caller that ENUMERATED the
-  /// entity's archetype in this very suspend window: the gate's invariant is then satisfied by
-  /// construction rather than by an invoke that re-establishes what was just read.
+  /// The question <see cref="RequirePresence" /> refuses on, for a caller to whom "no" is an
+  /// answer rather than a mistake.
+  /// Only a yes is remembered: it is what lets the accessor's own gate pass without asking again.
+  /// </summary>
+  private bool Carries(StructMirror entity, TypeMirror type, string hasMethod, EcsKind kind) {
+    var id = Ecs.Id(entity);
+    var key = (id.Index, id.Version, Type: type, Kind: kind);
+
+    if (this.carried.Contains(key)) {
+      return true;
+    }
+
+    var has = this.Accessor(hasMethod, 1, type);
+
+    if (!(bool) ((PrimitiveValue) this.inv.Invoke(this.EntityManager, has, entity)).Value) {
+      return false;
+    }
+
+    _ = this.carried.Add(key);
+
+    return true;
+  }
+
+  /// <summary>
+  /// Records a type as carried without asking the game, for a caller that read the fact off the
+  /// game in this very suspend window, by enumerating the entity's archetype or by listing it from
+  /// a query requiring the type: the gate's invariant is then satisfied by construction rather
+  /// than by an invoke that re-establishes what was just read.
   /// </summary>
   private void MarkCarried(StructMirror entity, TypeMirror type, EcsKind kind) {
     var id = Ecs.Id(entity);
@@ -328,30 +344,7 @@ public sealed partial class Ecs {
 
     var flags = this.catalog.Flags;
 
-    // Enabled state costs a member the target may not have, and its absence turns the whole column
-    // off: a target that cannot answer must say so, because an unreported state reads as "enabled".
-    var isEnabled = this.FindMember("IsComponentEnabled", 2, ["Entity", "ComponentType"]);
-
-    // Whether a type is enableable is one of the bits the index encodes; where it cannot be
-    // decoded it is a property invoke per type instead, and THAT member's absence turns the column
-    // off just the same.
-    // Probing costs nothing on the wire, so it happens whether the masks are expected to answer:
-    // the decode still falls through per type on a target whose index this cannot read.
-    var isEnableable = this.FindMember(
-      "IsEnableable",
-      0,
-      type: this.inv.ResolveType("Unity.Entities.ComponentType")
-    );
-
-    var absent = isEnabled is null
-      ? "EntityManager.IsComponentEnabled"
-      : flags is null && isEnableable is null
-        ? "ComponentType.IsEnableable"
-        : null;
-
-    // One absent member turns the column off, which the loop reads off enabledGetter being null.
-    var enabledGetter = absent is null ? isEnabled : null;
-    var enableableProbe = absent is null ? isEnableable : null;
+    var (enabledGetter, enableableProbe, absent) = this.ProbeEnabledState(flags);
 
     var components = new List<EntityComponentInfo>(componentTypes.Count);
 
@@ -397,6 +390,37 @@ public sealed partial class Ecs {
           "classify rather than one that is not enableable"
           : null
     };
+  }
+
+  /// <summary>
+  /// Probes the members enabled state is read through.
+  /// One absent member turns the whole column off -- both getters come back null and
+  /// <c>Absent</c> names the missing one -- because a target that cannot answer must say so: an
+  /// unreported state reads as "enabled".
+  /// Probing costs nothing on the wire, so it happens whether the masks are expected to answer:
+  /// the decode still falls through per type on a target whose index this cannot read.
+  /// </summary>
+  private (MethodMirror IsEnabled, MethodMirror IsEnableable, string Absent) ProbeEnabledState(
+    TypeIndexFlags flags
+  ) {
+    var isEnabled = this.FindMember("IsComponentEnabled", 2, ["Entity", "ComponentType"]);
+
+    // Whether a type is enableable is one of the bits the index encodes; where it cannot be
+    // decoded it is a property invoke per type instead, and THAT member's absence turns the column
+    // off just the same.
+    var isEnableable = this.FindMember(
+      "IsEnableable",
+      0,
+      type: this.inv.ResolveType("Unity.Entities.ComponentType")
+    );
+
+    var absent = isEnabled is null
+      ? "EntityManager.IsComponentEnabled"
+      : flags is null && isEnableable is null
+        ? "ComponentType.IsEnableable"
+        : null;
+
+    return absent is null ? (isEnabled, isEnableable, null) : (null, null, absent);
   }
 
   /// <summary>
@@ -683,17 +707,8 @@ public sealed partial class Ecs {
   /// unreachable rather than guarded against.
   /// </summary>
   public FollowedReference Follow(StructMirror entity, string spec) {
-    // A caller writes this spec by hand, so space around either half is a typo rather than a name,
-    // and a half that ends up empty named nothing at all.
-    var parts = spec.Split(':').Select(p => p.Trim()).ToArray();
-
-    if (parts.Length > 2 || parts[0].Length is 0) {
-      throw new InvalidOperationException(
-        $"follow expects \"<componentTypeFullName>[:<field>]\", got '{spec}'"
-      );
-    }
-
-    var type = this.types.ResolveNamed(parts[0]);
+    var (component, named) = EcsSelection.SplitSpec(spec, "follow");
+    var type = this.types.ResolveNamed(component);
 
     if (Ecs.UnreadableStorage(type) is {} storage) {
       throw new InvalidOperationException(
@@ -702,16 +717,13 @@ public sealed partial class Ecs {
       );
     }
 
-    // A trailing colon names no field, so it takes the single-field path below rather than
-    // searching for a field named "".
-    var named = parts.Length is 2 && parts[1].Length > 0 ? parts[1] : null;
     var field = Ecs.EntityField(type, named);
 
     // The read's own presence gate is what reports an entity that does not carry the component.
     // Its storage gate has nothing left to refuse here: the refusal above runs first, because it
     // alone routes the caller to the listing's kind column.
-    var component = (StructMirror) this.GetComponent(entity, type);
-    var target = (StructMirror) component[field.Name];
+    var value = (StructMirror) this.GetComponent(entity, type);
+    var target = (StructMirror) value[field.Name];
 
     // A field can legitimately hold Entity.Null, a reference the game has since destroyed, or an
     // index this world never covered, and whether it is live is asked in that order: Exists indexes

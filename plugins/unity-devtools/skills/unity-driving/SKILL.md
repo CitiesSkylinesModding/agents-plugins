@@ -45,6 +45,9 @@ An entity is `index[:version]`, read identically by every ECS tool: a bare `inde
 Carry the version when you have it: it is what catches a recycle between reading an index and acting on it.
 `ecs_query` counts and lists entities having ALL the given components; the count is always exact, `limit` caps only the listing.
 `label` attaches human-readable identity to raw entities via a one-Entity-arg method on a managed system, typically the game's name system (`MyGame.UI.LabelSystem:GetLabel`).
+`select` is the bulk read: it reads component values off every listed entity in the same call, as `component[:field]` specs (`MyGame.Movement.Speed:m_Value`), the spelling `follow` takes, so a census is one `ecs_query` with `limit` raised to the count.
+`components` picks the rows and `select` the columns: a match lacking a selected component stays listed with that spec missing from its `values`, so name the component in `components` too when you want only its carriers.
+Read `summary` before the rows: it counts the listed rows each spec was absent from, failed on, or disabled on, which is what keeps a gap from being read as data.
 State on an entity carrying Unity's `Prefab` or `Disabled` tag is invisible to `ecs_query`, and so is an entity whose queried enableable component is currently disabled (the engine's own default `EntityQuery` filtering) — but a game's prefab-like entities are excluded only when they actually carry the tag, so try the query before concluding the state is unreachable, and chase what it cannot see by following a reference into the tool below.
 `ecs_list_components` is the orient step on an unknown entity: one call lists every component type it carries, so a read starts from what is there instead of from a guess.
 Each entry's `kind` says what can read it — `component` → `ecs_get_component`, `buffer` → `ecs_get_buffer`, `tag` → no fields to read (presence, plus `enabled` where it carries one, is the state), `shared` and `chunk` → `eval` only, `managed` (class `IComponentData`) → out of reach over SDB, listed so you know the state is there.
@@ -65,7 +68,6 @@ Structs build with initializer syntax (`new MyGame.Movement.Speed { m_Value = 5f
 `out var x` declares a local the call writes; later statements can read it: `MyGame.Navigation.PathUtils.TryGetEndpoints(em, e, out var start, out var end)`.
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
-A bulk read is `ecs_query` for the entity list, then one `eval` per batch of entities closing on a single interpolated final expression.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods match by name, arity, and argument compatibility, and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.

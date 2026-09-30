@@ -32,39 +32,69 @@ public sealed class EcsTools(UnitySession session) {
   [McpServerTool(Name = "ecs_query")]
   [Description(
     """
-    Count and list the entities having ALL the given component types.
+    Count and list the entities having ALL the given component types, and read component values
+    off each listed one with select.
     Entities tagged Disabled or Prefab are excluded from the match, and so is an entity whose
     queried enableable component is currently disabled, so a count of 0 means "none the query
     can see" rather than "none exist"; reach one of those by index with ecs_list_components,
     which ignores the exclusion.
+    components picks the rows and select picks the columns: select never changes the match or the
+    count, so a listed entity lacking a selected component is still listed, with that spec missing
+    from its values and counted under summary.absent.
+    A read the game throws on marks its own row under errors and counts under summary.failed,
+    while the other rows return.
+    The summary counts cover the LISTED rows, not the whole match: raise limit to cover it.
     """
   )]
   [UsedImplicitly]
   public EcsQueryResult Query(
     [Description("Fully-qualified component type names; entities must have ALL of them.")]
     string[] components,
-    [Description("Max entities to list (the count is always exact).")]
+    [Description(
+      "Max entities to list (the count is always exact); label and select read the listed " +
+      "entities only."
+    )]
     int limit = 10,
     [Description("ECS world name; omit for the default world.")]
     string? world = null,
     [Description(
       "Annotate each listed entity through a one-Entity-arg method on a managed system (e.g. a " +
-      "name system), as \"<systemTypeFullName>:<method>\"."
+      "name system), as \"<systemTypeFullName>:<method>\". A call the game throws on leaves " +
+      "that row's label null and its reason under errors.label."
     )]
-    string? label = null
+    string? label = null,
+    [Description(
+      """
+      Values to read off each listed entity, as "<componentTypeFullName>[:<field>]" specs, e.g.
+      "MyGame.Movement.Speed:m_Value": a bare type reads the whole component as
+      ecs_get_component renders it, a field reads that top-level field alone (case-insensitive).
+      Each row's values are keyed by the spec exactly as written.
+      Reads unmanaged components; a tag reports "tag" on the rows carrying it.
+      A buffer element, shared or managed type is refused before any row is read, and so is an
+      unknown type or field.
+      To list only the entities carrying a selected component, name it in components as well.
+      A selected enableable component that is disabled on a row keeps its stored value and is named
+      in that row's disabled list.
+      The response and the game freeze both grow with limit times the number of distinct selected
+      components.
+      """
+    )]
+    string[]? select = null
   ) {
     return ToolGuard.Run(() => session.Run(Operation));
 
     EcsQueryResult Operation(SdbContext ctx) {
       var ecs = ctx.Ecs(world);
-      var listing = ecs.Query(components, limit, label);
+      var listing = ecs.Query(components, limit, label, select);
 
       return new EcsQueryResult {
         World = ecs.WorldName,
         Components = components,
         Count = listing.Count,
         Entities = listing.Rows,
-        Omitted = listing.Count - listing.Rows.Count
+        Omitted = listing.Count - listing.Rows.Count,
+        Summary = listing.Summary,
+        EnabledStateNote = listing.EnabledStateNote
       };
     }
   }
@@ -365,6 +395,12 @@ public sealed record EcsQueryResult {
 
   /// <summary>Matches not listed; raise the limit to see them.</summary>
   public required int Omitted { [UsedImplicitly] get; init; }
+
+  /// <inheritdoc cref="EcsQueryListing.Summary" />
+  public required EcsSelectSummary? Summary { [UsedImplicitly] get; init; }
+
+  /// <inheritdoc cref="EcsQueryListing.EnabledStateNote" />
+  public required string? EnabledStateNote { [UsedImplicitly] get; init; }
 }
 
 /// <summary>Result of the <c>ecs_list_components</c> tool: the entity's whole archetype.</summary>

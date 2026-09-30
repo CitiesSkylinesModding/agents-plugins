@@ -101,7 +101,7 @@ Bare names for the generic Unity tools, an `ecs_*` prefix for the ECS layer:
 | `find_types` | Resolve a type live by name, or search every loaded type by regex; optionally list its members. |
 | `eval` | Evaluate a C# statement sequence against the live game, like an IDE debugger would. |
 | `screenshot` | Return the frame the renderer is drawing, everything a player would see, as an inline image. |
-| `ecs_query` | Count/list entities having ALL given components, optionally labeled via a system call. |
+| `ecs_query` | Count/list entities having ALL given components, optionally labeled via a system call, with `select` reading component values off each listed one. |
 | `ecs_get_component` / `ecs_set_component` | Read, or field-write with read-back, one entity's component. |
 | `ecs_get_buffer` / `ecs_buffer_edit` | Read, append to, or remove from a `DynamicBuffer`. |
 
