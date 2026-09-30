@@ -217,7 +217,7 @@ run = "dotnet jb cleanupcode agents-plugins.slnx --profile=\"AutoCleanup\" --set
 # =============
 
 [tasks."publish:discord"]
-description = "Print the Discord announcement for the latest release batch (append a tag to pick an older one)."
+description = "Have Claude write the Discord announcement for the latest release batch (append a tag to pick an older one)."
 run = "bun scripts/discord-release-notes.ts"
 
 # RUN TASKS
