@@ -271,6 +271,8 @@ public sealed partial class Ecs {
     );
 
   public Value GetComponent(StructMirror entity, TypeMirror componentType) {
+    Ecs.RequireComponentStorage(componentType);
+
     this.RequirePresence(entity, componentType, "HasComponent", EcsKind.Component);
 
     return this.inv.Invoke(
@@ -281,6 +283,8 @@ public sealed partial class Ecs {
   }
 
   public void SetComponent(StructMirror entity, TypeMirror componentType, StructMirror value) {
+    Ecs.RequireComponentStorage(componentType);
+
     this.RequirePresence(entity, componentType, "HasComponent", EcsKind.Component);
 
     this.inv.Invoke(
@@ -691,7 +695,7 @@ public sealed partial class Ecs {
 
     var type = this.types.ResolveNamed(parts[0]);
 
-    if (Ecs.Unfollowable(type) is {} storage) {
+    if (Ecs.UnreadableStorage(type) is {} storage) {
       throw new InvalidOperationException(
         $"follow reads a plain unmanaged component, and {type.FullName} is {storage}; chase an " +
         $"Entity field on a type the listing reports under kind \"{EcsKind.Component.Wire}\""
@@ -704,6 +708,8 @@ public sealed partial class Ecs {
     var field = Ecs.EntityField(type, named);
 
     // The read's own presence gate is what reports an entity that does not carry the component.
+    // Its storage gate has nothing left to refuse here: the refusal above runs first, because it
+    // alone routes the caller to the listing's kind column.
     var component = (StructMirror) this.GetComponent(entity, type);
     var target = (StructMirror) component[field.Name];
 
@@ -731,7 +737,20 @@ public sealed partial class Ecs {
   }
 
   /// <summary>
-  /// How a component type is stored when the field read cannot reach it, null when it can.
+  /// Refuses a type the generic component accessors cannot serve, the gate every read and write of
+  /// a caller-named type passes BEFORE the presence one.
+  /// </summary>
+  private static void RequireComponentStorage(TypeMirror type) {
+    if (Ecs.UnreadableStorage(type) is {} storage) {
+      throw new InvalidOperationException(
+        $"{type.FullName} is {storage}, so it cannot be read or written as a component"
+      );
+    }
+  }
+
+  /// <summary>
+  /// How a component type is stored when the component accessors cannot reach it, null when they
+  /// can.
   /// The presence gate cannot stand in for this check, and it must run BEFORE the read: the gate
   /// asks about a type INDEX, which a buffer element shares with a component of the same name, so
   /// it answers yes for a buffer the entity carries and the read then reinterprets the buffer's
@@ -747,7 +766,7 @@ public sealed partial class Ecs {
   /// therefore still seen here, in that one round trip, and the ladder holds whether the target's
   /// Entities version chains these three together.
   /// </summary>
-  private static string Unfollowable(TypeMirror type) {
+  private static string UnreadableStorage(TypeMirror type) {
     var interfaces = type.GetInterfaces().Select(i => i.FullName).ToArray();
 
     // Storage first, in the order the kind ladder reports it, so a shared component is named
