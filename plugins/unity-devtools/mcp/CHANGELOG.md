@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.1.0...unity-devtools-mcp-v1.2.0) (2026-09-30)
+
+
+### Features
+
+* **unity-devtools:** read component values off every entity ecs_query lists ([92b2360](https://github.com/CitiesSkylinesModding/agents-plugins/commit/92b2360ce75cd3da327aaff76ee57449ee1e4c31))
+* **unity-devtools:** say why a type name failed and which types it could have meant ([1fcb2de](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1fcb2de01ee3a9d66166bf8e41b20b989a670854))
+
+
+### Bug Fixes
+
+* **unity-devtools:** teach SetComponentData with its type argument ([eccb665](https://github.com/CitiesSkylinesModding/agents-plugins/commit/eccb6658721e88d92ac8da0b120e9e4f1608e2a1))
+* **unity-devtools:** use placeholder types that mirror no real game ([f226e9e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/f226e9e7c70e90052c3f13d8e2f5880516007bf1))
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.0.1...unity-devtools-mcp-v1.1.0) (2026-09-19)
 
 

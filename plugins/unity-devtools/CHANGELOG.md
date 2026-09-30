@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.1.0...unity-devtools-v1.2.0) (2026-09-30)
+
+
+### Features
+
+* **unity-devtools:** answer a wrong member name with the members the receiver has ([d367627](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d3676272eb8d5cb045a03ac32114c7d27b124ce9))
+* **unity-devtools:** read component values off every entity ecs_query lists ([92b2360](https://github.com/CitiesSkylinesModding/agents-plugins/commit/92b2360ce75cd3da327aaff76ee57449ee1e4c31))
+* **unity-devtools:** say what a method call missed instead of "method not found" ([dbb24b4](https://github.com/CitiesSkylinesModding/agents-plugins/commit/dbb24b400a68e7844480ad0014980e32aa2802d7))
+* **unity-devtools:** say why a type name failed and which types it could have meant ([1fcb2de](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1fcb2de01ee3a9d66166bf8e41b20b989a670854))
+
+
+### Bug Fixes
+
+* **unity-devtools:** bind a generic call to whichever same-name definition accepts its arguments ([7a2bf83](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7a2bf83fbe67928ef90fd215b19fc7ca6e0599e6))
+* **unity-devtools:** name the ref or in keyword when eval rejects an argument modifier ([4f943bd](https://github.com/CitiesSkylinesModding/agents-plugins/commit/4f943bdea50c69cb1a4333fc788c6a4a6a243158))
+* **unity-devtools:** refuse a type that is not stored as a component before checking presence ([101c190](https://github.com/CitiesSkylinesModding/agents-plugins/commit/101c190802851d87f2df0962cf55e650b8597940))
+* **unity-devtools:** teach SetComponentData with its type argument ([eccb665](https://github.com/CitiesSkylinesModding/agents-plugins/commit/eccb6658721e88d92ac8da0b120e9e4f1608e2a1))
+* **unity-devtools:** use placeholder types that mirror no real game ([f226e9e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/f226e9e7c70e90052c3f13d8e2f5880516007bf1))
+
 ## [1.1.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.0.1...unity-devtools-v1.1.0) (2026-09-19)
 
 
