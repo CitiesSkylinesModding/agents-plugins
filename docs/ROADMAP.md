@@ -573,21 +573,9 @@ grammar does not reach it.
 
 **Priority:** high · **Cost:** moderate · **Hits:** 13 as of 2026-09-29
 
-`em.SetComponentData(e, value)` fails with `method EntityManager.SetComponentData/2 not found`:
-`Invoker.FindMethods` drops generic definitions, so a generic method called without its type
-arguments reads as absent rather than as generic. Recovery costs one retry adding `<T>`. Inferring `T` from an argument whose parameter is plain `T` covers every case seen; short
-of that, a miss that finds a generic definition should say it wants type arguments, which is cheap.
-
-### What a wrong type or member name reports
-
-**Priority:** high · **Cost:** cheap · **Hits:** 39 as of 2026-09-29
-
-A wrong type name or namespace gets a message that sends the agent away empty-handed. `type
-'Game.City.CitySystem' not found (names must be fully qualified)` blames qualification on a name that
-was fully qualified, just wrong, and `cannot resolve 'Colossal'` is as misleading on a real namespace.
-A member miss lists the type's instance fields only, so `List.Length` never shows the `Count` it
-wanted. Suggest near matches — types by simple name against `TypeCatalog`, members across fields and
-properties — which saves the `find_types` round trip each recovery spent.
+`em.SetComponentData(e, value)` fails, and the miss says the method is generic and wants its type
+argument written. Recovery costs one retry adding `<T>`. Inferring `T` from an argument whose
+parameter is plain `T` covers every case seen.
 
 ### A null receiver reports "no type for PrimitiveValue"
 
@@ -652,12 +640,11 @@ plain quotes would do.
 
 ### Extension methods through instance syntax
 
-**Priority:** low · **Cost:** cheap · **Hits:** 3 as of 2026-09-29
+**Priority:** low · **Cost:** moderate · **Hits:** 3 as of 2026-09-29
 
-`gameMode.IsEditor()` fails with `method GameMode.IsEditor/0 not found`. The static form works
-(`TextureAssetExtensions.AddAsset(db, …)` recovered one such call), but agents mostly abandon the
-call instead. Naming the static form on a miss is the cheap half; resolving extension methods for the
-receiver is the rest.
+`gameMode.IsEditor()` fails, and the miss names the static form (`GameModeExtensions.IsEditor(gameMode)`)
+when a bounded lookup finds the declaring class. Resolving extension methods for the receiver, so the
+instance form just works, is what remains.
 
 ### `ecs_set_component` writes no vector fields
 
