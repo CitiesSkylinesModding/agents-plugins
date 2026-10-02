@@ -560,7 +560,10 @@ that to one call — and it is the same read the prefab-by-name entry above want
 nothing can enumerate it. The read only completed by falling back to the private `m_Bindings` field
 behind it. Enumerating a returned `IEnumerable` into a rendered list is the general fix; short of
 that, "a private backing field is the escape hatch" is a fact the `unity-driving` skill should
-carry, because the failure gives no hint that one exists.
+carry, because the failure gives no hint that one exists. The same fix serves a plain `List<T>`,
+which renders as its type name: reading the game's binding table (`InputManager.GetBindings`, a
+`List<ProxyBinding>`) took `System.String.Concat<ProxyBinding>(list)` written to a file on the game
+machine.
 
 ### The `eval` grammar's type-name surface
 
