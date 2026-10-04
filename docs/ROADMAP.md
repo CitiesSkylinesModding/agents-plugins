@@ -879,6 +879,12 @@ into a user's install; that makes it a maintenance tool for regenerating a shipp
 the honest framing rather than a user-facing feature. And every base locale file carries trailing bytes past
 their declared end, so end-of-file is not end-of-data and the decoder has to stop on the counts.
 
+A second consumer, met in a mod's translation pass: an agent translating a mod into the game's
+languages wants each locale's official terms (photo mode, milestone, playset) so the mod reads like
+the vanilla UI, and decoding the dictionaries by hand was a detour. `cs2-modding-setup` could decode
+them into a machine-local directory recorded in `~/.cs2-modding/setup.md`, beside the decompile;
+a local copy commits nothing, so it stays on the right side of the copyright line.
+
 ### Marker namespace lint
 
 **Priority:** low · **Cost:** cheap
