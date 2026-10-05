@@ -81,26 +81,86 @@ The smoke question lives in `tests/fixtures/smoke.md`, deliberately outside `que
 
 ## The invocation contract
 
-Every invocation, both arms and the judge:
+Every invocation, both arms and the judge, runs in a fresh temp directory of its own, with the prompt on stdin:
 
 ```
-claude -p --output-format json --model <model> --effort <level> --safe-mode --disable-slash-commands
+claude -p --output-format stream-json --verbose --model <model> --effort <level> \
+  --setting-sources project --strict-mcp-config
 ```
 
-Arms add `--tools Read,Glob,Grep --allowed-tools Read,Glob,Grep --add-dir <root>...`; the judge adds `--tools ''` and no directory grant, so it can only read its own prompt. The prompt travels on stdin rather than in argv, which keeps Windows quoting and command-line length out of it.
+Each directory holds a `.claude/settings.json`:
 
-`--tools` is what denies subagents: `Task` is simply not in the set. `--safe-mode` is the isolation flag — it disables every customization on the machine (CLAUDE.md, skills, plugins, hooks, MCP servers, commands, agents) while leaving auth and permissions working, which is why the treatment arm reads the skill as plain files and loses nothing. `--bare` is ruled out: it keeps skills resolving and restricts auth to an API key this machine does not configure.
+```json
+{
+  "autoMemoryEnabled": false,
+  "permissions": {
+    "deny": [
+      "Read(/<this repo>/**)",
+      "Read(/<home>/.claude/**)",
+      "Read(/<home>/.cs2-modding/**)",
+      "Skill(code-review)"
+    ]
+  }
+}
+```
 
-### What the smoke run confirmed
+The control arm's deny list adds `Read(/<tmp>/cs2-bench-*/.claude/skills/**)`, which covers the skill copies in any treatment workspace running at the same time. `cs2-bench-` is the prefix the harness gives every workspace directory, so the rule and the harness change together.
+`<this repo>`, `<home>` and `<tmp>` are absolute paths, so every rule opens with `//`, which is how a permission rule spells an absolute path.
 
-Against Claude Code 2.1.226, with a probe invocation carrying the arm flags and reporting on its own environment:
+The arms add:
 
-- **Isolation holds.** The probe reported no CLAUDE.md or project instructions in context, and no skills, plugins or MCP servers available.
-- **Tool denial holds.** Available tools were exactly `Read`, `Glob`, `Grep`; no shell tool was reachable, despite the environment note mentioning one.
-- **Permissions hold under those flags.** Both arms read the decompile from a workspace in the temp directory with `permission_denials: []` in the result JSON, so `--add-dir` plus the bare `Read,Glob,Grep` grants pre-approve the reads with nothing left to prompt for.
-- **Usage and duration fields are all present.** The result JSON carries `usage` (input, cache creation, cache read, output), `total_cost_usd`, `num_turns`, `duration_ms` and `duration_api_ms`. The summary reports the API duration and flags wall times as concurrency-distorted only where a run reports none.
-- **Both arms and the judge complete end to end**, and the treatment arm cited the copied `SKILL.md` in its answer, so the copy-in and the entry-point path work as intended.
+```
+--permission-mode default --permission-prompts none \
+--tools Read,Glob,Grep,Write,Edit,Bash,WebSearch,WebFetch,Skill \
+--allowed-tools 'Read,Glob,Grep,Bash,WebSearch,WebFetch,Skill,Edit(/<workspace>/**),Write(/<workspace>/**)' \
+--add-dir <root>...
+```
 
-What the smoke run cannot prove is what Opus does with `--effort medium`; that is the preflight the benchmark run owes before the budget commits.
+- **treatment**: the four `cs2-*` skill folders are copied into `<workspace>/.claude/skills/`.
+- **control**: no skills folder.
 
-**The `Read` grant is unscoped.** `--allowed-tools Read` pre-approves reads anywhere, not only inside the granted roots; the workspaces sit outside any repository and the prompt forbids reading beyond the roots, so nothing on the machine is in reach by accident, but the flag set is not what enforces that.
+The judge adds `--disable-slash-commands --tools ''` and gets no directory grant.
+
+What each flag is for:
+
+- `--setting-sources project` is the isolation flag. It skips the user's settings, so their CLAUDE.md, rules, skills, plugins, hooks and output style never load. It still loads the workspace's own settings, which brings in the skills and the deny rules.
+- `--strict-mcp-config` keeps out the account's claude.ai connectors. Without it they show up, and in one run they arrived only after the `init` event.
+- `autoMemoryEnabled: false` keeps the auto-memory section out of the context.
+- `--permission-prompts none` denies anything not pre-approved. That's what makes the scoped `Edit`/`Write` grant hold. `--permission-mode default` pins the mode so it never comes from a settings file.
+- `--tools` keeps the agent tool out of the set. The `Skill(code-review)` deny rule blocks the one bundled skill seen running as a subagent.
+- `stream-json` is where the tool-call record comes from. In print mode the CLI refuses it without `--verbose`.
+
+`--safe-mode`, the previous isolation flag, is ruled out. It blocks workspace skills, and skills from `--plugin-dir` too, and it still applied the user's `defaultMode` (the run reported `permissionMode: "auto"`).
+`--restricted` is ruled out as well: workspace skills don't load under it, and it confines the file tools but not the shell.
+`--bare` fails with `Not logged in`.
+
+### What the probe confirmed
+
+These were run against Claude Code 2.1.289, on Sonnet at low effort. Each probe reported on its own environment, then made a fixed series of reads, writes, shell commands and web calls.
+
+- **The cs2 skills are the only skills the arms don't share.** Both arms' `init` events list the same 19 skills the CLI bundles (`dataviz`, `claude-api`, `run` and others). The treatment's adds `cs2-mod-project`, `cs2-modding`, `cs2-modding-setup` and `cs2-modding-ui`, and nothing else. Either arm can call a bundled skill, so the record of skill loads counts only `Skill` calls naming a `cs2-*` skill.
+  Two treatment runs got a modder's request to log blackouts once per in-game day, with no mention of skills. Both opened with `Skill {"skill":"cs2-modding"}` and then read references.
+- **None of the machine's customizations load.** Both arms and the judge reported no CLAUDE.md, rules, memory or output style. Their `init` events list no MCP server, and no plugin beyond the CLI's three builtins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`). The judge's lists no tools and no skills. With the user's settings loaded, a short prompt emitted 14 hook events. Under the contract it emitted none.
+- **The logged-in account works.** Runs report `"apiKeySource":"none"` with no API key in the environment.
+- **Workspace deny rules are honoured.** `Read`, `Grep` and `Glob` on a denied path all fail with a permission error. The shell is denied for `cat`, `head`, `ls`, `find` and `cd <denied> && head`. But `python3 -c "print(open('<denied file>').read())"` went through.
+- **Shell and web tools run unprompted.** `Bash`, `WebSearch` and `WebFetch` all returned results with no prompt and no denial.
+- **The agent tool is gone, but a bundled skill can still fork.** The arms' `init` tool lists hold no agent tool. In a control probe, `Skill` on the bundled `code-review` returned `"status":"forked"` with an agent id, and three events carried a parent tool call. With `Skill(code-review)` denied, the same call fails with `Skill execution blocked by permission rules`. `Skill` calls on `deep-research` and `batch` fail with `disable-model-invocation`.
+- **The write grant is scoped.** `Write` and `Edit` inside the workspace succeed. `Write` or `Edit` on a file in `/tmp` outside it is denied, and so is `Write` into the granted decompile root. With an unscoped `Write` grant, that same `/tmp` write succeeded. `echo outside > /tmp/...` through the shell went through under the scoped grant as well.
+- **The stream carries every tool's input.** Each `tool_use` event has its input: the `Bash` command, the `file_path` of `Read`, `Write` and `Edit`, the `path` of `Grep` and `Glob`, the `WebSearch` query, the `WebFetch` URL and the `Skill` name. A `WebSearch` result's `tool_use_result` lists the result URLs. Every denied call appears in the result's `permission_denials`.
+- **The fields the bench records are all there.** The closing `result` event carries `total_cost_usd`, `num_turns`, `duration_ms`, `duration_api_ms` and `usage` (input, cache creation, cache read, output).
+
+An arm doesn't always reach files through `Read` and `Write`. One treatment run wrote its answer with a shell heredoc and read references with `cat`. That's why file collection diffs the workspace, and why the reference-read record has to parse shell command text as well.
+
+### Which protections are enforced
+
+| Protection                                                                       | Status                                                                                                   |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Skills kept from the control arm: loaded as skills                               | Enforced                                                                                                 |
+| Skills kept from the control arm: read from a concurrent treatment workspace     | Enforced by the control's extra deny rule for `Read`, `Grep` and plain shell reads; detected-only past that |
+| Reads of this repository, the Claude config directory and the cs2 setup directory | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
+| Reads anywhere else outside the workspace and roots | Detected-only: the `Read`, `Grep`, `Glob` and `Bash` grants are unscoped |
+| Writes outside the workspace                                                     | Enforced for `Write` and `Edit`; detected-only through the shell                                         |
+| Subagents | Enforced for the agent tool and `code-review`; detected-only for any other bundled skill that forks, through its `"status":"forked"` result |
+| This repository reached on the web                                               | Detected-only                                                                                            |
+
+Detection scans the recorded tool calls, shell command text included, which makes it best-effort.
