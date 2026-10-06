@@ -136,6 +136,16 @@ description = "Run the skill-efficacy benchmark. Real API spend: read bench/READ
 raw = true
 run = "bun bench/run.ts"
 
+[tasks."bench:calibrate"]
+description = "Judge each benchmark task's two calibration samples. Real API spend, judge calls only."
+raw = true
+run = "bun bench/run.ts --calibrate"
+
+[tasks."bench:promote"]
+description = "Write a finished benchmark run into the tracked bench/results.md; pass the run directory."
+raw = true
+run = "bun bench/run.ts --promote"
+
 # SKILL MAINTENANCE TASKS
 # =======================
 

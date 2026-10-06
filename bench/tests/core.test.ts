@@ -7,12 +7,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { oneLine } from 'common-tags';
 import {
+  armNames,
   buildJudgePrompt,
   buildSummary,
+  calibrationVerdict,
   collectedFiles,
   findContamination,
   findSkillUse,
   jobSpend,
+  planJobs,
   planNextAttempt,
   loadTask,
   parseJudgeReply,
@@ -21,18 +24,23 @@ import {
   planArm,
   readStream,
   renderReport,
+  renderResults,
   resolveRoots,
   TaskFault,
   workspacePrefix,
   type ArmName,
   type ArmPlan,
   type ArmSummary,
+  type BenchSummary,
+  type ItemRuling,
+  type JobKey,
   type JobRecord,
   type RawInvocation,
   type TaskKind,
   type Verdict,
   type Attempt,
   type ResolvedRoot,
+  type RunSettings,
   type ToolCall
 } from '../core';
 
@@ -943,102 +951,144 @@ describe('judging', () => {
   });
 });
 
+describe('calibration', () => {
+  const rulings = (...verdicts: readonly Verdict[]): readonly ItemRuling[] =>
+    verdicts.map((verdict, index) => ({
+      item: ['Interval', 'Phase', 'Day'][index] ?? 'Extra',
+      verdict,
+      evidence: 'a line'
+    }));
+
+  test('passes a task whose items all fail on the falling sample and pass on the other', () => {
+    expect(
+      calibrationVerdict({
+        falls: rulings('fail', 'fail', 'fail'),
+        avoids: rulings('pass', 'pass', 'pass')
+      })
+    ).toEqual({ passes: true, misses: [] });
+  });
+
+  test.each([
+    [
+      'an item the falling sample passes',
+      rulings('fail', 'pass', 'fail'),
+      rulings('pass', 'pass', 'pass'),
+      'Phase: the falling sample was ruled pass'
+    ],
+    [
+      'an item the avoiding sample fails',
+      rulings('fail', 'fail', 'fail'),
+      rulings('pass', 'pass', 'fail'),
+      'Day: the avoiding sample was ruled fail'
+    ],
+    [
+      'a not-applicable item on the falling sample',
+      rulings('n/a', 'fail', 'fail'),
+      rulings('pass', 'pass', 'pass'),
+      'Interval: the falling sample was ruled n/a'
+    ],
+    [
+      'a not-applicable item on the avoiding sample',
+      rulings('fail', 'fail', 'fail'),
+      rulings('pass', 'n/a', 'pass'),
+      'Phase: the avoiding sample was ruled n/a'
+    ]
+  ] as const)('fails a task with %s', (_name, falls, avoids, miss) => {
+    expect(calibrationVerdict({ falls, avoids })).toEqual({ passes: false, misses: [miss] });
+  });
+});
+
+describe('resume and the task budget', () => {
+  const tasks = ['first', 'second', 'third'];
+
+  const keysOf = (planned: readonly JobKey[]): string[] =>
+    planned.map(key => `${key.task} ${key.arm} ${key.run}`);
+
+  test('a fresh run plans every job of every task, task by task', () => {
+    expect(keysOf(planJobs({ tasks: ['first', 'second'], runs: 2, records: [] }))).toEqual([
+      'first control 1',
+      'first control 2',
+      'first treatment 1',
+      'first treatment 2',
+      'second control 1',
+      'second control 2',
+      'second treatment 1',
+      'second treatment 2'
+    ]);
+  });
+
+  test('a resume skips the jobs with a result on disk and reruns a failed one', () => {
+    const records = [
+      job({ task: 'first', arm: 'control', run: 1 }),
+      job({ task: 'first', arm: 'treatment', run: 1, outcome: 'no-code' }),
+      job({ task: 'first', arm: 'treatment', run: 2, outcome: 'failed' })
+    ];
+
+    expect(keysOf(planJobs({ tasks: ['first'], runs: 2, records }))).toEqual([
+      'first control 2',
+      'first treatment 2'
+    ]);
+  });
+
+  test('a budget takes whole tasks, each in both arms for every run', () => {
+    expect(keysOf(planJobs({ tasks, runs: 1, records: [], budget: 2 }))).toEqual([
+      'first control 1',
+      'first treatment 1',
+      'second control 1',
+      'second treatment 1'
+    ]);
+  });
+
+  test('a budget spends nothing on a finished task and a whole slot on a started one', () => {
+    const records = [
+      job({ task: 'first', arm: 'control', run: 1 }),
+      job({ task: 'first', arm: 'treatment', run: 1 }),
+      job({ task: 'second', arm: 'control', run: 1 })
+    ];
+
+    expect(keysOf(planJobs({ tasks, runs: 1, records, budget: 1 }))).toEqual([
+      'second treatment 1'
+    ]);
+  });
+});
+
 describe('aggregation and the report', () => {
-  const items = ['Interval', 'Phase', 'Day'];
+  const cadence = 'cs2-modding/references/mechanics/simulation-time-and-units/cadence.md';
+  const leak = 'Read read /home/modder/notes.md, outside the workspace and roots';
+  const brokenLog = { task: 'broken-log', kind: 'bug report' } as const;
+  const partialLog = { task: 'partial-log' } as const;
 
-  function job(overrides: {
-    task?: string;
-    kind?: TaskKind;
-    arm: ArmName;
-    run: number;
-    outcome?: JobRecord['outcome'];
-    verdicts?: readonly Verdict[];
-    contamination?: readonly string[];
-    skillsLoaded?: readonly string[];
-    referencesRead?: readonly string[];
-    costUsd?: number;
-  }): JobRecord {
-    const outcome = overrides.outcome ?? 'judged';
-
-    const base = {
-      task: overrides.task ?? 'daily-log',
-      kind: overrides.kind ?? 'feature request',
-      arm: overrides.arm,
-      run: overrides.run,
-      attempts: [],
-      spend: {
-        costUsd: overrides.costUsd ?? 0.2,
-        numTurns: 10,
-        durationMs: 60_000,
-        durationSources: ['api']
-      },
-      contamination: overrides.contamination ?? [],
-      skillUse: {
-        skillsLoaded: overrides.skillsLoaded ?? [],
-        referencesRead: overrides.referencesRead ?? []
-      },
-      files: outcome == 'judged' ? ['Mod.cs'] : [],
-      finalMessage: '',
-      toolCalls: []
-    } as const;
-
-    if (outcome == 'failed') {
-      return { ...base, outcome, fault: 'the run hit its timeout' };
-    }
-
-    if (outcome == 'no-code') {
-      return { ...base, outcome };
-    }
-
-    return {
-      ...base,
-      outcome,
-      verdicts: (overrides.verdicts ?? ['pass', 'pass', 'pass']).map((verdict, index) => ({
-        item: items[index] ?? 'Extra',
-        verdict,
-        evidence: 'a line'
-      }))
-    };
-  }
+  const settings: RunSettings = {
+    startedAt: '2026-10-06T00:00:00.000Z',
+    model: 'sonnet',
+    effort: 'low',
+    judgeModel: 'sonnet',
+    runs: 2,
+    tasks: ['daily-log', 'broken-log', 'partial-log', 'unstarted-log']
+  };
 
   const jobs = [
     job({ arm: 'control', run: 1, verdicts: ['pass', 'fail', 'n/a'] }),
     job({ arm: 'control', run: 2, verdicts: ['pass', 'pass', 'fail'] }),
-    job({
-      arm: 'control',
-      run: 3,
-      contamination: ['Read read /home/modder/notes.md, outside the workspace and roots']
-    }),
-    job({ arm: 'control', run: 4, outcome: 'no-code' }),
-    job({ arm: 'control', run: 5, outcome: 'failed' }),
-    job({
-      arm: 'treatment',
-      run: 1,
-      skillsLoaded: ['cs2-modding'],
-      referencesRead: ['cs2-modding/references/mechanics/simulation-time-and-units/cadence.md']
-    }),
+    job({ arm: 'treatment', run: 1, skillsLoaded: ['cs2-modding'], referencesRead: [cadence] }),
     job({
       arm: 'treatment',
       run: 2,
       verdicts: ['n/a', 'n/a', 'n/a'],
       skillsLoaded: ['cs2-modding']
     }),
-    job({
-      arm: 'treatment',
-      run: 3,
-      task: 'broken-log',
-      kind: 'bug report',
-      verdicts: ['fail', 'pass', 'pass']
-    })
+    job({ ...brokenLog, arm: 'control', run: 1, contamination: [leak] }),
+    job({ ...brokenLog, arm: 'control', run: 2, outcome: 'no-code' }),
+    job({ ...brokenLog, arm: 'treatment', run: 1, verdicts: ['fail', 'pass', 'pass'] }),
+    job({ ...brokenLog, arm: 'treatment', run: 2, outcome: 'no-code' }),
+    // An interruption left this task with a failed job and one never run: if its two judged runs
+    // were scored, the control's would sink its pass rate and the treatment's would lift it.
+    job({ ...partialLog, arm: 'control', run: 1, verdicts: ['fail', 'fail', 'fail'] }),
+    job({ ...partialLog, arm: 'control', run: 2, outcome: 'failed' }),
+    job({ ...partialLog, arm: 'treatment', run: 1, skillsLoaded: ['cs2-modding'] })
   ];
 
-  const summary = buildSummary({
-    startedAt: '2026-10-06T00:00:00.000Z',
-    model: 'sonnet',
-    effort: 'low',
-    judgeModel: 'sonnet',
-    jobs
-  });
+  const summary = buildSummary({ settings, jobs });
 
   function armOf(arm: ArmName): ArmSummary {
     const found = summary.arms.find(candidate => candidate.arm == arm);
@@ -1052,7 +1102,11 @@ describe('aggregation and the report', () => {
     expect(armOf('control').tally).toEqual({ passed: 3, applicable: 5 });
     expect(armOf('control').contaminated).toBe(1);
     expect(armOf('control').noCode).toBe(1);
-    expect(armOf('control').failed).toBe(1);
+  });
+
+  test('the per-arm row counts the jobs of finished tasks only', () => {
+    // Counting the unfinished task's judged control job would move its pass rate, runs and share.
+    expect(renderReport(summary)).toContain('| control | 60% (3/5) | 2 | 0/4 | 1 | 1 | 0.2');
   });
 
   test('a not-applicable item counts neither way', () => {
@@ -1083,14 +1137,40 @@ describe('aggregation and the report', () => {
   });
 
   test('reports how many runs loaded a cs2 skill and which references they read', () => {
-    expect(armOf('treatment').skillLoaded).toEqual({ runs: 2, of: 3 });
+    expect(armOf('treatment').skillLoaded).toEqual({ runs: 2, of: 4 });
     expect(armOf('control').skillLoaded).toEqual({ runs: 0, of: 4 });
-    expect(summary.references).toEqual([
-      {
-        reference: 'cs2-modding/references/mechanics/simulation-time-and-units/cadence.md',
-        runs: 1
-      }
+    expect(summary.references).toEqual([{ reference: cadence, runs: 1 }]);
+  });
+
+  test('keeps a task an interruption left incomplete out of every score, and lists it', () => {
+    expect(summary.unfinished).toEqual([
+      { task: 'partial-log', finished: 2, of: 4 },
+      { task: 'unstarted-log', finished: 0, of: 4 }
     ]);
+    expect(summary.tasks.map(entry => entry.task)).not.toContain('partial-log');
+    expect(summary.items.map(entry => entry.task)).not.toContain('partial-log');
+  });
+
+  test('names every skills commit the run spanned, and whether any job ran on a dirty tree', () => {
+    const clean = { commit: 'aaaa111', isDirty: false };
+    const later = { commit: 'bbbb222', isDirty: false };
+
+    const spanned = (skills: ReadonlyArray<JobRecord['skills']>): BenchSummary['skills'] =>
+      buildSummary({
+        settings: { ...settings, runs: skills.length, tasks: ['daily-log'] },
+        jobs: skills.flatMap((version, index) =>
+          armNames.map(arm => job({ arm, run: index + 1, skills: version }))
+        )
+      }).skills;
+
+    expect(spanned([clean, later, clean])).toEqual({
+      commits: ['aaaa111', 'bbbb222'],
+      isDirty: false
+    });
+    expect(spanned([clean, { ...later, isDirty: true }])).toEqual({
+      commits: ['aaaa111', 'bbbb222'],
+      isDirty: true
+    });
   });
 
   test('renders the arms, the splits and every run left out of the scores', () => {
@@ -1100,16 +1180,57 @@ describe('aggregation and the report', () => {
     expect(report).toContain('| treatment | 83% (5/6) |');
     expect(report).toContain('| bug report | – | 67% (2/3) |');
     expect(report).toContain('| daily-log | Day | 0/1/1 | 1/0/1 |');
-    expect(report).toContain(
-      '| daily-log | control | 3 | Read read /home/modder/notes.md, outside the workspace and roots |'
-    );
+    expect(report).toContain(`| broken-log | control | 1 | ${leak} |`);
     expect(report).toContain('## No-code runs');
-    expect(report).toContain('| daily-log | control | 5 | the run hit its timeout |');
-    expect(report).toContain(
-      '| cs2-modding/references/mechanics/simulation-time-and-units/cadence.md | 1 |'
-    );
-    expect(report).toContain('| treatment | 83% (5/6) | 3 | 2/3 | 0 | 0 | 0 |');
+    expect(report).toContain('| partial-log | control | 2 | the run hit its timeout |');
+    expect(report).toContain(`| ${cadence} | 1 |`);
+    expect(report).toContain('| treatment | 83% (5/6) | 3 | 2/4 | 0 | 1 | 0.2000 |');
+    expect(report).toContain('| partial-log | 2/4 |');
+    expect(report).toContain('| unstarted-log | 0/4 |');
     expect(report).not.toContain('concurrency distorts');
+  });
+
+  describe('the promoted results file', () => {
+    const finished = buildSummary({
+      settings: { ...settings, tasks: ['daily-log', 'broken-log'] },
+      jobs: jobs.filter(entry => entry.task != 'partial-log')
+    });
+
+    test('carries the date, the models, the skills commits and the summary tables', () => {
+      const results = renderResults(finished);
+
+      expect(results).toContain('2026-10-06');
+      expect(results).toContain('sonnet at low effort');
+      expect(results).toContain('aaaa111');
+      expect(results).toContain('| control | 60% (3/5) |');
+      expect(results).toContain('| daily-log | Day | 0/1/1 | 1/0/1 |');
+      expect(results).not.toContain('uncommitted');
+    });
+
+    test('marks a run any job of which ran on uncommitted skills', () => {
+      const [first, ...rest] = finished.jobs;
+
+      assert.ok(first, 'the finished run holds jobs');
+
+      const dirty = buildSummary({
+        settings: finished.settings,
+        jobs: [{ ...first, skills: { commit: 'aaaa111', isDirty: true } }, ...rest]
+      });
+
+      expect(renderResults(dirty)).toContain('uncommitted');
+    });
+
+    test('leaves out the per-run detail and its machine-local findings', () => {
+      const results = renderResults(finished);
+
+      expect(results).toContain('## Per arm');
+      expect(results).not.toContain('## Runs');
+      expect(results).not.toContain(leak);
+    });
+
+    test('refuses a run with an unfinished task', () => {
+      expect(() => renderResults(summary)).toThrow(/partial-log/u);
+    });
   });
 
   test('reports an unpriced arm as unpriced and a mixed clock as distorted', () => {
@@ -1123,10 +1244,7 @@ describe('aggregation and the report', () => {
 
     const report = renderReport(
       buildSummary({
-        startedAt: summary.startedAt,
-        model: 'sonnet',
-        effort: 'low',
-        judgeModel: 'sonnet',
+        settings: { ...settings, runs: 1, tasks: ['daily-log'] },
         jobs: [unpriced, priced]
       })
     );
@@ -1135,6 +1253,66 @@ describe('aggregation and the report', () => {
     expect(report).toContain('concurrency distorts');
   });
 });
+
+/**
+ * A job record with every field the aggregation does not read set to a neutral value.
+ */
+function job(overrides: {
+  task?: string;
+  kind?: TaskKind;
+  arm: ArmName;
+  run: number;
+  outcome?: JobRecord['outcome'];
+  verdicts?: readonly Verdict[];
+  contamination?: readonly string[];
+  skillsLoaded?: readonly string[];
+  referencesRead?: readonly string[];
+  costUsd?: number;
+  skills?: JobRecord['skills'];
+}): JobRecord {
+  const outcome = overrides.outcome ?? 'judged';
+
+  const base = {
+    task: overrides.task ?? 'daily-log',
+    kind: overrides.kind ?? 'feature request',
+    arm: overrides.arm,
+    run: overrides.run,
+    skills: overrides.skills ?? { commit: 'aaaa111', isDirty: false },
+    attempts: [],
+    spend: {
+      costUsd: overrides.costUsd ?? 0.2,
+      numTurns: 10,
+      durationMs: 60_000,
+      durationSources: ['api']
+    },
+    contamination: overrides.contamination ?? [],
+    skillUse: {
+      skillsLoaded: overrides.skillsLoaded ?? [],
+      referencesRead: overrides.referencesRead ?? []
+    },
+    files: outcome == 'judged' ? ['Mod.cs'] : [],
+    finalMessage: '',
+    toolCalls: []
+  } as const;
+
+  if (outcome == 'failed') {
+    return { ...base, outcome, fault: 'the run hit its timeout' };
+  }
+
+  if (outcome == 'no-code') {
+    return { ...base, outcome };
+  }
+
+  return {
+    ...base,
+    outcome,
+    verdicts: (overrides.verdicts ?? ['pass', 'pass', 'pass']).map((verdict, index) => ({
+      item: ['Interval', 'Phase', 'Day'][index] ?? 'Extra',
+      verdict,
+      evidence: 'a line'
+    }))
+  };
+}
 
 /**
  * Writes a task folder to a temp directory, removed once the file's tests are done.

@@ -6,7 +6,8 @@ import { oneLine } from 'common-tags';
 
 // Every decision the benchmark makes: what a task file may say, what each arm is told and allowed,
 // what a run's streamed output records, which files it produced, whether it leaked, what the judge
-// ruled, and how the numbers are summarized.
+// ruled, which jobs a resume or a budget runs, whether a task calibrates, and how the numbers are
+// summarized and promoted.
 // run.ts is the shell around it and holds no decision of its own, which is what makes the whole
 // tool testable without spawning anything.
 
@@ -196,6 +197,20 @@ export interface ItemVerdict {
 }
 
 /**
+ * A verdict on a named checklist item.
+ */
+export type ItemRuling = ItemVerdict & { readonly item: string };
+
+/**
+ * The skills a job ran against: the last commit touching them, and whether the working tree held
+ * changes to them on top of it.
+ */
+export interface SkillsVersion {
+  readonly commit: string;
+  readonly isDirty: boolean;
+}
+
+/**
  * What a job's arm did and produced, the part of its record that is there whatever the outcome.
  * A job is one run of one task in one arm.
  */
@@ -204,6 +219,7 @@ export interface ArmRecord {
   readonly kind: TaskKind;
   readonly arm: ArmName;
   readonly run: number;
+  readonly skills: SkillsVersion;
   readonly attempts: readonly Attempt[];
   readonly spend: JobSpend;
   readonly contamination: readonly string[];
@@ -222,11 +238,20 @@ export type JobRecord = ArmRecord &
   (
     | {
         readonly outcome: 'judged';
-        readonly verdicts: ReadonlyArray<ItemVerdict & { readonly item: string }>;
+        readonly verdicts: readonly ItemRuling[];
       }
     | { readonly outcome: 'no-code' }
     | { readonly outcome: 'failed'; readonly fault: string }
   );
+
+/**
+ * Which job a record is: one run of one task in one arm.
+ */
+export interface JobKey {
+  readonly task: string;
+  readonly arm: ArmName;
+  readonly run: number;
+}
 
 export interface Tally {
   readonly passed: number;
@@ -251,7 +276,6 @@ export interface ArmSummary {
   readonly skillLoaded: { readonly runs: number; readonly of: number };
   readonly contaminated: number;
   readonly noCode: number;
-  readonly failed: number;
   /**
    * Over the runs that finished; undefined where none reported a cost.
    */
@@ -261,11 +285,26 @@ export interface ArmSummary {
   readonly durationSources: readonly DurationSource[];
 }
 
-export interface BenchSummary {
+/**
+ * What a run directory is fixed to when it is created, and every resume of it keeps.
+ */
+export interface RunSettings {
   readonly startedAt: string;
   readonly model: string;
   readonly effort: string;
   readonly judgeModel: string;
+  /**
+   * Runs per arm per task.
+   */
+  readonly runs: number;
+  /**
+   * The run's task slugs, in the order its slices take them.
+   */
+  readonly tasks: readonly string[];
+}
+
+export interface BenchSummary {
+  readonly settings: RunSettings;
   readonly arms: readonly ArmSummary[];
   readonly kinds: ReadonlyArray<{
     readonly kind: TaskKind;
@@ -295,6 +334,18 @@ export interface BenchSummary {
    * Which skill files the treatment runs read, and in how many runs.
    */
   readonly references: ReadonlyArray<{ readonly reference: string; readonly runs: number }>;
+  /**
+   * The tasks with a job not yet final, each with how many of its jobs are.
+   */
+  readonly unfinished: ReadonlyArray<{
+    readonly task: string;
+    readonly finished: number;
+    readonly of: number;
+  }>;
+  /**
+   * Every skills commit a job of the run ran against, and whether any ran on uncommitted changes.
+   */
+  readonly skills: { readonly commits: readonly string[]; readonly isDirty: boolean };
   readonly jobs: readonly JobRecord[];
 }
 
@@ -762,6 +813,34 @@ export function planNextAttempt(attempts: readonly Attempt[], maxAttempts: numbe
 }
 
 /**
+ * The jobs an invocation runs, task by task: every job of the run with no final record on disk,
+ * over the first `budget` tasks that have one.
+ * A run directory is its own ledger, so a resume is this plan over what an earlier invocation left.
+ * A failed record is no measurement and is rerun whole, while a no-code one is the arm's result.
+ * A task counts against the budget whole, however few of its jobs remain, so a slice always ends
+ * on a task boundary.
+ */
+export function planJobs(input: {
+  readonly tasks: readonly string[];
+  readonly runs: number;
+  readonly records: readonly JobRecord[];
+  readonly budget?: number | undefined;
+}): readonly JobKey[] {
+  const done = new Set(input.records.filter(record => isFinal(record)).map(key => keyOf(key)));
+
+  return input.tasks
+    .map(task =>
+      armNames.flatMap(arm =>
+        Array.from({ length: input.runs }, (_, index) => ({ task, arm, run: index + 1 }))
+      )
+    )
+    .map(jobs => jobs.filter(job => !done.has(keyOf(job))))
+    .filter(jobs => jobs.length)
+    .slice(0, input.budget)
+    .flat();
+}
+
+/**
  * What a job cost over every attempt it made, the discarded ones included, so an arm that stalls
  * more never looks cheaper.
  * Each attempt's duration is the API's where reported: it is the one clock concurrency does not
@@ -944,7 +1023,7 @@ export function buildJudgePrompt(input: {
 export function parseJudgeReply(
   text: string,
   checklist: readonly ChecklistItem[]
-): ReadonlyArray<ItemVerdict & { readonly item: string }> {
+): readonly ItemRuling[] {
   const itemCount = checklist.length;
   const verdicts = new Map<number, ItemVerdict>();
 
@@ -978,21 +1057,54 @@ export function parseJudgeReply(
 }
 
 /**
+ * Whether the judge can rule on a task's checklist, from its rulings on the two samples: every
+ * item fails on the sample that falls into every trap and passes on the one that avoids them all.
+ * A not-applicable ruling on either is a miss, since both samples meet every item by construction.
+ */
+export function calibrationVerdict(input: {
+  readonly falls: readonly ItemRuling[];
+  readonly avoids: readonly ItemRuling[];
+}): { readonly passes: boolean; readonly misses: readonly string[] } {
+  const samples = [
+    { name: 'falling', rulings: input.falls, expected: 'fail' },
+    { name: 'avoiding', rulings: input.avoids, expected: 'pass' }
+  ] as const;
+
+  const misses = samples.flatMap(sample =>
+    sample.rulings
+      .filter(ruling => ruling.verdict != sample.expected)
+      .map(ruling => `${ruling.item}: the ${sample.name} sample was ruled ${ruling.verdict}`)
+  );
+
+  return { passes: !misses.length, misses };
+}
+
+/**
  * Summarizes the jobs on disk.
  * A contaminated run is excluded from every score, a no-code or failed one has none, and a
  * not-applicable item counts neither way; all of them stay listed.
+ * Only finished tasks are aggregated, so a partial run compares the arms on the same tasks: an
+ * interrupted task is listed as unfinished and its jobs as runs, and counts nowhere else.
  */
 export function buildSummary(input: {
-  readonly startedAt: string;
-  readonly model: string;
-  readonly effort: string;
-  readonly judgeModel: string;
+  readonly settings: RunSettings;
   readonly jobs: readonly JobRecord[];
 }): BenchSummary {
-  const { jobs } = input;
-  const scored = jobs.filter(job => job.outcome == 'judged' && !job.contamination.length);
-  const finished = jobs.filter(job => job.outcome != 'failed');
-  const tasks = [...new Map(jobs.map(job => [job.task, job.kind]))];
+  const { settings, jobs } = input;
+  const jobsPerTask = armNames.length * settings.runs;
+
+  const unfinished = settings.tasks
+    .map(task => ({
+      task,
+      finished: jobs.filter(job => job.task == task && isFinal(job)).length,
+      of: jobsPerTask
+    }))
+    .filter(entry => entry.finished < entry.of);
+
+  const counted = jobs.filter(job => !unfinished.some(entry => entry.task == job.task));
+  const scored = counted.filter(job => job.outcome == 'judged' && !job.contamination.length);
+  const finished = counted.filter(job => isFinal(job));
+  const tasks = [...new Map(counted.map(job => [job.task, job.kind]))];
 
   const arms = armNames.map((arm): ArmSummary => {
     const armScored = scored.filter(job => job.arm == arm);
@@ -1009,7 +1121,6 @@ export function buildSummary(input: {
       },
       contaminated: armFinished.filter(job => job.contamination.length).length,
       noCode: armFinished.filter(job => job.outcome == 'no-code').length,
-      failed: jobs.filter(job => job.arm == arm && job.outcome == 'failed').length,
       costUsd: statsOf(costs),
       numTurns: statsOf(armFinished.map(job => job.spend.numTurns)),
       durationMs: statsOf(armFinished.map(job => job.spend.durationMs)),
@@ -1028,10 +1139,7 @@ export function buildSummary(input: {
   }
 
   return {
-    startedAt: input.startedAt,
-    model: input.model,
-    effort: input.effort,
-    judgeModel: input.judgeModel,
+    settings,
     arms,
     kinds: taskKinds.flatMap(kind =>
       armNames
@@ -1077,12 +1185,23 @@ export function buildSummary(input: {
     references: [...references]
       .map(([reference, runs]) => ({ reference, runs }))
       .toSorted((a, b) => b.runs - a.runs || a.reference.localeCompare(b.reference)),
+    unfinished,
+    skills: {
+      commits: [...new Set(jobs.map(job => job.skills.commit))],
+      isDirty: jobs.some(job => job.skills.isDirty)
+    },
     jobs
   };
 }
 
 export function renderReport(summary: BenchSummary): string {
-  const unscored = summary.jobs.filter(job => job.outcome != 'judged' || job.contamination.length);
+  const { settings } = summary;
+  const unscored = summary.jobs.filter(
+    job =>
+      job.outcome != 'judged' ||
+      job.contamination.length ||
+      summary.unfinished.some(entry => entry.task == job.task)
+  );
   const contaminated = summary.jobs.filter(job => job.contamination.length);
   const noCode = summary.jobs.filter(job => job.outcome == 'no-code');
   const failed = summary.jobs.filter(job => job.outcome == 'failed');
@@ -1090,8 +1209,11 @@ export function renderReport(summary: BenchSummary): string {
   return [
     '# Benchmark summary',
     '',
-    `- Started: ${summary.startedAt}`,
-    `- Arms: ${summary.model} at ${summary.effort} effort, judge: ${summary.judgeModel}`,
+    `- Started: ${settings.startedAt}`,
+    `- Arms: ${settings.model} at ${settings.effort} effort, judge: ${settings.judgeModel}`,
+    ...(summary.unfinished.length
+      ? [`- ${summary.unfinished.length} task(s) unfinished and left out of the scores.`]
+      : []),
     ...(summary.arms.some(arm => arm.durationSources.some(source => source != 'api'))
       ? [
           oneLine`
@@ -1104,75 +1226,7 @@ export function renderReport(summary: BenchSummary): string {
       ? [`- ${unscored.length} run(s) left out of the scores, listed below.`]
       : []),
     '',
-    '## Per arm',
-    '',
-    ...table(
-      [
-        'arm',
-        'pass rate',
-        'scored runs',
-        'loaded a cs2 skill',
-        'contaminated',
-        'no code',
-        'failed',
-        'cost mean usd',
-        'turns mean',
-        'duration mean ms'
-      ],
-      summary.arms.map(arm => [
-        arm.arm,
-        rateOf(arm.tally),
-        String(arm.scored),
-        `${arm.skillLoaded.runs}/${arm.skillLoaded.of}`,
-        String(arm.contaminated),
-        String(arm.noCode),
-        String(arm.failed),
-        arm.costUsd?.mean.toFixed(costDecimals) ?? '(none reported)',
-        arm.numTurns?.mean.toFixed(1) ?? '',
-        arm.durationMs?.mean.toFixed(0) ?? ''
-      ])
-    ),
-    '',
-    '## Per task kind',
-    '',
-    ...table(
-      ['kind', ...armNames],
-      taskKinds
-        .filter(kind => summary.kinds.some(entry => entry.kind == kind))
-        .map(kind =>
-          armRow(
-            [kind],
-            summary.kinds.filter(entry => entry.kind == kind),
-            entry => rateOf(entry?.tally)
-          )
-        )
-    ),
-    '',
-    '## Per task',
-    '',
-    ...table(
-      ['task', 'kind', ...armNames],
-      [...new Map(summary.tasks.map(entry => [entry.task, entry.kind]))].map(([task, kind]) =>
-        armRow(
-          [task, kind],
-          summary.tasks.filter(entry => entry.task == task),
-          entry => rateOf(entry?.tally)
-        )
-      )
-    ),
-    '',
-    '## Per item',
-    '',
-    `Pass/fail/not-applicable counts over the scored runs.`,
-    '',
-    ...table(
-      ['task', 'item', ...armNames],
-      summary.items.map(entry =>
-        armRow([entry.task, entry.item], entry.counts, counts =>
-          counts ? `${counts.pass}/${counts.fail}/${counts.notApplicable}` : '–'
-        )
-      )
-    ),
+    ...summaryTables(summary),
     '',
     '## Runs',
     '',
@@ -1205,10 +1259,11 @@ export function renderReport(summary: BenchSummary): string {
       ])
     ),
     ...section(
-      'References read by treatment runs',
-      ['reference', 'runs'],
-      summary.references.map(entry => [entry.reference, String(entry.runs)])
+      'Unfinished tasks',
+      ['task', 'jobs finished'],
+      summary.unfinished.map(entry => [entry.task, `${entry.finished}/${entry.of}`])
     ),
+    ...referencesSection(summary),
     ...section(
       'Contaminated runs',
       ['task', 'arm', 'run', 'findings'],
@@ -1224,6 +1279,41 @@ export function renderReport(summary: BenchSummary): string {
       ['task', 'arm', 'run', 'fault'],
       failed.map(job => [job.task, job.arm, String(job.run), job.fault])
     ),
+    ''
+  ].join('\n');
+}
+
+/**
+ * Renders a finished run as the tracked results file: what was measured with what, and the
+ * summary tables.
+ * The per-run detail stays in the run directory: its findings name machine-local paths, and the
+ * file is the baseline a later skill edit compares against, so it carries the scores alone.
+ */
+export function renderResults(summary: BenchSummary): string {
+  const { settings, skills } = summary;
+
+  if (summary.unfinished.length) {
+    throw new Error(oneLine`
+      The run is unfinished, so it has no results to promote: resume it to finish
+      ${summary.unfinished.map(entry => entry.task).join(', ')}.
+    `);
+  }
+
+  return [
+    '# Benchmark results',
+    '',
+    `- Date: ${settings.startedAt.slice(0, 'YYYY-MM-DD'.length)}`,
+    oneLine`
+      - Arms: ${settings.model} at ${settings.effort} effort, ${settings.runs} run(s) per arm per
+      task over ${settings.tasks.length} task(s), judge: ${settings.judgeModel}
+    `,
+    `- Skills: ${skills.commits.join(', ')}`,
+    ...(skills.isDirty
+      ? [`- At least one job ran on skills with uncommitted changes on top of their commit.`]
+      : []),
+    '',
+    ...summaryTables(summary),
+    ...referencesSection(summary),
     ''
   ].join('\n');
 }
@@ -1608,7 +1698,18 @@ function deniedLocations(machine: Machine): readonly string[] {
   ];
 }
 
-function verdictsOf(job: JobRecord): ReadonlyArray<ItemVerdict & { readonly item: string }> {
+/**
+ * A job's record is final when it measured the arm: judged, or no code at the cap.
+ */
+function isFinal(record: JobRecord): boolean {
+  return record.outcome != 'failed';
+}
+
+function keyOf(key: JobKey): string {
+  return `${key.task}\n${key.arm}\n${key.run}`;
+}
+
+function verdictsOf(job: JobRecord): readonly ItemRuling[] {
   return job.outcome == 'judged' ? job.verdicts : [];
 }
 
@@ -1679,6 +1780,89 @@ function statsOf(readings: readonly number[]): MetricStats | undefined {
     mean: sum(values) / values.length,
     median: values.length % 2 ? upper : (lower + upper) / 2
   };
+}
+
+/**
+ * The per-arm, per-kind, per-task and per-item tables, which the report and the results file share.
+ */
+function summaryTables(summary: BenchSummary): string[] {
+  return [
+    '## Per arm',
+    '',
+    ...table(
+      [
+        'arm',
+        'pass rate',
+        'scored runs',
+        'loaded a cs2 skill',
+        'contaminated',
+        'no code',
+        'cost mean usd',
+        'turns mean',
+        'duration mean ms'
+      ],
+      summary.arms.map(arm => [
+        arm.arm,
+        rateOf(arm.tally),
+        String(arm.scored),
+        `${arm.skillLoaded.runs}/${arm.skillLoaded.of}`,
+        String(arm.contaminated),
+        String(arm.noCode),
+        arm.costUsd?.mean.toFixed(costDecimals) ?? '(none reported)',
+        arm.numTurns?.mean.toFixed(1) ?? '',
+        arm.durationMs?.mean.toFixed(0) ?? ''
+      ])
+    ),
+    '',
+    '## Per task kind',
+    '',
+    ...table(
+      ['kind', ...armNames],
+      taskKinds
+        .filter(kind => summary.kinds.some(entry => entry.kind == kind))
+        .map(kind =>
+          armRow(
+            [kind],
+            summary.kinds.filter(entry => entry.kind == kind),
+            entry => rateOf(entry?.tally)
+          )
+        )
+    ),
+    '',
+    '## Per task',
+    '',
+    ...table(
+      ['task', 'kind', ...armNames],
+      [...new Map(summary.tasks.map(entry => [entry.task, entry.kind]))].map(([task, kind]) =>
+        armRow(
+          [task, kind],
+          summary.tasks.filter(entry => entry.task == task),
+          entry => rateOf(entry?.tally)
+        )
+      )
+    ),
+    '',
+    '## Per item',
+    '',
+    `Pass/fail/not-applicable counts over the scored runs.`,
+    '',
+    ...table(
+      ['task', 'item', ...armNames],
+      summary.items.map(entry =>
+        armRow([entry.task, entry.item], entry.counts, counts =>
+          counts ? `${counts.pass}/${counts.fail}/${counts.notApplicable}` : '–'
+        )
+      )
+    )
+  ];
+}
+
+function referencesSection(summary: BenchSummary): string[] {
+  return section(
+    'References read by treatment runs',
+    ['reference', 'runs'],
+    summary.references.map(entry => [entry.reference, String(entry.runs)])
+  );
 }
 
 /**

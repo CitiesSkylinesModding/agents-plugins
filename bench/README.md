@@ -9,14 +9,18 @@ Each task is a request a modder would type: a feature request, or a bug report o
 
 The prompt is byte-identical across arms. It's the request, then where the task's source roots are on this machine, then two closing lines: write the code without asking questions, and don't build, test or run anything.
 
-The layout is two files. `core.ts` holds every decision: task parsing, the arm and judge plans, stream reading, file collection, contamination, the retry plan, verdict parsing, aggregation and the report. It's what the tests drive. `run.ts` is a deliberately untested shell around it: workspaces, spawning, file system and clock.
+The layout is two files. `core.ts` holds every decision: task parsing, the arm and judge plans, stream reading, file collection, contamination, the retry plan, verdict parsing, resume planning, calibration, aggregation, the report and the results file. It's what the tests drive. `run.ts` is a deliberately untested shell around it: workspaces, spawning, file system and clock.
 
 ## Running it
 
 ```bash
 mise bench:test                     # the core's unit tests
 mise bench:validate                 # the task folders parse and their roots resolve; spends nothing
+mise bench:calibrate                # judge each task's two samples; spends judge calls only
 mise bench:run                      # the real thing: Opus, real spend
+mise bench:run --task-budget 3      # the same, stopping after three whole tasks
+mise bench:run --resume bench/results/<timestamp> --task-budget 3   # the next slice
+mise bench:promote bench/results/<timestamp>                         # write a finished run into results.md
 mise bench:run --smoke --runs 1 --model sonnet --judge-model sonnet --effort low --timeout-minutes 10
 ```
 
@@ -24,14 +28,18 @@ Flags, all optional:
 
 | Flag                    | Default         | What it does                                                                         |
 | ----------------------- | --------------- | ------------------------------------------------------------------------------------ |
-| `--smoke`               | off             | Runs the fixture task in `tests/fixtures/` instead of iterating `tasks/`.            |
+| `--smoke`               | off             | Takes the fixture tasks in `tests/fixtures/` instead of `tasks/`.                    |
 | `--runs <n>`            | `4`             | Runs per arm per task.                                                               |
 | `--concurrency <n>`     | `2`             | Jobs in flight at once. Also the throttle on spend rate.                             |
 | `--model <id>`          | `opus`          | The model both arms run.                                                             |
 | `--judge-model <id>`    | `opus`          | The model that judges.                                                               |
 | `--effort <level>`      | `medium`        | Effort level for every invocation, arms and judge.                                   |
 | `--timeout-minutes <n>` | `20`            | Per invocation, after which the attempt counts as an infrastructure failure.        |
+| `--task-budget <n>`     | none            | Stops after this many whole tasks, each in both arms for every run.                  |
+| `--resume <dir>`        | none            | Resumes a run directory instead of starting one.                                     |
 | `--validate-only`       | off             | Loads and validates the tasks and the fixture, resolves the roots, then stops.       |
+| `--calibrate`           | off             | Judges each task's two calibration samples instead of running the arms.              |
+| `--promote <dir>`       | none            | Writes a finished run directory into `results.md`.                                   |
 | `--tasks <dir>`         | `bench/tasks`   | Where the task folders live.                                                         |
 | `--results <dir>`       | `bench/results` | Where output lands.                                                                  |
 
@@ -39,7 +47,31 @@ An invocation is tasks × 2 arms × runs agent sessions, plus one judge call per
 
 **Source roots are resolved before the first invocation.** The decompile and the reformatted UI bundle copy come from the setup record at `~/.cs2-modding/setup.md`, the install from `CSII_INSTALLATIONPATH` with the record's `Game install` line as the fallback. A root that resolves to nothing, or to `(none)`, aborts the whole invocation rather than running an uneven comparison.
 
-Results land in `bench/results/<timestamp>/`, which is gitignored: `summary.json`, `summary.md`, and a `raw/<task>-<arm>-<run>/` directory per job. It holds the prompt, each attempt's streamed output and stderr, the files the judge read under `files/`, the judge prompt, each judge reply and its stderr, and `record.json`, the job's whole record. A workspace is deleted once its files are copied out. An attempt that failed keeps its workspace, and its fault names the path.
+Results land in `bench/results/<timestamp>/`, which is gitignored: `run.json`, `summary.json`, `summary.md`, and a `raw/<task>-<arm>-<run>/` directory per job. It holds the prompt, each attempt's streamed output and stderr, the files the judge read under `files/`, the judge prompt, each judge reply and its stderr, and `record.json`, the job's whole record. A workspace is deleted once its files are copied out. An attempt that failed keeps its workspace, and its fault names the path.
+
+### Resuming and slicing a run
+
+A run directory is its own ledger. `run.json` fixes the run's model, effort, judge model, runs per arm and task list when the directory is created. `--resume` keeps them, so it refuses `--smoke`, `--tasks`, `--runs`, `--model`, `--judge-model` and `--effort`. `--concurrency`, `--timeout-minutes` and `--task-budget` can change from one slice to the next. A resume also refuses a task whose folder changed since the run began. Its jobs would otherwise run and be judged against two versions of the task.
+
+A resume skips every job whose `record.json` says `judged` or `no-code`: both are results. Any other job is rerun whole from a fresh job directory. That covers a job an interruption cut off, which has no record yet, and a `failed` one, since an infrastructure failure measures nothing about the arm. A record is renamed into place once it's complete, so an interruption never leaves half of one. Ctrl-C kills the CLI sessions in flight along with the driver.
+
+`--task-budget <n>` stops an invocation after `n` whole tasks, each run in both arms for every run of the task, so a slice always ends on a task boundary. A finished task doesn't count against the budget. A task an earlier slice started counts as one, however few of its jobs are left.
+
+The summary is rebuilt from the records on disk after every job, so an interrupted run still has a readable `summary.md`. A task with a job not yet final is listed under "Unfinished tasks" and kept out of every score, so a partial report compares the arms on the same tasks. Its jobs still show up in the runs table.
+
+There's no skill pin. A resume against changed skills goes ahead, and each record says which skills it ran against.
+
+### Calibration
+
+`mise bench:calibrate` judges each task's `falls/` and `avoids/` samples, with the same judge prompt and invocation a run uses. A task is calibrated when every item fails on `falls/` and passes on `avoids/`. A not-applicable ruling on either sample fails it, since both samples meet every item by construction. The command prints each ruling with its quoted line, then the misses, and exits nonzero when any task fails. Judge logs land in `bench/results/calibration-<timestamp>/`.
+
+A task enters `tasks/` only once it calibrates. Calibrate again whenever a checklist or the judge prompt changes.
+
+### Promotion
+
+`mise bench:promote <run directory>` writes a finished run into `bench/results.md`, the one tracked results file. Each promotion replaces the last, and git history holds the series. The file gives the run's date, model, effort, runs and judge, then every skills commit its jobs ran against, with a line saying so if any job ran on uncommitted skill changes. Then come the summary tables: per arm, per task kind, per task, per item, and the references treatment runs read. The per-run rows and contamination findings stay in the run directory, since they name paths on this machine.
+
+A run with an unfinished task is refused: resume it first.
 
 ## The task format
 
@@ -91,7 +123,7 @@ The validation `core.ts` enforces, each failure named by its own fault code:
 
 `mise bench:validate` is that check on its own. It loads every task folder and the fixture and resolves their roots, which is everything a scored invocation does before it can spend anything, then stops.
 
-The fixture task lives in `tests/fixtures/`, outside `tasks/`, so a real invocation never picks it up.
+The fixture task lives in `tests/fixtures/`, outside `tasks/`, so a real invocation never picks it up. `--smoke` runs or calibrates it in place of `tasks/`.
 
 ## What a job records
 
@@ -100,6 +132,7 @@ A job is one run of one task in one arm. Its record holds:
 - Every tool call, read off the CLI's `stream-json` output: name, input, error, whether a deny rule refused it, the URLs a web search returned, and whether a skill ran forked. The session transcript is never read, since its format is internal.
 - The workspace's files, from snapshots taken before and after the run. The ones it created or changed are the files the record lists, and they say whether it wrote code. The judge gets all of them, so a seeded bug the run never touched is still in front of it. Build output (`bin/`, `obj/`, `node_modules/`) and the workspace's `.claude/` are left out.
 - The final message, and the cost, turns and time of every attempt, discarded ones included.
+- The skills it ran against: the last commit touching `plugins/cs2-modding/skills/`, and whether the working tree changed them.
 - Skill use: the `Skill` calls naming a `cs2-*` skill, and the skill files read through `Read` or named in shell text.
 - Contamination, defined below.
 - The judge's verdicts: pass, fail or not-applicable per item, each with the line of code it quoted.
@@ -110,7 +143,7 @@ The judge gets the request without its roots, the checklist without its referenc
 
 A run is contaminated when a call read outside its workspace and roots, named a denied location in shell text, reached this repository on the web, or ran a skill as a forked subagent. A call a deny rule refused never ran, so it doesn't count. Reading back a large tool output the CLI saved under `~/.claude/projects/<project>/<session>/tool-results/` doesn't count either: that's the arm reading its own output. A contaminated run is listed with its findings and kept out of every score.
 
-The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated, no-code and failed counts with mean cost, turns and duration. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run, the skill files treatment runs read, and the runs left out of the scores.
+The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated and no-code counts with mean cost, turns and duration. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run, the unfinished tasks, the skill files treatment runs read, and the runs left out of the scores.
 
 ## The invocation contract
 
