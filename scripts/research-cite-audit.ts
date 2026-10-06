@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -135,11 +135,15 @@ const hunkPattern =
 const namePattern = /(?<path>[\w./-]*?[\w-]+\.(?:cs|js|css|md))(?![\w:])/gu;
 
 const docs = [
-  ...['docs/research', 'docs/solutions', 'bench/questions'].flatMap(directory =>
+  ...['docs/research', 'docs/solutions'].flatMap(directory =>
     readdirSync(path.join(repoRoot, directory))
       .filter(name => name.endsWith('.md'))
       .map(name => `${directory}/${name}`)
   ),
+  // A task folder with no task.md yet is one still being authored, so it holds no cite to audit.
+  ...readdirSync(path.join(repoRoot, 'bench/tasks'))
+    .map(slug => `bench/tasks/${slug}/task.md`)
+    .filter(file => existsSync(path.join(repoRoot, file))),
   'docs/SOURCES.md',
   'docs/ROADMAP.md'
 ];
