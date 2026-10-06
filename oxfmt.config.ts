@@ -9,6 +9,9 @@ export default defineConfig({
     // formatting them would break the lock hashes.
     '.agents',
     '.claude',
+    // A benchmark task's samples are the mod code a judge reads, written in the game's UI scaffold
+    // style rather than this repo's.
+    'bench/tasks',
     // .config/dotnet-tools.json is the dotnet local-tools manifest, managed by the dotnet CLI.
     '.config',
     // "vendor" holds third-party sources, kept as fetched but for the patches their VENDOR.md

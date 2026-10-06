@@ -7,5 +7,8 @@
     "types": ["bun"]
   },
   // The root config's include resolves relative to the root; scope this project to the benchmark.
-  "include": ["**/*.ts"]
+  // A task's samples and a run's collected files are mod sources, written against the game's
+  // assemblies and UI scaffold, so they sit outside the program.
+  "include": ["**/*.ts"],
+  "exclude": ["tasks", "results"]
 }

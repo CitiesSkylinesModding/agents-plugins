@@ -35,7 +35,16 @@ const skillsDir = path.join(repoRoot, core.skillsSourceDir);
 const manifestFile = 'run.json';
 const recordFile = 'record.json';
 
-const machine: core.Machine = { repoRoot, home: os.homedir(), tmpDir: os.tmpdir() };
+// The setup record is read here for the deny rules alone; the roots read it again in main, where
+// its absence is the error. A promote needs neither, so a missing record is no error here.
+const machine: core.Machine = {
+  repoRoot,
+  home: os.homedir(),
+  tmpDir: os.tmpdir(),
+  modCorpus: fs.existsSync(setupRecordPath)
+    ? core.modCorpusRoot(core.parseSetupRecord(fs.readFileSync(setupRecordPath, 'utf8')))
+    : undefined
+};
 
 /**
  * The CLI sessions in flight, killed with the driver so an interrupted run stops spending.

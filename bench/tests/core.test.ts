@@ -18,6 +18,7 @@ import {
   planJobs,
   planNextAttempt,
   loadTask,
+  modCorpusRoot,
   parseJudgeReply,
   parseSetupRecord,
   parseTask,
@@ -35,6 +36,7 @@ import {
   type ItemRuling,
   type JobKey,
   type JobRecord,
+  type Machine,
   type RawInvocation,
   type TaskKind,
   type Verdict,
@@ -198,16 +200,17 @@ const roots: readonly ResolvedRoot[] = [
 const machine = {
   repoRoot: '/home/modder/agents-plugins',
   home: '/home/modder',
-  tmpDir: '/tmp'
+  tmpDir: '/tmp',
+  modCorpus: '/home/modder/cs2-mods'
 } as const;
 
-function armPlan(arm: ArmName): ArmPlan {
+function armPlan(arm: ArmName, onMachine: Machine = machine): ArmPlan {
   return planArm({
     arm,
     task: parseTask('a-slug', validTask),
     roots,
     workspace: `/tmp/${workspacePrefix}ws`,
-    machine,
+    machine: onMachine,
     model: 'sonnet',
     effort: 'low'
   });
@@ -243,6 +246,14 @@ describe('root resolution', () => {
 
   test('treats a (none) record value as unprovisioned', () => {
     expect(() => resolveRoots(['install'], record, {})).toThrow(/CSII_INSTALLATIONPATH/u);
+  });
+
+  test('reads the mod corpus root off the record, (none) and absence as no corpus', () => {
+    expect(modCorpusRoot(parseSetupRecord('Mod corpus root: /data/cs2-mods/'))).toBe(
+      '/data/cs2-mods'
+    );
+    expect(modCorpusRoot(parseSetupRecord('Mod corpus root: (none)'))).toBeUndefined();
+    expect(modCorpusRoot(record)).toBeUndefined();
   });
 
   test('falls back to the record when the install variable is set but empty', () => {
@@ -321,11 +332,12 @@ describe('arm plans', () => {
     );
   });
 
-  test('both arms deny the repo, the config and the setup record; control also the copies', () => {
+  test('both arms deny the repo, config, setup record and corpus; control also the copies', () => {
     const shared = [
       'Read(//home/modder/agents-plugins/**)',
       'Read(//home/modder/.claude/**)',
       'Read(//home/modder/.cs2-modding/**)',
+      'Read(//home/modder/cs2-mods/**)',
       'Skill(code-review)'
     ];
 
@@ -335,6 +347,18 @@ describe('arm plans', () => {
       'Read(//tmp/cs2-bench-*/.claude/skills/**)'
     ]);
     expect(control.settings.autoMemoryEnabled).toBe(false);
+  });
+
+  test('a machine without a mod corpus denies the three fixed locations only', () => {
+    const { modCorpus: _, ...bare } = machine;
+    const plan = armPlan('control', bare);
+
+    expect(plan.settings.permissions.deny.filter(rule => rule.startsWith('Read('))).toEqual([
+      'Read(//home/modder/agents-plugins/**)',
+      'Read(//home/modder/.claude/**)',
+      'Read(//home/modder/.cs2-modding/**)',
+      'Read(//tmp/cs2-bench-*/.claude/skills/**)'
+    ]);
   });
 });
 

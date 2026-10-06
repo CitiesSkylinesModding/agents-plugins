@@ -60,6 +60,10 @@ export interface Machine {
   readonly repoRoot: string;
   readonly home: string;
   readonly tmpDir: string;
+  /**
+   * The setup record's mod corpus, when it names one; denied like the setup directory.
+   */
+  readonly modCorpus?: string | undefined;
 }
 
 export interface WorkspaceSettings {
@@ -583,6 +587,15 @@ export function parseTask(slug: string, text: string): TaskText {
     checklist: parseChecklist(slug, requireSection(slug, sections, 'Checklist')),
     roots: parseRoots(slug, requireSection(slug, sections, 'Roots'))
   };
+}
+
+/**
+ * The mod corpus the setup record names, or nothing when the line is absent or `(none)`.
+ */
+export function modCorpusRoot(record: ReadonlyMap<string, string>): string | undefined {
+  const value = record.get('Mod corpus root');
+
+  return value && value != '(none)' ? path.resolve(value) : undefined;
 }
 
 /**
@@ -1694,7 +1707,8 @@ function deniedLocations(machine: Machine): readonly string[] {
   return [
     machine.repoRoot,
     path.join(machine.home, '.claude'),
-    path.join(machine.home, '.cs2-modding')
+    path.join(machine.home, '.cs2-modding'),
+    ...(machine.modCorpus ? [machine.modCorpus] : [])
   ];
 }
 

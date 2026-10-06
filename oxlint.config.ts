@@ -8,8 +8,9 @@ export default defineConfig({
   // .agents/hooks is synced verbatim from another repo and lives outside the tsconfig program, so
   // type-aware rules only see `error` types there, and fixing them in place would break the next
   // sync. .claude holds symlinks into linted trees and the full checkouts of agent worktrees, both
-  // outside the program too.
-  ignorePatterns: ['dist', '.agents/hooks', '.claude'],
+  // outside the program too. A benchmark task's samples are mod sources that compile only against
+  // the game's UI scaffold declarations, so the same `error` types are all the rules see there.
+  ignorePatterns: ['dist', '.agents/hooks', '.claude', 'bench/tasks'],
   rules: {
     // The server is Node/Bun-only (page-context code is kept self-contained by design and cannot
     // import anything anyway), so Node builtins are fine.

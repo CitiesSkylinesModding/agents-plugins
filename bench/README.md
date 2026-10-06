@@ -125,6 +125,10 @@ The validation `core.ts` enforces, each failure named by its own fault code:
 
 The fixture task lives in `tests/fixtures/`, outside `tasks/`, so a real invocation never picks it up. `--smoke` runs or calibrates it in place of `tasks/`.
 
+### Authoring a task
+
+A task goes through three agents before it calibrates, each run from its brief in `authoring/`, one task per agent so no agent holds two keys. The author (`author.md`) reads the shipped reference and writes the request, the checklist and the two samples. The verifier (`verifier.md`) gets each item without its `Reference` line and re-derives it from the decompile alone; an item it contradicts or cannot settle leaves the key, and a contradicted one is reported as a defect in the reference. The reviewer (`reviewer.md`) gets the request alone and tries to name the traps; a request it reads a trap off is reworded and reviewed again. The verifier's and reviewer's briefs say how to read their agents' reports.
+
 ## What a job records
 
 A job is one run of one task in one arm. Its record holds:
@@ -164,6 +168,7 @@ Each directory holds a `.claude/settings.json`:
       "Read(/<this repo>/**)",
       "Read(/<home>/.claude/**)",
       "Read(/<home>/.cs2-modding/**)",
+      "Read(/<mod corpus>/**)",
       "Skill(code-review)"
     ]
   }
@@ -171,7 +176,8 @@ Each directory holds a `.claude/settings.json`:
 ```
 
 The control arm's deny list adds `Read(/<tmp>/cs2-bench-*/.claude/skills/**)`, which covers the skill copies in any treatment workspace running at the same time. `cs2-bench-` is the prefix the harness gives every workspace directory, so the rule and the harness change together.
-`<this repo>`, `<home>` and `<tmp>` are absolute paths, so every rule opens with `//`, which is how a permission rule spells an absolute path.
+`<mod corpus>` is the setup record's `Mod corpus root`, and the rule is left out when the record has none: the corpus sits beside the decompile, so an arm listing the decompile's parent finds it, and other mods' sources are not what the bench measures. A control run in the pilot grepped it.
+`<this repo>`, `<home>`, `<tmp>` and `<mod corpus>` are absolute paths, so every rule opens with `//`, which is how a permission rule spells an absolute path.
 
 The arms add:
 
@@ -223,7 +229,7 @@ An arm doesn't always reach files through `Read` and `Write`. One treatment run 
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Skills kept from the control arm: loaded as skills                               | Enforced                                                                                                 |
 | Skills kept from the control arm: read from a concurrent treatment workspace     | Enforced by the control's extra deny rule for `Read`, `Grep` and plain shell reads; detected-only past that |
-| Reads of this repository, the Claude config directory and the cs2 setup directory | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
+| Reads of this repository, the Claude config directory, the cs2 setup directory and the mod corpus | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
 | Reads anywhere else outside the workspace and roots | Detected for `Read`, `Grep` and `Glob`; through the shell, only reads naming a denied location or another workspace are detected. The grants are unscoped |
 | Writes outside the workspace                                                     | Enforced for `Write` and `Edit`; through the shell, recorded but not classified                          |
 | Subagents | Enforced for the agent tool and `code-review`; detected-only for any other bundled skill that forks, through its `"status":"forked"` result |
