@@ -1,83 +1,116 @@
 # The skill-efficacy benchmark
 
-Measures whether an agent holding the `cs2-modding` skill answers a hard CS2 modding question better, faster or cheaper than the same model holding only the game's own sources.
+Measures whether an agent with the four `cs2-*` skills installed writes better Cities: Skylines II mod code than the same model with only the game's own sources, and what it costs.
 
-Two arms answer the same question in isolated headless workspaces, several times each, and a blind judge scores every answer against a maintainer-verified reference answer:
+Each task is a request a modder would type: a feature request, or a bug report on seeded code. Two arms get the same prompt in isolated headless workspaces, several times each, and write files. A judge that holds the task's checklist then rules on each item: did the code fall into the trap, avoid it, or never meet it.
 
-- **control** — an empty workspace. The prompt pastes the question's source roots and forbids skills and any reading beyond them.
-- **treatment** — the same, plus the shipped skill folder copied to `.claude/skills/cs2-modding/` as plain files. The prompt names `SKILL.md` as the entry point. Nothing loads it as a harness skill; the arm reads it with `Read`.
+- control: a fresh workspace, seeded from the task where it has a seed.
+- treatment: the same, plus the four `cs2-*` skill folders copied to `.claude/skills/`, where the CLI loads them as real skills. The prompt never mentions them, so a skill that fails to trigger shows up as a failure.
 
-Both arms get the identical root set and the identical flag set, so the delta is attributable to the skill alone.
+The prompt is byte-identical across arms. It's the request, then where the task's source roots are on this machine, then two closing lines: write the code without asking questions, and don't build, test or run anything.
 
-The layout is two files: `core.ts` holds every decision (question parsing, prompt assembly, result parsing, aggregation, rendering) and is what the tests drive; `run.ts` is a deliberately untested shell around it (workspaces, spawning, retries, file writes).
+The layout is two files. `core.ts` holds every decision: task parsing, the arm and judge plans, stream reading, file collection, contamination, the retry plan, verdict parsing, aggregation and the report. It's what the tests drive. `run.ts` is a deliberately untested shell around it: workspaces, spawning, file system and clock.
 
 ## Running it
 
 ```bash
 mise bench:test                     # the core's unit tests
-mise bench:validate                 # the question files parse and their roots resolve; spends nothing
+mise bench:validate                 # the task folders parse and their roots resolve; spends nothing
 mise bench:run                      # the real thing: Opus, real spend
-mise bench:run --smoke --runs 1 --model haiku --judge-model haiku --timeout-minutes 5
+mise bench:run --smoke --runs 1 --model sonnet --judge-model sonnet --effort low --timeout-minutes 10
 ```
 
 Flags, all optional:
 
-| Flag                    | Default           | What it does                                                                       |
-| ----------------------- | ----------------- | ---------------------------------------------------------------------------------- |
-| `--smoke`               | off               | Runs the smoke question in `tests/fixtures/` instead of iterating `questions/`.    |
-| `--runs <n>`            | `4`               | Runs per arm per question.                                                         |
-| `--concurrency <n>`     | `2`               | Runs in flight at once. Also the throttle on spend rate.                           |
-| `--model <id>`          | `opus`            | The model both arms run.                                                           |
-| `--judge-model <id>`    | `opus`            | The model that grades.                                                             |
-| `--effort <level>`      | `medium`          | Effort level for every invocation, arms and judge.                                 |
-| `--timeout-minutes <n>` | `20`              | Per invocation, after which the run counts as an infrastructure failure.           |
-| `--validate-only`       | off               | Loads and validates the questions, resolves the roots, then stops before spending. |
-| `--questions <dir>`     | `bench/questions` | Where the question files live.                                                     |
-| `--results <dir>`       | `bench/results`   | Where output lands.                                                                |
+| Flag                    | Default         | What it does                                                                         |
+| ----------------------- | --------------- | ------------------------------------------------------------------------------------ |
+| `--smoke`               | off             | Runs the fixture task in `tests/fixtures/` instead of iterating `tasks/`.            |
+| `--runs <n>`            | `4`             | Runs per arm per task.                                                               |
+| `--concurrency <n>`     | `2`             | Jobs in flight at once. Also the throttle on spend rate.                             |
+| `--model <id>`          | `opus`          | The model both arms run.                                                             |
+| `--judge-model <id>`    | `opus`          | The model that judges.                                                               |
+| `--effort <level>`      | `medium`        | Effort level for every invocation, arms and judge.                                   |
+| `--timeout-minutes <n>` | `20`            | Per invocation, after which the attempt counts as an infrastructure failure.        |
+| `--validate-only`       | off             | Loads and validates the tasks and the fixture, resolves the roots, then stops.       |
+| `--tasks <dir>`         | `bench/tasks`   | Where the task folders live.                                                         |
+| `--results <dir>`       | `bench/results` | Where output lands.                                                                  |
 
-At four questions and four runs an invocation is 32 Opus runs plus 32 judge calls. That is real money; `--concurrency` is the throttle.
+An invocation is tasks × 2 arms × runs agent sessions, plus one judge call per job that wrote code. That's real money; `--concurrency` is the throttle.
 
 **Source roots are resolved before the first invocation.** The decompile and the reformatted UI bundle copy come from the setup record at `~/.cs2-modding/setup.md`, the install from `CSII_INSTALLATIONPATH` with the record's `Game install` line as the fallback. A root that resolves to nothing, or to `(none)`, aborts the whole invocation rather than running an uneven comparison.
 
-Results land in `bench/results/<timestamp>/`, which is gitignored: `summary.json`, `summary.md`, and a `raw/` directory holding each run's assembled prompt, its CLI JSON, and its judge prompt and JSON. Promote a summary worth keeping into the repository by hand. A run that exhausts its retries keeps its workspace on disk and the path is in the fault; a run that succeeds deletes it.
+Results land in `bench/results/<timestamp>/`, which is gitignored: `summary.json`, `summary.md`, and a `raw/<task>-<arm>-<run>/` directory per job. It holds the prompt, each attempt's streamed output and stderr, the files the judge read under `files/`, the judge prompt, each judge reply and its stderr, and `record.json`, the job's whole record. A workspace is deleted once its files are copied out. An attempt that failed keeps its workspace, and its fault names the path.
 
-## The question-file format
+## The task format
 
-One Markdown file per question in `questions/`, the filename's stem as its slug. Four `##` sections, all required and all non-empty:
+One folder per task in `tasks/`, the folder name as its slug:
+
+```
+tasks/<slug>/
+  task.md     the request, the checklist, the roots
+  falls/      a solution that falls into every trap on the checklist
+  avoids/     a solution that avoids them all
+  seed/       optional: files copied into the workspace before the run
+```
+
+A bug report seeds from `falls/`, which is why it takes no `seed/` folder. A feature request may have one, for surrounding mod code the request builds on.
+
+`task.md` has a title and four `##` sections, all required and non-empty:
 
 ```markdown
 # A short title
 
+## Kind
+
+feature request
+
 ## Prompt
 
-What the arms are asked, verbatim. Nobody answers a follow-up, so it must stand alone.
+The request, in a modder's voice. Nothing in it names the trap, skills, documentation, the web or a judge.
 
-## Verified answer
+## Checklist
 
-What the maintainer verified against the owning first-party source, with file-and-line evidence.
-Never derived from the skill's own references: that would measure agreement, not truth.
+### The update interval is a power of two
 
-## Rubric
-
-- 6: The first key point.
-- 4: The second key point.
+- Falls in: what the code looks like when it falls into the trap.
+- Avoids: what it looks like when it avoids it.
+- Reference: cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md
+- Source: src/Game/Game/UpdateSystem.cs:288
 
 ## Roots
 
 - decompile
-- ui-bundle
 ```
 
 The validation `core.ts` enforces, each failure named by its own fault code:
 
-- **Rubric**: two to four points, each line `- <weight>: <key point>`, weights summing to 10 — the /10 scale the judge scores on is the rubric's own total.
-- **Roots**: `decompile`, `install`, `ui-bundle`, no repeats, and `decompile` always present. A question brings in the roots its answer touches and no more, since every extra root is context both arms pay for.
+- Kind: `feature request` or `bug report`.
+- Checklist: three to six `###` items with distinct names, each carrying exactly the four fields. `Reference` is a path under `plugins/cs2-modding/skills/` and must exist there; `Source` cites the decompile line that verifies the item.
+- Roots: `decompile`, `install`, `ui-bundle`, no repeats, and `decompile` always present. A task brings in the roots its request touches and no more.
+- Folders: `falls/` and `avoids/` exist and aren't empty, and a bug report has no `seed/`.
 
-`mise bench:validate` is that check on its own: it loads every question file and resolves its roots — everything a scored invocation does before it can spend anything — then stops.
+`mise bench:validate` is that check on its own. It loads every task folder and the fixture and resolves their roots, which is everything a scored invocation does before it can spend anything, then stops.
 
-The smoke question lives in `tests/fixtures/smoke.md`, deliberately outside `questions/`: a real invocation iterates that directory and must never pick it up.
+The fixture task lives in `tests/fixtures/`, outside `tasks/`, so a real invocation never picks it up.
 
-**A question may rest on prose the benchmark is measuring.** Where its answer touches a claim the shipped reference gets wrong, the treatment arm loses points for reading the skill faithfully — the measurement working, not a flaw in it. What keeps that fair is the rubric scoring what the prompt actually asks. `update-interval-power-of-two` is the live case: it sits on two reference claims the decompile contradicts, and its three rubric points are the throw, the failure's reach and the ignored interval, none of which the reference gets wrong.
+## What a job records
+
+A job is one run of one task in one arm. Its record holds:
+
+- Every tool call, read off the CLI's `stream-json` output: name, input, error, whether a deny rule refused it, the URLs a web search returned, and whether a skill ran forked. The session transcript is never read, since its format is internal.
+- The workspace's files, from snapshots taken before and after the run. The ones it created or changed are the files the record lists, and they say whether it wrote code. The judge gets all of them, so a seeded bug the run never touched is still in front of it. Build output (`bin/`, `obj/`, `node_modules/`) and the workspace's `.claude/` are left out.
+- The final message, and the cost, turns and time of every attempt, discarded ones included.
+- Skill use: the `Skill` calls naming a `cs2-*` skill, and the skill files read through `Read` or named in shell text.
+- Contamination, defined below.
+- The judge's verdicts: pass, fail or not-applicable per item, each with the line of code it quoted.
+
+A run that wrote no code is asked again, whole, with the same prompt. That retry shares the cap of three attempts with infrastructure failures, and the last attempt decides what a job at the cap is: a no-code run or a failed one. Both are listed in the report and left out of the pass rate.
+
+The judge gets the request without its roots, the checklist without its references, the collected files and the final message. It has no tools and is never told the arm. An unreadable reply is retried under the same cap.
+
+A run is contaminated when a call read outside its workspace and roots, named a denied location in shell text, reached this repository on the web, or ran a skill as a forked subagent. A call a deny rule refused never ran, so it doesn't count. Reading back a large tool output the CLI saved under `~/.claude/projects/<project>/<session>/tool-results/` doesn't count either: that's the arm reading its own output. A contaminated run is listed with its findings and kept out of every score.
+
+The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated, no-code and failed counts with mean cost, turns and duration. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run, the skill files treatment runs read, and the runs left out of the scores.
 
 ## The invocation contract
 
@@ -158,8 +191,8 @@ An arm doesn't always reach files through `Read` and `Write`. One treatment run 
 | Skills kept from the control arm: loaded as skills                               | Enforced                                                                                                 |
 | Skills kept from the control arm: read from a concurrent treatment workspace     | Enforced by the control's extra deny rule for `Read`, `Grep` and plain shell reads; detected-only past that |
 | Reads of this repository, the Claude config directory and the cs2 setup directory | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
-| Reads anywhere else outside the workspace and roots | Detected-only: the `Read`, `Grep`, `Glob` and `Bash` grants are unscoped |
-| Writes outside the workspace                                                     | Enforced for `Write` and `Edit`; detected-only through the shell                                         |
+| Reads anywhere else outside the workspace and roots | Detected for `Read`, `Grep` and `Glob`; through the shell, only reads naming a denied location or another workspace are detected. The grants are unscoped |
+| Writes outside the workspace                                                     | Enforced for `Write` and `Edit`; through the shell, recorded but not classified                          |
 | Subagents | Enforced for the agent tool and `code-review`; detected-only for any other bundled skill that forks, through its `"status":"forked"` result |
 | This repository reached on the web                                               | Detected-only                                                                                            |
 

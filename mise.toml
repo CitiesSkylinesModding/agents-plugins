@@ -127,7 +127,7 @@ raw = true
 run = "bun test bench"
 
 [tasks."bench:validate"]
-description = "Check the benchmark's question files parse and their roots resolve. Spends nothing."
+description = "Check the benchmark's task folders parse and their roots resolve. Spends nothing."
 raw = true
 run = "bun bench/run.ts --validate-only"
 
