@@ -8,7 +8,7 @@ symptoms:
   - 'a feature ships and the marketplace or package description still sells the product without it'
   - 'a claim is corrected and the replacement turns out to be false in its own right'
 tags: [prose, correction, sweep, carriers, review-gate]
-updated: 2026-09-19
+updated: 2026-10-06
 ---
 
 # A correction that landed on one carrier
@@ -38,6 +38,7 @@ A claim lives in more places than its sentence, and the other places do not read
 - **An ADR's present-tense aside.** The record reads frozen, so a sweep skips it, but the sentence around the decision is live: "the server-lifetime watchdogs still are" outlived the change that ported them.
 - **A badge.** `platform-Windows` is a claim inside a URL, and no prose grep reaches it.
 - **The checklist that enumerates the carriers.** A sweep skill's step, or an `AGENTS.md` invariant, listing the sites a re-probe must edit is itself a site the correction lands on. It fails in both directions: a round that adds a carrier and not the checklist leaves the next sweep blind to it, and a round that REMOVES a carrier leaves the checklist pointing at a site that no longer says anything.
+- **A script or skill that walks a directory by path.** Removing `bench/questions` left `research-cite-audit.ts` throwing ENOENT on it and the `cs2-game-update` skill still naming it, both silent until the next sweep ran; grep the old path across `scripts/` and `.agents/` too.
 - **A capability sentence in shipped metadata**, where adding a tool restates it ten times: both harness `plugin.json` files, both marketplace files, the package project's `<Description>` AND its own header comment, the plugin README's headline and tool table, the ROOT README's row for that plugin, and the roadmap's section intro for it. `check:plugin-sync` compares two of the ten, so a sweep that stops at prose leaves every install-decision surface selling the plugin without the thing it just gained.
 
 ## Fix
