@@ -121,11 +121,57 @@ export interface ToolCall {
   readonly isForked: boolean;
 }
 
+/**
+ * The token counts the bench keeps off a `result` event's `usage` block, each read by its key
+ * path, with the label the report gives it and the decimals of its per-arm mean.
+ * The block carries more than these, and its nesting moves between CLI releases, so every other
+ * field is left alone and a missing one is simply not counted.
+ */
+export const tokenFields = {
+  inputTokens: { path: ['input_tokens'], label: 'input tokens', decimals: 0 },
+  cacheCreationTokens: {
+    path: ['cache_creation_input_tokens'],
+    label: 'cache creation tokens',
+    decimals: 0
+  },
+  cacheReadTokens: { path: ['cache_read_input_tokens'], label: 'cache read tokens', decimals: 0 },
+  outputTokens: { path: ['output_tokens'], label: 'output tokens', decimals: 0 },
+  thinkingTokens: {
+    path: ['output_tokens_details', 'thinking_tokens'],
+    label: 'thinking tokens',
+    decimals: 0
+  },
+  webSearchRequests: {
+    path: ['server_tool_use', 'web_search_requests'],
+    label: 'web searches',
+    decimals: 1
+  },
+  webFetchRequests: {
+    path: ['server_tool_use', 'web_fetch_requests'],
+    label: 'web fetches',
+    decimals: 1
+  }
+} as const;
+
+export type TokenField = keyof typeof tokenFields;
+
+// `Object.keys` widens to `string[]`, though the object is a frozen literal.
+const tokenFieldNames = Object.keys(tokenFields) as readonly TokenField[];
+
+/**
+ * Only the counts that were reported, so an absent one never reads as zero.
+ */
+export type TokenUsage = Readonly<Partial<Record<TokenField, number>>>;
+
 export interface Spend {
   readonly costUsd: number | undefined;
   readonly numTurns: number | undefined;
   readonly cliDurationMs: number | undefined;
   readonly apiDurationMs: number | undefined;
+  /**
+   * Absent from an attempt in a record written before token counts were kept.
+   */
+  readonly tokens?: TokenUsage;
 }
 
 export interface StreamedRun {
@@ -146,18 +192,27 @@ export type StreamOutcome =
     };
 
 /**
- * One attempt at a job's arm run: it wrote code, wrote none, or failed on the infrastructure.
+ * What one CLI invocation spent, an arm attempt's or a judge call's.
  */
-export type Attempt = {
+export interface MeteredCall {
+  /**
+   * Undefined where the invocation failed before reporting it.
+   */
   readonly spend: Spend | undefined;
   /**
-   * The driver's own clock around the attempt, the duration of last resort.
+   * The driver's own clock around the invocation, the duration of last resort.
    */
   readonly wallMs: number;
-} & (
-  | { readonly outcome: 'code' | 'no-code' }
-  | { readonly outcome: 'failed'; readonly fault: string }
-);
+}
+
+/**
+ * One attempt at a job's arm run: it wrote code, wrote none, or failed on the infrastructure.
+ */
+export type Attempt = MeteredCall &
+  (
+    | { readonly outcome: 'code' | 'no-code' }
+    | { readonly outcome: 'failed'; readonly fault: string }
+  );
 
 export type NextStep =
   | { readonly action: 'judge' }
@@ -178,6 +233,10 @@ export interface JobSpend {
    * not comparable.
    */
   readonly durationSources: readonly DurationSource[];
+  /**
+   * Absent from a record written before token counts were kept, which a resume still reads.
+   */
+  readonly tokens?: TokenUsage;
 }
 
 export interface SkillUse {
@@ -244,8 +303,14 @@ export interface ArmRecord {
  * Judged: the arm wrote code and the judge ruled on it. No-code: no attempt up to the cap wrote
  * any. Failed: the infrastructure, the arm's or the judge's, gave out at the cap.
  */
-export type JobRecord = ArmRecord &
-  (
+export type JobRecord = ArmRecord & {
+  /**
+   * Every judge call the job made, the discarded ones included, kept apart from the arm's
+   * attempts since the arm is what the bench compares.
+   * Absent where no judge ran, and from a record written before the judge's spend was kept.
+   */
+  readonly judgeCalls?: readonly MeteredCall[];
+} & (
     | {
         readonly outcome: 'judged';
         readonly verdicts: readonly ItemRuling[];
@@ -293,6 +358,10 @@ export interface ArmSummary {
   readonly numTurns: MetricStats | undefined;
   readonly durationMs: MetricStats | undefined;
   readonly durationSources: readonly DurationSource[];
+  /**
+   * Over the same runs as the cost, each count over the runs that reported it.
+   */
+  readonly tokens: Readonly<Partial<Record<TokenField, MetricStats>>>;
 }
 
 /**
@@ -316,6 +385,10 @@ export interface RunSettings {
 export interface BenchSummary {
   readonly settings: RunSettings;
   readonly arms: readonly ArmSummary[];
+  /**
+   * The judge's spend over every job of the run.
+   */
+  readonly judge: JobSpend;
   readonly kinds: ReadonlyArray<{
     readonly kind: TaskKind;
     readonly arm: ArmName;
@@ -777,7 +850,8 @@ export function readStream(input: RawInvocation): StreamOutcome {
     costUsd: readNumber(result, 'total_cost_usd'),
     numTurns: readNumber(result, 'num_turns'),
     cliDurationMs: readNumber(result, 'duration_ms'),
-    apiDurationMs: readNumber(result, 'duration_api_ms')
+    apiDurationMs: readNumber(result, 'duration_api_ms'),
+    tokens: readTokens(result.usage)
   };
 
   if (input.timedOut) {
@@ -884,11 +958,11 @@ export function planJobs(input: {
 
 /**
  * What a job cost over every attempt it made, the discarded ones included, so an arm that stalls
- * more never looks cheaper.
+ * more never looks cheaper; the judge's calls sum the same way, apart.
  * Each attempt's duration is the API's where reported: it is the one clock concurrency does not
  * distort.
  */
-export function jobSpend(attempts: readonly Attempt[]): JobSpend {
+export function jobSpend(attempts: readonly MeteredCall[]): JobSpend {
   const costs = attempts.map(attempt => attempt.spend?.costUsd).filter(cost => cost != undefined);
 
   const durations = attempts.map(attempt => durationOf(attempt));
@@ -897,7 +971,8 @@ export function jobSpend(attempts: readonly Attempt[]): JobSpend {
     costUsd: costs.length ? sum(costs) : undefined,
     numTurns: sum(attempts.map(attempt => attempt.spend?.numTurns ?? 0)),
     durationMs: sum(durations.map(([duration]) => duration)),
-    durationSources: [...new Set(durations.map(([, source]) => source))].toSorted()
+    durationSources: [...new Set(durations.map(([, source]) => source))].toSorted(),
+    tokens: sumTokens(attempts.map(attempt => attempt.spend?.tokens ?? {}))
   };
 }
 
@@ -1168,7 +1243,12 @@ export function buildSummary(input: {
       durationMs: statsOf(armFinished.map(job => job.spend.durationMs)),
       durationSources: [
         ...new Set(armFinished.flatMap(job => job.spend.durationSources))
-      ].toSorted()
+      ].toSorted(),
+      tokens: perField(field =>
+        statsOf(
+          armFinished.map(job => job.spend.tokens?.[field]).filter(value => value != undefined)
+        )
+      )
     };
   });
 
@@ -1183,6 +1263,7 @@ export function buildSummary(input: {
   return {
     settings,
     arms,
+    judge: jobSpend(jobs.flatMap(job => job.judgeCalls ?? [])),
     kinds: taskKinds.flatMap(kind =>
       armNames
         .filter(arm => scored.some(job => job.kind == kind && job.arm == arm))
@@ -1253,6 +1334,7 @@ export function renderReport(summary: BenchSummary): string {
     '',
     `- Started: ${settings.startedAt}`,
     `- Arms: ${settings.model} at ${settings.effort} effort, judge: ${settings.judgeModel}`,
+    ...judgeLine(summary.judge),
     ...(summary.unfinished.length
       ? [`- ${summary.unfinished.length} task(s) unfinished and left out of the scores.`]
       : []),
@@ -1283,6 +1365,7 @@ export function renderReport(summary: BenchSummary): string {
         'cost usd',
         'turns',
         'duration ms',
+        ...tokenFieldNames.map(field => tokenFields[field].label),
         'cs2 skills',
         'contaminated'
       ],
@@ -1296,6 +1379,7 @@ export function renderReport(summary: BenchSummary): string {
         job.spend.costUsd?.toFixed(costDecimals) ?? '',
         String(job.spend.numTurns),
         String(job.spend.durationMs),
+        ...tokenFieldNames.map(field => job.spend.tokens?.[field]?.toString() ?? ''),
         job.skillUse.skillsLoaded.join(', '),
         job.contamination.length ? 'yes' : ''
       ])
@@ -1758,7 +1842,7 @@ function verdictsOf(job: JobRecord): readonly ItemRuling[] {
   return job.outcome == 'judged' ? job.verdicts : [];
 }
 
-function durationOf({ spend, wallMs }: Attempt): [number, DurationSource] {
+function durationOf({ spend, wallMs }: MeteredCall): [number, DurationSource] {
   if (spend?.apiDurationMs != undefined) {
     return [spend.apiDurationMs, 'api'];
   }
@@ -1840,7 +1924,8 @@ function summaryTables(summary: BenchSummary): string[] {
         'no code',
         'cost mean usd',
         'turns mean',
-        'duration mean ms'
+        'duration mean ms',
+        ...tokenFieldNames.map(field => `${tokenFields[field].label} mean`)
       ],
       summary.arms.map(arm => [
         arm.arm,
@@ -1851,7 +1936,10 @@ function summaryTables(summary: BenchSummary): string[] {
         String(arm.noCode),
         arm.costUsd?.mean.toFixed(costDecimals) ?? '(none reported)',
         arm.numTurns?.mean.toFixed(1) ?? '',
-        arm.durationMs?.mean.toFixed(0) ?? ''
+        arm.durationMs?.mean.toFixed(0) ?? '',
+        ...tokenFieldNames.map(
+          field => arm.tokens[field]?.mean.toFixed(tokenFields[field].decimals) ?? ''
+        )
       ])
     ),
     '',
@@ -1898,6 +1986,25 @@ function summaryTables(summary: BenchSummary): string[] {
   ];
 }
 
+/**
+ * The judge's spend over the run, or nothing for a run whose records never kept it.
+ */
+function judgeLine(judge: JobSpend): string[] {
+  const counts = tokenFieldNames.flatMap(field => {
+    const value = judge.tokens?.[field];
+
+    return value == undefined ? [] : [`${value} ${tokenFields[field].label}`];
+  });
+
+  if (judge.costUsd == undefined && !counts.length) {
+    return [];
+  }
+
+  const cost = judge.costUsd?.toFixed(costDecimals) ?? '(none reported)';
+
+  return [`- Judge spend: ${[`${cost} usd`, ...counts].join(', ')}`];
+}
+
 function referencesSection(summary: BenchSummary): string[] {
   return section(
     'References read by treatment runs',
@@ -1942,6 +2049,41 @@ function readNumber(source: Record<string, unknown>, key: string): number | unde
   const value = source[key];
 
   return typeof value == 'number' ? value : undefined;
+}
+
+/**
+ * Each count summed over the readings that report it.
+ */
+function sumTokens(readings: readonly TokenUsage[]): TokenUsage {
+  return perField(field => {
+    const values = readings.map(reading => reading[field]).filter(value => value != undefined);
+
+    return values.length ? sum(values) : undefined;
+  });
+}
+
+function readTokens(usage: unknown): TokenUsage {
+  return perField(field => {
+    const value = tokenFields[field].path.reduce<unknown>(
+      (node, key) => (isRecord(node) ? node[key] : undefined),
+      usage
+    );
+
+    return typeof value == 'number' ? value : undefined;
+  });
+}
+
+/**
+ * A record of the token fields `read` returns a value for; the rest stay absent.
+ */
+function perField<T>(read: (field: TokenField) => T | undefined): Partial<Record<TokenField, T>> {
+  return Object.fromEntries(
+    tokenFieldNames.flatMap(field => {
+      const value = read(field);
+
+      return value == undefined ? [] : [[field, value] as const];
+    })
+  );
 }
 
 function sum(values: readonly number[]): number {

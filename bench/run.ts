@@ -111,12 +111,18 @@ interface LastRun {
   readonly files: ReturnType<typeof core.collectedFiles>;
 }
 
-type JudgeOutcome =
+type JudgeOutcome = {
+  /**
+   * Every call the judge made, the discarded ones included.
+   */
+  readonly calls: readonly core.MeteredCall[];
+} & (
   | {
       readonly status: 'judged';
       readonly verdicts: readonly core.ItemRuling[];
     }
-  | { readonly status: 'failed'; readonly fault: string };
+  | { readonly status: 'failed'; readonly fault: string }
+);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
@@ -489,9 +495,11 @@ async function judgeJob(input: {
     logDir: jobDir
   });
 
+  const judged = { ...base, judgeCalls: outcome.calls };
+
   return outcome.status == 'judged'
-    ? { ...base, outcome: 'judged', verdicts: outcome.verdicts }
-    : { ...base, outcome: 'failed', fault: `the judge: ${outcome.fault}` };
+    ? { ...judged, outcome: 'judged', verdicts: outcome.verdicts }
+    : { ...judged, outcome: 'failed', fault: `the judge: ${outcome.fault}` };
 }
 
 /**
@@ -516,6 +524,7 @@ async function judge(input: {
   });
 
   const plan = core.planJudge({ machine, model: input.model, effort: input.effort });
+  const calls: core.MeteredCall[] = [];
   let fault = '';
 
   fs.writeFileSync(path.join(logDir, 'judge-prompt.txt'), prompt);
@@ -525,12 +534,16 @@ async function judge(input: {
 
     writeSettings(cwd, plan.settings);
 
+    const startedAt = Date.now();
+
     const invocation = await spawnClaude({
       cwd,
       prompt,
       args: plan.args,
       timeoutMs: input.timeoutMs
     });
+
+    const wallMs = Date.now() - startedAt;
 
     fs.rmSync(cwd, { recursive: true, force: true });
     fs.writeFileSync(path.join(logDir, `judge-${attempt}.jsonl`), invocation.stdout);
@@ -539,13 +552,17 @@ async function judge(input: {
     const outcome = core.readStream(invocation);
 
     if (outcome.status == 'retryable') {
+      calls.push({ spend: outcome.spend, wallMs });
       ({ fault } = outcome);
       continue;
     }
 
+    calls.push({ spend: outcome.run.spend, wallMs });
+
     try {
       return {
         status: 'judged',
+        calls,
         verdicts: core.parseJudgeReply(outcome.run.finalMessage, task.checklist)
       };
     } catch (error) {
@@ -553,7 +570,7 @@ async function judge(input: {
     }
   }
 
-  return { status: 'failed', fault };
+  return { status: 'failed', calls, fault };
 }
 
 /**

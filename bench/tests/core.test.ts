@@ -44,6 +44,7 @@ import {
   type Attempt,
   type ResolvedRoot,
   type RunSettings,
+  type TokenUsage,
   type ToolCall
 } from '../core';
 
@@ -503,8 +504,48 @@ describe('stream reading', () => {
       costUsd: 0.42,
       numTurns: 7,
       cliDurationMs: 90_000,
-      apiDurationMs: 61_000
+      apiDurationMs: 61_000,
+      tokens: { inputTokens: 12, outputTokens: 1200 }
     });
+  });
+
+  test('reads the token counts off the usage block by key, and nothing else in it', () => {
+    // Shaped like a pilot attempt's closing event, the fields the bench drops included.
+    const usage = {
+      input_tokens: 16,
+      cache_creation_input_tokens: 20_984,
+      cache_read_input_tokens: 100_207,
+      output_tokens: 4173,
+      output_tokens_details: { thinking_tokens: 781 },
+      server_tool_use: { web_search_requests: 2, web_fetch_requests: 1 },
+      service_tier: 'standard',
+      cache_creation: { ephemeral_1h_input_tokens: 20_984, ephemeral_5m_input_tokens: 0 },
+      iterations: [{ input_tokens: 2, output_tokens: 572, type: 'message' }],
+      speed: 'standard'
+    };
+
+    const outcome = readStream(invocation(streamOf([], { usage })));
+
+    assert.ok(outcome.status == 'ok');
+
+    expect(outcome.run.spend.tokens).toEqual({
+      inputTokens: 16,
+      cacheCreationTokens: 20_984,
+      cacheReadTokens: 100_207,
+      outputTokens: 4173,
+      thinkingTokens: 781,
+      webSearchRequests: 2,
+      webFetchRequests: 1
+    });
+  });
+
+  test('reads a result event with no usage block as no token counts', () => {
+    const outcome = readStream(invocation(streamOf([], { usage: undefined })));
+
+    assert.ok(outcome.status == 'ok');
+
+    expect(outcome.run.spend.tokens).toEqual({});
+    expect(outcome.run.spend.costUsd).toBe(0.42);
   });
 
   test('exposes the URLs a web search returned and a skill that forked', () => {
@@ -847,7 +888,13 @@ describe('skill use', () => {
 });
 
 describe('attempts', () => {
-  const spend = { costUsd: 0.1, numTurns: 5, cliDurationMs: 9000, apiDurationMs: 6000 };
+  const spend = {
+    costUsd: 0.1,
+    numTurns: 5,
+    cliDurationMs: 9000,
+    apiDurationMs: 6000,
+    tokens: {}
+  };
   const code: Attempt = { outcome: 'code', spend, wallMs: 10_000 };
   const noCode: Attempt = { outcome: 'no-code', spend, wallMs: 10_000 };
   const failed: Attempt = {
@@ -892,6 +939,16 @@ describe('attempts', () => {
     expect(total.numTurns).toBe(10);
     expect(total.durationMs).toBe(30_000);
     expect(total.durationSources).toEqual(['api', 'wall']);
+  });
+
+  test('a job sums each token count over its attempts, leaving out one none reported', () => {
+    const total = jobSpend([
+      failed,
+      { ...noCode, spend: { ...spend, tokens: { inputTokens: 10, outputTokens: 300 } } },
+      { ...code, spend: { ...spend, tokens: { inputTokens: 5, webSearchRequests: 2 } } }
+    ]);
+
+    expect(total.tokens).toEqual({ inputTokens: 15, outputTokens: 300, webSearchRequests: 2 });
   });
 
   test('a job no attempt priced stays unpriced rather than free', () => {
@@ -1292,6 +1349,127 @@ describe('aggregation and the report', () => {
     });
   });
 
+  test('averages each token count per arm over the finished runs that report it', () => {
+    const counted = buildSummary({
+      settings: { ...settings, tasks: ['daily-log'] },
+      jobs: [
+        job({ arm: 'control', run: 1, tokens: { inputTokens: 100, outputTokens: 1000 } }),
+        job({ arm: 'control', run: 2, tokens: { inputTokens: 300 } }),
+        // A record written before token counts were kept.
+        job({ arm: 'treatment', run: 1 }),
+        job({ arm: 'treatment', run: 2, outcome: 'no-code', tokens: { inputTokens: 50 } })
+      ]
+    });
+
+    expect(counted.arms.map(arm => arm.tokens)).toEqual([
+      { inputTokens: { mean: 200, median: 200 }, outputTokens: { mean: 1000, median: 1000 } },
+      { inputTokens: { mean: 50, median: 50 } }
+    ]);
+  });
+
+  test("sums the judge's spend over the run, apart from the arms'", () => {
+    const call = {
+      spend: {
+        costUsd: 0.05,
+        numTurns: 1,
+        cliDurationMs: 1000,
+        apiDurationMs: 900,
+        tokens: { inputTokens: 3000, outputTokens: 300 }
+      },
+      wallMs: 1200
+    };
+
+    const judged = buildSummary({
+      settings: { ...settings, runs: 1, tasks: ['daily-log'] },
+      jobs: [
+        // A discarded judge call that never reported its spend, between two that did.
+        {
+          ...job({ arm: 'control', run: 1, tokens: { inputTokens: 100 } }),
+          judgeCalls: [call, { spend: undefined, wallMs: 500 }, call]
+        },
+        // A record written before the judge's spend was kept.
+        job({ arm: 'treatment', run: 1 })
+      ]
+    });
+
+    expect(judged.judge.costUsd).toBeCloseTo(0.1);
+    expect(judged.judge.tokens).toEqual({ inputTokens: 6000, outputTokens: 600 });
+    expect(judged.arms[0]?.costUsd?.mean).toBe(0.2);
+    expect(judged.arms[0]?.tokens).toEqual({ inputTokens: { mean: 100, median: 100 } });
+  });
+
+  describe('token usage', () => {
+    const counted = buildSummary({
+      settings: { ...settings, runs: 1, tasks: ['daily-log'] },
+      jobs: [
+        {
+          ...job({
+            arm: 'control',
+            run: 1,
+            tokens: {
+              inputTokens: 120,
+              cacheCreationTokens: 2000,
+              cacheReadTokens: 50_000,
+              outputTokens: 3000,
+              thinkingTokens: 700,
+              webSearchRequests: 2,
+              webFetchRequests: 1
+            }
+          }),
+          judgeCalls: [
+            {
+              spend: {
+                costUsd: 0.05,
+                numTurns: 1,
+                cliDurationMs: 1000,
+                apiDurationMs: 900,
+                tokens: { inputTokens: 3000, outputTokens: 300 }
+              },
+              wallMs: 1200
+            }
+          ]
+        },
+        // A record written before token counts and the judge's spend were kept.
+        job({ arm: 'treatment', run: 1 })
+      ]
+    });
+
+    const controlArm =
+      '| control | 100% (3/3) | 1 | 0/1 | 0 | 0 | 0.2000 | 10.0 | 60000 | 120 | 2000 | 50000 | 3000 | 700 | 2.0 | 1.0 |';
+
+    test('the per-arm table gives each mean, empty for an arm whose runs reported none', () => {
+      const report = renderReport(counted);
+
+      expect(report).toContain('| input tokens mean | cache creation tokens mean |');
+      expect(report).toContain(controlArm);
+      expect(report).toContain(
+        '| treatment | 100% (3/3) | 1 | 0/1 | 0 | 0 | 0.2000 | 10.0 | 60000 |  |  |  |  |  |  |  |'
+      );
+    });
+
+    test("the runs table gives each job's totals, empty for a record without them", () => {
+      const report = renderReport(counted);
+
+      expect(report).toContain(
+        '| daily-log | control | 1 | judged | 100% (3/3) | 0 | 0.2000 | 10 | 60000 | 120 | 2000 | 50000 | 3000 | 700 | 2 | 1 |  |  |'
+      );
+      expect(report).toContain(
+        '| daily-log | treatment | 1 | judged | 100% (3/3) | 0 | 0.2000 | 10 | 60000 |  |  |  |  |  |  |  |  |  |'
+      );
+    });
+
+    test("a line under the header gives the judge's total, none for a run without it", () => {
+      expect(renderReport(counted)).toContain(
+        '- Judge spend: 0.0500 usd, 3000 input tokens, 300 output tokens'
+      );
+      expect(renderReport(summary)).not.toContain('Judge spend');
+    });
+
+    test('the results file carries the per-arm means', () => {
+      expect(renderResults(counted)).toContain(controlArm);
+    });
+  });
+
   test('reports an unpriced arm as unpriced and a mixed clock as distorted', () => {
     const unpriced: JobRecord = {
       ...job({ arm: 'control', run: 1 }),
@@ -1327,6 +1505,7 @@ function job(overrides: {
   skillsLoaded?: readonly string[];
   referencesRead?: readonly string[];
   costUsd?: number;
+  tokens?: TokenUsage;
   skills?: JobRecord['skills'];
 }): JobRecord {
   const outcome = overrides.outcome ?? 'judged';
@@ -1342,7 +1521,8 @@ function job(overrides: {
       costUsd: overrides.costUsd ?? 0.2,
       numTurns: 10,
       durationMs: 60_000,
-      durationSources: ['api']
+      durationSources: ['api'],
+      ...(overrides.tokens && { tokens: overrides.tokens })
     },
     contamination: overrides.contamination ?? [],
     skillUse: {

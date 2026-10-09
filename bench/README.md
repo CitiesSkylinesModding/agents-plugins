@@ -69,7 +69,7 @@ A task enters `tasks/` only once it calibrates. Calibrate again whenever a check
 
 ### Promotion
 
-`mise bench:promote <run directory>` writes a finished run into `bench/results.md`, the one tracked results file. Each promotion replaces the last, and git history holds the series. The file gives the run's date, model, effort, runs and judge, then every skills commit its jobs ran against, with a line saying so if any job ran on uncommitted skill changes. Then come the summary tables: per arm, per task kind, per task, per item, and the references treatment runs read. The per-run rows and contamination findings stay in the run directory, since they name paths on this machine.
+`mise bench:promote <run directory>` writes a finished run into `bench/results.md`, the one tracked results file. Each promotion replaces the last, and git history holds the series. The file gives the run's date, model, effort, runs and judge, then every skills commit its jobs ran against, with a line saying so if any job ran on uncommitted skill changes. Then come the summary tables: per arm with its token means, per task kind, per task, per item, and the references treatment runs read. The per-run rows and contamination findings stay in the run directory, since they name paths on this machine.
 
 A run with an unfinished task is refused: resume it first.
 
@@ -135,11 +135,12 @@ A job is one run of one task in one arm. Its record holds:
 
 - Every tool call, read off the CLI's `stream-json` output: name, input, error, whether a deny rule refused it, the URLs a web search returned, and whether a skill ran forked. The session transcript is never read, since its format is internal.
 - The workspace's files, from snapshots taken before and after the run. The ones it created or changed are the files the record lists, and they say whether it wrote code. The judge gets all of them, so a seeded bug the run never touched is still in front of it. Build output (`bin/`, `obj/`, `node_modules/`) and the workspace's `.claude/` are left out.
-- The final message, and the cost, turns and time of every attempt, discarded ones included.
+- The final message, and the cost, turns, time and token usage of every attempt, discarded ones included. Token usage is what the closing `result` event's `usage` block reports: input, cache creation, cache read, output and thinking tokens, and the web search and fetch counts. Thinking tokens are part of the output count. A count the block lacks stays empty and is left out of the means.
 - The skills it ran against: the last commit touching `plugins/cs2-modding/skills/`, and whether the working tree changed them.
 - Skill use: the `Skill` calls naming a `cs2-*` skill, and the skill files read through `Read` or named in shell text.
 - Contamination, defined below.
 - The judge's verdicts: pass, fail or not-applicable per item, each with the line of code it quoted.
+- The cost, turns, time and token usage of every judge call, retried ones included. They're kept apart from the arm's, since the arm is what the bench compares.
 
 A run that wrote no code is asked again, whole, with the same prompt. That retry shares the cap of three attempts with infrastructure failures, and the last attempt decides what a job at the cap is: a no-code run or a failed one. Both are listed in the report and left out of the pass rate.
 
@@ -147,7 +148,7 @@ The judge gets the request without its roots, the checklist without its referenc
 
 A run is contaminated when a call read outside its workspace and roots, named a denied location in shell text, reached this repository on the web, or ran a skill as a forked subagent. A call a deny rule refused never ran, so it doesn't count. Reading back a large tool output the CLI saved under `~/.claude/projects/<project>/<session>/tool-results/` doesn't count either: that's the arm reading its own output. A contaminated run is listed with its findings and kept out of every score.
 
-The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated and no-code counts with mean cost, turns and duration. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run, the unfinished tasks, the skill files treatment runs read, and the runs left out of the scores.
+The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated and no-code counts with mean cost, turns, duration and token counts. A line under the header gives the judge's total cost and token counts. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run with its token totals, the unfinished tasks, the skill files treatment runs read, and the runs left out of the scores.
 
 ## The invocation contract
 
