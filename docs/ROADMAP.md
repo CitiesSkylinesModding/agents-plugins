@@ -512,7 +512,9 @@ Reproduced in the fixture: `TestFixture.Overloads.Pick((object) o)` with an int 
 argument reaches overload matching as the int it was. The call succeeds and runs the wrong method,
 which is the one outcome the eval contract rules out — an edge may diverge, but loudly. Carrying
 the cast's static type to `SelectOverload`, or boxing at the cast, would make the written type the
-one that binds; which is cheaper is what the cost turns on.
+one that binds; which is cheaper is what the cost turns on. Member lookup ignores a cast the same
+way: `((System.Collections.ICollection) array).Count` fails, as an array implements `Count`
+explicitly and the lookup runs on `T[]`.
 
 ### `eval` matches no default arguments
 
@@ -567,11 +569,12 @@ machine.
 
 ### The `eval` grammar's type-name surface
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 5 as of 2026-09-29
+**Priority:** medium · **Cost:** moderate · **Hits:** 6 as of 2026-10-04
 
-Two rejections in the same family, both costing a round trip to discover. A *generic* `typeof` with
-a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives `parse error at
-offset 15: unsupported: qualified name` — while a non-generic qualified `typeof` works, so the
+Two rejections in the same family, both costing a round trip to discover. A *generic* `typeof` or
+cast with a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives
+`parse error at offset 15: unsupported: qualified name` — while a non-generic qualified `typeof`
+works, so the
 grammar handles qualified names and generic arguments but not their combination. And a nested type
 is unreachable through C# `.` syntax, which made every job-attribute check in the sweep go through
 `System.Type.GetType("Outer+Nested, Game")`. The same `System.Type.GetType("Ns.Type, Asm")` string
@@ -930,3 +933,27 @@ one asks for a system, a component or a patch, which is where the traps bite —
 values baked at initialisation, surviving a save, the update interval that must be a power of two —
 and where a good practice either shows up in the produced code or does not. It also breaks the
 saturation, since a run can miss one trap while getting everything else right.
+
+### What serializes a `CallBinding`'s result
+
+**Priority:** medium · **Cost:** cheap
+
+A `CallBinding` hands its callback to `view.BindCall` (`RawCallBindingBase.Attach`), so its return
+value reaches JavaScript through cohtml's own reflection `Exporter`, never through the
+`IWriter`/`IJsonWritable` path a `ValueBinding` takes, so a returned type's own `Write` never runs.
+Neither `binding-layer.md`
+nor any other reference says which serializer a call result meets; a task author met it while
+writing a panel task and found nothing to cite. A short section in `binding-layer.md` would settle
+it, sourced to `RawCallBindingBase.cs` and `cohtml.Net/Exporter.cs`.
+
+### `SystemAPI` needs the Entities source generator
+
+**Priority:** medium · **Cost:** cheap
+
+Every `SystemAPI` member's body is `throw InternalCompilerInterface.ThrowCodeGenException()`
+(`src/Unity.Entities/Unity.Entities/SystemAPI.cs`): the call only works where the Entities source
+generator rewrote it at compile time. `ecs-in-this-game.md` lists `SystemAPI.Query<T>()` and
+`SystemAPI.QueryBuilder()` as ordinary forms, and `placement-definitions.md` uses
+`SystemAPI.QueryBuilder()` in an example, without saying a mod build has to run the generator for
+any of them. Whether the mod template's build does is the fact to establish first; the references
+then either say so or steer to `GetComponentLookup`/`EntityQueryBuilder` on the system itself.
