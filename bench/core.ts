@@ -64,6 +64,12 @@ export interface Machine {
    * The setup record's mod corpus, when it names one; denied like the setup directory.
    */
   readonly modCorpus?: string | undefined;
+  /**
+   * The directory holding the setup record's reformatted UI bundle copy, when it names one.
+   * Denied so an arm reads only the install's minified bundle, even where the copy sits inside the
+   * decompile.
+   */
+  readonly uiBundleCopy?: string | undefined;
 }
 
 export interface WorkspaceSettings {
@@ -395,15 +401,22 @@ const itemFields = {
   'Source': 'source'
 } as const satisfies Record<string, keyof ChecklistItem>;
 
-// Where each root comes from, per docs/SOURCES.md: the user chooses the decompile and the
-// reformatted UI bundle copy and only the setup record names them, while the toolchain exports the
-// install.
+// Where each root comes from, per docs/SOURCES.md: the user chooses the decompile and only the
+// setup record names it, while the toolchain exports the install.
 // The install keeps the record as a fallback because a session started before the toolchain did
 // inherits none of the CSII_* variables.
-const rootSources: Readonly<Record<SourceRootKind, { envVar?: string; recordKey: string }>> = {
+// The UI bundle is the install's own minified one, the one a modder without the setup skill has,
+// so it resolves like the install with its directory joined under it.
+const rootSources: Readonly<
+  Record<SourceRootKind, { envVar?: string; recordKey: string; subpath?: string }>
+> = {
   'decompile': { recordKey: 'Decompile root' },
   'install': { envVar: 'CSII_INSTALLATIONPATH', recordKey: 'Game install' },
-  'ui-bundle': { recordKey: 'UI bundle copy' }
+  'ui-bundle': {
+    envVar: 'CSII_INSTALLATIONPATH',
+    recordKey: 'Game install',
+    subpath: 'Cities2_Data/Content/Game/UI'
+  }
 };
 
 /**
@@ -413,7 +426,7 @@ const rootSources: Readonly<Record<SourceRootKind, { envVar?: string; recordKey:
 const rootClauses: Readonly<Record<SourceRootKind, (rootPath: string) => string>> = {
   'decompile': rootPath => `the game's decompiled source is at ${rootPath}`,
   'install': rootPath => `the game is installed at ${rootPath}`,
-  'ui-bundle': rootPath => `a reformatted copy of its UI bundle is at ${rootPath}`
+  'ui-bundle': rootPath => `its UI bundle is at ${path.join(rootPath, 'index.js')}`
 };
 
 /**
@@ -599,6 +612,22 @@ export function modCorpusRoot(record: ReadonlyMap<string, string>): string | und
 }
 
 /**
+ * The directory of the UI bundle copy the setup record names, or nothing when it names none.
+ */
+export function uiBundleCopyDir(record: ReadonlyMap<string, string>): string | undefined {
+  const value = record.get('UI bundle copy');
+
+  return value && value != '(none)' ? path.dirname(path.resolve(value)) : undefined;
+}
+
+/**
+ * Whether `target` is `root` or sits under it.
+ */
+export function isInside(target: string, root: string): boolean {
+  return target == root || target.startsWith(`${root}/`);
+}
+
+/**
  * Reads the setup record's fixed `Key: value` lines; `(none)` values are kept as written.
  */
 export function parseSetupRecord(text: string): ReadonlyMap<string, string> {
@@ -657,7 +686,7 @@ export function resolveRoots(
       `);
     }
 
-    return { kind, path: path.resolve(resolved) };
+    return { kind, path: path.resolve(resolved, source.subpath ?? '') };
   });
 }
 
@@ -1701,14 +1730,16 @@ function isSavedToolOutput(target: string, home: string): boolean {
 
 /**
  * What both arms are denied reading:
- * this repository, the CLI's configuration, and the setup record.
+ * this repository, the CLI's configuration, the setup record, the mod corpus, and the UI bundle
+ * copy's directory.
  */
 function deniedLocations(machine: Machine): readonly string[] {
   return [
     machine.repoRoot,
     path.join(machine.home, '.claude'),
     path.join(machine.home, '.cs2-modding'),
-    ...(machine.modCorpus ? [machine.modCorpus] : [])
+    ...(machine.modCorpus ? [machine.modCorpus] : []),
+    ...(machine.uiBundleCopy ? [machine.uiBundleCopy] : [])
   ];
 }
 
@@ -1737,10 +1768,6 @@ function durationOf({ spend, wallMs }: Attempt): [number, DurationSource] {
   }
 
   return [wallMs, 'wall'];
-}
-
-function isInside(target: string, root: string): boolean {
-  return target == root || target.startsWith(`${root}/`);
 }
 
 function readVerdict(word: string): Verdict {

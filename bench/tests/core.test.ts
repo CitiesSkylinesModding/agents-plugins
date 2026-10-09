@@ -28,6 +28,7 @@ import {
   renderResults,
   resolveRoots,
   TaskFault,
+  uiBundleCopyDir,
   workspacePrefix,
   type ArmName,
   type ArmPlan,
@@ -194,14 +195,15 @@ describe('task folders', () => {
 
 const roots: readonly ResolvedRoot[] = [
   { kind: 'decompile', path: '/data/cs2-decompile' },
-  { kind: 'ui-bundle', path: '/data/cs2-decompile/src-ui/source.js' }
+  { kind: 'ui-bundle', path: '/games/cs2/Cities2_Data/Content/Game/UI' }
 ];
 
 const machine = {
   repoRoot: '/home/modder/agents-plugins',
   home: '/home/modder',
   tmpDir: '/tmp',
-  modCorpus: '/home/modder/cs2-mods'
+  modCorpus: '/home/modder/cs2-mods',
+  uiBundleCopy: '/data/cs2-decompile/src-ui'
 } as const;
 
 function armPlan(arm: ArmName, onMachine: Machine = machine): ArmPlan {
@@ -222,20 +224,34 @@ describe('root resolution', () => {
       '# cs2-modding setup',
       '',
       'Game install: (none)',
-      'Decompile root: /data/cs2-decompile/',
-      'UI bundle copy: /data/ui/source.js'
+      'Decompile root: /data/cs2-decompile/'
     ].join('\n')
   );
 
-  test('reads the chosen roots off the record and the install off the environment', () => {
-    const resolved = resolveRoots(['ui-bundle', 'install'], record, {
+  test('reads the decompile off the record, the install and UI bundle off the environment', () => {
+    const resolved = resolveRoots(['decompile', 'ui-bundle', 'install'], record, {
       CSII_INSTALLATIONPATH: '/games/cs2'
     });
 
     expect(resolved).toEqual([
-      { kind: 'ui-bundle', path: '/data/ui/source.js' },
+      { kind: 'decompile', path: '/data/cs2-decompile' },
+      { kind: 'ui-bundle', path: '/games/cs2/Cities2_Data/Content/Game/UI' },
       { kind: 'install', path: '/games/cs2' }
     ]);
+  });
+
+  test("finds the UI bundle under the record's install when the variable is unset", () => {
+    const installed = parseSetupRecord('Game install: /games/cs2/');
+
+    expect(resolveRoots(['ui-bundle'], installed, {})).toEqual([
+      { kind: 'ui-bundle', path: '/games/cs2/Cities2_Data/Content/Game/UI' }
+    ]);
+  });
+
+  test('cannot resolve the UI bundle without an install', () => {
+    expect(() => resolveRoots(['ui-bundle'], record, {})).toThrow(
+      /ui-bundle root .*CSII_INSTALLATIONPATH.*"Game install"/u
+    );
   });
 
   test('normalises a root written with a trailing slash', () => {
@@ -254,6 +270,14 @@ describe('root resolution', () => {
     );
     expect(modCorpusRoot(parseSetupRecord('Mod corpus root: (none)'))).toBeUndefined();
     expect(modCorpusRoot(record)).toBeUndefined();
+  });
+
+  test("reads the UI bundle copy's directory off the record, (none) and absence as no copy", () => {
+    expect(uiBundleCopyDir(parseSetupRecord('UI bundle copy: /data/ui/source.js'))).toBe(
+      '/data/ui'
+    );
+    expect(uiBundleCopyDir(parseSetupRecord('UI bundle copy: (none)'))).toBeUndefined();
+    expect(uiBundleCopyDir(record)).toBeUndefined();
   });
 
   test('falls back to the record when the install variable is set but empty', () => {
@@ -279,8 +303,8 @@ describe('arm plans', () => {
     expect(paragraphs[0]).toBe('I want my mod to log something once a day.');
     expect(paragraphs[1]).toBe(
       oneLine`
-        The game's decompiled source is at /data/cs2-decompile and a reformatted copy of its UI
-        bundle is at /data/cs2-decompile/src-ui/source.js, if you need to look anything up.
+        The game's decompiled source is at /data/cs2-decompile and its UI bundle is at
+        /games/cs2/Cities2_Data/Content/Game/UI/index.js, if you need to look anything up.
       `
     );
     expect(paragraphs.slice(2)).toEqual([
@@ -327,17 +351,19 @@ describe('arm plans', () => {
     expect(control.args.join(' ')).toContain(
       'Edit(//tmp/cs2-bench-ws/**),Write(//tmp/cs2-bench-ws/**)'
     );
-    expect(control.args.slice(control.args.indexOf('--add-dir') + 1)).toEqual(
-      roots.map(root => root.path)
-    );
+    expect(control.args.slice(control.args.indexOf('--add-dir') + 1)).toEqual([
+      '/data/cs2-decompile',
+      '/games/cs2/Cities2_Data/Content/Game/UI'
+    ]);
   });
 
-  test('both arms deny the repo, config, setup record and corpus; control also the copies', () => {
+  test('both arms deny the repo, config, setup, corpus and bundle copy; control the skills', () => {
     const shared = [
       'Read(//home/modder/agents-plugins/**)',
       'Read(//home/modder/.claude/**)',
       'Read(//home/modder/.cs2-modding/**)',
       'Read(//home/modder/cs2-mods/**)',
+      'Read(//data/cs2-decompile/src-ui/**)',
       'Skill(code-review)'
     ];
 
@@ -349,8 +375,8 @@ describe('arm plans', () => {
     expect(control.settings.autoMemoryEnabled).toBe(false);
   });
 
-  test('a machine without a mod corpus denies the three fixed locations only', () => {
-    const { modCorpus: _, ...bare } = machine;
+  test('a machine without a corpus or bundle copy denies the three fixed locations only', () => {
+    const { modCorpus: _, uiBundleCopy: __, ...bare } = machine;
     const plan = armPlan('control', bare);
 
     expect(plan.settings.permissions.deny.filter(rule => rule.startsWith('Read('))).toEqual([
@@ -626,7 +652,8 @@ describe('contamination', () => {
   const cleanRun = [
     call('Read', { file_path: '/tmp/cs2-bench-own/.claude/skills/cs2-modding/SKILL.md' }),
     call('Read', { file_path: '/data/cs2-decompile/src/Game/Game/UpdateSystem.cs' }),
-    call('Read', { file_path: '/data/cs2-decompile/src-ui/source.js' }),
+    call('Read', { file_path: '/games/cs2/Cities2_Data/Content/Game/UI/index.js' }),
+    call('Read', { file_path: '/games/cs2/Cities2_Data/Content/Game/UI/index.css' }),
     call('Read', {
       file_path: '/home/modder/.claude/projects/-tmp-cs2-bench-own/abc/tool-results/b1.txt'
     }),
@@ -658,6 +685,10 @@ describe('contamination', () => {
     ],
     ['an absolute glob outside', call('Glob', { pattern: '/home/modder/cs2-mods/**/*.cs' })],
     [
+      "a read of the install beyond the UI bundle's directory",
+      call('Read', { file_path: '/games/cs2/Cities2_Data/Managed/Game.dll' })
+    ],
+    [
       'a read of another workspace',
       call('Read', { file_path: '/tmp/cs2-bench-other/.claude/skills/cs2-modding/SKILL.md' })
     ],
@@ -665,6 +696,10 @@ describe('contamination', () => {
     [
       'a shell read of the setup record',
       call('Bash', { command: 'head "$HOME/.cs2-modding/setup.md"' })
+    ],
+    [
+      'a shell read of the UI bundle copy inside the decompile',
+      call('Bash', { command: 'cat /data/cs2-decompile/src-ui/source.js' })
     ],
     [
       'a shell read of the repository',

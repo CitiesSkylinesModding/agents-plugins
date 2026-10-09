@@ -37,13 +37,16 @@ const recordFile = 'record.json';
 
 // The setup record is read here for the deny rules alone; the roots read it again in main, where
 // its absence is the error. A promote needs neither, so a missing record is no error here.
+const setupRecord = fs.existsSync(setupRecordPath)
+  ? core.parseSetupRecord(fs.readFileSync(setupRecordPath, 'utf8'))
+  : undefined;
+
 const machine: core.Machine = {
   repoRoot,
   home: os.homedir(),
   tmpDir: os.tmpdir(),
-  modCorpus: fs.existsSync(setupRecordPath)
-    ? core.modCorpusRoot(core.parseSetupRecord(fs.readFileSync(setupRecordPath, 'utf8')))
-    : undefined
+  modCorpus: setupRecord && core.modCorpusRoot(setupRecord),
+  uiBundleCopy: setupRecord && core.uiBundleCopyDir(setupRecord)
 };
 
 /**
@@ -182,6 +185,17 @@ async function main(): Promise<void> {
       for (const root of resolved) {
         if (!fs.existsSync(root.path)) {
           throw new Error(`The ${root.kind} root does not exist: ${root.path}`);
+        }
+
+        // Both arms are denied the copy's whole directory, so one holding a root blinds them.
+        const copyDir = machine.uiBundleCopy;
+
+        if (copyDir && core.isInside(root.path, copyDir)) {
+          throw new Error(oneLine`
+            The setup record's UI bundle copy sits in ${copyDir}, which holds the ${root.kind}
+            root, and both arms are denied that directory. Move the copy into a directory of its
+            own and update the record.
+          `);
         }
       }
 
