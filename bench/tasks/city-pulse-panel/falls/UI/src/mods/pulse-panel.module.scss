@@ -1,0 +1,29 @@
+.layout {
+  position: absolute;
+  top: 120px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.panel {
+  width: 520px;
+  pointer-events: auto;
+}
+
+.headline {
+  font-size: 40px;
+  font-weight: bold;
+  text-align: center;
+  padding: 12px 0 4px;
+}
+
+.caption {
+  font-size: 14px;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0.7;
+  padding-bottom: 12px;
+}

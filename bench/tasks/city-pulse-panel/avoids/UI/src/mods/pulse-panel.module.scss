@@ -1,0 +1,33 @@
+// Lengths in rem: the game pins one rem to one pixel at 1920x1080 and scales it with the viewport,
+// so a px length would be the one thing on screen not scaling.
+.city-pulse-layout {
+  position: absolute;
+  top: 120rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.city-pulse-panel {
+  width: 520rem;
+  pointer-events: auto;
+}
+
+.city-pulse-headline {
+  // Multiplied by --fontScale so the player's text-scale setting reaches it; the --fontSize*
+  // tokens stop short of a headline.
+  font-size: calc(40rem * var(--fontScale));
+  font-weight: bold;
+  text-align: center;
+  padding: 12rem 0 4rem;
+}
+
+.city-pulse-caption {
+  font-size: var(--fontSizeS);
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0.7;
+  padding-bottom: 12rem;
+}

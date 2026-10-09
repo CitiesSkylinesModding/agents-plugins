@@ -1,0 +1,21 @@
+// One rem is one pixel at 1920x1080 and scales with the resolution, which is why the game's
+// own stylesheets size everything in rem.
+.unpowered-counter-button {
+  position: relative;
+}
+
+.unpowered-counter-badge {
+  position: absolute;
+  top: -4rem;
+  right: -4rem;
+  min-width: 20rem;
+  height: 20rem;
+  padding: 0 5rem;
+  border-radius: 10rem;
+  background-color: var(--negativeColor);
+  color: var(--textColor);
+  // The game's size tokens multiply by --fontScale, so the badge follows the text-scale setting.
+  font-size: var(--fontSizeXS);
+  line-height: 20rem;
+  text-align: center;
+}
