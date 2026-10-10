@@ -17,6 +17,7 @@
     <RootNamespace>TestFixture</RootNamespace>
     <AssemblyName>UnityDevtools.TestFixture</AssemblyName>
     <DebugType>portable</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

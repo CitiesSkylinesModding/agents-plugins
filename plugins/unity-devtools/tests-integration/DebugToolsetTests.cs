@@ -53,14 +53,7 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
   [SkippableFact]
   public void FrameEvaluationReadsAndWritesTheParameter() {
     try {
-      _ = fx.Debug.AddBreakpoints(
-        new BreakpointSpec {
-          TypeName = "TestFixture.Ticker",
-          MethodName = "Tick"
-        }
-      );
-
-      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+      this.BreakIn("TestFixture.Ticker", "Tick");
 
       // Reads compose with the eval grammar (operators run client-side on the frame value).
       var n = int.Parse(fx.DebugEval("n").Formatted);
@@ -125,20 +118,181 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
   [SkippableFact]
   public void ThisResolvesAndItsMembersAssign() {
     try {
-      _ = fx.Debug.AddBreakpoints(
-        new BreakpointSpec {
-          TypeName = "TestFixture.TickBox",
-          MethodName = "Bump"
-        }
-      );
-
-      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+      this.BreakIn("TestFixture.TickBox", "Bump");
 
       // `this` parses as a name root, and the frame scope binds it to the live receiver.
       Assert.StartsWith("TestFixture.TickBox#", fx.DebugEval("this").Formatted);
 
       // Member writes through `this` go through the regular lvalue machinery.
       Assert.Equal("424242", fx.DebugEval("this.Value = 424242; this.Value").Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  [SkippableFact]
+  public void ANullWrittenIntoAPointerParameterIsAZeroPointer() {
+    try {
+      this.BreakIn("TestFixture.Pointers", "At");
+
+      Assert.Equal(
+        "PointerValue<(System.Int32*) 0x0>",
+        fx.DebugEval("pointer = null; pointer").Formatted
+      );
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // A struct parameter decodes as a copy, so a member write stores the whole struct back.
+  [SkippableTheory]
+  [InlineData("pt.X = 42; pt.X", "42")]
+  [InlineData("holds.Maybe = 5; holds.Maybe ?? 0", "5")]
+  public void AMemberWriteOnAFrameStructPersists(string code, string expected) {
+    try {
+      this.BreakInFrames();
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // A frame write takes what C# assigns implicitly: a debuggee int widens into a long, and a
+  // client value boxes into an object.
+  [SkippableTheory]
+  [InlineData("wide = n; wide", "4")]
+  [InlineData("boxed = 5; boxed", "5")]
+  [InlineData("maybe = n; maybe ?? 0", "4")]
+  [InlineData("maybe = n; maybe.HasValue", "True")]
+  [InlineData("maybe = null; maybe.HasValue", "False")]
+  [InlineData("ratio = 'a'; ratio", "97")]
+  public void AFrameWriteWidensAndBoxes(string code, string expected) {
+    try {
+      this.BreakInFrames();
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // An interface slot takes a string, as C# assigns it, and stores a struct a call or member
+  // write through it changed back as a new box.
+  [SkippableTheory]
+  [InlineData("cmp = \"a\"; cmp", "\"a\"")]
+  [InlineData("bump.Bump(); bump.P", "1")]
+  [InlineData("bump.P = 7; bump.P", "7")]
+  public void AnInterfaceSlotTakesAStringAndStoresAChangedBox(string code, string expected) {
+    try {
+      this.BreakInFrames();
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // The agent serves a register-held local it wrote stale once an invoke ran, so a write reads
+  // back from what this pause wrote, within one evaluation and across several.
+  [SkippableTheory]
+  [InlineData("wide = 77; n.GetHashCode(); wide", "77")]
+  [InlineData("wide = 77; n.GetHashCode(); wide = wide + 1; wide", "78")]
+  public void AFrameLocalWriteReadsBackAfterACall(string code, string expected) {
+    try {
+      this.BreakInFrames();
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  [SkippableFact]
+  public void AFrameLocalWriteReadsBackAfterACallInAnotherEvaluation() {
+    try {
+      this.BreakInFrames();
+
+      _ = fx.DebugEval("wide = 77");
+      _ = fx.DebugEval("n.GetHashCode()");
+
+      Assert.Equal("77", fx.DebugEval("wide").Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  [SkippableFact]
+  public void APauseStateListsALocalThisPauseWrote() {
+    try {
+      this.BreakInFrames();
+
+      _ = fx.DebugEval("wide = 77; n.GetHashCode()");
+
+      var details = fx.Debug.Describe(fx.Debug.CurrentPause!, 0, false);
+
+      Assert.Contains(details.Locals, l => l.Name is "wide" && l.Value is "77");
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  [SkippableTheory]
+  [InlineData("narrow = 300", "300 does not fit TestFixture.Narrow")]
+  [InlineData("narrow = -1", "-1 does not fit TestFixture.Narrow")]
+  [InlineData("n = wide", "no implicit conversion from Int64 to System.Int32 for 'n'")]
+  [InlineData("narrow = 'a'", "cannot write a Char into enum variable 'narrow'")]
+  [InlineData("wide = 77; p = wide", "cannot write a value of type Int64 into 'p'")]
+  [InlineData(
+    "cmp = TestFixture.Frames.InTarget",
+    "cannot write a value of type TestFixture.Point into 'cmp' (System.IComparable)"
+  )]
+  [InlineData("shape.X = 5", "'shape' holds a boxed struct")]
+  [InlineData(
+    "text = pt",
+    "cannot write a value of type TestFixture.Point into 'text' (System.String)"
+  )]
+  [InlineData("TestFixture.Frames.ShapeAlias.X = 5", "'ShapeAlias' holds a boxed struct")]
+  [InlineData("boxed = 5; boxed == 5", "cannot compare a boxed value by reference")]
+  public void AFrameWriteRefusesWhatCSharpWouldNotAssign(string code, string expected) {
+    try {
+      this.BreakInFrames();
+
+      var ex = Assert.Throws<EvalFailedException>(() => fx.DebugEval(code));
+
+      Assert.Contains(expected, ex.Message, StringComparison.Ordinal);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // The documented divergence: C# boxes a number into an interface slot, where a frame write
+  // takes only a box a debuggee call returned.
+  [SkippableFact]
+  public void ANumberIntoAnInterfaceSlotIsRefusedWhereCSharpBoxesIt() {
+    try {
+      this.BreakInFrames();
+
+      var ex = Assert.Throws<EvalFailedException>(() => fx.DebugEval("cmp = n"));
+
+      Assert.Contains(
+        "cannot write a value of type Int32 into 'cmp' (System.IComparable): a frame write",
+        ex.Message,
+        StringComparison.Ordinal
+      );
+      Assert.Equal(
+        "4",
+        fx.DebugEval("cmp = System.Convert.ChangeType(n, typeof(int)); cmp").Formatted
+      );
     }
     finally {
       fx.ReleaseDebugger();
@@ -223,14 +377,7 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
   [SkippableFact]
   public void StepOverRePausesAsAStep() {
     try {
-      _ = fx.Debug.AddBreakpoints(
-        new BreakpointSpec {
-          TypeName = "TestFixture.Ticker",
-          MethodName = "Tick"
-        }
-      );
-
-      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+      this.BreakIn("TestFixture.Ticker", "Tick");
 
       // Removed first, so the re-pause can only be the step event, not the next Tick hit.
       _ = fx.Debug.RemoveAll();
@@ -362,5 +509,140 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
     finally {
       fx.ReleaseDebugger();
     }
+  }
+
+  // A call on a struct a slot typed object holds reads a copy of it, and writes nothing back:
+  // the slot keeps the box its alias holds.
+  [SkippableTheory]
+  [InlineData("shape.GetHashCode()")]
+  [InlineData("TestFixture.Frames.ShapeAlias.GetHashCode()")]
+  public void ACallOnABoxedStructKeepsTheBox(string code) {
+    try {
+      this.BreakInFrames();
+
+      _ = fx.DebugEval(code);
+      _ = fx.Debug.RemoveAll();
+      _ = fx.Debug.AddBreakpoints(
+        new BreakpointSpec {
+          TypeName = "TestFixture.Frames",
+          MethodName = "After"
+        }
+      );
+
+      fx.Debug.ResumeFromPause();
+
+      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+      Assert.Equal("True", fx.DebugEval("same").Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // A struct method's `this` is the caller's storage, so a member write or a mutating call
+  // through it lands there.
+  [SkippableTheory]
+  [InlineData("this.X = 9; TestFixture.Frames.Held.X", "9")]
+  [InlineData("this.X = 1; this.Bump(); TestFixture.Frames.Held.X", "2")]
+  [InlineData("this = new TestFixture.Mutable { X = 5 }; TestFixture.Frames.Held.X", "5")]
+  public void AWriteThroughAStructThisReachesTheCaller(string code, string expected) {
+    try {
+      this.BreakIn("TestFixture.Mutable", "Touch");
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  [SkippableTheory]
+  [InlineData("this.X = 9; TestFixture.Frames.GenericHeld.X", "9")]
+  [InlineData("this.GetHashCode() == this.GetHashCode()", "true")]
+  public void AGenericStructsThisReadsAndWritesLikeAnyOther(string code, string expected) {
+    try {
+      this.BreakIn("TestFixture.Generic`1", "Touch");
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // A `ref` parameter is the caller's storage, as in C#; an `in` one is too, where C# refuses the
+  // write (the documented divergence).
+  [SkippableTheory]
+  [InlineData("r.X = 5; TestFixture.Frames.RefTarget.X", "5")]
+  [InlineData("q.X = 6; TestFixture.Frames.InTarget.X", "6")]
+  public void AWriteThroughAByRefParameterReachesTheCaller(string code, string expected) {
+    try {
+      this.BreakIn("TestFixture.Frames", "ByRefs");
+
+      Assert.Equal(expected, fx.DebugEval(code).Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // A pause inside a running static constructor reads the statics it already assigned, as C#
+  // does, though the agent reports the type not yet initialized.
+  [SkippableFact]
+  public void AStaticReadsInsideItsRunningStaticConstructor() {
+    try {
+      _ = fx.Debug.AddBreakpoints(
+        new BreakpointSpec {
+          TypeName = "TestFixture.Starting",
+          MethodName = "Ready"
+        }
+      );
+      _ = fx.Eval("TestFixture.Starter.Requested = true");
+
+      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+      Assert.Equal("5", fx.DebugEval("TestFixture.Starting.First").Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  // Only the thread running a static constructor sees its statics partly assigned; any other
+  // thread would wait for it, so an evaluation elsewhere refuses them.
+  [SkippableFact]
+  public void AStaticConstructorRunningOnAnotherThreadIsRefused() {
+    try {
+      _ = fx.Debug.AddBreakpoints(
+        new BreakpointSpec {
+          TypeName = "TestFixture.WorkerStarting",
+          MethodName = "Ready"
+        }
+      );
+      _ = fx.Eval("TestFixture.Starter.StartOnWorker()");
+
+      Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
+
+      var ex = Assert.Throws<EvalFailedException>(() => fx.Eval("TestFixture.WorkerStarting.First")
+      );
+
+      Assert.Contains("static constructor has not run", ex.Message);
+      Assert.Equal("5", fx.DebugEval("TestFixture.WorkerStarting.First").Formatted);
+    }
+    finally {
+      fx.ReleaseDebugger();
+    }
+  }
+
+  private void BreakInFrames() => this.BreakIn("TestFixture.Frames", "At");
+
+  private void BreakIn(string typeName, string methodName) {
+    _ = fx.Debug.AddBreakpoints(
+      new BreakpointSpec {
+        TypeName = typeName,
+        MethodName = methodName
+      }
+    );
+
+    Assert.NotNull(fx.Debug.WaitForPause(DebugToolsetTests.HitTimeout));
   }
 }

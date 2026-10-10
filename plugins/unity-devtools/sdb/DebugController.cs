@@ -43,6 +43,12 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
   private StepEventRequest activeStep;
 
   /// <summary>
+  /// The frame locals the current pause wrote, read back across its evaluations (see
+  /// <see cref="FrameScope" />); a new pause starts a fresh set.
+  /// </summary>
+  private Dictionary<(long Thread, int Frame, string Name), Value> frameWrites = [];
+
+  /// <summary>
   /// A suspending event set is being classified (conditions may be mid-evaluation): the VM is
   /// already suspended even though no pause has been published yet.
   /// Lets the session's advance guard reject the window instead of silently advancing nothing.
@@ -456,7 +462,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     _ = DebugController.FrameAt(thread, frameIndex);
 
     var scopes = new List<IEvalScope> {
-      new FrameScope(invoker, thread, frameIndex)
+      new FrameScope(invoker, thread, frameIndex, this.FrameWritesOfCurrentPause())
     };
 
     scopes.AddRange(tailScopes);
@@ -464,6 +470,16 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     var interpreter = new EvalInterpreter(invoker, scopes, types);
 
     return interpreter.Run(program, state);
+  }
+
+  /// <summary>
+  /// The locals the current pause wrote; a held suspend, which no pause marks, keeps its writes
+  /// for one evaluation.
+  /// </summary>
+  private Dictionary<(long Thread, int Frame, string Name), Value> FrameWritesOfCurrentPause() {
+    lock (this.gate) {
+      return this.pause is null ? [] : this.frameWrites;
+    }
   }
 
   /// <summary>
@@ -754,6 +770,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
           : "user-break";
 
     lock (this.gate) {
+      this.frameWrites = [];
       this.pause = new PauseSnapshot {
         Seq = ++this.pauseSeq,
         Thread = thread,
@@ -948,7 +965,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
 
     var selected = DebugController.FrameAt(thread, frameIndex);
 
-    var (locals, localsNote) = this.ReadLocals(selected);
+    var (locals, localsNote) = this.ReadLocals(thread, frameIndex, selected);
 
     string threadName;
 
@@ -1000,7 +1017,17 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
       .ToArray();
   }
 
-  private (IReadOnlyList<VariableView> Locals, string Note) ReadLocals(StackFrame frame) {
+  /// <summary>
+  /// The frame's locals, a local the current pause wrote read as written, as an evaluation reads
+  /// it (see <see cref="FrameScope" />).
+  /// </summary>
+  private (IReadOnlyList<VariableView> Locals, string Note) ReadLocals(
+    ThreadMirror thread,
+    int frameIndex,
+    StackFrame frame
+  ) {
+    var writes = this.FrameWritesOfCurrentPause();
+
     IList<LocalVariable> visible;
 
     try {
@@ -1016,7 +1043,11 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     var locals = visible.Where(v => !v.IsArg)
       .Select(v => new VariableView {
           Name = v.Name,
-          Value = this.FormatSlot(() => frame.GetValue(v))
+          Value = this.FormatSlot(() =>
+            writes.TryGetValue((thread.Id, frameIndex, v.Name), out var written)
+              ? written
+              : frame.GetValue(v)
+          )
         }
       )
       .ToArray();

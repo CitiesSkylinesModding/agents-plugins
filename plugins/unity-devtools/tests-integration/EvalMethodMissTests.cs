@@ -26,12 +26,69 @@ public sealed class EvalMethodMissTests(MonoDebuggeeFixture fx) {
   }
 
   [SkippableFact]
-  public void AGenericMethodCalledBareIsToldItWantsATypeArgument() {
-    var message = this.Miss($"{EvalMethodMissTests.Dog}.Echo(1)");
+  public void AGenericMethodNoArgumentCanFixIsToldToWriteTheTypeArgument() {
+    var message = this.Miss("TestFixture.Infer.Make()");
 
     Assert.Contains(
-      "Echo is generic and its type argument is not inferred: write it, as in Echo<T>(T)",
+      "Make is generic and T cannot be inferred (no argument fixes it): write it, as in " +
+      "static Make<T>()",
       message
+    );
+  }
+
+  // A literal null and one read from the game arrive as different values.
+  [SkippableTheory]
+  [InlineData("null")]
+  [InlineData("TestFixture.Shapes.NullText")]
+  public void AGenericMethodGivenNullForItsTypedArgumentIsToldToWriteTheTypeArgument(string arg) {
+    var message = this.Miss($"TestFixture.Infer.Name({arg})");
+
+    Assert.Contains(
+      "Name is generic and T cannot be inferred (argument 1 is null): write it, as in " +
+      "static Name<T>(T)",
+      message
+    );
+  }
+
+  [SkippableFact]
+  public void AGenericMethodOnlyAnOutArgumentCarriesIsToldToWriteTheTypeArgument() {
+    var message = this.Miss("TestFixture.Infer.TryMake(out var made)");
+
+    Assert.Contains(
+      "TryMake is generic and T cannot be inferred (no argument fixes it): write it, as in " +
+      "static TryMake<T>(T)",
+      message
+    );
+  }
+
+  // An unknown type argument, then one every definition's constraints refuse.
+  [SkippableTheory]
+  [InlineData("TestFixture.Infer.Name<No.Such.Type>(TestFixture.Infer.Count())")]
+  [InlineData("TestFixture.Infer.Valued<string>(TestFixture.Infer.Count())")]
+  public void AWrittenTypeArgumentThatCannotBindFailsBeforeTheArgumentsRun(string code) {
+    var before = fx.Eval("TestFixture.Infer.Calls").Formatted;
+
+    _ = this.Miss(code);
+
+    Assert.Equal(before, fx.Eval("TestFixture.Infer.Calls").Formatted);
+  }
+
+  // A type parameter no argument can fix, alone and inside an array.
+  [SkippableTheory]
+  [InlineData("TestFixture.Infer.From(TestFixture.Infer.Count())")]
+  [InlineData("System.Array.AsReadOnly(TestFixture.Infer.Count())")]
+  public void AnUninferableCallFailsBeforeTheArgumentsRun(string code) {
+    var before = fx.Eval("TestFixture.Infer.Calls").Formatted;
+
+    Assert.Contains("(no argument fixes it)", this.Miss(code));
+    Assert.Equal(before, fx.Eval("TestFixture.Infer.Calls").Formatted);
+  }
+
+  [SkippableFact]
+  public void ANullArgumentReasonOutranksAnUnfixableSibling() {
+    Assert.Contains(
+      "T cannot be inferred (argument 1 is null)",
+      this.Miss("TestFixture.Infer.Conv(null)")
     );
   }
 

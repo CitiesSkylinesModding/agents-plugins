@@ -14,14 +14,19 @@ public static class Program {
     // Park in a managed loop rather than one infinite sleep: invokes need the main thread at a
     // managed safe point, and a thread blocked forever inside a native wait never reaches one.
     // Each iteration ticks (so armed breakpoints hit within milliseconds), periodically
-    // throws-and-catches (so exception breaks have something to catch), and honours a stall a test
-    // asked for (so the main thread can be put out of reach of invokes on demand).
+    // throws-and-catches (so exception breaks have something to catch), honours a stall a test
+    // asked for (so the main thread can be put out of reach of invokes on demand), visits the
+    // Pointers and Frames shapes (so breakpoint tests have frames to read and write through), and
+    // runs a static constructor once a test asks for it.
     var n = 0;
 
     while (true) {
       Ticker.Tick(n);
       Ticker.MaybeThrow(n);
       Ticker.MaybeStall();
+      Pointers.Visit(99);
+      Frames.Visit();
+      Starter.Visit();
 
       n++;
 

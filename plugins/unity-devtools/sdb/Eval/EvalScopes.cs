@@ -31,6 +31,20 @@ public interface IEvalScope {
   /// writable through this scope, so assignment falls through the chain.
   /// </summary>
   bool TrySetValue(string name, object value) => false;
+
+  /// <summary>
+  /// What stores a struct read from a root identifier back into its slot, so a member write or a
+  /// mutating call through the copy the read decoded persists; null where the scope stores none
+  /// (a slot typed object or as an interface holds a box, see <see cref="BoxSlotType" />).
+  /// </summary>
+  Action StructWriteBack(string name, StructMirror value) => null;
+
+  /// <summary>
+  /// The type of a slot typed object or as an interface a root identifier names, which holds a
+  /// struct boxed, so a changed one stores back through <see cref="TrySetValue" /> as a new box;
+  /// null for any other name.
+  /// </summary>
+  TypeMirror BoxSlotType(string name) => null;
 }
 
 /// <summary>

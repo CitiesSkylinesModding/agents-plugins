@@ -791,7 +791,7 @@ public sealed partial class Ecs {
         ? "shared"
         : !interfaces.Contains("Unity.Entities.IComponentData")
           ? "not a component type"
-          : type.IsValueType
+          : Invoker.IsValueType(type)
             ? null
             : "managed";
   }
@@ -921,7 +921,7 @@ public sealed partial class Ecs {
     Func<Value> entityManager
   ) {
     // Out/ref parameter types surface as "<element>&"; the value sent is the element's.
-    var target = targetType.IsByRef ? targetType.GetElementType() : targetType;
+    var target = Invoker.Bare(targetType);
     var typeName = target.FullName;
 
     switch (raw) {
@@ -947,14 +947,7 @@ public sealed partial class Ecs {
       // Parsed AS the enum's underlying type, which does both jobs at once: the wire value matches
       // its width, since a byte-backed enum sent as an Int32 is refused outright, and a token that
       // does not fit is rejected rather than truncated into a different member of the same enum.
-      return inv.MakeEnum(
-        target,
-        Convert.ChangeType(
-          raw,
-          Invoker.ClrPrimitive(target.EnumUnderlyingType.FullName),
-          CultureInfo.InvariantCulture
-        )
-      );
+      return inv.MakeEnumChecked(target, raw);
     }
 
     object parsed = typeName switch {

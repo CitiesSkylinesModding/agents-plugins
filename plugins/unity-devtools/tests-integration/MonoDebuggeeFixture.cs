@@ -40,7 +40,7 @@ public sealed class MonoDebuggeeFixture : IDisposable {
 
     // READY (printed by the fixture's Main after warming up the shared static roots) gates the
     // first eval: mirror reads never trigger class constructors, so evaluating before Main ran
-    // would see default values.
+    // would refuse the roots' statics.
     using var ready = new ManualResetEventSlim();
 
     this.debuggee.OutputDataReceived += (_, e) => {

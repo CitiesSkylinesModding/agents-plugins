@@ -302,8 +302,8 @@ public static class MissDiagnosis {
     );
 
     return generic is not null
-      ? $"{call.Name} is generic and its type argument is not inferred: write it, as in " +
-      MissDiagnosis.Signature(generic)
+      ? $"{call.Name} is generic and {call.Uninferred ?? "its type argument is not inferred"}: " +
+      $"write it, as in {MissDiagnosis.Signature(generic)}"
       : $"no {call.Name} of {type.FullName} takes {call.ArgCount} argument(s); {signatures}";
   }
 
@@ -493,12 +493,17 @@ public static class MissDiagnosis {
 /// The receiver's own text where it is a plain name chain, a placeholder otherwise: what the
 /// static form of an extension call takes as its first argument.
 /// </param>
+/// <param name="Uninferred">
+/// Why the arguments fixed no type argument for a generic definition of the name, as a clause
+/// (`T cannot be inferred (argument 1 is null)`); null when inference was not attempted.
+/// </param>
 public sealed record MissedCall(
   string Name,
   int ArgCount,
   int TypeArgCount,
   bool OnType,
-  string Receiver
+  string Receiver,
+  string Uninferred
 );
 
 /// <summary>Which spelling a suggested type name is printed under.</summary>

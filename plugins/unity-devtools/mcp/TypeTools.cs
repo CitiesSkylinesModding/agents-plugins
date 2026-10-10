@@ -177,11 +177,7 @@ public sealed class TypeTools(UnitySession session) {
       FullName = fullName,
       Assembly = assembly,
 
-      Kind = type.IsValueType
-        ? "struct"
-        : type.IsInterface
-          ? "interface"
-          : "class",
+      Kind = Invoker.KindOf(type),
 
       Fields = members
         ? type.GetFields()
@@ -259,7 +255,8 @@ public sealed record TypeDescription {
   public required string Assembly { [UsedImplicitly] get; init; }
 
   /// <summary>
-  /// "struct", "interface", "class", or "unknown" when the searched name no longer resolves.
+  /// "enum", "struct", "interface", or "class".
+  /// "unknown" when the searched name no longer resolves.
   /// </summary>
   public required string Kind { [UsedImplicitly] get; init; }
 

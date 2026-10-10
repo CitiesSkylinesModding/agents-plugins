@@ -312,6 +312,27 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
+  /// Finds every generic method definition of the name and parameter count, derived-first, whatever
+  /// its generic arity: the candidates a call written without type arguments may still bind once
+  /// those are inferred from its arguments.
+  /// </summary>
+  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
+  public List<MethodMirror> FindGenericDefinitions(TypeMirror type, string name, int argc) {
+    var matches = new List<MethodMirror>();
+
+    for (var t = type; t is not null; t = t.BaseType) {
+      matches.AddRange(
+        t.GetMethods()
+          .Where(m =>
+            m.Name == name && m.IsGenericMethodDefinition && m.GetParameters().Length == argc
+          )
+      );
+    }
+
+    return matches;
+  }
+
+  /// <summary>
   /// Runs an <c>invoke</c>, unwrapping a debuggee-side throw into a <see cref="GameException" />
   /// that names the exception the game itself raised.
   /// Every invoke made on a tool's behalf lands here, which is what makes that naming reach every
@@ -614,7 +635,10 @@ public sealed class Invoker(VirtualMachine vm) {
   /// </summary>
   public const int ReadDepth = 3;
 
-  /// <summary>Renders a mirrored value as text; structs and boxed structs list fields.</summary>
+  /// <summary>
+  /// Renders a mirrored value as text.
+  /// Structs and boxed structs list their fields, and a boxed primitive renders its value.
+  /// </summary>
   public string Format(Value v, int depth = 2) {
     switch (v) {
       case null: return "null";
@@ -632,7 +656,7 @@ public sealed class Invoker(VirtualMachine vm) {
 
       case StructMirror st: return this.FormatFields(st.Type, st.Fields, depth);
 
-      case ObjectMirror o when o.Type.IsValueType: {
+      case ObjectMirror o when Invoker.IsValueType(o.Type): {
         // Boxed struct: read its instance fields off the heap object.
         var fields = Invoker.InstanceFields(o.Type);
 
@@ -646,6 +670,11 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   private string FormatFields(TypeMirror type, Value[] values, int depth) {
+    // A boxed primitive is a struct of one field holding its value: render the value.
+    if (Invoker.ClrPrimitiveOrNull(type.FullName) is not null && values.Length is 1) {
+      return this.Format(values[0], depth);
+    }
+
     if (depth <= 0) {
       return $"{type.Name} {{...}}";
     }
@@ -797,14 +826,58 @@ public sealed class Invoker(VirtualMachine vm) {
   /// The one owner of that construction, since every caller that needs a placeholder -- a `new`
   /// with no constructor, an out-parameter slot, an Entity named by index and version -- needs the
   /// same one.
+  /// A nullable or a generic struct instance is refused: built client-side, one disconnects the
+  /// agent as an out-argument placeholder, though it decodes sent by value or as a field of a
+  /// struct the agent flags as a value type.
   /// </summary>
   public Value DefaultMirrorFor(TypeMirror type) {
+    // Only an out placeholder reaches here with such a type: `new` never names a generic type,
+    // and an Entity is not one.
+    if (Invoker.IsValueType(type) && !type.IsValueType && !type.IsEnum && !type.IsPrimitive) {
+      throw new InvalidOperationException(
+        $"cannot build a {type.FullName} client-side: the debugger agent would not accept it"
+      );
+    }
+
+    return this.BuildDefault(type);
+  }
+
+  /// <summary>
+  /// The null a slot of a mirrored type takes.
+  /// A pointer slot takes a zero pointer: the agent rejects a null mirror there, or drops it from
+  /// an array, but stores the zero.
+  /// </summary>
+  public Value NullFor(TypeMirror type) {
+    return type.IsPointer ? new PointerValue(this.Vm, type, 0) : this.Vm.CreateValue(null);
+  }
+
+  /// <summary>
+  /// A value as a <c>Nullable&lt;T&gt;</c> of the given type, built client-side the way C# lifts
+  /// it: a null becomes an empty nullable, and a nullable already passes through.
+  /// Only for a field of a client-built struct, where the agent decodes it.
+  /// </summary>
+  public Value WrapNullable(TypeMirror nullable, Value value) {
+    if (value is StructMirror wrapped && wrapped.Type == nullable) {
+      return value;
+    }
+
+    var lifted = (StructMirror) this.BuildDefault(nullable);
+
+    if (value is not PrimitiveValue { Value: null }) {
+      lifted["hasValue"] = this.Prim(true);
+      lifted["value"] = value;
+    }
+
+    return lifted;
+  }
+
+  private Value BuildDefault(TypeMirror type) {
     if (type.IsEnum) {
       // The underlying type is a primitive, so the recursion answers a zero of exactly the width
       // the wire expects for this enum.
       return this.Vm.CreateEnumMirror(
         type,
-        (PrimitiveValue) this.DefaultMirrorFor(type.EnumUnderlyingType)
+        (PrimitiveValue) this.BuildDefault(type.EnumUnderlyingType)
       );
     }
 
@@ -816,8 +889,8 @@ public sealed class Invoker(VirtualMachine vm) {
       );
     }
 
-    if (!type.IsValueType) {
-      return this.Vm.CreateValue(null);
+    if (!Invoker.IsValueType(type)) {
+      return this.NullFor(type);
     }
 
     // The vendored StructMirror constructor is internal to this assembly, which is what makes the
@@ -827,7 +900,7 @@ public sealed class Invoker(VirtualMachine vm) {
     return new StructMirror(
       this.Vm,
       type,
-      fields.Select(f => this.DefaultMirrorFor(f.FieldType)).ToArray()
+      fields.Select(f => this.BuildDefault(f.FieldType)).ToArray()
     );
   }
 
@@ -843,6 +916,27 @@ public sealed class Invoker(VirtualMachine vm) {
     var underlying = Invoker.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
 
     return this.Vm.CreateEnumMirror(enumType, this.Prim(Invoker.CastClient(numeric, underlying)));
+  }
+
+  /// <summary>
+  /// Whether a type is an integer: an integral type other than char, which C# gives no conversion
+  /// to an enum.
+  /// </summary>
+  public static bool IsInteger(Type type) =>
+    Type.GetTypeCode(type) is >= TypeCode.SByte and <= TypeCode.UInt64;
+
+  /// <summary>
+  /// Builds an enum mirror from a number or a numeric string, checked rather than cast: a value
+  /// the underlying type cannot hold throws <see cref="OverflowException" /> instead of wrapping
+  /// into a different member of the same enum.
+  /// </summary>
+  public EnumMirror MakeEnumChecked(TypeMirror enumType, object numeric) {
+    var underlying = Invoker.ClrPrimitive(enumType.EnumUnderlyingType.FullName);
+
+    return this.MakeEnum(
+      enumType,
+      Convert.ChangeType(numeric, underlying, CultureInfo.InvariantCulture)
+    );
   }
 
   /// <summary>C# cast semantics (truncation, not rounding) via the runtime binder.</summary>
@@ -871,6 +965,42 @@ public sealed class Invoker(VirtualMachine vm) {
   public static Type ClrPrimitive(string fullName) =>
     Invoker.ClrPrimitiveOrNull(fullName) ??
     throw new InvalidOperationException($"{fullName} is not a primitive type");
+
+  /// <summary>
+  /// Whether a mirrored type is a value type: a primitive, an enum, or a struct, generic or not.
+  /// The agent's own flag answers only for a struct it encodes as a plain value type, reporting a
+  /// primitive or a generic struct instance as a reference type, so the base type decides.
+  /// </summary>
+  public static bool IsValueType(TypeMirror type) {
+    return type.FullName is not "System.Enum" &&
+      type.BaseType?.FullName is "System.ValueType" or "System.Enum";
+  }
+
+  /// <summary>What kind of type a mirrored type is, as the type tools describe it.</summary>
+  public static string KindOf(TypeMirror type) {
+    return type.IsEnum
+      ? "enum"
+      : Invoker.IsValueType(type)
+        ? "struct"
+        : type.IsInterface
+          ? "interface"
+          : "class";
+  }
+
+  /// <summary>Whether a mirrored type is a <c>Nullable&lt;T&gt;</c>.</summary>
+  public static bool IsNullable(TypeMirror type) {
+    return type.FullName.StartsWith("System.Nullable`1", StringComparison.Ordinal);
+  }
+
+  /// <summary>
+  /// Whether a slot of a mirrored type takes a null: a reference type, a nullable, or a pointer.
+  /// </summary>
+  public static bool TakesNull(TypeMirror type) {
+    return !Invoker.IsValueType(type) || Invoker.IsNullable(type);
+  }
+
+  /// <summary>The type a by-ref slot holds, or the type itself for any other slot.</summary>
+  public static TypeMirror Bare(TypeMirror type) => type.IsByRef ? type.GetElementType() : type;
 
   /// <summary>
   /// The CLR primitive a mirrored type name stands for, null when it names something else.

@@ -25,8 +25,9 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     declarations, expression statements, and assignments; the final expression's value is the
     result.
     Calls run on the game's main thread; writes mutate live game state.
-    Supported: literals, member access, method calls (including explicit generic type arguments,
-    e.g. em.GetComponentData<MyComponent>(entity(123, 1))), indexers, `new` with initializers,
+    Supported: literals, member access, method calls (a type argument is inferred when it is an
+    argument's own type, as in em.SetComponentData(e, copy), and written otherwise, as in
+    em.GetComponentData<MyComponent>(entity(123, 1))), indexers, `new` with initializers,
     casts, operators, ternary/`?.`/`??`, typeof(T), string interpolation, and `out var x` / `out x`
     arguments.
     Not supported: lambdas, LINQ, loops, control flow, array-creation expressions
@@ -36,10 +37,15 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     Roots: fully-qualified type names, plus builtins `em` (the world's EntityManager), `world` (the
     ECS World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's
     result; heap results may be collected once the game resumes).
-    Struct writes follow C# lvalue semantics: chained writes through object fields and array
-    elements persist; a struct temporary returned by a method or property is rejected; a component
-    fetched into a `var` local stays a client-side copy, so persist it with
-    em.SetComponentData<ComponentType>(entity(...), copy).
+    Struct writes behave as on C# variables: assigning a struct copies it, and chained writes
+    through locals, object fields, and array elements persist; a member write into a struct
+    temporary returned by a method or property is rejected, and so is one into a struct boxed in
+    a field or element typed object; a member write or mutating call through a holder typed as an
+    interface, or a mutating call through one typed object, stores a new box, which other
+    references to the old box do not see; a write or mutating call through a readonly field
+    changes the field, where C# refuses the write or mutates a copy; a component fetched into a
+    `var` local stays a client-side copy, so persist it with
+    em.SetComponentData(entity(...), copy).
     The whole sequence runs in one suspend window; combine with the suspend tool for consistency
     across several eval calls.
     """

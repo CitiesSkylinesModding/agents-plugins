@@ -45,7 +45,22 @@ The .NET projects plus the vendored SDB client, grouped by `agents-plugins.slnx`
 The grammar is FROZEN: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators, assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`. Lambdas, LINQ, loops and control flow are rejected at parse time; array-creation expressions and the `as` operator sit outside the grammar too, and `params` expansion fails at overload matching, which wants exact arity.
 
 The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as C# would; edge semantics may diverge but must fail loudly with an actionable message, never succeed silently wrong.
-Deliberate divergences stay documented — today: numeric-to-enum convenience, in-range integral narrowing, enum/numeric operator mixing, `entity(index)` version defaulting.
+Deliberate divergences stay documented — today:
+
+- Numeric-to-enum convenience.
+- In-range integral narrowing, admitted for any integral value where C# admits it for an int constant only, so a call can bind a narrower overload than C# does, a derived type's included.
+- Enum/numeric operator mixing.
+- `entity(index)` version defaulting.
+- Type-argument inference takes the argument's runtime type rather than its declared one and reads only a parameter typed as the type parameter itself (not `T[]` or `List<T>`). It refuses loudly two arguments fixing a type parameter to different types, and a null beside one fixing it to a type taking null or to a struct a box may hide, unless a nearer tier's overload binds or a sibling takes every argument as is (a null at a slot no less specific than the generic instance's); C# fixes the type parameter to the non-null argument's type or to a type every argument converts to, and binds the generic method wherever that makes it applicable.
+- Overload binding reads a boxed argument's runtime type rather than its declared `object`, so a box holding an int binds `M(int)` where C# binds `M(object)`.
+- A mutating call through a struct boxed in a slot typed object or as an interface, or a member write through one typed as an interface, stores a new box, which other references to the old box do not see: the wire carries no box identity. A member write through one typed object is refused.
+- A write to or through a `readonly` field, or a frame write through a read-only slot (an `in` parameter, or `this` in a `readonly` member or `readonly struct`) or to that `this` itself, lands in that storage, where C# refuses the assignment and makes a mutating call change a defensive copy. Code the JIT compiled before such a write may keep a `static readonly` field's old value, though a read returns the new one.
+- A frame write refuses a number or bool into an interface slot, and a client number or bool, or a debuggee one of another type, into a nullable slot, where C# boxes or converts and wraps it.
+- A frame write to a local the JIT folded from a constant never reaches the resumed code, though the evaluation reads it back.
+- A frame local written by name reads back that write for the rest of the pause, missing a later write that reached it through another frame's `ref` parameter or struct `this`; under a held suspend, which marks no pause, a local written before an invoke reads back its old value in `debug_pause_state` and from the next evaluation on.
+- A static field of a type whose static constructor has not run is refused until the caller runs it, where C# runs it on first access; an evaluation on the thread running the constructor reads the statics it already assigned.
+- On an agent below protocol 2.44, a mutating call on a struct's `this` loses its write, since that agent cannot store `this` back.
+
 New evaluator effort goes to enforcing that contract through `tests-integration/`, not to growing the grammar. Anything needing debuggee-side execution belongs to the injected-helper roadmap tier.
 
 A result comes back FORMATTED for a reader — a string quoted, a bool as `True` — and locals live on the interpreter rather than the state, so only `_` survives a call. Code building on `eval` therefore parses that rendering back and re-embeds whatever the next program needs, quoting a path through Roslyn's own `SymbolDisplay.FormatLiteral` so the literal it emits is one the parser accepts.
@@ -57,7 +72,7 @@ All C# projects live here, none is covered by a `Directory.Build.props`, all set
 - `sdb/`: net10.0, `Nullable=disable` (so the vendored sources compile), no analyzers, `AllowUnsafeBlocks`, `NoWarn` on SYSLIB0001/SYSLIB0050/CS9258.
 - `mcp/`: net10.0, `Nullable=enable`, `EnforceCodeStyleInBuild` + `AnalysisMode=Recommended`.
 - `tests/`, `tests-integration/`: net10.0 xUnit, `Nullable=enable`, no analyzers.
-- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest`, `Nullable=enable`, no analyzers.
+- `tests-integration/fixture/`: net472 console debuggee, `LangVersion=latest`, `Nullable=enable`, no analyzers, `AllowUnsafeBlocks`.
 - `tests-integration/broken/`: net472 class library, `LangVersion=10.0`, `Nullable=disable`, no analyzers.
 - `tests-integration/missing/`: net472 class library, `LangVersion=latest`, `Nullable=enable`, no analyzers.
 
@@ -77,7 +92,7 @@ There is NO committed artifact and no local exe: the root `.mcp.json` (LOCAL DEV
 - ECS traps that cost hours: [`docs/solutions/unity-entities-over-sdb.md`](../../docs/solutions/unity-entities-over-sdb.md).
 - Attach churn is CONSUMABLE against a game under Wine/Proton, which leaks descriptors per debugger connection: spend enough and its agent stops accepting anyone until the game restarts, with no warning and no count to watch, with no client-side cure. Measurements and how to read the state from outside: [`docs/solutions/a-debugger-agent-that-stopped-accepting.md`](../../docs/solutions/a-debugger-agent-that-stopped-accepting.md). Probes and test runs that attach repeatedly spend the user's session, so bound them.
 - Cost work counts INVOKES, not round trips: an invoke wakes the game's main thread and costs ~26x a bare wire command, so trading one for twenty is break-even. A memo pays against a whole CALL, not against a round trip, so justify one with the freeze time of the smallest call that exercises it. Measurements, the per-call figures, and the rule for memoizing a failure: [`docs/solutions/sdb-round-trips-are-not-equal-cost.md`](../../docs/solutions/sdb-round-trips-are-not-equal-cost.md).
-- Before reading a value or a throw back from the debuggee, read [`docs/solutions/mono-debuggee-answers-over-sdb.md`](../../docs/solutions/mono-debuggee-answers-over-sdb.md): nulls, sparse arrays and exception messages all answer differently than .NET does, and the .NET reference source is evidence about .NET rather than about this fork.
+- Before reading a value, a type's value-type flag or a throw back from the debuggee, passing a pointer argument, or writing a nullable field, read [`docs/solutions/mono-debuggee-answers-over-sdb.md`](../../docs/solutions/mono-debuggee-answers-over-sdb.md): nulls, sparse arrays, `TypeMirror.IsValueType`, pointers and exception messages all answer differently than .NET does, and the .NET reference source is evidence about .NET rather than about this fork.
 
 ## Boundaries
 

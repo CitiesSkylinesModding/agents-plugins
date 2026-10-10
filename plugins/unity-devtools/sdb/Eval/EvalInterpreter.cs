@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 using Mono.Debugger.Soft;
 
@@ -25,11 +26,31 @@ public sealed class EvalInterpreter(
   IReadOnlyList<IEvalScope> scopes,
   TypeCatalog catalog = null
 ) {
+  // ArgumentCost's bands, cheapest first: an exact match, a numeric widening (the target's width
+  // rank), an in-range narrowing (the same rank on top of its band), a null into a nullable (the
+  // underlying primitive's rank on top of its band, any other underlying type's above every
+  // primitive's), any other conversion (an integer zero into an enum included), a conversion to
+  // object, and the numeric-to-enum convenience C# would not bind at all.
+  private const int ExactCost = 0;
+
+  private const int NarrowingCost = 100;
+
+  private const int NullIntoNullableCost = 440;
+
+  private const int ReferenceCost = 500;
+
+  private const int ObjectCost = 1000;
+
+  private const int EnumConvenienceCost = 1500;
+
+  // The rank of a target no numeric rank orders, above every numeric one.
+  private const int OtherRank = 50;
+
   /// <summary>Locals in declaration order (failure reports list them as declared).</summary>
   private readonly OrderedDictionary<string, object> locals = [];
 
   /// <summary>Receiver stack for `?.` chains (the tested value binds the member hole).</summary>
-  private readonly Stack<object> receivers = new();
+  private readonly Stack<Lvalue> receivers = new();
 
   public EvalOutcome Run(EvalProgram program, EvalState state) {
     object last = null;
@@ -77,7 +98,7 @@ public sealed class EvalInterpreter(
       );
     }
 
-    var value = this.Evaluate(declaration.Value);
+    var value = EvalInterpreter.CopyStruct(this.Evaluate(declaration.Value));
 
     this.locals[declaration.Name] = value;
 
@@ -109,7 +130,7 @@ public sealed class EvalInterpreter(
 
       case NameExpr or MemberExpr: return this.EvaluateChain(expr);
 
-      case ImplicitReceiverExpr: return this.receivers.Peek();
+      case ImplicitReceiverExpr: return this.receivers.Peek().Value;
 
       case CallExpr call: return this.EvaluateCall(call);
 
@@ -123,7 +144,7 @@ public sealed class EvalInterpreter(
         return inv.TypeObject(this.ResolveType(typeOf.TypeName, typeOf.Position));
 
       case UnaryExpr unary: {
-        var operand = this.Evaluate(unary.Operand);
+        var operand = EvalInterpreter.UnwrapNullable(this.Evaluate(unary.Operand));
 
         var raw = PrimitiveOps.Unary(unary.Op, EvalInterpreter.UnwrapForOps(operand));
 
@@ -139,13 +160,18 @@ public sealed class EvalInterpreter(
           : this.Evaluate(conditional.WhenFalse);
 
       case ConditionalAccessExpr access: {
-        var target = this.Evaluate(access.Target);
+        // The receiver keeps its link, so a call through it stores back as through `.`, save a
+        // nullable's value, which C# reads as a copy.
+        var link = this.EvaluateWritable(access.Target);
+        var target = EvalInterpreter.UnwrapNullable(link.Value);
 
         if (EvalInterpreter.IsNull(target)) {
           return null;
         }
 
-        this.receivers.Push(target);
+        this.receivers.Push(
+          ReferenceEquals(target, link.Value) ? link : new Lvalue(target, null, false)
+        );
 
         try {
           return this.Evaluate(access.WhenNotNull);
@@ -172,14 +198,14 @@ public sealed class EvalInterpreter(
       case "||": return this.EvaluateBool(binary.Left) || this.EvaluateBool(binary.Right);
 
       case "??": {
-        var left = this.Evaluate(binary.Left);
+        var left = EvalInterpreter.UnwrapNullable(this.Evaluate(binary.Left));
 
         return EvalInterpreter.IsNull(left) ? this.Evaluate(binary.Right) : left;
       }
 
       default: {
-        var left = this.Evaluate(binary.Left);
-        var right = this.Evaluate(binary.Right);
+        var left = EvalInterpreter.UnwrapNullable(this.Evaluate(binary.Left));
+        var right = EvalInterpreter.UnwrapNullable(this.Evaluate(binary.Right));
 
         if (left is EnumMirror || right is EnumMirror) {
           return this.EvaluateEnumBinary(binary, left, right);
@@ -267,6 +293,16 @@ public sealed class EvalInterpreter(
       return !wantEqual;
     }
 
+    // The agent returns a box as its value, so the identity C# compares two objects by is gone.
+    if ((left is StructMirror leftBox && EvalInterpreter.IsBoxedPrimitive(leftBox)) ||
+      (right is StructMirror rightBox && EvalInterpreter.IsBoxedPrimitive(rightBox))) {
+      throw new EvalRuntimeException(
+        "cannot compare a boxed value by reference: the debugger reads a box the debuggee " +
+        "returns as its value; cast it to its primitive type to compare values",
+        binary.Position
+      );
+    }
+
     var leftType = this.MirrorTypeOf(left, binary.Position);
     var rightType = this.MirrorTypeOf(right, binary.Position);
 
@@ -283,7 +319,7 @@ public sealed class EvalInterpreter(
       (MethodMirror Method, Value[] Values)? bound;
 
       try {
-        bound = this.SelectOverload(operators, [left, right], operatorName, binary.Position);
+        bound = this.SelectOverload([operators], [left, right], operatorName, binary.Position);
       }
       catch (EvalRuntimeException) {
         // The declared operator rejects these operands; the defaults below decide.
@@ -307,7 +343,7 @@ public sealed class EvalInterpreter(
     // Operator-less structs: C# would reject `==` outright; Equals is the debugger-friendly
     // extension (field-wise via ValueType.Equals unless overridden).
     var (equalsMethod, equalsValues) = this.SelectOverload(
-      inv.FindMethods(leftType, "Equals", 1),
+      [inv.FindMethods(leftType, "Equals", 1)],
       [right],
       $"{leftType.Name}.Equals",
       binary.Position
@@ -321,7 +357,7 @@ public sealed class EvalInterpreter(
   }
 
   private bool EvaluateBool(EvalExpr expr) {
-    var value = EvalInterpreter.UnwrapForOps(this.Evaluate(expr));
+    var value = EvalInterpreter.UnwrapForOps(EvalInterpreter.UnwrapNullable(this.Evaluate(expr)));
 
     return value is bool b
       ? b
@@ -541,7 +577,14 @@ public sealed class EvalInterpreter(
       var coerced = this.CoerceToType(value, field.FieldType, position);
 
       if (mirror is StructMirror structMirror) {
-        structMirror[name] = coerced;
+        // Nothing copies or wraps a value stored into a client-held struct, as the agent does for
+        // an invoke argument or a game field, so a struct gets its copy, and a nullable field its
+        // wrapper, built here.
+        var copied = (Value) EvalInterpreter.CopyStruct(coerced);
+
+        structMirror[name] = Invoker.IsNullable(field.FieldType)
+          ? inv.WrapNullable(field.FieldType, copied)
+          : copied;
       }
       else {
         ((ObjectMirror) mirror).SetValue(field, coerced);
@@ -564,6 +607,53 @@ public sealed class EvalInterpreter(
     );
   }
 
+  /// <summary>
+  /// Refuses a static field of a type whose static constructor has not run: the agent reads its
+  /// storage as zeros, and the constructor overwrites a write once it runs.
+  /// A <c>const</c> has no storage to wait on, and a type without a static constructor nothing to
+  /// run; a constructor the evaluating thread is still running reads partly assigned, as C# shows
+  /// it to that thread alone.
+  /// </summary>
+  private void RequireInitialized(TypeMirror type, FieldInfoMirror field, int position) {
+    // The initialized flag is cached once true, where a first scan of the method names costs a
+    // round trip per method.
+    if (field.IsLiteral ||
+      type.IsInitialized ||
+      type.GetMethods().All(m => m.Name != ".cctor") ||
+      this.IsRunningStaticConstructor(type)) {
+      return;
+    }
+
+    var name = MissSuggestions.EvalName(type.FullName);
+
+    throw new EvalRuntimeException(
+      $"{name}'s static constructor has not run, so '{field.Name}' holds no value yet; run it " +
+      "first with `System.Runtime.CompilerServices.RuntimeHelpers" +
+      $".RunClassConstructor(typeof({name}).TypeHandle)`, which runs the type's own code",
+      position
+    );
+  }
+
+  /// <summary>
+  /// Whether an evaluating thread's stack holds the type's static constructor: the main thread,
+  /// which every invoke runs on, or the thread whose frame a scope reads.
+  /// </summary>
+  private bool IsRunningStaticConstructor(TypeMirror type) {
+    ThreadMirror[] threads = [inv.MainThread, .. scopes.OfType<FrameScope>().Select(s => s.Thread)];
+
+    return threads.Any(thread => {
+        try {
+          return thread.GetFrames()
+            .Any(f => f.Method.Name is ".cctor" && f.Method.DeclaringType == type);
+        }
+        catch (VMNotSuspendedException) {
+          // A main thread still in native code has no managed stack to run one on.
+          return false;
+        }
+      }
+    );
+  }
+
   private object ReadStaticMember(TypeMirror type, string name, int position) {
     var field = type.GetFields().FirstOrDefault(f => f.IsStatic && f.Name == name);
 
@@ -571,6 +661,8 @@ public sealed class EvalInterpreter(
     // answers a `const` literal's value even though it has no storage, as an EnumMirror carrying
     // the member's full width.
     if (field is not null) {
+      this.RequireInitialized(type, field, position);
+
       return type.GetValue(field);
     }
 
@@ -631,7 +723,13 @@ public sealed class EvalInterpreter(
     // The receiver resolves with lvalue tracking: a struct read through a by-copy link (object
     // field, array element, static field) gets its post-call fields replayed back, so mutating
     // methods behave like C# on a variable, not on a discarded temporary.
-    var (target, writeBack, _) = this.EvaluateWritable(call.Target);
+    var (target, writeBack, anchored, refusal) = this.EvaluateWritable(call.Target);
+
+    // A temporary may still be the mirror a variable holds, so the call runs on a copy of it; an
+    // unanchored struct a refusal names is held somewhere, so the call runs on it.
+    if (!anchored && refusal is null) {
+      target = EvalInterpreter.CopyStruct(target);
+    }
 
     var isStatic = target is TypeRef;
 
@@ -691,6 +789,7 @@ public sealed class EvalInterpreter(
     bool onType
   ) {
     var argc = call.Args.Count;
+    var context = $"{declaringType.Name}.{call.Name}";
 
     // Out targets validate up front; plain arguments only evaluate once the method is known to
     // exist, so a typo'd call has no side effects.
@@ -724,12 +823,36 @@ public sealed class EvalInterpreter(
       .Where(c => !onType || c.IsStatic)
       .ToList();
 
-    if (candidates.Count is 0) {
-      throw Missed();
-    }
+    // A call written without type arguments may still bind a generic definition once its
+    // arguments fix them; those join the pool AFTER the non-generic candidates, which is what
+    // makes `M(int)` win over `M<int>(int)` while `M<T>(T)` still beats `M(object)`, as in C#.
+    var inferable = call.TypeArgs.Count is 0
+      ? inv.FindGenericDefinitions(declaringType, call.Name, argc)
+        .Where(c => !onType || c.IsStatic)
+        .ToList()
+      : [];
 
     var refused = new List<string>();
+    string unfixableReason = null;
 
+    // A type parameter no plain argument meets as a parameter of exactly its type can never be
+    // inferred, which the call's shape alone tells, so the definition drops out before any
+    // argument runs.
+    foreach (var definition in inferable.ToList()) {
+      if (EvalInterpreter.UnfixableTypeParameter(definition, call) is {} typeParameter) {
+        var reason = $"{typeParameter.Name} cannot be inferred (no argument fixes it)";
+
+        refused.Add($"{EvalInterpreter.Signature(definition)}: {reason}");
+        unfixableReason ??= reason;
+        inferable.Remove(definition);
+      }
+    }
+
+    if (candidates.Count is 0 && inferable.Count is 0) {
+      throw Missed(unfixableReason);
+    }
+
+    // Written type arguments resolve and instantiate before any argument evaluates.
     if (call.TypeArgs.Count > 0) {
       var typeArgs = call.TypeArgs.Select(name => this.ResolveType(name, call.Position)).ToArray();
       var definitions = candidates;
@@ -755,9 +878,21 @@ public sealed class EvalInterpreter(
           );
         }
       }
+
+      if (candidates.Count is 0) {
+        throw EvalInterpreter.NoOverload(
+          context,
+          refused,
+          call.Position
+        );
+      }
     }
 
     var evaluated = new object[argc];
+    string uninferredReason = null;
+
+    // The nearest tier's inference conflicts.
+    List<InferenceConflict> conflicts = [];
 
     for (var i = 0; i < argc; i++) {
       if (call.Args[i].Mode is ArgMode.Plain) {
@@ -765,18 +900,77 @@ public sealed class EvalInterpreter(
       }
     }
 
+    foreach (var definition in inferable) {
+      var (typeArgs, reason, hasConflict, fixedTypes) =
+        this.InferTypeArguments(definition, call, evaluated);
+
+      if (typeArgs is not null) {
+        try {
+          candidates.Add(inv.Instantiate(definition, typeArgs));
+
+          continue;
+        }
+        catch (InvalidOperationException) {
+          var inferred = string.Join(", ", typeArgs.Select(t => t.FullName));
+
+          reason = $"cannot be instantiated over <{inferred}>";
+        }
+      }
+
+      if (hasConflict) {
+        var depth = EvalInterpreter.TierOf(declaringType, definition);
+
+        if (conflicts.Count > 0 && depth < conflicts[0].Depth) {
+          conflicts.Clear();
+        }
+
+        if (conflicts.Count is 0 || depth == conflicts[0].Depth) {
+          conflicts.Add(new InferenceConflict(reason, depth, definition, fixedTypes));
+        }
+      }
+
+      refused.Add($"{EvalInterpreter.Signature(definition)}: {reason}");
+      uninferredReason ??= reason;
+    }
+
+    // Every definition refused and nothing else to try: the miss says why inference did not
+    // apply, so the caller knows writing the type argument is the fix rather than a retry.
+    if (candidates.Count is 0) {
+      throw Missed(uninferredReason);
+    }
+
+    var outSet = outIndexes.Count > 0 ? outIndexes.ToHashSet() : null;
+
+    // Within a tier, non-generic candidates still precede inferred ones.
     var (method, values) = this.SelectOverload(
-      candidates,
+      EvalInterpreter.Tiers(declaringType, candidates),
       evaluated,
-      $"{declaringType.Name}.{call.Name}",
+      context,
       call.Position,
-      outIndexes.Count > 0 ? outIndexes.ToHashSet() : null,
+      outSet,
       refused
     );
 
+    // C# may well have inferred past a conflict and bound the generic, so another binding stands
+    // in for it only where C# prefers that one over any instantiation: one from a nearer tier,
+    // which hides the generic, or one from its own tier taking every argument as is.
+    if (conflicts.Count > 0) {
+      var depth = EvalInterpreter.TierOf(declaringType, method);
+
+      var refusing = depth > conflicts[0].Depth
+        ? conflicts[0]
+        : depth == conflicts[0].Depth
+          ? conflicts.FirstOrDefault(c => !this.TakesAsIs(method, evaluated, outSet, c))
+          : null;
+
+      if (refusing is not null) {
+        throw Missed(refusing.Reason);
+      }
+    }
+
     return (method, values, outIndexes);
 
-    EvalRuntimeException Missed() {
+    EvalRuntimeException Missed(string cause) {
       var receiver = EvalInterpreter.TryFlattenChain(call.Target, out var segments)
         ? string.Join(".", segments.Select(s => s.Name))
         : "value";
@@ -786,7 +980,7 @@ public sealed class EvalInterpreter(
           inv,
           catalog,
           declaringType,
-          new MissedCall(call.Name, argc, call.TypeArgs.Count, onType, receiver)
+          new MissedCall(call.Name, argc, call.TypeArgs.Count, onType, receiver, cause)
         ),
         call.Position
       );
@@ -794,15 +988,335 @@ public sealed class EvalInterpreter(
   }
 
   /// <summary>
+  /// Fixes a generic definition's type parameters from the arguments, the way C# does for the one
+  /// shape an agent writes by reflex: a parameter whose type IS a type parameter takes the
+  /// argument's runtime type.
+  /// Any other shape (`T[]`, `List&lt;T&gt;`, a `T` only the return type carries) is not inferred,
+  /// nor is one two arguments fix to different types, nor one a null meets: each is reported as
+  /// the reason, for the caller to write the type argument instead.
+  /// Only a definition every type parameter of which a plain argument can fix reaches here (see
+  /// <see cref="UnfixableTypeParameter" />).
+  /// </summary>
+  /// <returns>
+  /// The type arguments in declaration order, or null with the reason, and whether that reason is
+  /// a conflict, C# perhaps inferring past it: a disagreement, or a null beside an argument
+  /// fixing the type parameter to a type taking it, or one that may be a box, whose declared type
+  /// C# would fix instead.
+  /// Every type parameter is fixed before a null's reason comes back, with the types fixed (see
+  /// <see cref="InferenceConflict" />).
+  /// </returns>
+  private (TypeMirror[] Types, string Reason, bool HasConflict, TypeMirror[] Fixed)
+    InferTypeArguments(
+      MethodMirror definition,
+      CallExpr call,
+      object[] evaluated
+    ) {
+    var typeParameters = definition.GetGenericArguments();
+    var parameters = definition.GetParameters();
+    var fixedTypes = new TypeMirror[typeParameters.Length];
+    (string Reason, bool HasConflict)? nullMet = null;
+
+    for (var k = 0; k < typeParameters.Length; k++) {
+      var fixedBy = -1;
+      var nullAt = -1;
+
+      for (var i = 0; i < parameters.Length; i++) {
+        // A type parameter's mirror is one object per attach, so identity is the test.
+        if (parameters[i].ParameterType != typeParameters[k]) {
+          continue;
+        }
+
+        if (call.Args[i].Mode is not ArgMode.Plain) {
+          continue;
+        }
+
+        if (EvalInterpreter.IsNull(evaluated[i])) {
+          nullAt = nullAt < 0 ? i : nullAt;
+
+          continue;
+        }
+
+        var argumentType = this.MirrorTypeOf(evaluated[i], call.Position);
+
+        if (fixedTypes[k] is null) {
+          fixedTypes[k] = argumentType;
+          fixedBy = i;
+        }
+        else if (fixedTypes[k] != argumentType) {
+          return (
+            null,
+            $"{typeParameters[k].Name} fixed to {fixedTypes[k].Name} by argument " +
+            $"{fixedBy + 1} and {argumentType.Name} by argument {i + 1}",
+            true,
+            null
+          );
+        }
+      }
+
+      // An instance that cannot take the null is inapplicable, as C# drops it, not a conflict,
+      // unless the argument fixing it is a struct, which may be a box of a type taking it.
+      if (nullAt >= 0) {
+        nullMet ??= (
+          $"{typeParameters[k].Name} cannot be inferred (argument {nullAt + 1} is null)",
+          fixedTypes[k] is not null &&
+          (Invoker.TakesNull(fixedTypes[k]) || evaluated[fixedBy] is StructMirror)
+        );
+      }
+    }
+
+    if (nullMet is var (reason, hasConflict)) {
+      return (null, reason, hasConflict, fixedTypes);
+    }
+
+    return (fixedTypes, null, false, null);
+  }
+
+  /// <summary>
+  /// Whether a bound candidate takes every argument as is: each non-null one at its own type, and
+  /// a null at a slot no less specific than the conflicting generic's instance takes it at.
+  /// </summary>
+  private bool TakesAsIs(
+    MethodMirror candidate,
+    object[] args,
+    IReadOnlySet<int> outIndexes,
+    InferenceConflict conflict
+  ) {
+    var parameters = candidate.GetParameters();
+
+    for (var i = 0; i < args.Length; i++) {
+      if (outIndexes is not null && outIndexes.Contains(i)) {
+        continue;
+      }
+
+      var slot = Invoker.Bare(parameters[i].ParameterType);
+
+      var isAsIs = EvalInterpreter.IsNull(args[i])
+        ? Invoker.TakesNull(slot) && IsNoLessSpecific(i, slot)
+        : this.ArgumentCost(args[i], slot).Cost is EvalInterpreter.ExactCost;
+
+      if (!isAsIs) {
+        return false;
+      }
+    }
+
+    return true;
+
+    // An instance slot taking no null, or a type parameter only nulls met, which C# cannot
+    // infer, leaves the generic inapplicable, any slot beating it.
+    bool IsNoLessSpecific(int i, TypeMirror slot) {
+      if (conflict.Fixed is null) {
+        return false;
+      }
+
+      var genericSlot = conflict.Definition.GetParameters()[i].ParameterType;
+      var k = Array.IndexOf(conflict.Definition.GetGenericArguments(), genericSlot);
+      var instanceSlot = k >= 0 ? conflict.Fixed[k] : Invoker.Bare(genericSlot);
+
+      return instanceSlot is null ||
+        !Invoker.TakesNull(instanceSlot) ||
+        EvalInterpreter.Depth(slot, instanceSlot) is not int.MaxValue;
+    }
+  }
+
+  /// <summary>
+  /// The first type parameter of a generic definition that no plain argument meets as a parameter
+  /// of exactly its type, or null when the arguments can fix them all.
+  /// An out argument fixes nothing: it has no value yet, and the agent reports an `out T`
+  /// parameter's type as plain `T`, so only the argument's mode tells it apart.
+  /// </summary>
+  private static TypeMirror UnfixableTypeParameter(MethodMirror definition, CallExpr call) {
+    var parameters = definition.GetParameters();
+
+    return definition.GetGenericArguments()
+      .FirstOrDefault(typeParameter => !parameters
+        .Where((p, i) => p.ParameterType == typeParameter && call.Args[i].Mode is ArgMode.Plain)
+        .Any()
+      );
+  }
+
+  /// <summary>
+  /// Whether a struct is a primitive the debuggee held boxed: the agent sends a box's contents
+  /// rather than the box, a boxed primitive as a struct of its type where an unboxed one arrives
+  /// as a <see cref="PrimitiveValue" />, so a struct of a primitive type can only have been boxed.
+  /// A boxed struct leaves no such trace: it arrives exactly as an unboxed one.
+  /// </summary>
+  private static bool IsBoxedPrimitive(StructMirror value) {
+    return Invoker.ClrPrimitiveOrNull(value.Type.FullName) is not null;
+  }
+
+  /// <summary>
+  /// A boxed primitive as its value where the slot takes an enum, or a primitive the box's own
+  /// type converts to exactly or by widening, so it binds and ranks by its runtime type as every
+  /// argument does; anything else, a box headed for an object or interface slot or a narrower
+  /// primitive included, as is.
+  /// </summary>
+  private static object UnboxFor(object value, TypeMirror slot) {
+    if (EvalInterpreter.Unboxed(value) is not {} box) {
+      return value;
+    }
+
+    var own = Invoker.ClrPrimitive(box.Type.FullName);
+
+    return slot.IsEnum ||
+      (Invoker.ClrPrimitiveOrNull(slot.FullName) is {} clr &&
+        (clr == own || PrimitiveOps.CanWiden(own, clr)))
+        ? box.Value
+        : value;
+  }
+
+  /// <summary>
+  /// A boxed primitive's type and value, whichever shape it arrives in: the agent returns a box as
+  /// a struct of the primitive type, while one built client-side stays an object mirror, whose
+  /// identity a reference comparison still reads; null for anything else.
+  /// </summary>
+  private static (TypeMirror Type, Value Value)? Unboxed(object value) {
+    return value switch {
+      StructMirror boxed when EvalInterpreter.IsBoxedPrimitive(boxed) =>
+        (boxed.Type, boxed.Fields[0]),
+      ObjectMirror boxed when Invoker.ClrPrimitiveOrNull(boxed.Type.FullName) is not null =>
+        (boxed.Type, boxed.GetValue(Invoker.InstanceFields(boxed.Type)[0])),
+      _ => null
+    };
+  }
+
+  /// <summary>
+  /// Candidates as C# member lookup ranks them: it binds the most derived type that declares an
+  /// applicable member, so each level of the hierarchy is a tier of its own, nearest first.
+  /// </summary>
+  private static IReadOnlyList<IReadOnlyList<MethodMirror>> Tiers(
+    TypeMirror type,
+    IEnumerable<MethodMirror> candidates
+  ) {
+    return [
+      .. candidates
+        .GroupBy(c => EvalInterpreter.TierOf(type, c))
+        .OrderBy(level => level.Key)
+        .Select(level => (IReadOnlyList<MethodMirror>) level.ToList())
+    ];
+  }
+
+  /// <summary>
+  /// A candidate's tier below the type a call is written on, an override counting as declared
+  /// where its method was introduced.
+  /// </summary>
+  private static int TierOf(TypeMirror type, MethodMirror method) =>
+    EvalInterpreter.Depth(type, EvalInterpreter.SlotOwner(method));
+
+  /// <summary>
+  /// The type whose method a candidate is, for member lookup: its declaring type, except for an
+  /// override, which belongs to the ancestor that introduced the slot it overrides.
+  /// </summary>
+  private static TypeMirror SlotOwner(MethodMirror method) {
+    if (!EvalInterpreter.IsOverride(method)) {
+      return method.DeclaringType;
+    }
+
+    var signature = EvalInterpreter.SlotSignature(method);
+
+    for (var type = method.DeclaringType.BaseType; type is not null; type = type.BaseType) {
+      var introduces = type.GetMethods()
+        .Any(m => m.Name == method.Name &&
+          m.IsVirtual &&
+          !EvalInterpreter.IsOverride(m) &&
+          EvalInterpreter.SlotSignature(m).SequenceEqual(signature)
+        );
+
+      if (introduces) {
+        return type;
+      }
+    }
+
+    return method.DeclaringType;
+  }
+
+  /// <summary>Whether a method overrides an inherited slot rather than declaring its own.</summary>
+  private static bool IsOverride(MethodMirror method) {
+    return method.IsVirtual &&
+      (method.Attributes & MethodAttributes.VtableLayoutMask) is MethodAttributes.ReuseSlot;
+  }
+
+  /// <summary>
+  /// What an override shares with the method it overrides: its generic arity and its parameter
+  /// types, read off the generic definition so an inferred instantiation compares with an open
+  /// one.
+  /// </summary>
+  private static string[] SlotSignature(MethodMirror method) {
+    var definition = method.IsGenericMethod && !method.IsGenericMethodDefinition
+      ? method.GetGenericMethodDefinition()
+      : method;
+
+    var typeParameters = definition.IsGenericMethodDefinition
+      ? definition.GetGenericArguments()
+      : [];
+
+    return [
+      $"{typeParameters.Length}",
+      .. definition.GetParameters()
+        .Select(p => EvalInterpreter.SlotKey(p.ParameterType, typeParameters))
+    ];
+  }
+
+  /// <summary>
+  /// A parameter type as <see cref="SlotSignature" /> compares it: a method type parameter, bare
+  /// or nested in an array, a by-ref, a pointer, or a generic instance, keyed by its position,
+  /// since an override may rename it.
+  /// </summary>
+  private static string SlotKey(TypeMirror type, TypeMirror[] typeParameters) {
+    if (Array.IndexOf(typeParameters, type) is var position and >= 0) {
+      return $"!!{position}";
+    }
+
+    if (type.IsArray) {
+      var rank = new string(',', type.GetArrayRank() - 1);
+
+      return $"{EvalInterpreter.SlotKey(type.GetElementType(), typeParameters)}[{rank}]";
+    }
+
+    if (type.IsByRef || type.IsPointer) {
+      var suffix = type.IsByRef ? "&" : "*";
+
+      return $"{EvalInterpreter.SlotKey(type.GetElementType(), typeParameters)}{suffix}";
+    }
+
+    if (type.IsGenericType && !type.IsGenericTypeDefinition) {
+      var arguments = type.GetGenericArguments()
+        .Select(argument => EvalInterpreter.SlotKey(argument, typeParameters));
+
+      return $"{type.GetGenericTypeDefinition().FullName}[{string.Join(",", arguments)}]";
+    }
+
+    return type.FullName;
+  }
+
+  /// <summary>
+  /// How many base-type steps separate a type from one of its ancestors; a type outside the chain
+  /// sorts last.
+  /// </summary>
+  private static int Depth(TypeMirror type, TypeMirror ancestor) {
+    var depth = 0;
+
+    for (var current = type; current is not null; current = current.BaseType) {
+      if (current == ancestor) {
+        return depth;
+      }
+
+      depth++;
+    }
+
+    return int.MaxValue;
+  }
+
+  /// <summary>
   /// Picks the overload whose parameters accept the evaluated arguments, coercing each argument:
   /// an exact-type pass runs before a widening pass, so `M(int)` beats `M(long)` for an int
   /// argument regardless of enumeration order.
+  /// Candidates come in tiers, each running both passes before the next is tried.
   /// Out-argument slots take client-built default placeholders and never coerce.
   /// <paramref name="refused" /> carries the candidates that dropped out before reaching here, each
   /// with its reason, so a miss reports them beside the ones tried.
   /// </summary>
   private (MethodMirror Method, Value[] Values) SelectOverload(
-    List<MethodMirror> candidates,
+    IReadOnlyList<IReadOnlyList<MethodMirror>> tiers,
     object[] args,
     string context,
     int position,
@@ -810,13 +1324,23 @@ public sealed class EvalInterpreter(
     IReadOnlyList<string> refused = null
   ) {
     var failures = new List<string>(refused ?? []);
+    (MethodMirror Method, Value[] Values)? fallback = null;
 
-    foreach (var allowWidening in new[] { false, true }) {
+    foreach (var (candidates, allowWidening) in tiers.SelectMany(t =>
+        new[] { (t, false), (t, true) }
+      )) {
       // The widening pass tries candidates in ascending conversion cost, approximating C#'s
       // better-conversion rule, so `M(long)` beats `M(double)` for an int argument regardless
-      // of declaration order (OrderBy is stable: ties keep declaration order).
+      // of declaration order; the more specific reference targets break a tie, and declaration
+      // order any left (OrderBy is stable).
       var ordered = allowWidening
-        ? candidates.OrderBy(c => this.ConversionCost(c, args, outIndexes)).ToList()
+        ? [
+          .. candidates
+            .Select(c => (Candidate: c, Cost: this.ConversionCost(c, args, outIndexes)))
+            .OrderBy(c => c.Cost.Cost)
+            .ThenByDescending(c => c.Cost.Specificity)
+            .Select(c => c.Candidate)
+        ]
         : candidates;
 
       foreach (var candidate in ordered) {
@@ -826,12 +1350,26 @@ public sealed class EvalInterpreter(
         try {
           for (var i = 0; i < args.Length; i++) {
             var parameterType = parameters[i].ParameterType;
+            var bareType = Invoker.Bare(parameterType);
 
-            values[i] = outIndexes is not null && outIndexes.Contains(i)
-              ? inv.DefaultMirrorFor(
-                parameterType.IsByRef ? parameterType.GetElementType() : parameterType
-              )
-              : this.CoerceToType(args[i], parameterType, position, allowWidening);
+            if (outIndexes is not null && outIndexes.Contains(i)) {
+              values[i] = inv.DefaultMirrorFor(bareType);
+
+              continue;
+            }
+
+            // The debugger agent hands the callee another address than the pointer sent, null
+            // included, so no raw pointer argument can be passed faithfully. An IntPtr, or a
+            // pointer held in a struct's field, arrives intact.
+            if (bareType.IsPointer) {
+              throw new EvalRuntimeException(
+                $"cannot pass a pointer argument as {bareType.FullName}: the debugger agent " +
+                "does not deliver its value; pass an IntPtr where the method takes one",
+                position
+              );
+            }
+
+            values[i] = this.CoerceToType(args[i], parameterType, position, allowWidening);
           }
         }
         catch (Exception ex) when (ex is EvalRuntimeException or
@@ -848,52 +1386,151 @@ public sealed class EvalInterpreter(
           continue;
         }
 
+        // The numeric-to-enum convenience binds a call C# would not, so a binding only through
+        // it yields to any other, a costlier sibling's or an ancestor's, and binds when none
+        // applies.
+        if (this.NeedsEnumConvenience(candidate, args, outIndexes)) {
+          fallback ??= (candidate, values);
+
+          continue;
+        }
+
         return (candidate, values);
       }
     }
 
-    throw new EvalRuntimeException(
-      $"no overload of {context} accepts these arguments; tried: {string.Join("; ", failures)}",
+    return fallback ?? throw EvalInterpreter.NoOverload(context, failures, position);
+  }
+
+  private static EvalRuntimeException NoOverload(
+    string context,
+    IEnumerable<string> tried,
+    int position
+  ) {
+    return new EvalRuntimeException(
+      $"no overload of {context} accepts these arguments; tried: {string.Join("; ", tried)}",
       position
     );
   }
 
-  private int ConversionCost(MethodMirror candidate, object[] args, IReadOnlySet<int> outIndexes) {
+  /// <summary>
+  /// Whether a bound candidate takes some argument only through the numeric-to-enum convenience:
+  /// a non-zero integer into an enum slot.
+  /// </summary>
+  private bool NeedsEnumConvenience(
+    MethodMirror candidate,
+    object[] args,
+    IReadOnlySet<int> outIndexes
+  ) {
     var parameters = candidate.GetParameters();
-    var cost = 0;
 
     for (var i = 0; i < args.Length; i++) {
-      if (outIndexes is null || !outIndexes.Contains(i)) {
-        cost += this.ArgumentCost(args[i], parameters[i].ParameterType);
+      var slot = Invoker.Bare(parameters[i].ParameterType);
+
+      slot = Invoker.IsNullable(slot) ? slot.GetGenericArguments()[0] : slot;
+
+      var arg = EvalInterpreter.UnwrapNullable(args[i]);
+
+      if ((outIndexes is null || !outIndexes.Contains(i)) &&
+        slot.IsEnum &&
+        arg is not EnumMirror &&
+        !EvalInterpreter.IsNull(arg) &&
+        !EvalInterpreter.IsIntegerZero(EvalInterpreter.UnboxFor(arg, slot))) {
+        return true;
       }
     }
 
-    return cost;
+    return false;
+  }
+
+  private (int Cost, int Specificity) ConversionCost(
+    MethodMirror candidate,
+    object[] args,
+    IReadOnlySet<int> outIndexes
+  ) {
+    var parameters = candidate.GetParameters();
+    var (total, specificity) = (0, 0);
+
+    for (var i = 0; i < args.Length; i++) {
+      if (outIndexes is null || !outIndexes.Contains(i)) {
+        var cost = this.ArgumentCost(args[i], parameters[i].ParameterType);
+
+        total += cost.Cost;
+        specificity += cost.Specificity;
+      }
+    }
+
+    return (total, specificity);
   }
 
   /// <summary>
-  /// The widening pass's conversion-cost heuristic: exact parameters cost nothing, numeric
-  /// widening costs the target's width rank (narrower wins, as in C#), narrowing and boxing
-  /// cost most.
+  /// The widening pass's conversion-cost heuristic, approximating C#'s better-conversion rule:
+  /// the cheaper of two candidates' conversions is the one C# prefers (see the cost bands), and
+  /// of two at equal cost, the more specific.
   /// </summary>
-  private int ArgumentCost(object arg, TypeMirror parameterType) {
-    var bare = parameterType.IsByRef ? parameterType.GetElementType() : parameterType;
+  private (int Cost, int Specificity) ArgumentCost(object arg, TypeMirror parameterType) {
+    var bare = Invoker.Bare(parameterType);
+
+    arg = EvalInterpreter.UnboxFor(arg, bare);
 
     if (Invoker.ClrPrimitiveOrNull(bare.FullName) is {} clr) {
       var argType = EvalInterpreter.UnwrapForOps(arg)?.GetType();
 
       return argType == clr
-        ? 0
+        ? (EvalInterpreter.ExactCost, 0)
         : argType is not null && PrimitiveOps.CanWiden(argType, clr)
-          ? EvalInterpreter.NumericRank(clr)
-          : 100 + EvalInterpreter.NumericRank(clr);
+          ? (EvalInterpreter.NumericRank(clr), 0)
+          : (EvalInterpreter.NarrowingCost + EvalInterpreter.NumericRank(clr), 0);
     }
 
-    if (EvalInterpreter.MirrorTypeOrNull(arg) is {} mirrorType && mirrorType == bare) {
-      return 0;
+    if ((EvalInterpreter.MirrorTypeOrNull(arg) is {} mirrorType && mirrorType == bare) ||
+      (arg is string && bare.FullName is "System.String")) {
+      return (EvalInterpreter.ExactCost, 0);
     }
 
-    return bare.FullName is "System.Object" ? 1000 : 500;
+    // A value lifted into a nullable slot costs its plain conversion and a little more, so
+    // `M(long?)` beats `M(double?)` for an int, and `M(int)` beats `M(int?)`.
+    if (Invoker.IsNullable(bare) && !EvalInterpreter.IsNull(arg)) {
+      var (cost, specificity) = this.ArgumentCost(arg, bare.GetGenericArguments()[0]);
+
+      return (cost + 1, specificity);
+    }
+
+    if (bare.FullName is "System.Object") {
+      return (EvalInterpreter.ObjectCost, 0);
+    }
+
+    // A nullable is a better target for a null than any reference type it converts to, and a
+    // primitive's narrowest one the best, as C# picks `M(int?)` over `M(long?)` and over
+    // `M(ValueType)`.
+    if (EvalInterpreter.IsNull(arg) && Invoker.IsNullable(bare)) {
+      var underlying = Invoker.ClrPrimitiveOrNull(bare.GetGenericArguments()[0].FullName);
+
+      return (
+        EvalInterpreter.NullIntoNullableCost +
+        (underlying is null ? EvalInterpreter.OtherRank : EvalInterpreter.NumericRank(underlying)),
+        0
+      );
+    }
+
+    // The numeric-to-enum convenience binds past boxing, as C# would not bind it at all, save for
+    // a zero, which C# converts to any enum.
+    if (bare.IsEnum) {
+      return EvalInterpreter.IsIntegerZero(arg)
+        ? (EvalInterpreter.ReferenceCost, 0)
+        : (EvalInterpreter.EnumConvenienceCost, 0);
+    }
+
+    // Any other conversion reaches a class or an interface; the most
+    // specific target, the deepest and the one with the most interfaces, wins a tie, as C# picks
+    // `M(Derived)` over `M(Base)` and `M(IList<T>)` over `M(IEnumerable<T>)`.
+    var depth = 0;
+
+    for (var t = bare.BaseType; t is not null; t = t.BaseType) {
+      depth++;
+    }
+
+    return (EvalInterpreter.ReferenceCost, depth + bare.GetInterfaces().Length);
   }
 
   private static int NumericRank(Type clr) {
@@ -909,7 +1546,7 @@ public sealed class EvalInterpreter(
       TypeCode.UInt64 => 8,
       TypeCode.Single => 9,
       TypeCode.Double => 10,
-      _ => 50
+      _ => EvalInterpreter.OtherRank
     };
   }
 
@@ -942,7 +1579,12 @@ public sealed class EvalInterpreter(
       throw new EvalRuntimeException($"{type.FullName} has no indexer", position);
     }
 
-    var (method, values) = this.SelectOverload(candidates, args, $"{type.Name} indexer", position);
+    var (method, values) = this.SelectOverload(
+      EvalInterpreter.Tiers(type, candidates),
+      args,
+      $"{type.Name} indexer",
+      position
+    );
 
     return inv.Invoke(mirror, method, values);
   }
@@ -1003,7 +1645,7 @@ public sealed class EvalInterpreter(
 
     Value instance;
 
-    if (type.IsValueType && args.Length is 0 && candidates.Count is 0) {
+    if (Invoker.IsValueType(type) && args.Length is 0 && candidates.Count is 0) {
       // Zeroed client-side default: no debuggee allocation, fields overwritten locally and
       // serialized on first send. A struct with a declared parameterless constructor must run it
       // instead.
@@ -1018,7 +1660,7 @@ public sealed class EvalInterpreter(
       }
 
       var (ctor, values) = this.SelectOverload(
-        candidates,
+        [candidates],
         args,
         $"{type.Name} constructor",
         creation.Position
@@ -1039,7 +1681,7 @@ public sealed class EvalInterpreter(
   private object EvaluateAssign(AssignExpr assignment) {
     switch (assignment.Target) {
       case NameExpr name when this.locals.ContainsKey(name.Name): {
-        var value = this.Evaluate(assignment.Value);
+        var value = EvalInterpreter.CopyStruct(this.Evaluate(assignment.Value));
 
         this.locals[name.Name] = value;
 
@@ -1109,18 +1751,24 @@ public sealed class EvalInterpreter(
   }
 
   /// <summary>
-  /// An assignment target's container: the value written into, whether mutations to it persist
-  /// (<see cref="Anchored" />: a local, a live object, or a chain of tracked links rooted in
-  /// one), and the write-back replaying by-copy struct links outward. Object fields, array
-  /// elements, and static fields decode structs as fresh client copies, so C# lvalue semantics
-  /// require storing the mutated copy back after the leaf write.
+  /// A struct as a fresh copy, nested structs included, so a local bound to it is its own value as
+  /// in C#: a member write mutates a client-side struct in place; anything else as is.
   /// </summary>
-  private readonly record struct Lvalue(object Value, Action WriteBack, bool Anchored);
+  internal static object CopyStruct(object value) {
+    return value is StructMirror structMirror and not EnumMirror
+      ? new StructMirror(
+        structMirror.VirtualMachine,
+        structMirror.Type,
+        [.. structMirror.Fields.Select(f => (Value) EvalInterpreter.CopyStruct(f))]
+      )
+      : value;
+  }
 
   /// <summary>C#'s CS1612 analog: a write into a struct temporary would be silently lost.</summary>
   private static void RequireAnchored(Lvalue target, int position) {
     if (target is { Value: StructMirror, Anchored: false }) {
       throw new EvalRuntimeException(
+        target.Refusal ??
         "the target is a struct copy returned by a method, property, or indexer; store it in a " +
         "local, mutate that, then assign it back whole",
         position
@@ -1136,10 +1784,47 @@ public sealed class EvalInterpreter(
     switch (expr) {
       case NameExpr or MemberExpr when EvalInterpreter.TryFlattenChain(expr, out var segments): {
         var (root, next) = this.ResolveChainRoot(segments);
+        var rootName = segments[0].Name;
 
         // Locals, scope values, and types anchor a chain (their mirrors are the stored
-        // instances client-side).
-        var current = new Lvalue(root, null, true);
+        // instances client-side), save a struct a scope's slot holds, which decodes as a copy:
+        // a member write stores the whole struct back.
+        var writeBack = root is StructMirror rootStruct &&
+          next is 1 &&
+          !this.locals.ContainsKey(rootName)
+            ? scopes
+              .Select(s => s.StructWriteBack(rootName, rootStruct))
+              .FirstOrDefault(w => w is not null)
+            : null;
+
+        // A box a scope's slot typed object or as an interface holds stores back through it.
+        var (boxScope, boxSlotType) = writeBack is null &&
+          root is StructMirror &&
+          next is 1 &&
+          !this.locals.ContainsKey(rootName)
+            ? scopes
+              .Select(s => (Scope: s, Type: s.BoxSlotType(rootName)))
+              .FirstOrDefault(s => s.Type is not null)
+            : (null, null);
+
+        var current = boxScope is not null
+          ? EvalInterpreter.SlotLink(
+            (Value) root,
+            boxSlotType,
+            rootName,
+            () => boxScope.TrySetValue(rootName, root)
+          )
+          // A struct `this` no scope stores back takes no member write, which would change only
+          // a copy; a call on it still runs.
+          : writeBack is null && rootName is "this" && root is StructMirror
+            ? new Lvalue(
+              root,
+              null,
+              false,
+              "this debugger agent cannot store a struct's `this` back, so a member assignment " +
+              "through it would change only a copy"
+            )
+            : new Lvalue(root, writeBack, true);
 
         for (var i = next; i < segments.Count; i++) {
           current = this.ReadLink(current, segments[i].Name, segments[i].Position);
@@ -1153,6 +1838,8 @@ public sealed class EvalInterpreter(
 
         return this.ReadLink(container, member.Name, member.Position);
       }
+
+      case ImplicitReceiverExpr: return this.receivers.Peek();
 
       case IndexExpr index: {
         var container = this.EvaluateWritable(index.Target);
@@ -1168,6 +1855,69 @@ public sealed class EvalInterpreter(
     }
   }
 
+  /// <summary>
+  /// The link of a value a debuggee slot of <paramref name="slotType" /> holds (a field, an array
+  /// element, a frame slot), a struct read from it storing back through <paramref name="store" />.
+  /// A box, in a slot typed object or as an interface, is stored back only once changed, as a
+  /// read-only call keeps the box, and the store replaces it with a new box; one typed object
+  /// takes no member write, C# admitting none there.
+  /// </summary>
+  private static Lvalue SlotLink(Value value, TypeMirror slotType, string name, Action store) {
+    if (value is not StructMirror structMirror) {
+      return new Lvalue(value, null, true);
+    }
+
+    if (Invoker.IsValueType(slotType)) {
+      return new Lvalue(value, store, true);
+    }
+
+    var changed = EvalInterpreter.ChangedOnly(structMirror, store);
+
+    return slotType.IsInterface
+      ? new Lvalue(value, changed, true)
+      : new Lvalue(value, changed, false, EvalInterpreter.BoxRefusal(name));
+  }
+
+  /// <summary>
+  /// A write-back firing only when the struct differs from what it was as this link read it.
+  /// </summary>
+  private static Action ChangedOnly(StructMirror value, Action writeBack) {
+    if (writeBack is null) {
+      return null;
+    }
+
+    var before = (Value) EvalInterpreter.CopyStruct(value);
+
+    return () => {
+      if (!EvalInterpreter.IsSameValue(before, value)) {
+        writeBack();
+      }
+    };
+  }
+
+  /// <summary>
+  /// Whether two decoded values hold the same data: the vendored PrimitiveValue.Equals compares
+  /// boxed payloads by reference, so primitives compare by value here.
+  /// </summary>
+  private static bool IsSameValue(Value a, Value b) {
+    return (a, b) switch {
+      (StructMirror x, StructMirror y) => x.Type == y.Type &&
+        x.Fields.Length == y.Fields.Length &&
+        x.Fields.Zip(y.Fields).All(p => EvalInterpreter.IsSameValue(p.First, p.Second)),
+      // A float's sign and payload count, which equality ignores for 0 and -0.
+      (PrimitiveValue { Value: float f }, PrimitiveValue { Value: float g }) =>
+        BitConverter.SingleToInt32Bits(f) == BitConverter.SingleToInt32Bits(g),
+      (PrimitiveValue { Value: double f }, PrimitiveValue { Value: double g }) =>
+        BitConverter.DoubleToInt64Bits(f) == BitConverter.DoubleToInt64Bits(g),
+      (PrimitiveValue x, PrimitiveValue y) => Equals(x.Value, y.Value),
+      (ObjectMirror x, ObjectMirror y) => x.Id == y.Id,
+      _ => Equals(a, b)
+    };
+  }
+
+  private static string BoxRefusal(string name) =>
+    $"'{name}' holds a boxed struct, so a member assignment would change only a copy";
+
   /// <summary>One tracked member link of an lvalue chain (see <see cref="Lvalue" />).</summary>
   private Lvalue ReadLink(Lvalue container, string name, int position) {
     switch (container.Value) {
@@ -1175,12 +1925,17 @@ public sealed class EvalInterpreter(
         var field = typeRef.Type.GetFields().FirstOrDefault(f => f.IsStatic && f.Name == name);
 
         if (field is not null) {
+          this.RequireInitialized(typeRef.Type, field, position);
+
           var value = typeRef.Type.GetValue(field);
 
           // Static struct fields decode as fresh copies: store the mutated copy back.
-          return value is StructMirror
-            ? new Lvalue(value, () => typeRef.Type.SetValue(field, value), true)
-            : new Lvalue(value, null, true);
+          return EvalInterpreter.SlotLink(
+            value,
+            field.FieldType,
+            field.Name,
+            () => typeRef.Type.SetValue(field, value)
+          );
         }
 
         // A struct from a static property getter is a temporary, as in C#.
@@ -1201,13 +1956,21 @@ public sealed class EvalInterpreter(
           var value = structContainer[name];
 
           // A nested struct is the STORED mirror: mutations land in the parent's fields
-          // client-side, so persistence rides the parent's own write-back. Any other field kind
-          // is written directly (heap identity or leaf), needing no replay.
-          return value is StructMirror
-            ? container with {
-              Value = value
-            }
-            : new Lvalue(value, null, true);
+          // client-side, so persistence rides the parent's own write-back, a box's only once
+          // changed (see SlotLink). Any other field kind is written directly (heap identity or
+          // leaf), needing no replay.
+          return value is not StructMirror nested
+            ? new Lvalue(value, null, true)
+            : Invoker.IsValueType(field.FieldType)
+              ? container with {
+                Value = value
+              }
+              : new Lvalue(
+                value,
+                EvalInterpreter.ChangedOnly(nested, container.WriteBack),
+                container.Anchored && field.FieldType.IsInterface,
+                field.FieldType.IsInterface ? container.Refusal : EvalInterpreter.BoxRefusal(name)
+              );
         }
 
         if (getter is not null) {
@@ -1234,9 +1997,12 @@ public sealed class EvalInterpreter(
           var value = objectContainer.GetValue(field);
 
           // Object fields decode structs as fresh copies: store the copy back after the write.
-          return value is StructMirror
-            ? new Lvalue(value, () => objectContainer.SetValue(field, value), true)
-            : new Lvalue(value, null, true);
+          return EvalInterpreter.SlotLink(
+            value,
+            field.FieldType,
+            field.Name,
+            () => objectContainer.SetValue(field, value)
+          );
         }
 
         if (getter is not null) {
@@ -1270,9 +2036,12 @@ public sealed class EvalInterpreter(
 
       // Array elements decode as fresh copies; unlike C#'s true by-reference elements, the
       // mutated copy must be stored back after the leaf write.
-      return value is StructMirror
-        ? new Lvalue(value, () => array.SetValues(at, [value]), true)
-        : new Lvalue(value, null, true);
+      return EvalInterpreter.SlotLink(
+        value,
+        array.Type.GetElementType(),
+        $"element {at}",
+        () => array.SetValues(at, [value])
+      );
     }
 
     // get_Item returns a temporary; C# itself forbids writing through it when it is a struct.
@@ -1290,6 +2059,7 @@ public sealed class EvalInterpreter(
         var field = typeRef.Type.GetFields().FirstOrDefault(f => f.IsStatic && f.Name == name);
 
         if (field is not null) {
+          this.RequireInitialized(typeRef.Type, field, position);
           typeRef.Type.SetValue(field, this.CoerceToType(value, field.FieldType, position));
 
           return;
@@ -1349,7 +2119,7 @@ public sealed class EvalInterpreter(
     }
 
     var (method, values) = this.SelectOverload(
-      candidates,
+      EvalInterpreter.Tiers(type, candidates),
       [.. args, value],
       $"{type.Name} indexer",
       position
@@ -1362,7 +2132,24 @@ public sealed class EvalInterpreter(
 
   private object EvaluateCast(CastExpr cast) {
     var type = this.ResolveType(cast.TypeName, cast.Position);
-    var value = this.Evaluate(cast.Operand);
+    var value = EvalInterpreter.UnwrapNullable(this.Evaluate(cast.Operand));
+    var clr = Invoker.ClrPrimitiveOrNull(type.FullName);
+
+    // An unboxing cast takes the box's own type only, as an enum over it, as C#'s throws
+    // InvalidCastException for any other, even a wider one.
+    if ((type.IsEnum
+        ? type.EnumUnderlyingType
+        : clr is not null
+          ? type
+          : null) is {} unboxTo &&
+      EvalInterpreter.Unboxed(value) is {} box) {
+      value = box.Type == unboxTo
+        ? box.Value
+        : throw new EvalRuntimeException(
+          $"cannot unbox a {box.Type.FullName} as {type.FullName}",
+          cast.Position
+        );
+    }
 
     if (type.IsEnum) {
       var numeric = EvalInterpreter.UnwrapForOps(value);
@@ -1376,8 +2163,6 @@ public sealed class EvalInterpreter(
         );
     }
 
-    var clr = Invoker.ClrPrimitiveOrNull(type.FullName);
-
     if (clr is not null) {
       var unwrapped = EvalInterpreter.UnwrapForOps(value);
 
@@ -1389,9 +2174,11 @@ public sealed class EvalInterpreter(
         );
     }
 
-    // Null casts to any reference target.
+    // Null casts to any target taking it; C# throws for any other.
     if (EvalInterpreter.IsNull(value)) {
-      return value;
+      return Invoker.TakesNull(type)
+        ? value
+        : throw new EvalRuntimeException($"cannot cast null to {type.FullName}", cast.Position);
     }
 
     // Mirrors carry no representation change over a cast, but a mirror's Type is the value's
@@ -1473,6 +2260,18 @@ public sealed class EvalInterpreter(
 
   private static bool IsNull(object value) => value is null or PrimitiveValue { Value: null };
 
+  /// <summary>
+  /// A nullable as an operator reads it, as C# lifts one: its value, or null when it has none.
+  /// Member access keeps the wrapper, which is what `.HasValue` and `.Value` are read from.
+  /// </summary>
+  private static object UnwrapNullable(object value) {
+    if (value is not StructMirror nullable || !Invoker.IsNullable(nullable.Type)) {
+      return value;
+    }
+
+    return nullable["hasValue"] is PrimitiveValue { Value: true } ? nullable["value"] : null;
+  }
+
   /// <summary>Converts any in-flight value to a mirror for use as an invoke target.</summary>
   private Value ToMirror(object value, int position) {
     return value switch {
@@ -1490,8 +2289,8 @@ public sealed class EvalInterpreter(
 
   /// <summary>
   /// Coerces an in-flight value to a target (parameter or field) type, client-side: exact CLR
-  /// match, plus implicit numeric widening and reference-conversion assignability when
-  /// <paramref name="allowWidening" /> permits (overload binding's strict pass disables both).
+  /// match, plus, when <paramref name="allowWidening" /> permits, every conversion beyond it
+  /// (overload binding's strict pass disables them all).
   /// </summary>
   private Value CoerceToType(
     object value,
@@ -1499,11 +2298,31 @@ public sealed class EvalInterpreter(
     int position,
     bool allowWidening = true
   ) {
-    var typeName = targetType.FullName.TrimEnd('&');
+    var bareTarget = Invoker.Bare(targetType);
+    var typeName = bareTarget.FullName;
 
     if (EvalInterpreter.IsNull(value)) {
-      return inv.Vm.CreateValue(null);
+      // A null fails here like any other mismatch, so overload matching moves on; it binds only in
+      // the widening pass, whose cost ranking prefers the most specific slot.
+      return !allowWidening || !Invoker.TakesNull(bareTarget)
+        ? throw new EvalRuntimeException($"cannot pass null as {typeName}", position)
+        : inv.NullFor(bareTarget);
     }
+
+    // A nullable slot takes its underlying value as is, the agent wrapping it; a lifting
+    // conversion, so not in the exact pass.
+    if (allowWidening &&
+      Invoker.IsNullable(bareTarget) &&
+      EvalInterpreter.MirrorTypeOrNull(value) != bareTarget) {
+      return this.CoerceToType(
+        value,
+        bareTarget.GetGenericArguments()[0],
+        position,
+        allowWidening
+      );
+    }
+
+    value = EvalInterpreter.UnboxFor(value, bareTarget);
 
     if (value is TypeRef typeRef) {
       // A bare type where a System.Type is expected: the common typo for typeof(...).
@@ -1518,8 +2337,6 @@ public sealed class EvalInterpreter(
     if (value is not Value mirror) {
       return this.CoerceClient(value, targetType, position, allowWidening);
     }
-
-    var bareTarget = targetType.IsByRef ? targetType.GetElementType() : targetType;
 
     switch (mirror) {
       case EnumMirror e when bareTarget.IsEnum:
@@ -1584,22 +2401,29 @@ public sealed class EvalInterpreter(
     int position,
     bool allowWidening
   ) {
-    if (value is null) {
-      return inv.Vm.CreateValue(null);
-    }
-
-    var bareTarget = targetType.IsByRef ? targetType.GetElementType() : targetType;
+    var bareTarget = Invoker.Bare(targetType);
     var typeName = bareTarget.FullName;
 
     if (bareTarget.IsEnum) {
-      // Numeric-to-enum is admitted as a REPL convenience (C# itself would want a cast);
-      // strings and bools stay out (no numeric identity to convert).
-      return allowWidening && value is IConvertible and not string and not bool
-        ? inv.MakeEnum(bareTarget, value)
-        : throw new EvalRuntimeException(
+      // Numeric-to-enum is admitted as a REPL convenience (C# itself would want a cast), for an
+      // integer the enum's underlying type holds: any other would truncate or wrap into a
+      // different member.
+      if (!allowWidening || !Invoker.IsInteger(value.GetType())) {
+        throw new EvalRuntimeException(
           $"cannot pass {value.GetType().FullName} as enum {typeName}",
           position
         );
+      }
+
+      try {
+        return inv.MakeEnumChecked(bareTarget, value);
+      }
+      catch (OverflowException) {
+        throw new EvalRuntimeException(
+          $"{Convert.ToString(value, CultureInfo.InvariantCulture)} does not fit {typeName}",
+          position
+        );
+      }
     }
 
     switch (typeName) {
@@ -1664,22 +2488,19 @@ public sealed class EvalInterpreter(
     );
   }
 
-  private static bool IsIntegral(Type type) {
-    return Type.GetTypeCode(type) is TypeCode.SByte or
-      TypeCode.Byte or
-      TypeCode.Int16 or
-      TypeCode.UInt16 or
-      TypeCode.Int32 or
-      TypeCode.UInt32 or
-      TypeCode.Int64 or
-      TypeCode.UInt64 or
-      TypeCode.Char;
+  /// <summary>An integer zero, the one number C# converts to any enum.</summary>
+  private static bool IsIntegerZero(object value) {
+    return EvalInterpreter.UnwrapForOps(value) is {} number &&
+      Invoker.IsInteger(number.GetType()) &&
+      Convert.ToDecimal(number, CultureInfo.InvariantCulture) is 0;
   }
+
+  private static bool IsIntegral(Type type) => type == typeof(char) || Invoker.IsInteger(type);
 
   // ---- Formatting and reporting ----
 
   private string Stringify(object value) {
-    return value switch {
+    return EvalInterpreter.UnwrapNullable(value) switch {
       null => "",
       string s => s,
       IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
@@ -1759,6 +2580,40 @@ public sealed class EvalInterpreter(
       return "<unreadable>";
     }
   }
+
+  /// <summary>
+  /// An inference conflict a generic definition met, for another binding to stand in past.
+  /// </summary>
+  /// <param name="Depth">The definition's tier, as <see cref="TierOf" /> counts it.</param>
+  /// <param name="Fixed">
+  /// The type arguments fixed before a null met the conflict, by type-parameter position; null
+  /// for a disagreement, whose two types make no instance.
+  /// </param>
+  private sealed record InferenceConflict(
+    string Reason,
+    int Depth,
+    MethodMirror Definition,
+    TypeMirror[] Fixed
+  );
+
+  /// <summary>
+  /// An assignment target's container: the value written into, whether mutations to it persist
+  /// (<see cref="Anchored" />: a local, a live object, or a chain of tracked links rooted in
+  /// one), and the write-back replaying by-copy struct links outward. Object fields, array
+  /// elements, and static fields decode structs as fresh client copies, so C# lvalue semantics
+  /// require storing the mutated copy back after the leaf write.
+  /// </summary>
+  /// <param name="Refusal">
+  /// Why an unanchored struct takes no write, where the generic copy explanation would mislead.
+  /// An unanchored struct carrying one is held somewhere rather than a temporary, so a call runs
+  /// on it rather than on a copy.
+  /// </param>
+  private readonly record struct Lvalue(
+    object Value,
+    Action WriteBack,
+    bool Anchored,
+    string Refusal = null
+  );
 
   /// <summary>A name chain resolved to a type instead of a value (static context).</summary>
   private sealed record TypeRef(TypeMirror Type);

@@ -216,7 +216,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
   [Description(
     """
     Evaluate a C# statement sequence in a paused frame: the eval grammar plus the frame's locals,
-    parameters, and `this` as roots, readable AND assignable.
+    parameters, and `this` as roots, readable AND assignable (`this` itself only in a struct
+    method, as in C#).
     Requires an active pause (breakpoint/step/exception hit, or a held suspend, which evaluates
     on the main thread); errors otherwise: use eval for frameless evaluation.
     Frame slots are direct reads/writes; method and property calls run on the game's main thread
