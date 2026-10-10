@@ -9,8 +9,9 @@ symptoms:
   - 'a session reports itself attached long after the debuggee exited'
   - 'a stack trace appears in the MCP stdio stream when a debuggee dies'
   - 'an attach hangs forever against a port some other program is listening on'
+  - 'a write through a generic struct''s `this` fails "The frame''s method needs to be a valuetype instance method."'
 tags: [sdb, mono-debugger-soft, vendoring, net10, caching, liveness, timeouts]
-updated: 2026-08-14
+updated: 2026-10-10
 ---
 
 # Running Mono's vendored SDB client on .NET 10
@@ -47,6 +48,11 @@ The vendored sources predate .NET Core's removal of remoting-era APIs.
 Compiling the vendored sources **into** this assembly also opens their `internal` surface, which the
 evaluator depends on: default `StructMirror`s are built entirely client-side through the internal
 `StructMirror(vm, type, fields)` ctor.
+`StackFrame.SetThis` checks `Method.DeclaringType.IsValueType`, the agent's encoding flag, so it
+refuses a generic struct's `this`, which the agent stores fine; `FrameScope.StructWriteBack` sends
+the internal `StackFrame_SetThis` directly. After a vendor update, rerun
+`AGenericStructsThisReadsAndWritesLikeAnyOther` with the client's `SetThis` swapped back in: if it
+passes, the bypass is no longer needed.
 
 Which accessors cost the wire is not evident from their neighbours, and two of them read as free
 while charging per call:

@@ -516,6 +516,69 @@ one that binds; which is cheaper is what the cost turns on. Member lookup ignore
 way: `((System.Collections.ICollection) array).Count` fails, as an array implements `Count`
 explicitly and the lookup runs on `T[]`.
 
+### A mutation through a box no slot holds is lost
+
+**Priority:** medium · **Cost:** moderate
+
+A mutating call on a struct boxed behind an interface stores the changed struct back only when a
+field, an array element, or a frame slot holds the box. Two shapes reach a box with nothing behind
+it and drop the call silently. A getter returning it: with `t` a `Tuple<IBump>`,
+`t.Item1.Bump(); t.Item1.P` reads 0 where C# reads 1. A cast to the interface:
+`((IBump) Boxes.Ifc).Bump()` leaves `P` at 0. Silent is the one outcome the eval contract rules out.
+The wire decodes a box as its struct and carries no box identity, so the call runs on a client copy;
+running it on the agent's own object instead is what the cost turns on. The member-assignment form
+through a getter (`t.Item1.P = 3`) fails loudly today, where C# accepts it on an interface
+reference.
+
+### `?:` with a nullable branch
+
+**Priority:** low · **Cost:** cheap
+
+In C#, `flag ? h.Maybe : 0` has type `int?`, the `0` lifted. The evaluator returns whichever branch
+ran as it is, so the result is an `int?` on one branch and a plain int on the other, and a member
+only the nullable has (`.HasValue`) fails when the plain branch ran. Lifting the other branch when
+one is nullable is the fix.
+
+### Type-argument inference beyond a plain `T` parameter
+
+**Priority:** low · **Cost:** moderate
+
+Inference reads only a parameter typed as the type parameter itself and takes each argument's
+runtime type. It refuses two arguments fixing `T` to different types, and a null beside an argument
+fixing `T` to a type that takes null. C# also infers through `T[]` and `List<T>`, and fixes `T` to a
+type every argument converts to. Each refusal is loud and names its fix, writing the type argument.
+Reading `T[]` and generic-instance parameters is the step agents would reach first; the common-type
+cases need static types the evaluator does not track.
+
+### Calls C# rejects as ambiguous bind silently
+
+**Priority:** low · **Cost:** large
+
+Where C# reports CS0121, the evaluator picks one overload and runs it: a null into a nullable slot
+against a reference slot, variance and array-covariance ties, related interfaces, a lifted
+conversion against a numeric widening, and an integral argument against a narrower and an enum
+sibling. No valid program contains these calls, so there is no C# answer to diverge from, yet the
+call runs a method the caller did not choose. Reporting the tie needs a better-conversion ranking
+the binder does not have, which is the cost.
+
+### A call on a boxed primitive fails with the agent's own error
+
+**Priority:** low · **Cost:** cheap
+
+A method called on a boxed primitive a debuggee call returned (an `object` holding an int) fails
+with the agent's raw invoke error, which names neither the box nor a way out. A refusal naming the
+box and suggesting the cast to its primitive type would make it actionable.
+
+### The evaluator's structure
+
+**Priority:** low · **Cost:** moderate
+
+Two refactors parked for a go-ahead. Overload binding (tiers, inference, cost ranking, and the
+null rules) has grown inside `EvalInterpreter` into an `OverloadResolver` waiting to be extracted.
+`FrameScope` repeats its `this`, local, and parameter dispatch across `TryResolveValue`,
+`TrySetValue`, `StructWriteBack`, and `BoxSlotType`, and the last two are two queries the
+interpreter reassembles into one link; one slot query feeding `SlotLink` would merge them.
+
 ### `eval` matches no default arguments
 
 **Priority:** high · **Cost:** unsure · **Hits:** 19 as of 2026-09-29
@@ -581,14 +644,6 @@ is unreachable through C# `.` syntax, which made every job-attribute check in th
 is the workaround for both, which is the tell that one resolver handles the string form and the
 grammar does not reach it.
 
-### `eval` infers no type arguments
-
-**Priority:** high · **Cost:** moderate · **Hits:** 13 as of 2026-09-29
-
-`em.SetComponentData(e, value)` fails, and the miss says the method is generic and wants its type
-argument written. Recovery costs one retry adding `<T>`. Inferring `T` from an argument whose
-parameter is plain `T` covers every case seen.
-
 ### A null receiver reports "no type for PrimitiveValue"
 
 **Priority:** medium · **Cost:** cheap · **Hits:** 7 as of 2026-09-29
@@ -651,6 +706,55 @@ its 60 s limit, and the session is dropped. Reproduced in the fixture by harvest
 `InvokeOptions.None`, so a throwing `eval` should hang the same way, and a mistyped type name in a
 debug tool now reaches it through the catalog's first harvest. Suppressing breakpoints for the
 plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, untested.
+
+### An invoke releases a thread paused at a breakpoint
+
+**Priority:** medium · **Cost:** unsure
+
+Every invoke goes out with `InvokeOptions.None`, so the agent resumes the whole VM while it runs. A
+worker thread paused at a breakpoint runs on during a frameless `eval`: in the fixture, a worker
+paused inside a static constructor finished it and exited, and the next `debug_evaluate` failed with
+`the paused thread has no managed frames`. `SingleThreaded` holds every other thread, at the price
+of deadlocking an invoke that waits on one of them; which callers can take that is what the cost
+turns on.
+
+### The frame-write journal's blind spots
+
+**Priority:** low · **Cost:** moderate
+
+`FrameScope` answers a frame local's reads from what the current pause wrote to it by name, since the
+agent serves a register-held local stale after an invoke. Three shapes fall outside it, each listed
+among the plugin's divergences. Under a held suspend, which publishes no pause, a local written
+before an invoke reads its old value from the next evaluation on, `debug_pause_state` included. A
+write reaching the local through another frame's `ref` parameter or struct `this` is missed. A
+breakpoint condition's writes do not carry into the pause it publishes. Keying the journal to the
+session's resume count rather than to the pause covers the first and the third; the second needs
+alias tracking.
+
+### A frame write of a client value into a nullable slot
+
+**Priority:** low · **Cost:** cheap
+
+`maybe = 5` at a breakpoint is refused for an `int?` local, where C# wraps it; the workaround is a
+debuggee-side int of the underlying type. Building the `Nullable` struct client-side, or checking
+that the agent wraps a client primitive as it does a debuggee one, would lift the refusal.
+
+### A static read in a worker frame while the main thread runs the constructor
+
+**Priority:** low · **Cost:** cheap
+
+The static-constructor guard admits a type whose constructor the main thread is running, since every
+invoke runs there. With the main thread blocked inside `T`'s constructor and a worker paused at a
+breakpoint, `debug_evaluate` in the worker's frame reads `T`'s partly assigned statics where C# on
+the worker would wait. Scanning only the frame's own thread when a frame scope is present would
+close it.
+
+### Unnamed threads reported as the main thread
+
+**Priority:** low · **Cost:** trivial
+
+`DebugController` labels any thread without a name `(main)`, so a pause on an unnamed worker
+reports `thread=(main)`. Comparing the thread with `Invoker.MainThread` would name it right.
 
 ### Smaller `eval` grammar misses
 

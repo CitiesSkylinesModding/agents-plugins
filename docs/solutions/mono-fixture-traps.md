@@ -1,8 +1,9 @@
 ---
 date: 2026-07-29
+updated: 2026-10-10
 area: plugins/unity-devtools/tests-integration
 symptoms:
-  - 'static fixture roots read as null'
+  - 'static fixture roots read as null, or refused because a static constructor has not run'
   - 'invokes hang against the parked main thread'
   - 'every debug test reports AbsentInformation'
   - 'the whole suite hangs after one debug test'
@@ -21,7 +22,8 @@ Distinct ways the debuggee looks broken when the fixture is at fault.
 ## Root cause and fix
 
 - **Mirror reads never trigger class constructors.** A static root read before anything touched its
-  class comes back empty. `Main` warms the static roots and prints `READY` before the harness evaluates.
+  class is refused when the class has a static constructor, and comes back empty when it has none.
+  `Main` warms the static roots and prints `READY` before the harness evaluates.
 - **Invokes need a managed safepoint.** A thread blocked forever in a native wait never reaches one, so
   the parked main thread loops through short _managed_ sleeps.
 - **Symbols need both halves.** The fixture must build a portable PDB (`DebugType=portable`) _and_ mono
