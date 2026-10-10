@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.2.0...unity-devtools-v1.3.0) (2026-10-10)
+
+
+### Features
+
+* **unity-devtools:** infer generic type arguments in eval and follow C# value semantics ([ca457d1](https://github.com/CitiesSkylinesModding/agents-plugins/commit/ca457d160f9d568e4a145c8cf3da6a42613beba2))
+
 ## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.1.0...unity-devtools-v1.2.0) (2026-09-30)
 
 
