@@ -39,6 +39,16 @@ hung engine from its own unresolved promise. Say that the call timed out while a
 either it never settled or the engine stopped answering. A per-call `timeoutMs` on `game_eval` is the larger half, since `GAMEFACE_CALL_TIMEOUT_MS`
 is server-wide; wait for its hits to grow before building it.
 
+### A `game_eval` that blocks the game's frames
+
+**Priority:** medium · **Cost:** trivial
+
+`gameface-driving` does not warn that the UI script runs on the game's frame: a `requestAnimationFrame`
+loop busy-waiting 70ms per frame, set up from `game_eval` to simulate slow frames in Cities: Skylines II,
+hung the game until crashpad killed it, and the mod's settings file had lost a saved value by the next
+start. One sentence in the skill's traps: a script that blocks frame after frame takes the game down
+with it, so measure slow-frame behaviour from the game's own slow frames instead.
+
 ### Removing a breakpoint the UI is paused at
 
 **Priority:** low · **Cost:** cheap
