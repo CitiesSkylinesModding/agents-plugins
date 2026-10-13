@@ -20,7 +20,7 @@ When failures run into the hundreds, hand "Group by root cause" and "Match each 
 ## 2. Group by root cause
 
 Read every failure in `failures.jsonl` and sort each into a **class**: one root cause, one fix.
-A signature is a grouping hint and nothing more — `method … not found` and `no overload … accepts` each front several causes, so classify on the method called and its declared signature, reading the plugin source where the message leaves it open.
+A signature is a grouping hint and nothing more — `method … not found`, `no … accepts these … argument(s)`, and its older form `no overload … accepts` each front several causes, so classify on the method called and its declared signature, reading the plugin source where the message leaves it open.
 The `next` moves are the richest field: the workaround the agent reached for says what it wanted, and an abandoned call marks a gap with no workaround.
 
 Each class takes one kind:

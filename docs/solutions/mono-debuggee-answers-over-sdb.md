@@ -1,6 +1,6 @@
 ---
 date: 2026-07-30
-updated: 2026-10-10
+updated: 2026-10-13
 area: plugins/unity-devtools/sdb
 symptoms:
   - 'a null check on an invoke result never fires'
@@ -8,6 +8,7 @@ symptoms:
   - "'Retrieve the LoaderExceptions property for more information'"
   - 'System.Int32 reported as a class, or a null passed to a struct parameter'
   - 'an out argument of a nullable or a generic struct disconnects the VM'
+  - 'an omitted `in` generic-struct default disconnects the VM'
   - 'a pointer argument arrives at a different address, or a null pointer write fails'
   - 'a frame local reads back its old value after a call in the same pause'
   - 'a static field reads as zero'
@@ -51,7 +52,11 @@ primitives (`int`, `bool`, `IntPtr`) and for every generic struct instance (`Key
 base type. A client-built `StructMirror` of a nullable or a generic struct instance sent as an
 out-argument placeholder, for an `int?` say, disconnects the VM and takes the game with it, so
 `Invoker.DefaultMirrorFor` refuses those types; the same value sent by value, or as a field of a
-struct the agent flags, decodes fine. The agent wraps a bare value into a nullable slot for an invoke
+struct the agent flags, decodes fine. A generic struct sent into an `in` parameter disconnects the VM
+too, and the mirror reports that parameter's type by value (`IsByRef` false), so its type alone does
+not tell it from a by-value slot; the assembly metadata does, through the Param row's `In` flag and
+the by-ref signature. A null sent into an `in` nullable, or a plain struct holding a generic
+one, decodes there. The agent wraps a bare value into a nullable slot for an invoke
 argument or a game field, but nothing wraps one stored into a client-built struct's nullable field,
 so the evaluator builds that wrapper itself.
 
