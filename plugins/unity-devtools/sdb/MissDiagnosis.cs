@@ -263,8 +263,8 @@ public static class MissDiagnosis {
 
   /// <summary>
   /// A call no method of the receiver's type answers, diagnosed by what the type does have: the
-  /// name on the wrong side, the name wanting a type argument, the name at other arities, or no
-  /// such name at all.
+  /// name on the wrong side, a generic definition whose type arguments were not inferred, the
+  /// candidates of the name that refused the call, or no such name at all.
   /// Only that last case can be an extension method, so only it looks for one, and may run the
   /// catalog's first harvest doing so.
   /// </summary>
@@ -272,10 +272,7 @@ public static class MissDiagnosis {
   /// Null skips the extension lookup, leaving its static form stated as a shape.
   /// </param>
   public static string Method(Invoker inv, TypeCatalog catalog, TypeMirror type, MissedCall call) {
-    var named = MissDiagnosis.Chain(type)
-      .SelectMany(t => t.GetMethods())
-      .Where(m => m.Name == call.Name)
-      .ToList();
+    var named = Invoker.Named(type, call.Name).ToList();
 
     if (named.Count is 0) {
       return MissDiagnosis.UnknownMethod(inv, catalog, type, call);
@@ -286,25 +283,50 @@ public static class MissDiagnosis {
         "type, not on the type itself";
     }
 
-    var signatures = MissSuggestions.Listing(
-      [("it has", named.Select(MissDiagnosis.Signature).Distinct().ToList())],
-      MissSuggestions.SignatureCap,
-      MissDiagnosis.MemberPointer
-    );
-
-    if (call.TypeArgCount > 0) {
-      return $"no {call.Name} of {type.FullName} takes {call.TypeArgCount} type argument(s) " +
-        $"with {call.ArgCount} argument(s); {signatures}";
+    if (call.Uninferred is {} uninferred) {
+      return $"{call.Name} is generic and {uninferred.Reason}: write it, as in " +
+        MissDiagnosis.Signature(uninferred.Method);
     }
 
-    var generic = named.FirstOrDefault(m =>
-      m.IsGenericMethodDefinition && m.GetParameters().Length == call.ArgCount
+    return MissDiagnosis.Unbound(
+      $"{call.Name} of {type.FullName}",
+      call.ArgCount,
+      call.TypeArgCount,
+      call.Rejected
+    );
+  }
+
+  /// <summary>
+  /// A call or construction no candidate binds: every candidate, each with why it refused, so an
+  /// overload dropped for its argument count shows beside the ones whose arguments failed.
+  /// The caller orders them, nearest the call first, which is what the cap keeps.
+  /// </summary>
+  /// <param name="subject">
+  /// What was called, as in `Speak of MyGame.Dog` or `MyGame.Hash constructor`.
+  /// </param>
+  public static string Unbound(
+    string subject,
+    int argc,
+    int typeArgc,
+    IEnumerable<Rejection> rejected
+  ) {
+    var arguments = typeArgc > 0
+      ? $"{typeArgc} type argument(s) and these {argc} argument(s)"
+      : $"these {argc} argument(s)";
+
+    // An override and the method it overrides read the same.
+    var entries = rejected.Select(r => $"{MissDiagnosis.Signature(r.Method)}: {r.Reason}")
+      .Distinct()
+      .ToList();
+
+    var listing = MissSuggestions.Listing(
+      [("it has", entries)],
+      MissSuggestions.SignatureCap,
+      MissDiagnosis.MemberPointer,
+      "; "
     );
 
-    return generic is not null
-      ? $"{call.Name} is generic and {call.Uninferred ?? "its type argument is not inferred"}: " +
-      $"write it, as in {MissDiagnosis.Signature(generic)}"
-      : $"no {call.Name} of {type.FullName} takes {call.ArgCount} argument(s); {signatures}";
+    return $"no {subject} accepts {arguments}; {listing}";
   }
 
   private static string UnknownMethod(
@@ -402,8 +424,9 @@ public static class MissDiagnosis {
       : "";
 
     var parameters = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name));
+    var name = method.Name is ".ctor" ? method.DeclaringType.Name : method.Name;
 
-    return $"{(method.IsStatic ? "static " : "")}{method.Name}{typeParameters}({parameters})";
+    return $"{(method.IsStatic ? "static " : "")}{name}{typeParameters}({parameters})";
   }
 
   private static IEnumerable<TypeMirror> Chain(TypeMirror type) {
@@ -494,17 +517,22 @@ public static class MissDiagnosis {
 /// static form of an extension call takes as its first argument.
 /// </param>
 /// <param name="Uninferred">
-/// Why the arguments fixed no type argument for a generic definition of the name, as a clause
-/// (`T cannot be inferred (argument 1 is null)`); null when inference was not attempted.
+/// The generic definition the arguments fixed no type argument for, with why as a clause
+/// (`T cannot be inferred (argument 1 is null)`); null when inference is not what failed.
 /// </param>
+/// <param name="Rejected">Every candidate of the name, with why it refused the call.</param>
 public sealed record MissedCall(
   string Name,
   int ArgCount,
   int TypeArgCount,
   bool OnType,
   string Receiver,
-  string Uninferred
+  Rejection Uninferred,
+  IReadOnlyList<Rejection> Rejected
 );
+
+/// <summary>A candidate a call or construction did not bind, with why.</summary>
+public sealed record Rejection(MethodMirror Method, string Reason);
 
 /// <summary>Which spelling a suggested type name is printed under.</summary>
 public enum MissNames {

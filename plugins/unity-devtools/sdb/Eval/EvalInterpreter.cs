@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -309,28 +310,23 @@ public sealed class EvalInterpreter(
     var operatorName = wantEqual ? "op_Equality" : "op_Inequality";
 
     // C# considers operators declared on either operand's type.
-    var operators = inv.FindMethods(leftType, operatorName, 2);
+    var operators = Invoker.FindMethods(leftType, operatorName, 2);
 
     if (rightType != leftType) {
-      operators = [.. operators, .. inv.FindMethods(rightType, operatorName, 2)];
+      operators = [.. operators, .. Invoker.FindMethods(rightType, operatorName, 2)];
     }
 
-    if (operators.Count > 0) {
-      (MethodMirror Method, Value[] Values)? bound;
-
-      try {
-        bound = this.SelectOverload([operators], [left, right], operatorName, binary.Position);
-      }
-      catch (EvalRuntimeException) {
-        // The declared operator rejects these operands; the defaults below decide.
-        bound = null;
-      }
-
-      if (bound is {} b) {
-        return EvalInterpreter.UnwrapForOps(
-          inv.InvokeStatic(b.Method.DeclaringType, b.Method, b.Values)
-        );
-      }
+    // A declared operator rejecting these operands leaves the defaults below to decide.
+    if (operators.Count > 0 &&
+      this.SelectOverload(
+        [[.. operators.Select(o => ArityFit.Exact(o, 2))]],
+        [left, right],
+        binary.Position,
+        []
+      ) is {} bound) {
+      return EvalInterpreter.UnwrapForOps(
+        inv.InvokeStatic(bound.Method.DeclaringType, bound.Method, bound.Values)
+      );
     }
 
     if (left is ObjectMirror leftObject && right is ObjectMirror rightObject) {
@@ -342,12 +338,18 @@ public sealed class EvalInterpreter(
 
     // Operator-less structs: C# would reject `==` outright; Equals is the debugger-friendly
     // extension (field-wise via ValueType.Equals unless overridden).
+    var failures = new List<Rejection>();
+
     var (equalsMethod, equalsValues) = this.SelectOverload(
-      [inv.FindMethods(leftType, "Equals", 1)],
-      [right],
-      $"{leftType.Name}.Equals",
-      binary.Position
-    );
+        [[.. Invoker.FindMethods(leftType, "Equals", 1).Select(e => ArityFit.Exact(e, 1))]],
+        [right],
+        binary.Position,
+        failures
+      ) ??
+      throw new EvalRuntimeException(
+        MissDiagnosis.Unbound($"Equals of {leftType.FullName}", 1, 0, failures),
+        binary.Position
+      );
 
     var equal = EvalInterpreter.UnwrapForOps(
       inv.Invoke(this.ToMirror(left, binary.Position), equalsMethod, equalsValues)
@@ -789,7 +791,6 @@ public sealed class EvalInterpreter(
     bool onType
   ) {
     var argc = call.Args.Count;
-    var context = $"{declaringType.Name}.{call.Name}";
 
     // Out targets validate up front; plain arguments only evaluate once the method is known to
     // exist, so a typo'd call has no side effects.
@@ -819,37 +820,49 @@ public sealed class EvalInterpreter(
     // A static method called through a value still runs, so only the reverse is a miss: an
     // instance method has no receiver to run on when the call is written on the type.
     // Filtered before any instantiation, which costs a command an instance method would waste.
-    var candidates = inv.FindMethods(declaringType, call.Name, argc, call.TypeArgs.Count)
-      .Where(c => !onType || c.IsStatic)
+    var named = Invoker.Named(declaringType, call.Name).ToList();
+    var reachable = named.Where(c => !onType || c.IsStatic).ToList();
+
+    var fits = reachable.Where(c => Invoker.HasGenericArity(c, call.TypeArgs.Count))
+      .Select(c => ArityFit.Of(inv, c, argc))
       .ToList();
 
     // A call written without type arguments may still bind a generic definition once its
     // arguments fix them; those join the pool AFTER the non-generic candidates, which is what
     // makes `M(int)` win over `M<int>(int)` while `M<T>(T)` still beats `M(object)`, as in C#.
-    var inferable = call.TypeArgs.Count is 0
-      ? inv.FindGenericDefinitions(declaringType, call.Name, argc)
-        .Where(c => !onType || c.IsStatic)
+    var definitionFits = call.TypeArgs.Count is 0
+      ? reachable.Where(c => c.IsGenericMethodDefinition)
+        .Select(c => ArityFit.Of(inv, c, argc))
         .ToList()
       : [];
 
-    var refused = new List<string>();
-    string unfixableReason = null;
+    var candidates = fits.Where(f => f.IsFit).ToList();
+    var inferable = definitionFits.Where(f => f.IsFit).ToList();
+
+    // The candidates whose type arguments could not be had, and those whose arguments failed,
+    // for a miss to list.
+    var refused = new List<Rejection>();
+    var failures = new List<Rejection>();
+    Rejection unfixable = null;
 
     // A type parameter no plain argument meets as a parameter of exactly its type can never be
     // inferred, which the call's shape alone tells, so the definition drops out before any
     // argument runs.
     foreach (var definition in inferable.ToList()) {
-      if (EvalInterpreter.UnfixableTypeParameter(definition, call) is {} typeParameter) {
-        var reason = $"{typeParameter.Name} cannot be inferred (no argument fixes it)";
+      if (EvalInterpreter.UnfixableTypeParameter(definition.Method, call) is {} typeParameter) {
+        var rejection = new Rejection(
+          definition.Method,
+          $"{typeParameter.Name} cannot be inferred (no argument fixes it)"
+        );
 
-        refused.Add($"{EvalInterpreter.Signature(definition)}: {reason}");
-        unfixableReason ??= reason;
+        refused.Add(rejection);
+        unfixable ??= rejection;
         inferable.Remove(definition);
       }
     }
 
     if (candidates.Count is 0 && inferable.Count is 0) {
-      throw Missed(unfixableReason);
+      throw Missed(unfixable);
     }
 
     // Written type arguments resolve and instantiate before any argument evaluates.
@@ -863,7 +876,7 @@ public sealed class EvalInterpreter(
       // the arguments meet the parameters.
       foreach (var definition in definitions) {
         try {
-          candidates.Add(inv.Instantiate(definition, typeArgs));
+          candidates.Add(definition with { Method = inv.Instantiate(definition.Method, typeArgs) });
         }
         catch (InvalidOperationException) {
           // The agent refuses type arguments a definition's constraints rule out, and the client
@@ -874,22 +887,18 @@ public sealed class EvalInterpreter(
           var written = string.Join(", ", call.TypeArgs);
 
           refused.Add(
-            $"{EvalInterpreter.Signature(definition)}: cannot be instantiated over <{written}>"
+            new Rejection(definition.Method, $"cannot be instantiated over <{written}>")
           );
         }
       }
 
       if (candidates.Count is 0) {
-        throw EvalInterpreter.NoOverload(
-          context,
-          refused,
-          call.Position
-        );
+        throw Missed(null);
       }
     }
 
     var evaluated = new object[argc];
-    string uninferredReason = null;
+    Rejection uninferred = null;
 
     // The nearest tier's inference conflicts.
     List<InferenceConflict> conflicts = [];
@@ -900,13 +909,15 @@ public sealed class EvalInterpreter(
       }
     }
 
-    foreach (var definition in inferable) {
+    foreach (var fit in inferable) {
+      var definition = fit.Method;
+
       var (typeArgs, reason, hasConflict, fixedTypes) =
         this.InferTypeArguments(definition, call, evaluated);
 
       if (typeArgs is not null) {
         try {
-          candidates.Add(inv.Instantiate(definition, typeArgs));
+          candidates.Add(fit with { Method = inv.Instantiate(definition, typeArgs) });
 
           continue;
         }
@@ -929,27 +940,29 @@ public sealed class EvalInterpreter(
         }
       }
 
-      refused.Add($"{EvalInterpreter.Signature(definition)}: {reason}");
-      uninferredReason ??= reason;
+      var rejection = new Rejection(definition, reason);
+
+      refused.Add(rejection);
+      uninferred ??= rejection;
     }
 
     // Every definition refused and nothing else to try: the miss says why inference did not
     // apply, so the caller knows writing the type argument is the fix rather than a retry.
     if (candidates.Count is 0) {
-      throw Missed(uninferredReason);
+      throw Missed(uninferred);
     }
 
     var outSet = outIndexes.Count > 0 ? outIndexes.ToHashSet() : null;
 
     // Within a tier, non-generic candidates still precede inferred ones.
     var (method, values) = this.SelectOverload(
-      EvalInterpreter.Tiers(declaringType, candidates),
-      evaluated,
-      context,
-      call.Position,
-      outSet,
-      refused
-    );
+        EvalInterpreter.Tiers(declaringType, candidates),
+        evaluated,
+        call.Position,
+        failures,
+        outSet
+      ) ??
+      throw Missed(null);
 
     // C# may well have inferred past a conflict and bound the generic, so another binding stands
     // in for it only where C# prefers that one over any instantiation: one from a nearer tier,
@@ -964,24 +977,47 @@ public sealed class EvalInterpreter(
           : null;
 
       if (refusing is not null) {
-        throw Missed(refusing.Reason);
+        throw Missed(new Rejection(refusing.Definition, refusing.Reason));
       }
     }
 
     return (method, values, outIndexes);
 
-    EvalRuntimeException Missed(string cause) {
+    // A miss lists the candidates nearest the call first: those its arguments failed, then those
+    // whose type arguments could not be had, then those its shape does not fit.
+    EvalRuntimeException Missed(Rejection uninferredBy) {
       var receiver = EvalInterpreter.TryFlattenChain(call.Target, out var segments)
         ? string.Join(".", segments.Select(s => s.Name))
         : "value";
 
+      var pooled = fits.Concat(definitionFits).ToList();
+      var misfits = pooled.Where(f => !f.IsFit).Select(f => f.Rejection);
+
+      // Every reachable candidate the type-argument count kept out of both pools.
+      var typeArgMisfits = reachable.Except(pooled.Select(f => f.Method))
+        .Select(c => new Rejection(
+            c,
+            c.IsGenericMethodDefinition
+              ? $"takes {c.GetGenericArguments().Length} type argument(s)"
+              : "takes no type arguments"
+          )
+        );
+
+      var unreachable = named.Except(reachable)
+        .Select(c => new Rejection(c, "an instance method: call it on a value"));
+
+      var missed = new MissedCall(
+        call.Name,
+        argc,
+        call.TypeArgs.Count,
+        onType,
+        receiver,
+        uninferredBy,
+        [.. failures, .. refused, .. misfits, .. typeArgMisfits, .. unreachable]
+      );
+
       return new EvalRuntimeException(
-        MissDiagnosis.Method(
-          inv,
-          catalog,
-          declaringType,
-          new MissedCall(call.Name, argc, call.TypeArgs.Count, onType, receiver, cause)
-        ),
+        MissDiagnosis.Method(inv, catalog, declaringType, missed),
         call.Position
       );
     }
@@ -1020,7 +1056,8 @@ public sealed class EvalInterpreter(
       var fixedBy = -1;
       var nullAt = -1;
 
-      for (var i = 0; i < parameters.Length; i++) {
+      // An omitted parameter fixes nothing, as in C#.
+      for (var i = 0; i < call.Args.Count; i++) {
         // A type parameter's mirror is one object per attach, so identity is the test.
         if (parameters[i].ParameterType != typeParameters[k]) {
           continue;
@@ -1123,12 +1160,14 @@ public sealed class EvalInterpreter(
   /// of exactly its type, or null when the arguments can fix them all.
   /// An out argument fixes nothing: it has no value yet, and the agent reports an `out T`
   /// parameter's type as plain `T`, so only the argument's mode tells it apart.
+  /// An omitted parameter fixes nothing either, as in C#, even where it declares a default.
   /// </summary>
   private static TypeMirror UnfixableTypeParameter(MethodMirror definition, CallExpr call) {
     var parameters = definition.GetParameters();
 
     return definition.GetGenericArguments()
       .FirstOrDefault(typeParameter => !parameters
+        .Take(call.Args.Count)
         .Where((p, i) => p.ParameterType == typeParameter && call.Args[i].Mode is ArgMode.Plain)
         .Any()
       );
@@ -1183,15 +1222,15 @@ public sealed class EvalInterpreter(
   /// Candidates as C# member lookup ranks them: it binds the most derived type that declares an
   /// applicable member, so each level of the hierarchy is a tier of its own, nearest first.
   /// </summary>
-  private static IReadOnlyList<IReadOnlyList<MethodMirror>> Tiers(
+  private static IReadOnlyList<IReadOnlyList<ArityFit>> Tiers(
     TypeMirror type,
-    IEnumerable<MethodMirror> candidates
+    IEnumerable<ArityFit> candidates
   ) {
     return [
       .. candidates
-        .GroupBy(c => EvalInterpreter.TierOf(type, c))
+        .GroupBy(c => EvalInterpreter.TierOf(type, c.Method))
         .OrderBy(level => level.Key)
-        .Select(level => (IReadOnlyList<MethodMirror>) level.ToList())
+        .Select(level => (IReadOnlyList<ArityFit>) level.ToList())
     ];
   }
 
@@ -1311,19 +1350,19 @@ public sealed class EvalInterpreter(
   /// an exact-type pass runs before a widening pass, so `M(int)` beats `M(long)` for an int
   /// argument regardless of enumeration order.
   /// Candidates come in tiers, each running both passes before the next is tried.
+  /// Within a pass, a candidate needing fewer defaults for omitted parameters goes first, which
+  /// is C#'s tie-breaker, and the omitted parameters take those defaults once the arguments bind.
   /// Out-argument slots take client-built default placeholders and never coerce.
-  /// <paramref name="refused" /> carries the candidates that dropped out before reaching here, each
-  /// with its reason, so a miss reports them beside the ones tried.
   /// </summary>
-  private (MethodMirror Method, Value[] Values) SelectOverload(
-    IReadOnlyList<IReadOnlyList<MethodMirror>> tiers,
+  /// <param name="failures">Receives each candidate tried, with the conversion that failed.</param>
+  /// <returns>The binding, or null when no candidate takes the arguments.</returns>
+  private (MethodMirror Method, Value[] Values)? SelectOverload(
+    IReadOnlyList<IReadOnlyList<ArityFit>> tiers,
     object[] args,
-    string context,
     int position,
-    IReadOnlySet<int> outIndexes = null,
-    IReadOnlyList<string> refused = null
+    List<Rejection> failures,
+    IReadOnlySet<int> outIndexes = null
   ) {
-    var failures = new List<string>(refused ?? []);
     (MethodMirror Method, Value[] Values)? fallback = null;
 
     foreach (var (candidates, allowWidening) in tiers.SelectMany(t =>
@@ -1331,21 +1370,21 @@ public sealed class EvalInterpreter(
       )) {
       // The widening pass tries candidates in ascending conversion cost, approximating C#'s
       // better-conversion rule, so `M(long)` beats `M(double)` for an int argument regardless
-      // of declaration order; the more specific reference targets break a tie, and declaration
-      // order any left (OrderBy is stable).
+      // of declaration order; the more specific reference targets break a tie, then fewer
+      // omitted parameters, and declaration order any left (OrderBy is stable).
       var ordered = allowWidening
-        ? [
-          .. candidates
-            .Select(c => (Candidate: c, Cost: this.ConversionCost(c, args, outIndexes)))
-            .OrderBy(c => c.Cost.Cost)
-            .ThenByDescending(c => c.Cost.Specificity)
-            .Select(c => c.Candidate)
-        ]
-        : candidates;
+        ? candidates
+          .Select(c => (Fit: c, Cost: this.ConversionCost(c.Method, args, outIndexes)))
+          .OrderBy(c => c.Cost.Cost)
+          .ThenByDescending(c => c.Cost.Specificity)
+          .ThenBy(c => c.Fit.Omitted.Length)
+          .Select(c => c.Fit)
+        : candidates.OrderBy(c => c.Omitted.Length);
 
-      foreach (var candidate in ordered) {
+      foreach (var fit in ordered) {
+        var candidate = fit.Method;
         var parameters = candidate.GetParameters();
-        var values = new Value[args.Length];
+        var values = new Value[parameters.Length];
 
         try {
           for (var i = 0; i < args.Length; i++) {
@@ -1371,6 +1410,14 @@ public sealed class EvalInterpreter(
 
             values[i] = this.CoerceToType(args[i], parameterType, position, allowWidening);
           }
+
+          for (var i = args.Length; i < parameters.Length; i++) {
+            values[i] = this.OmittedValue(
+              fit.Omitted[i - args.Length],
+              parameters[i].ParameterType,
+              position
+            );
+          }
         }
         catch (Exception ex) when (ex is EvalRuntimeException or
           InvalidOperationException or
@@ -1380,7 +1427,7 @@ public sealed class EvalInterpreter(
           // Any conversion failure rejects the candidate; only the widening pass reports (its
           // failures subsume the strict pass's).
           if (allowWidening) {
-            failures.Add($"{EvalInterpreter.Signature(candidate)}: {ex.Message}");
+            failures.Add(new Rejection(candidate, ex.Message));
           }
 
           continue;
@@ -1399,18 +1446,31 @@ public sealed class EvalInterpreter(
       }
     }
 
-    return fallback ?? throw EvalInterpreter.NoOverload(context, failures, position);
+    return fallback;
   }
 
-  private static EvalRuntimeException NoOverload(
-    string context,
-    IEnumerable<string> tried,
-    int position
-  ) {
-    return new EvalRuntimeException(
-      $"no overload of {context} accepts these arguments; tried: {string.Join("; ", tried)}",
-      position
-    );
+  /// <summary>
+  /// The value C# passes for an omitted parameter, built client-side with no invoke: its
+  /// constant, a null constant reading as the slot's default (a zeroed struct for `= default`),
+  /// and an optional parameter declaring no constant taking `default(T)`, or `Type.Missing` in an
+  /// object slot, as the compiler emits.
+  /// <see cref="ArityFit" /> has already refused a default or a slot this cannot build, save a
+  /// zeroed generic struct, which <see cref="Invoker.DefaultMirrorFor" /> refuses here: the mirror
+  /// reports an `in` parameter's type by value, so a by-ref slot, where one disconnects the agent,
+  /// cannot be told apart by its type.
+  /// </summary>
+  private Value OmittedValue(DeclaredDefault declared, TypeMirror slot, int position) {
+    var bare = Invoker.Bare(slot);
+
+    return declared.Kind switch {
+      DefaultKind.Optional when bare.FullName is "System.Object" =>
+        (Value) this.ReadStaticMember(inv.ResolveType("System.Type"), "Missing", position),
+      DefaultKind.Constant when declared.Constant is not null =>
+        this.CoerceToType(declared.Constant, slot, position),
+      DefaultKind.Constant or DefaultKind.Optional =>
+        Invoker.TakesNull(bare) ? inv.NullFor(bare) : inv.DefaultMirrorFor(bare),
+      _ => throw new UnreachableException($"eval cannot supply a {declared.Kind} default")
+    };
   }
 
   /// <summary>
@@ -1550,12 +1610,6 @@ public sealed class EvalInterpreter(
     };
   }
 
-  private static string Signature(MethodMirror method) {
-    var parameters = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name));
-
-    return $"{method.Name}({parameters})";
-  }
-
   // ---- Indexers ----
 
   private Value EvaluateIndex(IndexExpr index) {
@@ -1573,20 +1627,67 @@ public sealed class EvalInterpreter(
     var mirror = this.ToMirror(target, position);
     var type = this.MirrorTypeOf(target, position);
 
-    var candidates = inv.FindMethods(type, "get_Item", args.Length);
+    var accessors = Invoker.Named(type, "get_Item").ToList();
 
-    if (candidates.Count is 0) {
+    if (accessors.Count is 0) {
       throw new EvalRuntimeException($"{type.FullName} has no indexer", position);
     }
 
-    var (method, values) = this.SelectOverload(
-      EvalInterpreter.Tiers(type, candidates),
-      args,
-      $"{type.Name} indexer",
-      position
-    );
+    var (method, values) = this.SelectIndexer(type, accessors, args, position);
 
     return inv.Invoke(mirror, method, values);
+  }
+
+  /// <summary>
+  /// Binds an indexer accessor at its own parameter count: a setter takes its value after any
+  /// optional index, so omitting one is no trailing omission, and the getter matches it.
+  /// </summary>
+  private (MethodMirror Method, Value[] Values) SelectIndexer(
+    TypeMirror type,
+    IEnumerable<MethodMirror> accessors,
+    object[] args,
+    int position
+  ) {
+    return this.Bind(
+      $"{type.FullName} indexer",
+      type,
+      [.. accessors.Select(a => ArityFit.Exact(a, args.Length))],
+      args,
+      position
+    );
+  }
+
+  /// <summary>
+  /// Binds the fitting candidates of a member of the type, or throws the miss listing every
+  /// candidate with why it refused.
+  /// </summary>
+  /// <param name="subject">
+  /// What was called, as <see cref="MissDiagnosis.Unbound" /> names it.
+  /// </param>
+  private (MethodMirror Method, Value[] Values) Bind(
+    string subject,
+    TypeMirror type,
+    IReadOnlyList<ArityFit> fits,
+    object[] args,
+    int position
+  ) {
+    var failures = new List<Rejection>();
+
+    return this.SelectOverload(
+        EvalInterpreter.Tiers(type, fits.Where(f => f.IsFit)),
+        args,
+        position,
+        failures
+      ) ??
+      throw new EvalRuntimeException(
+        MissDiagnosis.Unbound(
+          subject,
+          args.Length,
+          0,
+          [.. failures, .. fits.Where(f => !f.IsFit).Select(f => f.Rejection)]
+        ),
+        position
+      );
   }
 
   /// <summary>
@@ -1639,30 +1740,25 @@ public sealed class EvalInterpreter(
       )
       .ToArray();
 
-    var candidates = type.GetMethods()
-      .Where(m => m.Name is ".ctor" && m.GetParameters().Length == args.Length)
-      .ToList();
+    var constructors = type.GetMethods().Where(m => m.Name is ".ctor").ToList();
 
     Value instance;
 
-    if (Invoker.IsValueType(type) && args.Length is 0 && candidates.Count is 0) {
+    if (Invoker.IsValueType(type) &&
+      args.Length is 0 &&
+      constructors.All(c => c.GetParameters().Length is not 0)) {
       // Zeroed client-side default: no debuggee allocation, fields overwritten locally and
       // serialized on first send. A struct with a declared parameterless constructor must run it
-      // instead.
+      // instead; one whose parameters are all optional does not, as `new S()` in C# is the
+      // default there too.
       instance = inv.DefaultMirrorFor(type);
     }
     else {
-      if (candidates.Count is 0) {
-        throw new EvalRuntimeException(
-          $"no {type.Name} constructor takes {args.Length} argument(s)",
-          creation.Position
-        );
-      }
-
-      var (ctor, values) = this.SelectOverload(
-        [candidates],
+      var (ctor, values) = this.Bind(
+        $"{type.FullName} constructor",
+        type,
+        [.. constructors.Select(c => ArityFit.Of(inv, c, args.Length))],
         args,
-        $"{type.Name} constructor",
         creation.Position
       );
 
@@ -2112,18 +2208,13 @@ public sealed class EvalInterpreter(
     var mirror = this.ToMirror(target, position);
     var type = this.MirrorTypeOf(target, position);
 
-    var candidates = inv.FindMethods(type, "set_Item", args.Length + 1);
+    var accessors = Invoker.Named(type, "set_Item").ToList();
 
-    if (candidates.Count is 0) {
+    if (accessors.Count is 0) {
       throw new EvalRuntimeException($"{type.FullName} has no writable indexer", position);
     }
 
-    var (method, values) = this.SelectOverload(
-      EvalInterpreter.Tiers(type, candidates),
-      [.. args, value],
-      $"{type.Name} indexer",
-      position
-    );
+    var (method, values) = this.SelectIndexer(type, accessors, [.. args, value], position);
 
     inv.Invoke(mirror, method, values);
   }

@@ -31,9 +31,9 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     casts, operators, ternary/`?.`/`??`, typeof(T), string interpolation, and `out var x` / `out x`
     arguments.
     Not supported: lambdas, LINQ, loops, control flow, array-creation expressions
-    (`new T[] { ... }`), and the `as` operator (a cast works); overload matching does no
-    `params` expansion, so a `params` method takes exactly one argument already typed as its
-    array.
+    (`new T[] { ... }`), and the `as` operator (a cast works); a call may omit trailing optional
+    parameters, but overload matching does no `params` expansion, so a `params` method takes
+    exactly one argument already typed as its array.
     Roots: fully-qualified type names, plus builtins `em` (the world's EntityManager), `world` (the
     ECS World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's
     result; heap results may be collected once the game resumes).

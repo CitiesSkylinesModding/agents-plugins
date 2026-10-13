@@ -28,6 +28,11 @@ public sealed class Invoker(VirtualMachine vm) {
 
   public SdbThreadMirror MainThread { get; } = Invoker.PickMainThread(vm);
 
+  /// <summary>
+  /// The parameter defaults read so far, held for the attach like every memo here.
+  /// </summary>
+  public ParameterDefaults Defaults { get; } = new();
+
   private static SdbThreadMirror PickMainThread(VirtualMachine vm) {
     var threads = vm.GetThreads();
 
@@ -203,22 +208,18 @@ public sealed class Invoker(VirtualMachine vm) {
     int genericArity,
     string[] paramTypes
   ) {
-    for (var t = type; t is not null; t = t.BaseType) {
-      foreach (var m in t.GetMethods()) {
-        if (m.Name != name ||
-          m.GetParameters().Length != argc ||
-          !Invoker.HasGenericArity(m, genericArity)) {
-          continue;
-        }
-
-        if (paramTypes is not null &&
-          paramTypes.Where((p, i) => p is not null && m.GetParameters()[i].ParameterType.Name != p)
-            .Any()) {
-          continue;
-        }
-
-        return m;
+    foreach (var m in Invoker.Named(type, name)) {
+      if (m.GetParameters().Length != argc || !Invoker.HasGenericArity(m, genericArity)) {
+        continue;
       }
+
+      if (paramTypes is not null &&
+        paramTypes.Where((p, i) => p is not null && m.GetParameters()[i].ParameterType.Name != p)
+          .Any()) {
+        continue;
+      }
+
+      return m;
     }
 
     return null;
@@ -226,7 +227,7 @@ public sealed class Invoker(VirtualMachine vm) {
 
   // Arity 0 asks for a non-generic method, anything above for a generic definition with that many
   // type parameters.
-  private static bool HasGenericArity(MethodMirror method, int genericArity) {
+  public static bool HasGenericArity(MethodMirror method, int genericArity) {
     return genericArity is 0
       ? !method.IsGenericMethodDefinition
       : method.IsGenericMethodDefinition &&
@@ -278,58 +279,25 @@ public sealed class Invoker(VirtualMachine vm) {
   }
 
   /// <summary>
-  /// Finds every method matching name and arity, derived-first, so a caller can pick the overload
-  /// whose signature accepts its arguments.
-  /// <paramref name="genericArity" /> selects as it does for <see cref="FindMethod" />: 0 matches
-  /// non-generic methods only, anything above only the generic definitions with that many type
-  /// parameters.
+  /// Finds every non-generic method matching name and arity, derived-first, so a caller can pick
+  /// the overload whose signature accepts its arguments.
   /// </summary>
-
-  // CA1822 (mark static): kept an instance member on purpose. It is part of Invoker's cohesive
-  // invoke abstraction and is called as `this.inv.FindMethods(...)` across files; making it static
-  // would churn every call site for no real gain.
-  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
-  public List<MethodMirror> FindMethods(
-    TypeMirror type,
-    string name,
-    int argc,
-    int genericArity = 0
-  ) {
-    var matches = new List<MethodMirror>();
-
-    for (var t = type; t is not null; t = t.BaseType) {
-      matches.AddRange(
-        t.GetMethods()
-          .Where(m =>
-            m.Name == name &&
-            m.GetParameters().Length == argc &&
-            Invoker.HasGenericArity(m, genericArity)
-          )
-      );
-    }
-
-    return matches;
+  public static List<MethodMirror> FindMethods(TypeMirror type, string name, int argc) {
+    return [
+      .. Invoker.Named(type, name)
+        .Where(m => m.GetParameters().Length == argc && !m.IsGenericMethodDefinition)
+    ];
   }
 
-  /// <summary>
-  /// Finds every generic method definition of the name and parameter count, derived-first, whatever
-  /// its generic arity: the candidates a call written without type arguments may still bind once
-  /// those are inferred from its arguments.
-  /// </summary>
-  [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
-  public List<MethodMirror> FindGenericDefinitions(TypeMirror type, string name, int argc) {
-    var matches = new List<MethodMirror>();
-
+  /// <summary>Every method of the name along the base chain, derived-first.</summary>
+  public static IEnumerable<MethodMirror> Named(TypeMirror type, string name) {
     for (var t = type; t is not null; t = t.BaseType) {
-      matches.AddRange(
-        t.GetMethods()
-          .Where(m =>
-            m.Name == name && m.IsGenericMethodDefinition && m.GetParameters().Length == argc
-          )
-      );
+      foreach (var method in t.GetMethods()) {
+        if (method.Name == name) {
+          yield return method;
+        }
+      }
     }
-
-    return matches;
   }
 
   /// <summary>
@@ -443,7 +411,7 @@ public sealed class Invoker(VirtualMachine vm) {
   /// until the window closes, so every later invoke in it lands on the first attempt.
   /// </summary>
 
-  // CA1822: instance member by design (see FindMethods); part of the invoke plumbing.
+  // CA1822: instance member by design; part of the invoke plumbing.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   private T Retrying<T>(Func<T> invoke) {
     var started = Stopwatch.GetTimestamp();
@@ -611,7 +579,7 @@ public sealed class Invoker(VirtualMachine vm) {
   public Value GetStaticProperty(TypeMirror type, string name) =>
     this.InvokeStatic(type, this.FindMethod(type, $"get_{name}", 0));
 
-  // CA1822: instance member by design (see FindMethods); called via this.inv.TypeOf cross-file.
+  // CA1822: instance member by design; called via this.inv.TypeOf cross-file.
   [SuppressMessage("Performance", "CA1822", Justification = "Cohesive instance API")]
   public TypeMirror TypeOf(Value v) {
     return v switch {
@@ -824,18 +792,21 @@ public sealed class Invoker(VirtualMachine vm) {
   /// the client fills in and serializes on first send, so nothing is asked of the debuggee and
   /// nothing is allocated in it.
   /// The one owner of that construction, since every caller that needs a placeholder -- a `new`
-  /// with no constructor, an out-parameter slot, an Entity named by index and version -- needs the
-  /// same one.
+  /// with no constructor, an out-parameter slot, an omitted default, an Entity named by index and
+  /// version -- needs the same one.
   /// A nullable or a generic struct instance is refused: built client-side, one disconnects the
   /// agent as an out-argument placeholder, though it decodes sent by value or as a field of a
   /// struct the agent flags as a value type.
+  /// A client-built generic struct sent into an `in` parameter disconnects the agent too,
+  /// and the mirror reports that parameter's type by value,
+  /// so an omitted generic-struct default is refused whatever its slot.
   /// </summary>
   public Value DefaultMirrorFor(TypeMirror type) {
-    // Only an out placeholder reaches here with such a type: `new` never names a generic type,
-    // and an Entity is not one.
+    // Only an out placeholder or an omitted default reaches here with such a type: `new` never
+    // names a generic type, and an Entity is not one.
     if (Invoker.IsValueType(type) && !type.IsValueType && !type.IsEnum && !type.IsPrimitive) {
       throw new InvalidOperationException(
-        $"cannot build a {type.FullName} client-side: the debugger agent would not accept it"
+        $"eval cannot build a {type.FullName} client-side"
       );
     }
 

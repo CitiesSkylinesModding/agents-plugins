@@ -71,7 +71,7 @@ A static field of a type whose static constructor has not run yet is refused rat
 Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
-Methods match by name, arity, and argument compatibility, a boxed argument by the type it holds (a box of an int binds `M(int)` over `M(object)`), and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
+Methods and constructors match by name, argument count, and argument compatibility, trailing optional parameters omitted as in C#, a boxed argument by the type it holds (a box of an int binds `M(int)` over `M(object)`), and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
 On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
 
 ## Seeing the game

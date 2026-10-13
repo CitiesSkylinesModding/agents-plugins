@@ -42,7 +42,7 @@ The .NET projects plus the vendored SDB client, grouped by `agents-plugins.slnx`
 
 ## The eval contract
 
-The grammar is FROZEN: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators, assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`. Lambdas, LINQ, loops and control flow are rejected at parse time; array-creation expressions and the `as` operator sit outside the grammar too, and `params` expansion fails at overload matching, which wants exact arity.
+The grammar is FROZEN: literals, member access, calls with explicit generic type args, indexers, `new` + object initializers, casts, operators, assignments, ternary/`?.`/`??`, `typeof`, string interpolation, `out var`. Lambdas, LINQ, loops and control flow are rejected at parse time; array-creation expressions and the `as` operator sit outside the grammar too, and overload matching omits trailing optional parameters as C# does but expands no `params`.
 
 The semantic boundary is a contract, not a node list: common agent workflows evaluate exactly as C# would; edge semantics may diverge but must fail loudly with an actionable message, never succeed silently wrong.
 Deliberate divergences stay documented — today:
@@ -53,6 +53,7 @@ Deliberate divergences stay documented — today:
 - `entity(index)` version defaulting.
 - Type-argument inference takes the argument's runtime type rather than its declared one and reads only a parameter typed as the type parameter itself (not `T[]` or `List<T>`). It refuses loudly two arguments fixing a type parameter to different types, and a null beside one fixing it to a type taking null or to a struct a box may hide, unless a nearer tier's overload binds or a sibling takes every argument as is (a null at a slot no less specific than the generic instance's); C# fixes the type parameter to the non-null argument's type or to a type every argument converts to, and binds the generic method wherever that makes it applicable.
 - Overload binding reads a boxed argument's runtime type rather than its declared `object`, so a box holding an int binds `M(int)` where C# binds `M(object)`.
+- A candidate whose omitted default `eval` cannot supply (a `decimal`, an attributed `DateTime`, a constant into a nullable, a pointer, a zeroed generic struct) drops out of overload binding, so a sibling C# ranks lower binds in its place; with no sibling, the miss says why.
 - A mutating call through a struct boxed in a slot typed object or as an interface, or a member write through one typed as an interface, stores a new box, which other references to the old box do not see: the wire carries no box identity. A member write through one typed object is refused.
 - A write to or through a `readonly` field, or a frame write through a read-only slot (an `in` parameter, or `this` in a `readonly` member or `readonly struct`) or to that `this` itself, lands in that storage, where C# refuses the assignment and makes a mutating call change a defensive copy. Code the JIT compiled before such a write may keep a `static readonly` field's old value, though a read returns the new one.
 - A frame write refuses a number or bool into an interface slot, and a client number or bool, or a debuggee one of another type, into a nullable slot, where C# boxes or converts and wraps it.

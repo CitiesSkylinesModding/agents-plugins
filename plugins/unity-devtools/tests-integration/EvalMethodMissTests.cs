@@ -20,7 +20,8 @@ public sealed class EvalMethodMissTests(MonoDebuggeeFixture fx) {
     var message = this.Miss($"{EvalMethodMissTests.Dog}.Speak(1, 2)");
 
     Assert.Contains(
-      "no Speak of TestFixture.Miss.Dog takes 2 argument(s); it has: Speak(), Speak(Int32)",
+      "no Speak of TestFixture.Miss.Dog accepts these 2 argument(s); it has: " +
+      "Speak(): takes 0 argument(s); Speak(Int32): takes 1 argument(s)",
       message
     );
   }
@@ -96,8 +97,11 @@ public sealed class EvalMethodMissTests(MonoDebuggeeFixture fx) {
   public void AGenericCallOnANonGenericMethodListsItsSignatures() {
     var message = this.Miss($"{EvalMethodMissTests.Dog}.Bark<System.Int32>()");
 
-    Assert.Contains("no Bark of TestFixture.Miss.Dog takes 1 type argument(s)", message);
-    Assert.Contains("it has: Bark()", message);
+    Assert.Contains(
+      "no Bark of TestFixture.Miss.Dog accepts 1 type argument(s) and these 0 argument(s); " +
+      "it has: Bark(): takes no type arguments",
+      message
+    );
   }
 
   [SkippableFact]

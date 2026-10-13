@@ -113,10 +113,14 @@ public static class MissSuggestions {
   /// what a cut drops is the tail of the last group.
   /// A cut counts what it dropped and says where the whole list is.
   /// </summary>
+  /// <param name="separator">
+  /// Between names: entries that hold commas themselves take another.
+  /// </param>
   public static string Listing(
     IReadOnlyList<(string Label, IReadOnlyList<string> Names)> groups,
     int cap,
-    string whereTheRestIs
+    string whereTheRestIs,
+    string separator = ", "
   ) {
     var total = groups.Sum(g => g.Names.Count);
 
@@ -133,7 +137,7 @@ public static class MissSuggestions {
       room -= taken.Count;
 
       if (taken.Count > 0) {
-        parts.Add($"{label}: {string.Join(", ", taken)}");
+        parts.Add($"{label}: {string.Join(separator, taken)}");
       }
     }
 

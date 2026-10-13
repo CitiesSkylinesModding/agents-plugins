@@ -129,7 +129,7 @@ public sealed class EvalCoreOpTests(MonoDebuggeeFixture fx) {
       fx.Eval("TestFixture.Overloads.Only<string>(new TestFixture.Holder(), \"x\")")
     );
 
-    Assert.Contains("Only(Holder, T): cannot be instantiated over <System.String>", ex.Message);
+    Assert.Contains("Only<T>(Holder, T): cannot be instantiated over <System.String>", ex.Message);
   }
 
   [SkippableFact]
