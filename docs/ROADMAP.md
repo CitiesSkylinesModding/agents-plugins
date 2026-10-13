@@ -1061,3 +1061,15 @@ generator rewrote it at compile time. `ecs-in-this-game.md` lists `SystemAPI.Que
 `SystemAPI.QueryBuilder()` in an example, without saying a mod build has to run the generator for
 any of them. Whether the mod template's build does is the fact to establish first; the references
 then either say so or steer to `GetComponentLookup`/`EntityQueryBuilder` on the system itself.
+
+### A crashed session's minidump
+
+**Priority:** medium · **Cost:** cheap
+
+`diagnostics.md` saves a crashed run's logs but never names its minidump, the one record of a native
+crash: one in V8 left `Player.log` without its last seconds and no managed exception anywhere.
+Crashpad writes it to `.cache/backtrace/crashpad/reports/<id>.dmp` under the user data root, beside
+the snapshots it takes on a quit or a hang, which read `Simulated Exception` and are no crash.
+`minidump-stackwalk` reads one on Linux without symbols, and module offsets alone tell a V8 frame
+called from cohtml from Mono (a script or binding crash) from an engine one. Which quits write a
+snapshot is the fact to settle first; seen on a Proton install.
