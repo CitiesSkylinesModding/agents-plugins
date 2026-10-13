@@ -218,6 +218,18 @@ arrives without it: `game_console` captures `Log.entryAdded`, which is where the
 failed resource load, so the error case is visible today and the marginal value here is bodies,
 headers and timing rather than learning that a request failed at all.
 
+### `fetch-doc.mjs sitemap` against a site with no sitemap
+
+**Priority:** medium · **Cost:** cheap
+
+`skills/gameface/scripts/fetch-doc.mjs sitemap` reads
+`docs.coherent-labs.com/cpp-gameface/sitemap.xml`, which now answers 404, as do `/sitemap.xml`,
+`/sitemap-index.xml` and `/robots.txt` (checked 2026-10-12), so the skill's documented way to find a
+page fails and an agent falls back to guessing URLs, which mostly 404 too. The site's navigation
+is the replacement: every page of `/cpp-gameface/` front-loads the full menu, about 745
+`href="/cpp-gameface/…"` links, so the sitemap mode can take its URL list from the index page's
+anchors, dropping the `_astro/` assets, and keep its output format.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
@@ -268,6 +280,24 @@ life without ever ending that port's listen, so the port names itself in no `Fau
 apart from a lone hiccup, and the ports carrying no traffic never complete a receive to reset a
 counter on, so the bound has to be the elapsed time a socket has spent failing without a gap. The
 timed receive above supplies exactly that clock, which is why the two belong in one change.
+
+### `status` cannot see another client holding the slot
+
+**Priority:** medium · **Cost:** cheap
+
+`status` reports the beacon and this server's own session, so a slot held by another client reads
+as a healthy game nobody is attached to. In one session it reported `debuggerEnabled: true` and
+`attached: false` while a second Claude session's installed server held the only connection to the
+advertised port. The first sign was an attach answered with no greeting, which under Proton costs
+the game a socket it never reclaims. `ss -tnp` on the port named the holder and its pid.
+
+Without a connect, the OS connection table can answer this.
+`IPGlobalProperties.GetActiveTcpConnections` lists an established connection to the advertised
+endpoint on every platform, so `status` can report `slotHeld` and stay attach-free. The holder's pid
+is platform-specific: `/proc/net/tcp` inode to `/proc/*/fd` on Linux, `GetExtendedTcpTable` on
+Windows. It is worth having, since it is what tells an IDE from a stranded server of one's own. Only
+a holder on the server's own machine shows up, which is the usual case. One held from elsewhere
+still looks free, so the field means "held here" and not "free".
 
 ### Wedge detection on wire progress rather than on age
 
@@ -579,19 +609,6 @@ null rules) has grown inside `EvalInterpreter` into an `OverloadResolver` waitin
 `TrySetValue`, `StructWriteBack`, and `BoxSlotType`, and the last two are two queries the
 interpreter reassembles into one link; one slot query feeding `SlotLink` would merge them.
 
-### `eval` matches no default arguments
-
-**Priority:** high · **Cost:** unsure · **Hits:** 19 as of 2026-09-29
-
-`new Game.Prefabs.PrefabID("ZonePrefab", name)` fails against a constructor whose third parameter is
-`Hash128 hash = default(Hash128)` — legal C#, and the one spelling an agent writes. The error
-compounds it by reporting only the *other* constructor, `(PrefabBase, Hash128)`, as tried, which
-points at the argument types rather than at the arity, and a session chased the wrong fix for two
-calls before reading the decompiled signature. Binding the omitted parameters to their declared
-defaults is the fix; listing every candidate in the message is the cheaper half.
-`em.GetBuffer<T>(e)`, whose `isReadOnly` defaults, is the other
-common miss. Whether SDB exposes a parameter's declared default is what the cost turns on.
-
 ### `eval` cannot build an `EntityQuery`
 
 **Priority:** medium · **Cost:** large · **Hits:** 16 as of 2026-09-29
@@ -676,7 +693,7 @@ C# semantics.
 Overload matching takes a variadic method's array as one argument and array creation is outside the
 grammar, so `CreateEntityQuery(typeof(A), typeof(B))`, `String.Join(",", a, b)` and `Split('\n')`
 are all unreachable, recovered through `ecs_query` or not at all. Packing
-the trailing arguments into the parameter's array type when no exact-arity overload binds is the fix.
+the trailing arguments into the parameter's array type when no overload binds them as written is the fix.
 
 ### A beacon attach that fails reports a bare socket error
 
@@ -782,15 +799,6 @@ instance form just works, is what remains.
 and an inherited static property already reads through the accessor lookup. The miss names the
 declaring type (`Base.Count`), so recovery costs one retry. The static field read and write look at
 the type written alone; walking the base chain there makes the expression work as written.
-
-### A constructor miss lists no signatures
-
-**Priority:** low · **Cost:** cheap
-
-`new T(1, 2)` on a type with no two-argument constructor says only `no T constructor takes 2
-argument(s)`, where a method called at the wrong arity lists the signatures that name has. Listing
-the constructors the same way, through the wording the method miss uses, saves the `find_types`
-round trip.
 
 ### `ecs_set_component` writes no vector fields
 
