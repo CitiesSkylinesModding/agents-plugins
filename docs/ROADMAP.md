@@ -1134,3 +1134,11 @@ Read those first; the scripts could ship nearly as they are.
 
 Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the scripts as tooling it points to, and the Windows launch and process checks added beside the Linux ones.
 The scripts carry NetworkTools' own scenario names and log files, which a generic version takes as arguments.
+
+### `EntityQuery.Matches` and the unchecked query-mask limit
+
+**Priority:** medium · **Cost:** trivial
+
+`ecs-in-this-game.md` never mentions query masks. A world has 1024: `Matches` (or `GetEntityQueryMask`) takes one for each distinct query descriptor it is called on, deduplicated by descriptor hash (`src/Unity.Entities/Unity.Entities/EntityQueryManager.cs:576-596`, `:1043`), and frees none before the world goes.
+The limit check, `ThrowIfEntityQueryMasksIsGreaterThanLimit` (`:1032`), is `[Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]`/`[Conditional("UNITY_DOTS_DEBUG")]`, so the game's release build skips it, and the 1025th mask writes past `Archetype.QueryMaskArray` (`fixed byte[128]`, `Archetype.cs:80`) instead of throwing.
+The rule to add: call `Matches` only on a bounded set of queries with fixed descriptors, never on queries whose component set varies with the input. Found while reviewing a Find It change that filters changed prefabs with each processor's cached query (23 masks in a loaded world).
