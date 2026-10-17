@@ -821,6 +821,18 @@ still never caught the write; a state that passes faster cannot be observed at a
 collapses the loop into the one place that can run it without a round trip per turn, and is the
 shape `debug_wait` already has for pauses.
 
+### Fault injection at a paused call
+
+**Priority:** medium · **Cost:** cheap
+
+`unity-driving` arms a conditional breakpoint to catch a hot path, never to make a call fail. A
+method-entry breakpoint on a BCL call, conditioned on its argument (`System.IO.Directory.Move` with
+`sourceDirName.EndsWith(".new")`), pauses the game just before the call; changing the outside world
+under the pause (moving the folder away, corrupting a zip), then resuming, fails the call as a
+player's machine would. That builds a red case for an I/O failure path with no test seam, which a
+fix to another author's mod cannot add: Asset Icon Library's unpack fixes were tested this way. A
+paragraph in the skill's breakpoint section would carry it.
+
 ### Injected in-game helper (exploratory, opt-in)
 
 **Priority:** low · **Cost:** large
@@ -1060,8 +1072,10 @@ crash: one in V8 left `Player.log` without its last seconds and no managed excep
 Crashpad writes it to `.cache/backtrace/crashpad/reports/<id>.dmp` under the user data root, beside
 the snapshots it takes on a quit or a hang, which read `Simulated Exception` and are no crash.
 `minidump-stackwalk` reads one on Linux without symbols, and module offsets alone tell a V8 frame
-called from cohtml from Mono (a script or binding crash) from an engine one. Which quits write a
-snapshot is the fact to settle first; seen on a Proton install.
+called from cohtml from Mono (a script or binding crash) from an engine one. Its `--brief` prints
+only the crashing thread, which in a hang snapshot is the Backtrace watchdog: the main thread is
+Thread 0 of the full output. Which quits write a snapshot is the fact to settle first; seen on a
+Proton install.
 
 ### Restarting the game and waiting on it, unattended
 
@@ -1089,3 +1103,11 @@ The scripts carry NetworkTools' own scenario names and log files, which a generi
 `ecs-in-this-game.md` never mentions query masks. A world has 1024: `Matches` (or `GetEntityQueryMask`) takes one for each distinct query descriptor it is called on, deduplicated by descriptor hash (`src/Unity.Entities/Unity.Entities/EntityQueryManager.cs:576-596`, `:1043`), and frees none before the world goes.
 The limit check, `ThrowIfEntityQueryMasksIsGreaterThanLimit` (`:1032`), is `[Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]`/`[Conditional("UNITY_DOTS_DEBUG")]`, so the game's release build skips it, and the 1025th mask writes past `Archetype.QueryMaskArray` (`fixed byte[128]`, `Archetype.cs:80`) instead of throwing.
 The rule to add: call `Matches` only on a bounded set of queries with fixed descriptors, never on queries whose component set varies with the input. Found while reviewing a Find It change that filters changed prefabs with each processor's cached query (23 masks in a loaded world).
+
+### A disposed mod stays in `modManager` with its assembly set
+
+**Priority:** medium · **Cost:** trivial
+
+`loader-states.md` says `GeneralError` "in practice means `OnLoad` threw", but `ModInfo.Load` runs `GetTypesDerivedFrom<IMod>()` inside the same `try` (`src/Game/Game.Modding/ModManager.cs:120`, its catch-all at `:141`), so a mod whose assembly loads and whose types do not, such as one a game update left outdated, lands there too.
+Like the other rethrowing states it ends at `Disposed`, and the entry stays in `modManager` with `asset.assembly` set, so reflecting over it throws `ReflectionTypeLoadException` again.
+The rule to add: code that enumerates `modManager` and reflects over each assembly skips a mod whose `state` is not `Loaded`. Found while reviewing Asset Icon Library, whose API calls now do; Find It's API registration does not, and throws in a dispatcher updater on every frame.
