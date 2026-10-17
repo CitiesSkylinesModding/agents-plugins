@@ -1063,30 +1063,6 @@ the snapshots it takes on a quit or a hang, which read `Simulated Exception` and
 called from cohtml from Mono (a script or binding crash) from an engine one. Which quits write a
 snapshot is the fact to settle first; seen on a Proton install.
 
-### The game's mscorlib loses to the reference pack's on Linux
-
-**Priority:** high · **Cost:** cheap
-
-`linux-toolchain.md` gets a mod building, but not one whose code meets a `Span` type: a Linux user following it was stuck on the wrong mscorlib, and NetworkTools only builds there through a csproj target the guide lacks.
-With no net48 targeting pack, the SDK adds `Microsoft.NETFramework.ReferenceAssemblies.net48`, whose targets declare their own `<Reference Include="mscorlib" />`; `ResolvePackageFileConflicts` then logs `Encountered conflict between 'Reference:…/Cities2_Data/Managed/mscorlib.dll'` and the compiler gets the pack's copy instead of `Mod.props`'s.
-That copy lacks what the game's Unity mscorlib adds over .NET Framework 4.8. `ReadOnlySpan`, which the game's `System.Memory.dll` only forwards there, fails any overload set holding a span parameter with `CS0518: Predefined type 'System.ReadOnlySpan`1' is not defined or imported`: `EntityManager.CreateArchetype` has one (`src/Unity.Entities/Unity.Entities/EntityManager.cs:2199`), and 7 of the corpus's 22 mods call it. `foreach (var (k, v) in dictionary)` fails too, with CS1061 on `KeyValuePair`'s missing `Deconstruct`; NetworkTools built with the swap disabled showed both.
-The fix NetworkTools carries swaps the reference back after RAR, a no-op on Windows:
-
-```xml
-<Target Name="UseGameMscorlibOnUnix" AfterTargets="ResolveAssemblyReferences" Condition="'$(OS)' != 'Windows_NT' AND '$(MSCORLIBPath)' != ''">
-	<ItemGroup>
-		<ReferencePath Remove="@(ReferencePath)" Condition="'%(Filename)' == 'mscorlib'" />
-		<ReferencePath Include="$(MSCORLIBPath)">
-			<Private>false</Private>
-		</ReferencePath>
-	</ItemGroup>
-</Target>
-```
-
-It belongs in the guide's project changes, with a troubleshooting row for both errors; the community wiki's Linux page carries it as an optional step.
-Verified on SDK 10.0.401 only; the user's SDK 8.0.425 runs the conflict step before RAR too, so the swap should hold there.
-The root cause is `Mod.props`, which is Colossal Order's to fix.
-
 ### Restarting the game and waiting on it, unattended
 
 **Priority:** medium · **Cost:** moderate
