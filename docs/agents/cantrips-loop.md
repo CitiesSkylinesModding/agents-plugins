@@ -23,3 +23,10 @@ Three invariants hold whatever the backend: an annotation appends without touchi
 
 - `docs/adr/` — **enabled**. Durable decisions with supersession chains: an outdated record names the record that replaced it. The root `AGENTS.md` section "Where knowledge goes" holds the boundary against the other stores.
 - `docs/solutions/` — **enabled**. One file per hard-won problem, reached through a pointer placed where the problem bites.
+
+## Deputy/Arbiter instructions
+
+Always brief the deputy for this:
+- Take roadmap entries critically, they are often raw reports from other agents. So you can reject and retire roadmap entries, just ask the user first.
+- Prose written for agents is not code: agents are good at reading intention, so short sentences can beat longer ones unless a specific problem is encountered.
+- In the same vein, always keep skills as small as possible. Every line is a context cost and an actual cost for the user.
