@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -77,7 +79,7 @@ public static class Defaulted {
   // No value of these defaults is built client-side, so a call omitting them is refused.
   public static string Money(decimal amount = 1.5m) => $"{amount}";
 
-  public static string When([Optional, DateTimeConstant(630822816000000000)] DateTime when) =>
+  public static string When([Optional] [DateTimeConstant(630822816000000000)] DateTime when) =>
     $"{when.Ticks}";
 
   public static string Maybe(int? maybe = 5) => $"{maybe}";
@@ -154,42 +156,42 @@ public static class Emitted {
     }
 
     var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(
-      new System.Reflection.AssemblyName("UnityDevtools.TestFixture.Emitted"),
-      System.Reflection.Emit.AssemblyBuilderAccess.Run
+      new AssemblyName("UnityDevtools.TestFixture.Emitted"),
+      AssemblyBuilderAccess.Run
     );
 
     var type = assembly.DefineDynamicModule("m")
       .DefineType(
         Emitted.TypeName,
-        System.Reflection.TypeAttributes.Public |
-        System.Reflection.TypeAttributes.Abstract |
-        System.Reflection.TypeAttributes.Sealed
+        TypeAttributes.Public |
+        TypeAttributes.Abstract |
+        TypeAttributes.Sealed
       );
 
     // static int Add(int a, int b = 7) => a + b;
     var add = type.DefineMethod(
       "Add",
-      System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+      MethodAttributes.Public | MethodAttributes.Static,
       typeof(int),
       [typeof(int), typeof(int)]
     );
 
-    add.DefineParameter(1, System.Reflection.ParameterAttributes.None, "a");
+    add.DefineParameter(1, ParameterAttributes.None, "a");
 
     add.DefineParameter(
         2,
-        System.Reflection.ParameterAttributes.Optional |
-        System.Reflection.ParameterAttributes.HasDefault,
+        ParameterAttributes.Optional |
+        ParameterAttributes.HasDefault,
         "b"
       )
       .SetConstant(7);
 
     var il = add.GetILGenerator();
 
-    il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
-    il.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
-    il.Emit(System.Reflection.Emit.OpCodes.Add);
-    il.Emit(System.Reflection.Emit.OpCodes.Ret);
+    il.Emit(OpCodes.Ldarg_0);
+    il.Emit(OpCodes.Ldarg_1);
+    il.Emit(OpCodes.Add);
+    il.Emit(OpCodes.Ret);
 
     return Emitted.built = type.CreateType();
   }
