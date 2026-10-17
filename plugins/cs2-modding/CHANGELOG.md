@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.0...cs2-modding-v1.2.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **cs2-modding:** keep the game's mscorlib on Linux, so a mod using spans or tuple deconstruction builds ([77105d0](https://github.com/CitiesSkylinesModding/agents-plugins/commit/77105d01d6d59da47892bd17b1da0a585c65f140))
+
 ## [1.2.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.1.0...cs2-modding-v1.2.0) (2026-09-19)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.3.0...unity-devtools-mcp-v1.4.0) (2026-10-17)
+
+
+### Features
+
+* **unity-devtools:** bind eval calls omitting trailing optional parameters, as C# does ([6403e87](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6403e879659f2904fc281f50b4f3ce7144f920a6))
+* **unity-devtools:** evaluate type aliases, ref arguments, format clauses and default(T) in eval ([1c66a8e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1c66a8e54c0ed6c28d5fb969bff16c156fbe2b82))
+
 ## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.2.0...unity-devtools-mcp-v1.3.0) (2026-10-10)
 
 
