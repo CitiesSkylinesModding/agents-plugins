@@ -28,12 +28,14 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     Supported: literals, member access, method calls (a type argument is inferred when it is an
     argument's own type, as in em.SetComponentData(e, copy), and written otherwise, as in
     em.GetComponentData<MyComponent>(entity(123, 1))), indexers, `new` with initializers,
-    casts, operators, ternary/`?.`/`??`, typeof(T), string interpolation, and `out var x` / `out x`
-    arguments.
+    casts, operators, ternary/`?.`/`??`, typeof(T), default(T), string interpolation with format
+    clauses (`$"{x:F1}"`), `out var x` / `out x` / `ref x` arguments, and type aliases such as
+    `int` or `string` as roots (`string.Join(", ", names)`).
     Not supported: lambdas, LINQ, loops, control flow, array-creation expressions
-    (`new T[] { ... }`), and the `as` operator (a cast works); a call may omit trailing optional
-    parameters, but overload matching does no `params` expansion, so a `params` method takes
-    exactly one argument already typed as its array.
+    (`new T[] { ... }`), the `as` operator (a cast works), and interpolation alignment
+    (`{x,8}`); a call may omit trailing optional parameters, but overload matching does no
+    `params` expansion, so a `params` method takes exactly one argument already typed as its
+    array.
     Roots: fully-qualified type names, plus builtins `em` (the world's EntityManager), `world` (the
     ECS World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's
     result; heap results may be collected once the game resumes).

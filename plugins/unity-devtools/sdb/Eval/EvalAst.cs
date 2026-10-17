@@ -50,7 +50,9 @@ public sealed record CallExpr(
   IReadOnlyList<ArgExpr> Args
 ) : EvalExpr;
 
-/// <summary>One call argument; out arguments name a local (declared by <c>out var</c>).</summary>
+/// <summary>
+/// One call argument; out and ref arguments name a local (declared by <c>out var</c>).
+/// </summary>
 public sealed record ArgExpr(EvalExpr Value, ArgMode Mode = ArgMode.Plain);
 
 public enum ArgMode {
@@ -60,7 +62,10 @@ public enum ArgMode {
   Out,
 
   /// <summary>An <c>out var x</c> argument declaring the local it writes.</summary>
-  OutVar
+  OutVar,
+
+  /// <summary>A <c>ref x</c> argument passing an existing local and writing it back.</summary>
+  Ref
 }
 
 /// <summary>An indexer access, readable and assignable.</summary>
@@ -107,9 +112,18 @@ public sealed record TypeofExpr(string TypeName) : EvalExpr;
 
 /// <summary>
 /// An interpolated string: parts are string literals and embedded expressions, concatenated after
-/// formatting each value client-side.
+/// rendering each value.
 /// </summary>
-public sealed record InterpolatedStringExpr(IReadOnlyList<EvalExpr> Parts) : EvalExpr;
+public sealed record InterpolatedStringExpr(IReadOnlyList<InterpolationPart> Parts) : EvalExpr;
+
+/// <summary>
+/// One part of an interpolated string, with the hole's format clause (<c>F1</c> in
+/// <c>{x:F1}</c>); null for a literal part or a hole without one.
+/// </summary>
+public sealed record InterpolationPart(EvalExpr Value, string Format = null);
+
+/// <summary>A <c>default(T)</c> expression: null for a type taking it, else zeroes.</summary>
+public sealed record DefaultExpr(string TypeName) : EvalExpr;
 
 /// <summary>
 /// A simple assignment (<c>=</c>) to a local, field, property, or indexer; evaluates to the

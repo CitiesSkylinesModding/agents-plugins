@@ -804,14 +804,19 @@ public sealed class Invoker(VirtualMachine vm) {
   public Value DefaultMirrorFor(TypeMirror type) {
     // Only an out placeholder or an omitted default reaches here with such a type: `new` never
     // names a generic type, and an Entity is not one.
-    if (Invoker.IsValueType(type) && !type.IsValueType && !type.IsEnum && !type.IsPrimitive) {
-      throw new InvalidOperationException(
-        $"eval cannot build a {type.FullName} client-side"
-      );
+    if (Invoker.BreaksByReference(type)) {
+      throw new InvalidOperationException($"eval cannot build a {type.FullName} client-side");
     }
 
     return this.BuildDefault(type);
   }
+
+  /// <summary>
+  /// Whether a client-built value of the type disconnects the VM sent through a by-reference slot:
+  /// a generic struct instance, a nullable included, which the agent does not flag as a value type.
+  /// </summary>
+  public static bool BreaksByReference(TypeMirror type) =>
+    Invoker.IsValueType(type) && !type.IsValueType && !type.IsEnum && !type.IsPrimitive;
 
   /// <summary>
   /// The null a slot of a mirrored type takes.

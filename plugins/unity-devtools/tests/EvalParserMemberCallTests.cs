@@ -134,10 +134,45 @@ public sealed class EvalParserMemberCallTests {
   }
 
   [Fact]
-  public void RejectsRefArguments() {
-    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse("Foo.Bar(ref x)"));
+  public void ParsesARefArgument() {
+    var call = Assert.IsType<CallExpr>(EvalParserMemberCallTests.ParseSingle("Foo.Bar(ref x, y)"));
 
-    Assert.Contains("unsupported", error.Message);
+    Assert.Equal(ArgMode.Ref, call.Args[0].Mode);
+    Assert.Equal("x", Assert.IsType<NameExpr>(call.Args[0].Value).Name);
+    Assert.Equal(ArgMode.Plain, call.Args[1].Mode);
+  }
+
+  [Theory]
+  [InlineData("Foo.Bar(ref a.b)")]
+  [InlineData("Foo.Bar(ref a[0])")]
+  public void RefOnAnythingButALocalSaysRefTakesALocal(string code) {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse(code));
+
+    Assert.Contains("`ref` takes a local", error.Message);
+  }
+
+  [Theory]
+  [InlineData("string.Join(\", \", names)", "System.String", "Join")]
+  [InlineData("object.ReferenceEquals(a, b)", "System.Object", "ReferenceEquals")]
+  public void APredefinedAliasAsACallRootTranslatesToItsSystemName(
+    string code,
+    string type,
+    string method
+  ) {
+    var call = Assert.IsType<CallExpr>(EvalParserMemberCallTests.ParseSingle(code));
+
+    Assert.Equal(type, Assert.IsType<NameExpr>(call.Target).Name);
+    Assert.Equal(method, call.Name);
+  }
+
+  [Theory]
+  [InlineData("int.MaxValue", "System.Int32")]
+  [InlineData("float.Epsilon", "System.Single")]
+  [InlineData("decimal.MaxValue", "System.Decimal")]
+  public void APredefinedAliasAsAMemberRootTranslatesToItsSystemName(string code, string type) {
+    var member = Assert.IsType<MemberExpr>(EvalParserMemberCallTests.ParseSingle(code));
+
+    Assert.Equal(type, Assert.IsType<NameExpr>(member.Target).Name);
   }
 
   [Fact]

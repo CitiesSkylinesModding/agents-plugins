@@ -67,12 +67,13 @@ Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.L
 Structs build with initializer syntax (`new MyGame.Movement.Speed { m_Value = 5f }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
 A `readonly` field takes a write, to itself or to a member, where C# refuses it, and a mutating call through it changes the field rather than a copy; game code the JIT compiled before the write may still use a `static readonly` field's old value, though `eval` reads back the new one.
 A static field of a type whose static constructor has not run yet is refused rather than read as zeros: run the constructor with the call the error names, knowing it runs the type's own code, or read it once the game has touched the type.
-`out var x` declares a local the call writes; later statements can read it: `MyGame.Navigation.PathUtils.TryGetEndpoints(em, e, out var start, out var end)`.
-Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
+`out var x` declares a local the call writes; later statements can read it: `MyGame.Navigation.PathUtils.TryGetEndpoints(em, e, out var start, out var end)`. `ref x` passes a `var` local in and writes the callee's value back into it.
+Type aliases root members and calls as in C# (`int.MaxValue`, `string.Join(", ", names)`), and `default(T)` builds a type's zero value or null.
+Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `??` do work; the final expression is the result, so write no `return`); unsupported constructs are rejected up front with an "unsupported: ..." parse error.
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods and constructors match by name, argument count, and argument compatibility, trailing optional parameters omitted as in C#, a boxed argument by the type it holds (a box of an int binds `M(int)` over `M(object)`), and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
-On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a} | {b}"` to read several values at once.
+On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a:F1} | {b}"` to read several values at once.
 
 ## Seeing the game
 

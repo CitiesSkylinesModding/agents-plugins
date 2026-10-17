@@ -24,8 +24,8 @@ public sealed record ArityFit(MethodMirror Method, DeclaredDefault[] Omitted, st
   public Rejection Rejection => this.IsFit ? null : new Rejection(this.Method, this.Reason);
 
   /// <summary>
-  /// Fits a candidate to an argument count, reading its defaults only when it has more parameters
-  /// than arguments, which is what fetches its assembly's metadata the first time.
+  /// Fits a candidate to an argument count,
+  /// reading its defaults only when it has more parameters than arguments.
   /// </summary>
   public static ArityFit Of(Invoker inv, MethodMirror candidate, int argc) {
     var parameters = candidate.GetParameters();

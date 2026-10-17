@@ -28,6 +28,14 @@ public static class EvalParser {
     var error = tree.GetDiagnostics().FirstOrDefault(d => d.Severity is DiagnosticSeverity.Error);
 
     if (error is not null) {
+      if (EvalParser.EscapedQuoteInHole(tree, source) is {} escape) {
+        throw new EvalParseException(
+          "syntax error: an interpolation hole takes plain quotes, unescaped " +
+          "(write $\"{d[\"key\"]}\")",
+          escape
+        );
+      }
+
       // Clamp: the error can sit on the appended terminator, past the typed input.
       throw new EvalParseException(
         $"syntax error: {error.GetMessage()}",
@@ -112,6 +120,13 @@ public static class EvalParser {
         };
       }
 
+      case ReturnStatementSyntax:
+        throw new EvalParseException(
+          "unsupported: return statement (the final expression's value is the result: drop " +
+          "`return`)",
+          statement.SpanStart
+        );
+
       default: throw EvalParser.Unsupported(statement);
     }
   }
@@ -129,6 +144,18 @@ public static class EvalParser {
         case IdentifierNameSyntax identifier:
           return new NameExpr(identifier.Identifier.Text) {
             Position = identifier.SpanStart
+          };
+
+        // `string.Join(...)`, `int.MaxValue`: one dotted name, which no local can shadow, resolves
+        // as the type it names.
+        case PredefinedTypeSyntax predefined:
+          return new NameExpr(EvalParser.PredefinedName(predefined)) {
+            Position = predefined.SpanStart
+          };
+
+        case DefaultExpressionSyntax defaultOf:
+          return new DefaultExpr(EvalParser.TranslateTypeName(defaultOf.Type)) {
+            Position = defaultOf.SpanStart
           };
 
         // `this` rides the name path: the frame scope resolves it like any root (frameless eval
@@ -278,28 +305,35 @@ public static class EvalParser {
   private static InterpolatedStringExpr TranslateInterpolatedString(
     InterpolatedStringExpressionSyntax interpolated
   ) {
-    var parts = new List<EvalExpr>();
+    var parts = new List<InterpolationPart>();
 
     foreach (var content in interpolated.Contents) {
       switch (content) {
         case InterpolatedStringTextSyntax text:
           parts.Add(
-            new LiteralExpr(text.TextToken.ValueText) {
-              Position = text.SpanStart
-            }
+            new InterpolationPart(
+              new LiteralExpr(text.TextToken.ValueText) {
+                Position = text.SpanStart
+              }
+            )
           );
 
           break;
 
         case InterpolationSyntax interpolation:
-          if (interpolation.AlignmentClause is not null || interpolation.FormatClause is not null) {
+          if (interpolation.AlignmentClause is not null) {
             throw new EvalParseException(
-              "unsupported: interpolation alignment/format clause (format the value yourself)",
-              interpolation.SpanStart
+              "unsupported: interpolation alignment (pad the value yourself)",
+              interpolation.AlignmentClause.SpanStart
             );
           }
 
-          parts.Add(EvalParser.TranslateExpr(interpolation.Expression));
+          parts.Add(
+            new InterpolationPart(
+              EvalParser.TranslateExpr(interpolation.Expression),
+              interpolation.FormatClause?.FormatStringToken.ValueText
+            )
+          );
 
           break;
 
@@ -374,6 +408,20 @@ public static class EvalParser {
       return new ArgExpr(EvalParser.TranslateExpr(argument.Expression));
     }
 
+    if (argument.RefKindKeyword.IsKind(SyntaxKind.RefKeyword)) {
+      return argument.Expression is IdentifierNameSyntax local
+        ? new ArgExpr(
+          new NameExpr(local.Identifier.Text) {
+            Position = local.SpanStart
+          },
+          ArgMode.Ref
+        )
+        : throw new EvalParseException(
+          "unsupported: ref argument target (`ref` takes a local)",
+          argument.SpanStart
+        );
+    }
+
     if (!argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword)) {
       throw new EvalParseException(
         $"unsupported: {argument.RefKindKeyword.Text} argument",
@@ -420,35 +468,42 @@ public static class EvalParser {
       case QualifiedNameSyntax { Right: IdentifierNameSyntax right } qualified:
         return $"{EvalParser.TranslateTypeName(qualified.Left)}.{right.Identifier.Text}";
 
-      case PredefinedTypeSyntax predefined: {
-        var mapped = predefined.Keyword.Kind() switch {
-          SyntaxKind.IntKeyword => "System.Int32",
-          SyntaxKind.UIntKeyword => "System.UInt32",
-          SyntaxKind.LongKeyword => "System.Int64",
-          SyntaxKind.ULongKeyword => "System.UInt64",
-          SyntaxKind.ShortKeyword => "System.Int16",
-          SyntaxKind.UShortKeyword => "System.UInt16",
-          SyntaxKind.ByteKeyword => "System.Byte",
-          SyntaxKind.SByteKeyword => "System.SByte",
-          SyntaxKind.FloatKeyword => "System.Single",
-          SyntaxKind.DoubleKeyword => "System.Double",
-          SyntaxKind.BoolKeyword => "System.Boolean",
-          SyntaxKind.CharKeyword => "System.Char",
-          SyntaxKind.StringKeyword => "System.String",
-          SyntaxKind.ObjectKeyword => "System.Object",
-          _ => null
-        };
-
-        return mapped ?? throw EvalParser.Unsupported(type);
-      }
+      case PredefinedTypeSyntax predefined: return EvalParser.PredefinedName(predefined);
 
       default: throw EvalParser.Unsupported(type);
     }
   }
 
+  /// <summary>The System name a predefined type keyword aliases.</summary>
+  private static string PredefinedName(PredefinedTypeSyntax predefined) {
+    var mapped = predefined.Keyword.Kind() switch {
+      SyntaxKind.IntKeyword => "System.Int32",
+      SyntaxKind.UIntKeyword => "System.UInt32",
+      SyntaxKind.LongKeyword => "System.Int64",
+      SyntaxKind.ULongKeyword => "System.UInt64",
+      SyntaxKind.ShortKeyword => "System.Int16",
+      SyntaxKind.UShortKeyword => "System.UInt16",
+      SyntaxKind.ByteKeyword => "System.Byte",
+      SyntaxKind.SByteKeyword => "System.SByte",
+      SyntaxKind.FloatKeyword => "System.Single",
+      SyntaxKind.DoubleKeyword => "System.Double",
+      SyntaxKind.DecimalKeyword => "System.Decimal",
+      SyntaxKind.BoolKeyword => "System.Boolean",
+      SyntaxKind.CharKeyword => "System.Char",
+      SyntaxKind.StringKeyword => "System.String",
+      SyntaxKind.ObjectKeyword => "System.Object",
+      _ => null
+    };
+
+    return mapped ?? throw EvalParser.Unsupported(predefined);
+  }
+
   private static LiteralExpr TranslateLiteral(LiteralExpressionSyntax literal) {
     if (literal.IsKind(SyntaxKind.DefaultLiteralExpression)) {
-      throw EvalParser.Unsupported(literal);
+      throw new EvalParseException(
+        "unsupported: default literal (write `default(T)`)",
+        literal.SpanStart
+      );
     }
 
     var value = literal.IsKind(SyntaxKind.NullLiteralExpression) ? null : literal!.Token.Value;
@@ -463,6 +518,27 @@ public static class EvalParser {
     return new LiteralExpr(value) {
       Position = literal.SpanStart
     };
+  }
+
+  /// <summary>
+  /// Where an escaped quote sits inside an interpolation hole, a form Roslyn reports only as a
+  /// missing close brace; null when none does.
+  /// </summary>
+  private static int? EscapedQuoteInHole(SyntaxTree tree, string source) {
+    var root = tree.GetRoot();
+
+    foreach (var diagnostic in tree.GetDiagnostics()) {
+      var at = diagnostic.Location.SourceSpan.Start;
+
+      if (at + 1 < source.Length &&
+        source[at] is '\\' &&
+        source[at + 1] is '"' &&
+        root.FindToken(at).Parent?.AncestorsAndSelf().OfType<InterpolationSyntax>().Any() is true) {
+        return at;
+      }
+    }
+
+    return null;
   }
 
   private static EvalParseException Unsupported(SyntaxNode node) {

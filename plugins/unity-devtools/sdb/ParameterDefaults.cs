@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
@@ -10,9 +12,11 @@ using Mono.Debugger.Soft;
 namespace UnityDevtools.Sdb;
 
 /// <summary>
-/// The defaults a method's parameters declare, read off its assembly's own metadata: the agent's
-/// parameter info carries no flags and no constant, so the assembly image is fetched whole, once
-/// per assembly and attach, and decoded client-side, costing the game no invoke.
+/// What a method's parameters declare, read off its assembly's own metadata: their defaults, and
+/// how each is passed.
+/// The agent's parameter info carries no flags and no constant, and reports a by-reference
+/// parameter's type by value, so the assembly image is fetched whole, once per assembly and
+/// attach, and decoded client-side, costing the game no invoke.
 /// Metadata is immutable while the assembly is loaded, so the image is held for the attach.
 /// An assembly whose image cannot be fetched or parsed, a dynamic one included, is held as
 /// unreadable for the attach too: what the agent refuses to serve is a property of the assembly.
@@ -30,18 +34,12 @@ public sealed class ParameterDefaults {
   /// <summary>
   /// What each parameter of a method declares, in position order, or null when its assembly's
   /// metadata cannot be read.
-  /// A generic instantiation answers its definition's, whose token it carries.
   /// </summary>
   public DeclaredDefault[] Of(MethodMirror method) {
-    var reader = this.ReaderOrNull(method.DeclaringType.Assembly);
-
-    var handle = MetadataTokens.EntityHandle(method.MetadataToken);
-
-    if (reader is null || handle.Kind is not HandleKind.MethodDefinition) {
+    if (this.DefinitionOrNull(method) is not var (reader, definition)) {
       return null;
     }
 
-    var definition = reader.GetMethodDefinition((MethodDefinitionHandle) handle);
     var declared = new DeclaredDefault[method.GetParameters().Length];
 
     // A parameter with no Param row declares nothing, which leaves it required.
@@ -58,6 +56,60 @@ public sealed class ParameterDefaults {
     }
 
     return declared;
+  }
+
+  /// <summary>
+  /// How C# declares each of a method's parameters passed, in position order.
+  /// Null when its assembly's metadata cannot be read.
+  /// </summary>
+  public ParameterMode[] Modes(MethodMirror method) {
+    if (this.DefinitionOrNull(method) is not var (reader, definition)) {
+      return null;
+    }
+
+    var modes = definition.DecodeSignature(ByReferenceProvider.Instance, null)
+      .ParameterTypes
+      .Select(static isByReference => isByReference ? ParameterMode.Ref : ParameterMode.Plain)
+      .ToArray();
+
+    // A by-reference parameter flagged Out alone is `out`, flagged In alone `in`; both flags, as
+    // interop writes `[In, Out] ref`, leave it `ref`.
+    foreach (var parameterHandle in definition.GetParameters()) {
+      var parameter = reader.GetParameter(parameterHandle);
+      var position = parameter.SequenceNumber - 1;
+
+      if (position < 0 || position >= modes.Length || modes[position] is not ParameterMode.Ref) {
+        continue;
+      }
+
+      modes[position] = (parameter.Attributes & (ParameterAttributes.Out | ParameterAttributes.In))
+        switch {
+          ParameterAttributes.Out => ParameterMode.Out,
+          ParameterAttributes.In => ParameterMode.In,
+          _ => ParameterMode.Ref
+        };
+    }
+
+    return modes;
+  }
+
+  /// <summary>
+  /// The method's definition row and its reader, or null when its assembly's metadata cannot be
+  /// read.
+  /// A generic instantiation answers its definition's, whose token it carries.
+  /// </summary>
+  private (MetadataReader Reader, MethodDefinition Definition)? DefinitionOrNull(
+    MethodMirror method
+  ) {
+    var reader = this.ReaderOrNull(method.DeclaringType.Assembly);
+
+    var handle = MetadataTokens.EntityHandle(method.MetadataToken);
+
+    if (reader is null || handle.Kind is not HandleKind.MethodDefinition) {
+      return null;
+    }
+
+    return (reader, reader.GetMethodDefinition((MethodDefinitionHandle) handle));
   }
 
   /// <summary>
@@ -102,7 +154,7 @@ public sealed class ParameterDefaults {
       HandleKind.MethodDefinition =>
         reader.GetMethodDefinition((MethodDefinitionHandle) attribute.Constructor)
           .GetDeclaringType(),
-      _ => default(EntityHandle)
+      _ => default
     };
 
     return type.Kind switch {
@@ -157,6 +209,71 @@ public sealed class ParameterDefaults {
       return null;
     }
   }
+}
+
+/// <summary>
+/// Decodes a signature down to whether each type is passed by reference, ignoring the rest; a
+/// modifier, such as the one marking an `in` parameter, keeps the type it modifies.
+/// </summary>
+internal sealed class ByReferenceProvider : ISignatureTypeProvider<bool, object> {
+  public static readonly ByReferenceProvider Instance = new();
+
+  public bool GetByReferenceType(bool elementType) => true;
+
+  public bool GetModifiedType(bool modifier, bool unmodifiedType, bool isRequired) =>
+    unmodifiedType;
+
+  public bool GetArrayType(bool elementType, ArrayShape shape) => false;
+
+  public bool GetFunctionPointerType(MethodSignature<bool> signature) => false;
+
+  public bool GetGenericInstantiation(bool genericType, ImmutableArray<bool> typeArguments) =>
+    false;
+
+  public bool GetGenericMethodParameter(object genericContext, int index) => false;
+
+  public bool GetGenericTypeParameter(object genericContext, int index) => false;
+
+  public bool GetPinnedType(bool elementType) => false;
+
+  public bool GetPointerType(bool elementType) => false;
+
+  public bool GetPrimitiveType(PrimitiveTypeCode typeCode) => false;
+
+  public bool GetSZArrayType(bool elementType) => false;
+
+  public bool GetTypeFromDefinition(
+    MetadataReader reader,
+    TypeDefinitionHandle handle,
+    byte rawTypeKind
+  ) =>
+    false;
+
+  public bool GetTypeFromReference(
+    MetadataReader reader,
+    TypeReferenceHandle handle,
+    byte rawTypeKind
+  ) =>
+    false;
+
+  public bool GetTypeFromSpecification(
+    MetadataReader reader,
+    object genericContext,
+    TypeSpecificationHandle handle,
+    byte rawTypeKind
+  ) =>
+    false;
+}
+
+/// <summary>How a parameter is passed, as C# declares it.</summary>
+public enum ParameterMode {
+  Plain,
+
+  Ref,
+
+  Out,
+
+  In
 }
 
 /// <summary>What a parameter declares about being omitted.</summary>

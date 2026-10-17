@@ -67,16 +67,64 @@ public sealed class EvalParserConstructTests {
     );
 
     Assert.Equal(4, expr.Parts.Count);
-    Assert.Equal("a=", Assert.IsType<LiteralExpr>(expr.Parts[0]).Value);
-    Assert.Equal("a", Assert.IsType<NameExpr>(expr.Parts[1]).Name);
-    Assert.Equal(" | b=", Assert.IsType<LiteralExpr>(expr.Parts[2]).Value);
+    Assert.Equal("a=", Assert.IsType<LiteralExpr>(expr.Parts[0].Value).Value);
+    Assert.Equal("a", Assert.IsType<NameExpr>(expr.Parts[1].Value).Name);
+    Assert.Equal(" | b=", Assert.IsType<LiteralExpr>(expr.Parts[2].Value).Value);
+    Assert.All(expr.Parts, static p => Assert.Null(p.Format));
   }
 
   [Fact]
-  public void RejectsInterpolationFormatSpecifiers() {
-    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse("$\"{x:F2}\""));
+  public void AFormatClauseLandsOnItsInterpolationPart() {
+    var expr = Assert.IsType<InterpolatedStringExpr>(
+      EvalParserMemberCallTests.ParseSingle("$\"x={x:F1}\"")
+    );
 
-    Assert.Contains("unsupported", error.Message);
+    Assert.Null(expr.Parts[0].Format);
+    Assert.Equal("x", Assert.IsType<NameExpr>(expr.Parts[1].Value).Name);
+    Assert.Equal("F1", expr.Parts[1].Format);
+  }
+
+  [Theory]
+  [InlineData("$\"{x,8}\"")]
+  [InlineData("$\"{x,8:F1}\"")]
+  public void RejectsInterpolationAlignmentNamingAlignmentAlone(string code) {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse(code));
+
+    Assert.Contains("unsupported: interpolation alignment", error.Message);
+    Assert.DoesNotContain("format", error.Message);
+  }
+
+  [Fact]
+  public void AnEscapedQuoteInAHoleSaysTheHoleTakesPlainQuotes() {
+    var error = Assert.Throws<EvalParseException>(() =>
+      EvalParser.Parse("$\"{d[\\\"k\\\"]}\"")
+    );
+
+    Assert.Contains("hole takes plain quotes", error.Message);
+    Assert.Equal(5, error.Position);
+  }
+
+  [Fact]
+  public void ParsesADefaultOfAType() {
+    var expr = Assert.IsType<DefaultExpr>(
+      EvalParserMemberCallTests.ParseSingle("default(MyGame.Movement.Speed)")
+    );
+
+    Assert.Equal("MyGame.Movement.Speed", expr.TypeName);
+  }
+
+  [Fact]
+  public void ParsesADefaultOfAPredefinedType() {
+    var expr = Assert.IsType<DefaultExpr>(EvalParserMemberCallTests.ParseSingle("default(int)"));
+
+    Assert.Equal("System.Int32", expr.TypeName);
+  }
+
+  [Fact]
+  public void TheBareDefaultLiteralPointsAtDefaultOfT() {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse("var a = default;"));
+
+    Assert.Contains("unsupported: default literal (write `default(T)`)", error.Message);
   }
 
   [Fact]
@@ -109,11 +157,18 @@ public sealed class EvalParserConstructTests {
   [InlineData("if (a) { b(); }")]
   [InlineData("for (;;) { }")]
   [InlineData("while (true) { }")]
-  [InlineData("return 1;")]
   public void RejectsControlFlow(string code) {
     var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse(code));
 
     Assert.Contains("unsupported", error.Message);
+  }
+
+  [Fact]
+  public void AReturnSaysTheFinalExpressionIsTheResult() {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse("var a = 1; return a;"));
+
+    Assert.Contains("unsupported: return statement", error.Message);
+    Assert.Contains("the final expression's value is the result", error.Message);
   }
 
   [Fact]
@@ -130,12 +185,10 @@ public sealed class EvalParserConstructTests {
     Assert.Contains("unsupported: await", error.Message);
   }
 
-  [Theory]
-  [InlineData("Foo.Bar(ref a)", "unsupported: ref argument")]
-  [InlineData("Foo.Bar(in a)", "unsupported: in argument")]
-  public void RejectedArgumentModesNameTheirKeyword(string code, string expected) {
-    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse(code));
+  [Fact]
+  public void AnInArgumentIsRejectedNamingItsKeyword() {
+    var error = Assert.Throws<EvalParseException>(() => EvalParser.Parse("Foo.Bar(in a)"));
 
-    Assert.Contains(expected, error.Message);
+    Assert.Contains("unsupported: in argument", error.Message);
   }
 }

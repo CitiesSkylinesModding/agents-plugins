@@ -144,6 +144,10 @@ public sealed class EvalInterpreter(
       case TypeofExpr typeOf:
         return inv.TypeObject(this.ResolveType(typeOf.TypeName, typeOf.Position));
 
+      // A type the builder cannot zero client-side is refused there, naming it.
+      case DefaultExpr defaultOf:
+        return this.DefaultOf(this.ResolveType(defaultOf.TypeName, defaultOf.Position));
+
       case UnaryExpr unary: {
         var operand = EvalInterpreter.UnwrapNullable(this.Evaluate(unary.Operand));
 
@@ -183,7 +187,9 @@ public sealed class EvalInterpreter(
       }
 
       case InterpolatedStringExpr interpolated:
-        return string.Concat(interpolated.Parts.Select(p => this.Stringify(this.Evaluate(p))));
+        return string.Concat(
+          interpolated.Parts.Select(p => this.RenderHole(this.Evaluate(p.Value), p.Format))
+        );
 
       case AssignExpr assignment: return this.EvaluateAssign(assignment);
 
@@ -703,7 +709,7 @@ public sealed class EvalInterpreter(
           a.Mode is ArgMode.Plain
             ? EvalInterpreter.UnwrapForOps(this.Evaluate(a.Value))
             : throw new EvalRuntimeException(
-              "builtin functions take no out arguments",
+              "builtin functions take no out or ref arguments",
               call.Position
             )
         )
@@ -774,7 +780,7 @@ public sealed class EvalInterpreter(
       );
     }
 
-    // Out values come back positionally in OutArgs; write them into their locals.
+    // Out and ref values come back positionally in OutArgs; write them into their locals.
     foreach (var index in outIndexes) {
       var argument = call.Args[index];
       var name = ((NameExpr) argument.Value).Name;
@@ -815,6 +821,14 @@ public sealed class EvalInterpreter(
           call.Position
         );
       }
+
+      if (argument.Mode is ArgMode.Ref && !this.locals.ContainsKey(outName.Name)) {
+        throw new EvalRuntimeException(
+          $"ref target '{outName.Name}' is not a local of this program (`ref` takes a local " +
+          "declared with `var`)",
+          call.Position
+        );
+      }
     }
 
     // A static method called through a value still runs, so only the reverse is a miss: an
@@ -845,9 +859,9 @@ public sealed class EvalInterpreter(
     var failures = new List<Rejection>();
     Rejection unfixable = null;
 
-    // A type parameter no plain argument meets as a parameter of exactly its type can never be
-    // inferred, which the call's shape alone tells, so the definition drops out before any
-    // argument runs.
+    // A type parameter no plain or `ref` argument meets as a parameter of exactly its type can
+    // never be inferred, which the call's shape alone tells, so the definition drops out before
+    // any argument runs.
     foreach (var definition in inferable.ToList()) {
       if (EvalInterpreter.UnfixableTypeParameter(definition.Method, call) is {} typeParameter) {
         var rejection = new Rejection(
@@ -876,7 +890,11 @@ public sealed class EvalInterpreter(
       // the arguments meet the parameters.
       foreach (var definition in definitions) {
         try {
-          candidates.Add(definition with { Method = inv.Instantiate(definition.Method, typeArgs) });
+          candidates.Add(
+            definition with {
+              Method = inv.Instantiate(definition.Method, typeArgs)
+            }
+          );
         }
         catch (InvalidOperationException) {
           // The agent refuses type arguments a definition's constraints rule out, and the client
@@ -886,9 +904,7 @@ public sealed class EvalInterpreter(
           // this catch cannot tell a constraint from a momentary fault.
           var written = string.Join(", ", call.TypeArgs);
 
-          refused.Add(
-            new Rejection(definition.Method, $"cannot be instantiated over <{written}>")
-          );
+          refused.Add(new Rejection(definition.Method, $"cannot be instantiated over <{written}>"));
         }
       }
 
@@ -904,9 +920,13 @@ public sealed class EvalInterpreter(
     List<InferenceConflict> conflicts = [];
 
     for (var i = 0; i < argc; i++) {
-      if (call.Args[i].Mode is ArgMode.Plain) {
-        evaluated[i] = this.Evaluate(call.Args[i].Value);
-      }
+      evaluated[i] = call.Args[i].Mode switch {
+        ArgMode.Plain => this.Evaluate(call.Args[i].Value),
+
+        // A ref slot passes the local's current value in, and the call writes it back.
+        ArgMode.Ref => this.locals[((NameExpr) call.Args[i].Value).Name],
+        _ => null
+      };
     }
 
     foreach (var fit in inferable) {
@@ -917,7 +937,11 @@ public sealed class EvalInterpreter(
 
       if (typeArgs is not null) {
         try {
-          candidates.Add(fit with { Method = inv.Instantiate(definition, typeArgs) });
+          candidates.Add(
+            fit with {
+              Method = inv.Instantiate(definition, typeArgs)
+            }
+          );
 
           continue;
         }
@@ -952,7 +976,15 @@ public sealed class EvalInterpreter(
       throw Missed(uninferred);
     }
 
-    var outSet = outIndexes.Count > 0 ? outIndexes.ToHashSet() : null;
+    foreach (var fit in candidates.ToList()) {
+      if (this.ModeMismatch(fit.Method, call) is {} reason) {
+        failures.Add(new Rejection(fit.Method, reason));
+        candidates.Remove(fit);
+      }
+    }
+
+    // The slots taking a placeholder rather than an argument: `out`, not `ref`.
+    var outSet = outIndexes.Where(i => call.Args[i].Mode is not ArgMode.Ref).ToHashSet();
 
     // Within a tier, non-generic candidates still precede inferred ones.
     var (method, values) = this.SelectOverload(
@@ -978,6 +1010,27 @@ public sealed class EvalInterpreter(
 
       if (refusing is not null) {
         throw Missed(new Rejection(refusing.Definition, refusing.Reason));
+      }
+    }
+
+    // A struct local reaching a `ref` slot through a conversion gets the converted copy written
+    // back, not the callee's value, so it binds only at its own type, as C# requires. A reference
+    // local converts nothing, and an eval local has no declared type to match.
+    var parameters = method.GetParameters();
+
+    foreach (var i in outIndexes.Where(i => call.Args[i].Mode is ArgMode.Ref)) {
+      var expected = parameters[i].ParameterType;
+
+      if (Invoker.IsValueType(expected) &&
+        !EvalInterpreter.IsNull(evaluated[i]) &&
+        this.MirrorTypeOf(evaluated[i], call.Position) is var actual &&
+        actual.FullName != expected.FullName) {
+        throw new EvalRuntimeException(
+          $"ref target '{((NameExpr) call.Args[i].Value).Name}' holds a {actual.FullName}, where " +
+          $"'{parameters[i].Name}' takes a {expected.FullName}: `ref` passes a struct local only " +
+          "of the parameter's exact type",
+          call.Position
+        );
       }
     }
 
@@ -1063,7 +1116,7 @@ public sealed class EvalInterpreter(
           continue;
         }
 
-        if (call.Args[i].Mode is not ArgMode.Plain) {
+        if (call.Args[i].Mode is not (ArgMode.Plain or ArgMode.Ref)) {
           continue;
         }
 
@@ -1156,8 +1209,53 @@ public sealed class EvalInterpreter(
   }
 
   /// <summary>
-  /// The first type parameter of a generic definition that no plain argument meets as a parameter
-  /// of exactly its type, or null when the arguments can fix them all.
+  /// Why an argument's keyword does not match how its parameter is passed, or null when every one
+  /// does: as in C#, `ref` and `out` each bind only their own kind and a plain argument neither.
+  /// The agent reports a by-reference parameter's type by value, so only the assembly's metadata
+  /// tells; where it cannot be read, plain and `out` arguments bind as the agent reports them.
+  /// </summary>
+  private string ModeMismatch(MethodMirror method, CallExpr call) {
+    // Reading the modes fetches the assembly's image the first time, which a call with no
+    // argument has nothing to check against.
+    if (call.Args.Count is 0) {
+      return null;
+    }
+
+    var modes = inv.Defaults.Modes(method);
+
+    if (modes is null) {
+      return call.Args.Any(static a => a.Mode is ArgMode.Ref)
+        ? $"the metadata of {Invoker.SimpleAssemblyName(method.DeclaringType.Assembly)} could " +
+        "not be read, so its ref parameters are unknown"
+        : null;
+    }
+
+    var parameters = method.GetParameters();
+
+    for (var i = 0; i < call.Args.Count; i++) {
+      var name = parameters[i].Name;
+
+      var reason = (call.Args[i].Mode, modes[i]) switch {
+        (ArgMode.Plain, ParameterMode.Plain or ParameterMode.In) or
+          (ArgMode.Ref, ParameterMode.Ref) or
+          (ArgMode.Out or ArgMode.OutVar, ParameterMode.Out) => null,
+        (_, ParameterMode.Ref) => $"'{name}' is a ref parameter: write `ref`",
+        (_, ParameterMode.Out) => $"'{name}' is an out parameter: write `out`",
+        (ArgMode.Ref, _) => $"'{name}' is not a ref parameter: drop `ref`",
+        _ => $"'{name}' is not an out parameter: drop `out`"
+      };
+
+      if (reason is not null) {
+        return reason;
+      }
+    }
+
+    return null;
+  }
+
+  /// <summary>
+  /// The first type parameter of a generic definition that no plain or `ref` argument meets as a
+  /// parameter of exactly its type, or null when the arguments can fix them all.
   /// An out argument fixes nothing: it has no value yet, and the agent reports an `out T`
   /// parameter's type as plain `T`, so only the argument's mode tells it apart.
   /// An omitted parameter fixes nothing either, as in C#, even where it declares a default.
@@ -1168,7 +1266,9 @@ public sealed class EvalInterpreter(
     return definition.GetGenericArguments()
       .FirstOrDefault(typeParameter => !parameters
         .Take(call.Args.Count)
-        .Where((p, i) => p.ParameterType == typeParameter && call.Args[i].Mode is ArgMode.Plain)
+        .Where((p, i) =>
+          p.ParameterType == typeParameter && call.Args[i].Mode is ArgMode.Plain or ArgMode.Ref
+        )
         .Any()
       );
   }
@@ -1355,7 +1455,10 @@ public sealed class EvalInterpreter(
   /// Out-argument slots take client-built default placeholders and never coerce.
   /// </summary>
   /// <param name="failures">Receives each candidate tried, with the conversion that failed.</param>
-  /// <returns>The binding, or null when no candidate takes the arguments.</returns>
+  /// <returns>
+  /// The binding, or null when no candidate takes the arguments; a binding that would send a
+  /// generic struct or nullable by reference throws instead.
+  /// </returns>
   private (MethodMirror Method, Value[] Values)? SelectOverload(
     IReadOnlyList<IReadOnlyList<ArityFit>> tiers,
     object[] args,
@@ -1442,11 +1545,50 @@ public sealed class EvalInterpreter(
           continue;
         }
 
-        return (candidate, values);
+        return this.SendableByReference(candidate, values, position);
       }
     }
 
-    return fallback;
+    return fallback is {} chosen
+      ? this.SendableByReference(chosen.Method, chosen.Values, position)
+      : null;
+  }
+
+  /// <summary>
+  /// The binding, refused when it would send a generic struct or nullable by reference,
+  /// through `ref` or into an `in` parameter, which disconnects the debugger agent.
+  /// Refused once bound rather than dropped from the candidates,
+  /// so no sibling C# would not pick binds in its place.
+  /// The agent reports a by-reference parameter's type by value,
+  /// so the slot's type says whether the value is at risk,
+  /// and only then is the assembly's metadata read for how it is passed.
+  /// </summary>
+  private (MethodMirror Method, Value[] Values) SendableByReference(
+    MethodMirror method,
+    Value[] values,
+    int position
+  ) {
+    var parameters = method.GetParameters();
+    ParameterMode[] modes = null;
+
+    for (var i = 0; i < values.Length; i++) {
+      var type = parameters[i].ParameterType;
+
+      if (values[i] is not StructMirror || !Invoker.BreaksByReference(type)) {
+        continue;
+      }
+
+      modes ??= inv.Defaults.Modes(method);
+
+      if (modes?[i] is ParameterMode.Ref or ParameterMode.In) {
+        throw new EvalRuntimeException(
+          $"'{parameters[i].Name}' takes its {type.FullName} by reference, which eval cannot send",
+          position
+        );
+      }
+    }
+
+    return (method, values);
   }
 
   /// <summary>
@@ -1467,11 +1609,14 @@ public sealed class EvalInterpreter(
         (Value) this.ReadStaticMember(inv.ResolveType("System.Type"), "Missing", position),
       DefaultKind.Constant when declared.Constant is not null =>
         this.CoerceToType(declared.Constant, slot, position),
-      DefaultKind.Constant or DefaultKind.Optional =>
-        Invoker.TakesNull(bare) ? inv.NullFor(bare) : inv.DefaultMirrorFor(bare),
+      DefaultKind.Constant or DefaultKind.Optional => this.DefaultOf(bare),
       _ => throw new UnreachableException($"eval cannot supply a {declared.Kind} default")
     };
   }
+
+  /// <summary>C#'s <c>default(T)</c>, built client-side: null where the type takes one.</summary>
+  private Value DefaultOf(TypeMirror type) =>
+    Invoker.TakesNull(type) ? inv.NullFor(type) : inv.DefaultMirrorFor(type);
 
   /// <summary>
   /// Whether a bound candidate takes some argument only through the numeric-to-enum convenience:
@@ -1736,7 +1881,10 @@ public sealed class EvalInterpreter(
     var args = creation.Args.Select(a =>
         a.Mode == ArgMode.Plain
           ? this.Evaluate(a.Value)
-          : throw new EvalRuntimeException("constructors take no out arguments", creation.Position)
+          : throw new EvalRuntimeException(
+            "constructors take no out or ref arguments",
+            creation.Position
+          )
       )
       .ToArray();
 
@@ -2590,17 +2738,71 @@ public sealed class EvalInterpreter(
 
   // ---- Formatting and reporting ----
 
-  private string Stringify(object value) {
+  private string Stringify(object value, string format = null) {
     return EvalInterpreter.UnwrapNullable(value) switch {
       null => "",
       string s => s,
-      IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+      IFormattable f => f.ToString(format, CultureInfo.InvariantCulture),
       StringMirror s => s.Value,
-      PrimitiveValue p => this.Stringify(p.Value),
+      PrimitiveValue p => this.Stringify(p.Value, format),
       EnumMirror e => inv.EnumName(e),
       Value v => inv.Format(v),
       _ => value.ToString()
     };
+  }
+
+  /// <summary>
+  /// Renders an interpolation hole, a format clause reaching the value's
+  /// <c>IFormattable.ToString</c>.
+  /// An object or struct runs it in the debuggee, under the debuggee's culture.
+  /// A client value or an unboxed debuggee primitive runs it client-side, under the invariant one.
+  /// A value that is not formattable ignores the clause, rendering as an unformatted hole does.
+  /// </summary>
+  private string RenderHole(object value, string format) {
+    var unwrapped = EvalInterpreter.UnwrapNullable(value);
+
+    if (format is null || EvalInterpreter.IsNull(unwrapped)) {
+      return this.Stringify(value);
+    }
+
+    if (unwrapped is not (ObjectMirror or StructMirror)) {
+      return this.Stringify(unwrapped, format);
+    }
+
+    var mirror = (Value) unwrapped;
+
+    if (EvalInterpreter.FormattableToString(EvalInterpreter.MirrorTypeOrNull(mirror)) is not {
+      } method) {
+      return this.Stringify(mirror);
+    }
+
+    var rendered = inv.Invoke(mirror, method, inv.Str(format), inv.Prim(null));
+
+    return (rendered as StringMirror)?.Value ?? "";
+  }
+
+  /// <summary>
+  /// The type's <c>IFormattable.ToString(string, IFormatProvider)</c>, public or explicitly
+  /// implemented, along its base chain; null when the type is not formattable.
+  /// </summary>
+  private static MethodMirror FormattableToString(TypeMirror type) {
+    var isFormattable = false;
+
+    for (var t = type; t is not null && !isFormattable; t = t.BaseType) {
+      isFormattable = t.GetInterfaces().Any(static i => i.FullName is "System.IFormattable");
+    }
+
+    if (!isFormattable) {
+      return null;
+    }
+
+    return Invoker.Named(type, "ToString")
+      .Concat(Invoker.Named(type, "System.IFormattable.ToString"))
+      .FirstOrDefault(static m => m.GetParameters() is [
+          { ParameterType.FullName: "System.String" },
+          { ParameterType.FullName: "System.IFormatProvider" }
+        ]
+      );
   }
 
   private string FormatValue(object value, int depth) {
