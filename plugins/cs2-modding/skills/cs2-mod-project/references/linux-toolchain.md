@@ -208,6 +208,22 @@ Replace the two `Import` lines of the `.csproj` with this, which behaves the sam
 <Import Project="$(CSIIToolPath)\Mod.targets" />
 ```
 
+**The game's mscorlib.** With no net48 targeting pack installed, the SDK references `Microsoft.NETFramework.ReferenceAssemblies.net48`, whose targets declare their own `mscorlib`; the reference-conflict step then hands the compiler that copy over the game's, and everything the game's Unity mscorlib adds over .NET Framework 4.8 goes missing: a `ReadOnlySpan` parameter fails with `CS0518`, and `foreach (var (k, v) in dictionary)` with `CS1061` on `KeyValuePair`.
+Swap the reference back after assembly resolution, a no-op on Windows:
+
+```xml
+<Target Name="UseGameMscorlibOnUnix" AfterTargets="ResolveAssemblyReferences" Condition="'$(OS)' != 'Windows_NT' AND '$(MSCORLIBPath)' != ''">
+  <ItemGroup>
+    <ReferencePath Remove="@(ReferencePath)" Condition="'%(Filename)' == 'mscorlib'" />
+    <ReferencePath Include="$(MSCORLIBPath)">
+      <Private>false</Private>
+    </ReferencePath>
+  </ItemGroup>
+</Target>
+```
+
+(UNVERIFIED: that the swap holds on SDK 8, whose conflict step also runs before assembly resolution — a build there would settle it.)
+
 **The mod template.** Install it natively from the game's copy, after which `dotnet new csiimod` works as on Windows:
 
 ```bash
@@ -260,4 +276,5 @@ Pointing `MONO_PATH` at the game's managed folder makes Mono load the game's own
 | A build error reading `wineserver: using server-side synchronization.` | MSBuild reports the post-processor's stderr as errors. | The wrapper, which filters that line. |
 | `Modding toolchain is incomplete, please reinstall it` | The post-processor cannot find the Unity editor, its version, or the Unity mod project's packages. | The Windows editor's registry values, then the Unity mod project. |
 | The UI bundle deploys to a folder named `Cities Skylines II\Mods\…` | The UI scaffold's Windows path separators. | The UI mods change. |
+| `CS0518` on `ReadOnlySpan`, or `CS1061` on `KeyValuePair` missing `Deconstruct` | The reference pack's `mscorlib` won the reference conflict over the game's. | The mscorlib swap target in the project changes. |
 | `net48` tests abort with `Test host process crashed` | Mono lacks the framework facades the test host loads. | Install `mono-devel`. |
