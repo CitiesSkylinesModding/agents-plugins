@@ -87,11 +87,11 @@ floor where only one world is live, which is the norm for DOTS player builds; mu
 characteristic of Unity NetCode. Reinstating a cache for named worlds only, revalidated by
 `IsCreated`, is ~25 lines and deliberately unbuilt — these are the numbers to weigh it against.
 
-The parameter-defaults memo (`ParameterDefaults`) spends no invoke, only wire: the first call into an
-assembly that fits a candidate with more parameters than arguments fetches the whole image, even
-when an exact overload then wins. Against a 12 MB assembly on the reference target, that first call
-froze for 268 ms and a later defaulted call for a median of ~51 ms, so the image is held for the
-attach rather than re-fetched per call.
+The parameter-defaults memo (`ParameterDefaults`) spends no invoke, only wire: the first method
+call into an assembly that passes an argument, any call that fits a candidate with more parameters
+than arguments, or any binding that meets a generic struct or nullable at a parameter typed as one
+fetches the whole image, even when an exact overload then wins. Against a 12 MB assembly on the reference target, that first call froze for 268 ms and a later defaulted
+call for a median of ~51 ms, so the image is held for the attach rather than re-fetched per call.
 
 ## Fix
 

@@ -247,9 +247,6 @@ Drive a running Unity Mono development build from the outside over the Mono Soft
 read-write, breakpoint/pause debugging (`debug_*`, `advance`) and screen capture, through one
 persistent lazy-attach session.
 
-An entry growing the `eval` grammar amends the contract the plugin's `AGENTS.md` declares FROZEN,
-so it lands only once that decision is lifted.
-
 ### Cross-platform support
 
 **Priority:** low · **Cost:** unsure
@@ -438,6 +435,17 @@ all length 0 — before `Game.Net.LabelPosition` came back with 51. Either repor
 each listed entity when a queried type is a buffer, or take a minimum-length filter; the first is
 cheaper and answers the same question.
 
+### A by-reference generic struct into an assembly whose metadata cannot be read
+
+**Priority:** low · **Cost:** trivial
+
+`eval` refuses a generic struct or nullable bound by reference, since the debugger agent disconnects
+the VM on one, but it learns how a parameter is passed from the assembly's metadata. Where that
+cannot be read, a dynamic or unfetchable assembly, a plain argument into an `in` parameter is sent
+anyway: `SendableByReference` passes on null modes (`modes?[i] is ParameterMode.Ref or
+ParameterMode.In`). No hit records it. The fix refuses an at-risk value there whatever the slot,
+trading a rare by-value call into such an assembly for the game staying up.
+
 ### Reading a log file off the game machine
 
 **Priority:** medium · **Cost:** cheap
@@ -504,16 +512,6 @@ The tool matches entities carrying ALL the listed types, so the two other shapes
 the post-facility census (`PostFacilityData` or `MailBoxData`) took two queries and a hand-reconciled
 overlap, and counting owned map tiles (`MapTile` without `Native`) took two queries and a
 subtraction. An `any` and a `none` list beside `components` makes both one call.
-
-### Predefined type aliases in `eval`
-
-**Priority:** medium · **Cost:** trivial · **Hits:** 5 as of 2026-09-29
-
-The grammar maps the C# aliases in type positions but not as an expression, so `string.Join(...)` fails with
-`parse error: unsupported: predefined type` and wants `System.String.Join(...)`. Agents type the
-alias by reflex, and every occurrence costs a round trip: two separate live-read agents hit it in
-the 1.6.2f1 sweep. A `TranslateExpr` case reusing `TranslateTypeName`'s alias mapping is the
-whole fix.
 
 ### What a failed `eval` reports
 
@@ -679,23 +677,6 @@ Reading a member off a local that holds null fails with `no type for PrimitiveVa
 null arrives as a `PrimitiveValue` with a null payload, which `MirrorTypeOf` does not treat as null.
 Each recovery costs 2–3 calls of bisecting the statement list. Report `cannot read 'isBuiltIn' on null` and name the local.
 
-### `ref` arguments in `eval`
-
-**Priority:** medium · **Cost:** cheap · **Hits:** 8 as of 2026-09-29
-
-`TerrainUtils.SampleHeight(ref hd, pos)` failed with `unsupported: argument`, which now names the
-keyword, and there is no workaround: every recorded hit ended with the agent giving up on the
-call. A `ref` to a local fits the write-back path `out` arguments already take through
-`Invoker.InvokeWithOutArgs`.
-
-### Format clauses in `eval` interpolation
-
-**Priority:** medium · **Cost:** cheap · **Hits:** 8 as of 2026-09-29
-
-`$"{x:F1}"` fails with `unsupported: interpolation alignment/format clause`, deliberately. Agents
-write it by reflex when rendering a result, then drop the clause on retry and read unrounded floats. Invoking `ToString(format)` on the value in the debuggee keeps
-C# semantics.
-
 ### `params` expansion in `eval`
 
 **Priority:** medium · **Cost:** moderate · **Hits:** 7 as of 2026-09-29
@@ -782,16 +763,6 @@ close it.
 
 `DebugController` labels any thread without a name `(main)`, so a pause on an unnamed worker
 reports `thread=(main)`. Comparing the thread with `Invoker.MainThread` would name it right.
-
-### Smaller `eval` grammar misses
-
-**Priority:** low · **Cost:** cheap · **Hits:** 5 as of 2026-09-29
-
-Three rejections that each cost a retry. `default(T)` has no parse case,
-though the interpreter can already build a default value for any type. A `return` statement is
-rejected without saying the final expression is the result. And an escaped `\"` inside an
-interpolation hole surfaces Roslyn's `Missing close delimiter '}'`, where a hint that the hole takes
-plain quotes would do.
 
 ### Extension methods through instance syntax
 
