@@ -667,7 +667,9 @@ grammar handles qualified names and generic arguments but not their combination.
 is unreachable through C# `.` syntax, which made every job-attribute check in the sweep go through
 `System.Type.GetType("Outer+Nested, Game")`. The same `System.Type.GetType("Ns.Type, Asm")` string
 is the workaround for both, which is the tell that one resolver handles the string form and the
-grammar does not reach it.
+grammar does not reach it. `new` with a generic qualified type fails the same way; with an instance
+of the type at hand, `System.Activator.CreateInstance(x.GetType())` builds another, which a typed
+parameter and an indexer accept as `object`.
 
 ### A null receiver reports "no type for PrimitiveValue"
 
