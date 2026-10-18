@@ -1125,3 +1125,12 @@ The rule to add: call `Matches` only on a bounded set of queries with fixed desc
 `loader-states.md` says `GeneralError` "in practice means `OnLoad` threw", but `ModInfo.Load` runs `GetTypesDerivedFrom<IMod>()` inside the same `try` (`src/Game/Game.Modding/ModManager.cs:120`, its catch-all at `:141`), so a mod whose assembly loads and whose types do not, such as one a game update left outdated, lands there too.
 Like the other rethrowing states it ends at `Disposed`, and the entry stays in `modManager` with `asset.assembly` set, so reflecting over it throws `ReflectionTypeLoadException` again.
 The rule to add: code that enumerates `modManager` and reflects over each assembly skips a mod whose `state` is not `Loaded`. Found while reviewing Asset Icon Library, whose API calls now do; Find It's API registration does not, and throws in a dispatcher updater on every frame.
+
+### The game's culture is not invariant after boot
+
+**Priority:** medium · **Cost:** trivial
+
+`localization.md` closes the `ToUpper()`/`ToUpperInvariant()` enum-key mismatch as inert (`:161`, `:675`), because `GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`src/Game/Game.SceneFlow/GameManager.cs:542`).
+But `Awake` is `async void` (`:518`) and sets it before its first `await` (`:557`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
+So culture-sensitive calls (`ToLower()`, `ToUpper()`, `StartsWith(string)`, a culture `IndexOf`) follow the player's locale, and the enum-key mismatch is live under a Turkish or Azeri one.
+Correct both passages, and add the rule: use the invariant or ordinal forms wherever a string must compare the same for every player. Found while reviewing a Find It search change.
