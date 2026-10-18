@@ -240,6 +240,18 @@ is the replacement: every page of `/cpp-gameface/` front-loads the full menu, ab
 `href="/cpp-gameface/…"` links, so the sitemap mode can take its URL list from the index page's
 anchors, dropping the `_astro/` assets, and keep its output format.
 
+### A UI trigger from a shell loop
+
+**Priority:** medium · **Cost:** cheap
+
+A before-and-after measurement in Cities: Skylines II repeats one UI action dozens of times across
+builds, waiting on the mod's log between steps, and `game_eval` gives each step a tool call and a
+15 s cap. A Node script of about fifteen lines (the global `WebSocket`, one `Runtime.evaluate` to
+`ws://localhost:9444/json/devtools/page/0`) let a bash loop drive it unattended, beside the server's
+own connection (prototype: `.scratch/tools/ui-eval.mjs` in Morgan's Find It checkout, local, not in
+the repo). A one-shot CLI in the package, or the pattern in `gameface-driving`, would make this a
+documented route.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
