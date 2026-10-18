@@ -496,12 +496,12 @@ tools already classify, would answer it in one call.
 `ecs_query`'s `label` annotates each listed entity through a managed system's method, but nothing
 filters on what it produces, and no tool takes a prefab name. Reading eight named
 `NotificationIconData` prefabs out of 160 during the 1.6.2f1 live-read sweep therefore meant listing
-all 160 with labels and reading the indices back off the dump. The C# route is closed too, though
-not for the reason it first appears: `Game.Prefabs.PrefabID` declares
-`PrefabID(string type, string name, Hash128 hash = default(Hash128))`
-(`src/Game/Game.Prefabs/PrefabID.cs:38`), so `new PrefabID(type, name)` is legal C# and it is `eval`
-that rejects it, per the default-argument entry below. Either let `label` double as a filter, or
-take a name pattern beside the component list.
+all 160 with labels and reading the indices back off the dump. `eval` reaches one prefab whose type
+and name are known: `PrefabSystem.TryGetPrefab(new Game.Prefabs.PrefabID(type, name), out var p)`,
+then `PrefabSystem.GetEntity(p)` for its entity. Releases up to 1.3.0 bind no trailing default, so
+there the hash is written out, `new Colossal.Hash128()`. A name pattern, or a name of unknown type,
+stays out of reach. Either let `label` double as a filter, or take a name pattern beside the
+component list.
 
 ### `ecs_query` ANDs its components, with no any and no none
 
