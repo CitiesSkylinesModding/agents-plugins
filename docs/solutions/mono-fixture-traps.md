@@ -1,6 +1,6 @@
 ---
 date: 2026-07-29
-updated: 2026-10-10
+updated: 2026-10-20
 area: plugins/unity-devtools/tests-integration
 symptoms:
   - 'static fixture roots read as null, or refused because a static constructor has not run'
@@ -8,6 +8,7 @@ symptoms:
   - 'every debug test reports AbsentInformation'
   - 'the whole suite hangs after one debug test'
   - 'the attach dies with "sent no Mono debugger greeting"'
+  - 'an object built for a collected-mirror test survives GC.Collect'
 tags: [integration-tests, mono, sdb, xunit]
 ---
 
@@ -40,6 +41,9 @@ Distinct ways the debuggee looks broken when the fixture is at fault.
   run time with `had one or more unresolved constructor arguments`. Sharing a type whose constructor
   carries a test-only default therefore costs a wrapper, which is usually dearer than constructing it
   per test.
+- **An object the debugger touched in the current suspend window survives `GC.Collect`.** A test
+  needing a collected mirror builds the object in one eval and collects it in the next, binding it
+  from `_`: any other bind is a round trip that touches it again.
 
 The debug-toolset tests ride the same loop: `Main` calls `Ticker.Tick(n)` each iteration (armed
 breakpoints hit within milliseconds) and periodically throws-and-catches a `FormatException` for
