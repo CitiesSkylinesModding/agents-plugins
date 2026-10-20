@@ -598,17 +598,18 @@ interpreter reassembles into one link; one slot query feeding `SlotLink` would m
 
 ### `eval` cannot build an `EntityQuery`
 
-**Priority:** medium · **Cost:** large · **Hits:** 16 as of 2026-09-29
+**Priority:** medium · **Cost:** large · **Hits:** 17 as of 2026-10-20
 
 Two independent walls, both hit reaching for `ToComponentDataArray`. User-defined implicit
 conversions are not applied, so `new Unity.Entities.EntityQueryBuilder(Unity.Collections.Allocator.Temp)`
 fails and the explicit cast is rejected as well (`cannot cast Allocator to AllocatorHandle`); the
-workaround is to construct the target type by hand,
+workaround is the ready-made handle `Unity.Collections.AllocatorManager.Temp`, or one built by hand,
 `new AllocatorManager.AllocatorHandle { Index = 2, Version = 0 }`. Past that, chaining
 `WithAll<T>()` throws `BadImageFormatException: Cannot box IsByRefLike type
-'Unity.Entities.EntityQueryBuilder'`, which no workaround reaches. The whole-set field census that
-drove both attempts is served by `ecs_query`'s `select`; what stays open is a query `eval` builds for
-itself, through honouring `ref struct` receivers. The cost line prices that route; the
+'Unity.Entities.EntityQueryBuilder'`. The builder can be skipped: `em.CreateEntityQuery(all)` takes a
+`ComponentType[]` built as the `params` entry below says. The whole-set field census that
+drove both attempts is served by `ecs_query`'s `select`; what stays open is the builder itself,
+through honouring `ref struct` receivers. The cost line prices that route; the
 implicit-conversion half alone reads cheaper.
 
 ### `ecs_query`'s `label` is empty for prefab entities
@@ -652,12 +653,15 @@ parameter and an indexer accept as `object`.
 
 ### `params` expansion in `eval`
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 7 as of 2026-09-29
+**Priority:** medium · **Cost:** moderate · **Hits:** 8 as of 2026-10-20
 
 Overload matching takes a variadic method's array as one argument and array creation is outside the
 grammar, so `CreateEntityQuery(typeof(A), typeof(B))`, `String.Join(",", a, b)` and `Split('\n')`
-are all unreachable, recovered through `ecs_query` or not at all. Packing
-the trailing arguments into the parameter's array type when no overload binds them as written is the fix.
+need the array built first: `System.Array.CreateInstance(typeof(T), n)` plus `SetValue(x, i)` builds
+one, and a local holding it binds a `T[]` parameter (`em.CreateEntityQuery(all)` worked). Documenting
+that route at `unity-driving/SKILL.md:74`, which calls such a method out of reach, is the cheap fix;
+packing the trailing arguments into the parameter's array type when no overload binds them as
+written is the full one.
 
 ### A beacon attach that fails reports a bare socket error
 
