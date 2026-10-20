@@ -1085,3 +1085,12 @@ The fact to add, beside the SDK's entry in `navigating-the-decompile`: code afte
 
 `prefabs-and-assets.md` covers `ScriptableObject.CreateInstance` (`:337`) but not whether such an object outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`src/Game/Game.SceneFlow/GameManager.cs:927`).
 Unity keeps what script fields and statics reach, and a managed system is reachable from the static `World.s_AllWorlds` (`src/Unity.Entities/Unity.Entities/World.cs:57`), so an instance a system's field (or an object it holds) references survives without `HideFlags`. Read from the decompile and Unity's documented rule, not tested in game. The fact to add there; found while reviewing a Find It change, where three reviewers raised the opposite as a bug.
+
+### An updated prefab's old entity can come first, and still resolves
+
+**Priority:** medium · **Cost:** trivial
+
+`regenerating-a-prefab.md`'s "What the call does" lists the drain's steps but not two consequences for code that reads both entities in the `Deleted` frame.
+The drain tags the old entity `Deleted` before it creates the new one (`src/Game/Game.Prefabs/PrefabSystem.cs:782`, `:798`), so when the rebuilt component set is new, the old entity's `Deleted` archetype is created first and a query over both lists the old entity before its replacement; with an unchanged set the replacement reuses the boot archetype and comes first. Shown in game: an `EditorAssetCategoryOverride` added before the call flipped the order.
+And the old entity keeps its `PrefabData` (`:799` copies it to the new one), so `TryGetPrefab(Entity)` (`:669`) still resolves it to the live prefab during that frame.
+The facts to add there, with the rule: code that pairs an updated prefab's old and new entities matches them by prefab, never by query order, and checks `Deleted` before `TryGetPrefab`. Found while fixing Find It's partial index, which lost an updated prefab's fields to both.
