@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,8 +12,9 @@ using Xunit;
 namespace UnityDevtools.Sdb.IntegrationTests;
 
 /// <summary>
-/// Attaching to a port the caller names rather than one the beacon advertises: the recovery path
-/// for a game the beacon does not describe.
+/// Attaching to a port the caller names rather than one the beacon advertises, which is the
+/// recovery path for a game the beacon does not describe; an advertised endpoint that refuses; and
+/// a held slot read without attaching.
 /// A debuggee of its own, because the debugger slot is exclusive and the suite's shared debuggee
 /// already has a client.
 /// </summary>
@@ -244,6 +247,98 @@ public sealed class UnitySessionAttachTests : IDisposable {
 
     Assert.Contains($"port {port}", failure.Message, StringComparison.Ordinal);
     Assert.Contains("attach tool", failure.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AFailedAttachToTheAdvertisedEndpointSaysTheBeaconAdvertisedIt() {
+    // Listening on a port of the group no player broadcasts on: the session attaches to whatever
+    // the listener holds, so on a shared port a game running here would replace the synthetic
+    // beacon and be attached to in its place.
+    var beaconPort = MonoDebuggee.PickFreePort();
+
+    using var listener = new BeaconListener(ports: [beaconPort]);
+
+    // Nothing listens on this port, which is what a beacon a crashed game left fresh names.
+    var port = MonoDebuggee.PickFreePort();
+    var (guid, payload) = BeaconListenerTests.SyntheticBeacon(port);
+
+    var sent = BeaconListenerTests.BroadcastUntil(
+      payload,
+      beaconPort,
+      // ReSharper disable once AccessToDisposedClosure
+      () => listener.Latest?.ConnectionGuid == guid
+    );
+
+    Assert.True(
+      sent,
+      "no beacon reached the listener; see " +
+      nameof(BeaconListenerTests.ReceivesABeaconSentToAnyPortOfTheGroupAndDerivesItsEndpoint)
+    );
+
+    using var session = new UnitySession(listener);
+
+    var failure = Assert.ThrowsAny<Exception>(() => session.Run(ctx => ctx.Vm.Version.VMVersion));
+
+    Assert.Contains($"127.0.0.1:{port}", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("advertised", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("status", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("stale", failure.Message, StringComparison.Ordinal);
+
+    // Kept underneath, so whatever classifies the failure as a lost connection still does.
+    _ = Assert.IsType<SocketException>(failure.InnerException);
+  }
+
+  [SkippableFact]
+  public void AConnectionHeldToTheDebuggerPortReadsAsAHeldSlotUntilItCloses() {
+    Skip.If(MonoDebuggee.SkipReason is not null, MonoDebuggee.SkipReason);
+
+    var (_, port) = this.StartDebuggee();
+
+    Assert.False(SdbSession.IsSlotHeld("127.0.0.1", port));
+
+    // A bare connection rather than an attach: the detection reads the connection table, so any
+    // client established on the port is a holder, and nothing here speaks to the agent.
+    using (var holder = new TcpClient()) {
+      holder.Connect(IPAddress.Loopback, port);
+
+      Assert.True(SdbSession.IsSlotHeld("127.0.0.1", port));
+    }
+
+    Assert.False(SdbSession.IsSlotHeld("127.0.0.1", port));
+  }
+
+  [SkippableFact]
+  public void AHolderOnLoopbackHoldsTheSlotAtEveryAddressOfThisMachineOnly() {
+    // A beacon advertises the interface address the player picked, while a client on the same
+    // machine usually dials loopback: both name one slot.
+    var lan = NetworkInterface.GetAllNetworkInterfaces()
+      .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
+      .Select(unicast => unicast.Address)
+      .FirstOrDefault(address =>
+        address.AddressFamily is AddressFamily.InterNetwork && !IPAddress.IsLoopback(address)
+      );
+
+    Skip.If(lan is null, "this machine has no address other than loopback");
+
+    // A plain listener rather than a debuggee: the detection reads the connection table alone.
+    var port = MonoDebuggee.PickFreePort();
+    var listener = new TcpListener(IPAddress.Loopback, port);
+
+    listener.Start();
+
+    try {
+      using var holder = new TcpClient();
+
+      holder.Connect(IPAddress.Loopback, port);
+
+      Assert.True(SdbSession.IsSlotHeld(lan.ToString(), port));
+
+      // An address of another machine (TEST-NET-1) is not held by a connection to this one.
+      Assert.False(SdbSession.IsSlotHeld("192.0.2.1", port));
+    }
+    finally {
+      listener.Stop();
+    }
   }
 
   [Fact]

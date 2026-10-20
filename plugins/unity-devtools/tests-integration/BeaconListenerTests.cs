@@ -11,9 +11,8 @@ namespace UnityDevtools.Sdb.IntegrationTests;
 /// <summary>
 /// Serializes the classes that care what is on the beacon group, which is a real shared resource:
 /// this machine's multicast traffic.
-/// One of them broadcasts synthetic beacons to the real group, and another skips itself whenever a
-/// game appears to be advertising. Run in parallel, the first makes the second skip on its own
-/// traffic -- silently, and in CI as readily as locally, so the test simply stops running.
+/// A synthetic beacon sent to one of the group's shared ports reaches every listener on it, so a
+/// test listening there in parallel would take another test's beacon for a game's.
 /// </summary>
 [CollectionDefinition(BeaconGroupCollection.Name)]
 public sealed class BeaconGroupCollection {
@@ -96,26 +95,21 @@ public sealed class BeaconListenerTests {
     Assert.True(ours.Attachable);
   }
 
-  [SkippableFact]
+  [Fact]
   public void ASightingStopsBeingReportedOnceItsGameGoesQuiet() {
     var (guid, payload) = BeaconListenerTests.SyntheticBeacon();
     var freshness = TimeSpan.FromMilliseconds(400);
 
-    using var listener = new BeaconListener(freshness);
-
     // The assertion is that NOTHING is reported once the synthetic sender stops, so a real game
     // advertising itself would keep the listener supplied and the test would pass with the expiry
-    // ripped out. Skipping is the only honest answer: there is no way to unsee another
-    // broadcaster on a shared multicast group.
-    Skip.If(
-      listener.Wait(BeaconListener.DiscoveryWait) is not null,
-      "a Unity game is advertising itself on this machine"
-    );
+    // ripped out. A port of the group no player broadcasts on keeps every other broadcaster out.
+    var port = MonoDebuggee.PickFreePort();
+
+    using var listener = new BeaconListener(freshness, [port]);
 
     var sent = BeaconListenerTests.BroadcastUntil(
       payload,
-      // This test is about expiry, not about coverage, so one port carries it.
-      BeaconListenerTests.AttestedPort,
+      port,
       // ReSharper disable once AccessToDisposedClosure
       () => listener.Latest?.ConnectionGuid == guid
     );
@@ -141,14 +135,17 @@ public sealed class BeaconListenerTests {
   /// <summary>
   /// A beacon payload with a GUID unique to this run: a real game advertising itself on this
   /// machine puts its own beacons on the same group, and an assertion has to be about ours.
+  /// <paramref name="sdbPort"/> is advertised as the debugger port when given, in place of the one
+  /// the GUID derives.
   /// </summary>
-  private static (uint Guid, string Payload) SyntheticBeacon() {
+  internal static (uint Guid, string Payload) SyntheticBeacon(int? sdbPort = null) {
     var guid = (uint) Random.Shared.Next(1, 1000000);
+    var suffix = sdbPort is {} port ? $":{port}" : "";
 
     return (
       guid,
       $"[IP] 127.0.0.1 [Port] 55000 [Flags] 2 [Guid] {guid} [EditorId] 0 [Version] 1048832 " +
-      "[Id] SyntheticPlayer(1,TEST) [Debug] 1 [PackageName] SyntheticPlayer " +
+      $"[Id] SyntheticPlayer(1,TEST){suffix} [Debug] 1 [PackageName] SyntheticPlayer " +
       "[ProjectName] beacon listener test"
     );
   }
@@ -175,7 +172,7 @@ public sealed class BeaconListenerTests {
   /// Sends the payload to one of the beacon group's ports until <paramref name="received"/> holds,
   /// and reports whether it ever did.
   /// </summary>
-  private static bool BroadcastUntil(string payload, int port, Func<bool> received) {
+  internal static bool BroadcastUntil(string payload, int port, Func<bool> received) {
     var group = new IPEndPoint(IPAddress.Parse(BeaconListener.MulticastGroup), port);
 
     using var sender = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);

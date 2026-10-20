@@ -84,12 +84,20 @@ public sealed class BeaconListener : IDisposable {
 
   private readonly TimeSpan freshness;
 
+  private readonly IReadOnlyList<int> ports;
+
   /// <param name="freshness">
   /// How long a sighting keeps describing the present, <see cref="Freshness"/> by default.
   /// A test shortens it to watch a sighting expire without waiting out the shipped window.
   /// </param>
-  public BeaconListener(TimeSpan? freshness = null) {
+  /// <param name="ports">
+  /// The group's ports to listen on, <see cref="MulticastPorts"/> by default.
+  /// A test names one no player broadcasts on, so a game running on the same machine cannot
+  /// replace the synthetic beacon it sends there.
+  /// </param>
+  public BeaconListener(TimeSpan? freshness = null, IReadOnlyList<int> ports = null) {
     this.freshness = freshness ?? BeaconListener.Freshness;
+    this.ports = ports ?? BeaconListener.MulticastPorts;
 
     // Enumerated once and shared, so every socket joins the same set: an interface flapping
     // mid-loop would otherwise leave the sockets with memberships that disagree.
@@ -104,7 +112,7 @@ public sealed class BeaconListener : IDisposable {
 
     var listening = new List<(Socket Socket, int Port)>();
 
-    foreach (var port in BeaconListener.MulticastPorts) {
+    foreach (var port in this.ports) {
       var socket = BeaconListener.TryListen(port, indexes, noRoute, out var reason);
 
       if (socket is null) {
@@ -154,11 +162,11 @@ public sealed class BeaconListener : IDisposable {
       // Walked in the group's own order, which the dictionary does not keep, and ports sharing a
       // reason are named together: the common failure is one the whole machine has, so listing it
       // per port would say the same thing as many times as there are ports.
-      var lost = BeaconListener.MulticastPorts
+      var lost = this.ports
         .Where(this.faults.ContainsKey)
         .GroupBy(port => this.faults[port])
-        .Select(ports =>
-          $"port{(ports.Count() > 1 ? "s" : "")} {string.Join(", ", ports)} {ports.Key}"
+        .Select(group =>
+          $"port{(group.Count() > 1 ? "s" : "")} {string.Join(", ", group)} {group.Key}"
         );
 
       return string.Join("; ", lost);
@@ -173,7 +181,7 @@ public sealed class BeaconListener : IDisposable {
   /// no caller has to read them in a particular order: every port that loses its listen records
   /// why before this turns false. A disposal is the exception, ending the listen without a fault.
   /// </summary>
-  public bool Listening => !this.closed && this.faults.Count < BeaconListener.MulticastPorts.Count;
+  public bool Listening => !this.closed && this.faults.Count < this.ports.Count;
 
   /// <summary>
   /// The most recent beacon received, attachable or not, or null when none has arrived within

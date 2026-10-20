@@ -668,7 +668,26 @@ public sealed class UnitySession(BeaconListener beacons, TimeSpan? gateWait = nu
 
     var (host, port) = endpoint ?? this.ResolveEndpoint();
 
-    var connected = SdbSession.Connect(host, port);
+    SdbSession connected;
+
+    try {
+      connected = SdbSession.Connect(host, port);
+    }
+    catch (Exception ex) when (endpoint is null &&
+      UnitySession.CauseOf<SocketException>(ex)
+        is not null) {
+      // A bare socket error names neither the endpoint nor where it came from, and the caller
+      // never typed it.
+      // A reset after the accept is restated too: the vendored handshake read surfaces it as a
+      // raw SocketException, established by tracing TcpConnection.TransportReceive.
+      throw new InvalidOperationException(
+        $"could not attach to {host}:{port}, the endpoint the PlayerConnection beacon " +
+        $"advertised rather than a port given to the attach tool: {ex.Message}. status shows " +
+        "what the beacon advertises now; a game that crashed leaves a stale beacon naming its " +
+        $"dead port for up to {BeaconListener.Freshness.TotalSeconds:0}s",
+        ex
+      );
+    }
 
     // The version info is cached from the attach handshake (no extra round-trip); it lets status
     // report the negotiated SDB protocol (generic invokes need 2.24+).

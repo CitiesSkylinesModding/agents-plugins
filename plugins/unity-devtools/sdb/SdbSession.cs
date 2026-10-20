@@ -1,4 +1,7 @@
 using System;
+using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using Mono.Debugger.Soft;
@@ -130,6 +133,62 @@ public sealed class SdbSession : IDisposable {
       throw;
     }
   }
+
+  /// <summary>
+  /// Whether a client on this machine holds the debugger slot at <paramref name="host"/>, read off
+  /// the OS connection table rather than found out by connecting: a probe connect to a held slot
+  /// is answered with silence, and under Wine costs the debuggee a socket it never reclaims.
+  /// Only this machine's connections are in that table, so false means "not held here", never
+  /// "free". Null when the table or this machine's addresses cannot be read, or the host is not
+  /// an address.
+  /// A host that is this machine is reachable through any of its addresses, loopback included, so
+  /// a connection to the port through any one of them counts.
+  /// </summary>
+  public static bool? IsSlotHeld(string host, int port) {
+    if (!IPAddress.TryParse(host, out var target)) {
+      return null;
+    }
+
+    try {
+      // The port and state filter first: most of a busy machine's connections fall to it, and with
+      // none left this machine's addresses need not be read at all.
+      var candidates = IPGlobalProperties.GetIPGlobalProperties()
+        .GetActiveTcpConnections()
+        .Where(connection =>
+          connection.State is TcpState.Established && connection.RemoteEndPoint.Port == port
+        )
+        .Select(connection => SdbSession.Plain(connection.RemoteEndPoint.Address))
+        .ToList();
+
+      if (candidates.Count is 0) {
+        return false;
+      }
+
+      var own = NetworkInterface.GetAllNetworkInterfaces()
+        .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
+        .Select(unicast => SdbSession.Plain(unicast.Address))
+        .ToHashSet();
+
+      target = SdbSession.Plain(target);
+
+      var isOwn = IsOwn(target);
+
+      return candidates.Any(remote => isOwn ? IsOwn(remote) : remote.Equals(target));
+
+      bool IsOwn(IPAddress address) => IPAddress.IsLoopback(address) || own.Contains(address);
+    }
+    // The Linux table read wraps every file and parse failure as NetworkInformationException, as
+    // a decompile of System.Net.NetworkInformation showed.
+    catch (Exception ex) when (ex is NetworkInformationException or PlatformNotSupportedException) {
+      return null;
+    }
+  }
+
+  /// <summary>
+  /// An IPv4 address the connection table reports through an IPv6 socket, as IPv4 again.
+  /// </summary>
+  private static IPAddress Plain(IPAddress address) =>
+    address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
 
   /// <summary>
   /// Runs the vendored handshake under a deadline. That read is fixed-length and untimed, so a peer

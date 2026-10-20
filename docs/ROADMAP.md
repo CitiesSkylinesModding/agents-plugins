@@ -300,24 +300,6 @@ apart from a lone hiccup, and the ports carrying no traffic never complete a rec
 counter on, so the bound has to be the elapsed time a socket has spent failing without a gap. The
 timed receive above supplies exactly that clock, which is why the two belong in one change.
 
-### `status` cannot see another client holding the slot
-
-**Priority:** medium · **Cost:** cheap
-
-`status` reports the beacon and this server's own session, so a slot held by another client reads
-as a healthy game nobody is attached to. In one session it reported `debuggerEnabled: true` and
-`attached: false` while a second Claude session's installed server held the only connection to the
-advertised port. The first sign was an attach answered with no greeting, which under Proton costs
-the game a socket it never reclaims. `ss -tnp` on the port named the holder and its pid.
-
-Without a connect, the OS connection table can answer this.
-`IPGlobalProperties.GetActiveTcpConnections` lists an established connection to the advertised
-endpoint on every platform, so `status` can report `slotHeld` and stay attach-free. The holder's pid
-is platform-specific: `/proc/net/tcp` inode to `/proc/*/fd` on Linux, `GetExtendedTcpTable` on
-Windows. It is worth having, since it is what tells an IDE from a stranded server of one's own. Only
-a holder on the server's own machine shows up, which is the usual case. One held from elsewhere
-still looks free, so the field means "held here" and not "free".
-
 ### Wedge detection on wire progress rather than on age
 
 **Priority:** medium · **Cost:** moderate
@@ -662,14 +644,6 @@ one, and a local holding it binds a `T[]` parameter (`em.CreateEntityQuery(all)`
 that route at `unity-driving/SKILL.md:74`, which calls such a method out of reach, is the cheap fix;
 packing the trailing arguments into the parameter's array type when no overload binds them as
 written is the full one.
-
-### A beacon attach that fails reports a bare socket error
-
-**Priority:** medium · **Cost:** trivial · **Hits:** 9 as of 2026-09-29
-
-An attach through an explicit port wraps its failure with the port and what to do instead; one
-resolved from the beacon surfaces `Connection refused` raw. Wrap it the same way: name the endpoint the beacon advertised, and point at `status`
-and at a stale beacon after a crash.
 
 ### Breakpoints in async methods
 

@@ -26,6 +26,10 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
     beaconFault or beaconListening says the listen itself is impaired.
     No beacon while session.heldSuspends is above zero means neither: a suspended game stops
     broadcasting, so this session froze the very thing it is reporting on. Resume and ask again.
+    slotHeld true means another client on this machine holds the debugger slot at the endpoint, so
+    an attach would get no answer: free that client first. It sees holders on this machine only,
+    so false means "not held here" rather than "free". Null means it cannot tell: no endpoint, an
+    unreadable connection table, or this server's own attach still in flight.
     Other tools attach lazily on first use, so a session needs no explicit attach step.
     """
   )]
@@ -35,6 +39,7 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
 
     StatusResult Operation() {
       var beacon = beacons.Wait();
+      var snapshot = session.Snapshot();
 
       return new StatusResult {
         Beacon = beacon is null
@@ -50,10 +55,30 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
             ProjectName = beacon.ProjectName
           },
         Endpoint = beacon?.Endpoint is {} endpoint ? $"{endpoint.Host}:{endpoint.Port}" : null,
+        SlotHeld = SlotHeld(),
         BeaconListening = beacons.Listening,
         BeaconFault = beacons.Fault,
-        Session = SessionTools.Describe(session.Snapshot())
+        Session = SessionTools.Describe(snapshot)
       };
+
+      bool? SlotHeld() {
+        if (beacon?.Endpoint is not {} advertised) {
+          return null;
+        }
+
+        // Attached there, the connection in the table is this session's own.
+        if (snapshot.Attached && snapshot.Port == advertised.Port) {
+          return false;
+        }
+
+        // Unattached with the gate held is an attach in flight, whose own connection the table
+        // cannot tell from a stranger's until it settles.
+        if (!snapshot.Attached && snapshot.BusyFor is not null) {
+          return null;
+        }
+
+        return SdbSession.IsSlotHeld(advertised.Host, advertised.Port);
+      }
     }
   }
 
@@ -155,6 +180,13 @@ public sealed record StatusResult {
   /// itself.
   /// </summary>
   public required string? Endpoint { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// Whether another client on this machine holds the debugger slot at <see cref="Endpoint"/>,
+  /// read from the OS connection table without connecting. Null when there is no endpoint, the
+  /// table cannot be read here, or this server's own attach is still in flight.
+  /// </summary>
+  public required bool? SlotHeld { [UsedImplicitly] get; init; }
 
   /// <summary>
   /// Which part of the beacon listen was lost and why, or null while all of it is up. Set, a
