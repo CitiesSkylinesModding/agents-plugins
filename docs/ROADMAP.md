@@ -1134,3 +1134,17 @@ The rule to add: code that enumerates `modManager` and reflects over each assemb
 But `Awake` is `async void` (`:518`) and sets it before its first `await` (`:557`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
 So culture-sensitive calls (`ToLower()`, `ToUpper()`, `StartsWith(string)`, a culture `IndexOf`) follow the player's locale, and the enum-key mismatch is live under a Turkish or Azeri one.
 Correct both passages, and add the rule: use the invariant or ordinal forms wherever a string must compare the same for every player. Found while reviewing a Find It search change.
+
+### The local mod details call never suspends
+
+**Priority:** low · **Cost:** trivial
+
+No reference says the PDX SDK's local mod lookup completes synchronously: `ModsInformationService.GetLocalModDetails` reads only the local cache and returns `Task.FromResult` on both paths (`src/PDX.SDK/PDX.SDK.Internal.Service.Mods.Services/ModsInformationService.cs:92-130`), so a mod's `async` method awaiting it never yields and runs to its end inside the call.
+The fact to add, beside the SDK's entry in `navigating-the-decompile`: code after that await runs before the caller's next line, so no frame or other thread sees the method half done. Found while reviewing a Find It change, whose reviewers raised a race on the mod dates it fills that cannot happen.
+
+### A mod-held runtime prefab survives the load's asset unload
+
+**Priority:** low · **Cost:** trivial
+
+`prefabs-and-assets.md` covers `ScriptableObject.CreateInstance` (`:337`) but not whether such an object outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`src/Game/Game.SceneFlow/GameManager.cs:927`).
+Unity keeps what script fields and statics reach, and a managed system is reachable from the static `World.s_AllWorlds` (`src/Unity.Entities/Unity.Entities/World.cs:57`), so an instance a system's field (or an object it holds) references survives without `HideFlags`. Read from the decompile and Unity's documented rule, not tested in game. The fact to add there; found while reviewing a Find It change, where three reviewers raised the opposite as a bug.
