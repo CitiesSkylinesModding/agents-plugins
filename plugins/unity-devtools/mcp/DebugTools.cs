@@ -435,7 +435,7 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     string? before = null,
     [Description("Eval snippet run after re-taking the hold (e.g. re-pause the simulation).")]
     string? after = null,
-    [Description("ECS world name for the snippets' em/world builtins.")]
+    [Description("ECS world name for the snippets' em/world/entity() builtins.")]
     string? world = null
   ) {
     // One exclusive sequence: the guard, the snippets and the window each take the session's gate
