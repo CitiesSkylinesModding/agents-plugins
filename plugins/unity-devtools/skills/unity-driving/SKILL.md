@@ -61,8 +61,9 @@ An entity you WRITE is never resolved: a component field, a buffer `set`, and ev
 ## Evaluating C# in the game
 
 `eval` runs a C# statement sequence on the game's main thread, like an IDE debugger: `var` declarations, expression statements, and assignments; the final expression's value is the result (its trailing semicolon is optional).
-Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
-A generic method's type argument is inferred when it is an argument's own type (`em.SetComponentData(entity(123, 1), speed)`), and written when it is not: `em.GetComponentData<MyGame.Movement.Speed>(entity(123, 1))`.
+Roots are fully-qualified type names plus the builtins `em` (the selected world's EntityManager), `world` (the World), `entity(index, version)` (an Entity value, refused past the store's highest index), and `_` (the previous successful eval's result; a heap result may be garbage-collected once the game resumes, and using it then fails with a "re-evaluate" error).
+A generic method's type argument is inferred when it is an argument's own type (`em.SetComponentData(entity(123, 1), speed)`), and written when it is not: `world.GetExistingSystemManaged<MyGame.UI.LabelSystem>()`.
+`em` reaches the ECS accessors without the presence gate the `ecs_*` tools apply, and its buffer accessor without the read-only narrowing `ecs_get_buffer` applies: where an entity may lack the component, read it with `ecs_get_component`, or guard in `eval` with `em.HasComponent<T>(e) ? em.GetComponentData<T>(e) : default(T)`.
 Managed systems are plain C#: `world.GetExistingSystemManaged(typeof(MyGame.UI.LabelSystem)).SetLabel(entity(123, 1), "New Name")`.
 Structs build with initializer syntax (`new MyGame.Movement.Speed { m_Value = 5f }`), and struct writes follow honest C# copy semantics: mutating a component copy does not persist it, finish with `em.SetComponentData(entity(...), copy)`.
 A `readonly` field takes a write, to itself or to a member, where C# refuses it, and a mutating call through it changes the field rather than a copy; game code the JIT compiled before the write may still use a `static readonly` field's old value, though `eval` reads back the new one.
@@ -73,7 +74,7 @@ Excluded by design: lambdas, LINQ, loops, and control flow (ternary, `?.`, and `
 Also outside the grammar: array-creation expressions (`new T[] { ... }`) and the `as` operator — a cast works; and overload matching does no `params` expansion, so a variadic method takes exactly one argument already typed as its array, which array creation being excluded usually puts out of reach.
 One eval runs in one suspend window; hold `suspend`/`resume` around several evals when they must see one consistent state.
 Methods and constructors match by name, argument count, and argument compatibility, trailing optional parameters omitted as in C#, a boxed argument by the type it holds (a box of an int binds `M(int)` over `M(object)`), and an extension method is called in its static form: `MyGame.Movement.SpeedExtensions.Clamp(speed, 10f)`.
-On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a:F1} | {b}"` to read several values at once.
+On failure the error reports the failing statement, the in-game exception, and the locals evaluated so far, a long one clipped and its elided length named, so end on a value you need whole as the final expression; on success only the final value returns, nested structs formatted to a fixed depth with anything deeper elided as `TypeName {...}`, so end with an interpolation like `$"{a:F1} | {b}"` to read several values at once.
 
 ## Seeing the game
 

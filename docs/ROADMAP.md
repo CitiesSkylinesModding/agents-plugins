@@ -419,22 +419,6 @@ verified by hand against a running game. Stub types under the `Unity.Entities` n
 reaches — `World`, `EntityManager`, `ComponentType`, `TypeManager`'s flag constants, the generic
 accessors — would give every ECS tool a test seam.
 
-### The `eval` path passes no presence gate
-
-**Priority:** medium · **Cost:** cheap
-
-The ECS tools refuse a component the entity does not carry before any accessor runs. `eval` reaches
-the same accessors without that gate: `em.GetComponentData<T>(e)` is invoked as written. The
-storage-kind half is not open for a buffer element, which the accessor's own generic constraint
-refuses (`cannot be instantiated over`). `entity(index)` builds a client-side value with no
-check against the store's bound, the buffer accessor there lacks the read-only narrowing
-`ecs_get_buffer` applies, and the `eval` description uses the unguarded read as its example.
-`debug_evaluate` and breakpoint conditions share the interpreter, so both reach the same accessors.
-Candidate fixes: a bound check on `entity()` with the version still taken literally, and a disclosure
-in the `eval` description and the `unity-driving` skill. The all-zero answer for an absent component
-was measured through a direct accessor invoke and nothing records it for the `eval` path
-specifically, so the disclosure asserts the structural fact and not the symptom.
-
 ### A buffer filter on `ecs_query`
 
 **Priority:** low · **Cost:** cheap
@@ -524,23 +508,6 @@ The tool matches entities carrying ALL the listed types, so the two other shapes
 the post-facility census (`PostFacilityData` or `MailBoxData`) took two queries and a hand-reconciled
 overlap, and counting owned map tiles (`MapTile` without `Native`) took two queries and a
 subtraction. An `any` and a `none` list beside `components` makes both one call.
-
-### What a failed `eval` reports
-
-**Priority:** medium · **Cost:** cheap · **Hits:** 5 as of 2026-09-29
-
-On failure `eval` reports the failing statement, the in-game exception, and every local evaluated so
-far, verbatim and uncapped. That dump is the tool's best diagnostic and also the one place a result
-can be arbitrarily large: reading a screenshot back off the game machine bound a 3.7 MB base64 string
-to a local, and one failed statement returned the whole of it. Clip each local to a budget and name
-what was elided, the way `ecs_query` and `find_types` already report what their limits cut.
-
-The same failure named the wrong cause — `a previous result was garbage-collected after the game
-resumed; re-evaluate it instead of using _`, on a call that used no `_`. The local it choked on was a
-`Stopwatch` read successfully two statements earlier, so the likely mechanism is the large allocation
-triggering a collection that invalidated the mirror. If that holds, the message should name the
-collected local and the constraint behind it — an allocation mid-sequence can invalidate object
-mirrors held across it — rather than a slot the caller never used.
 
 ### `eval` cannot cast to an array type
 
@@ -682,14 +649,6 @@ is the workaround for both, which is the tell that one resolver handles the stri
 grammar does not reach it. `new` with a generic qualified type fails the same way; with an instance
 of the type at hand, `System.Activator.CreateInstance(x.GetType())` builds another, which a typed
 parameter and an indexer accept as `object`.
-
-### A null receiver reports "no type for PrimitiveValue"
-
-**Priority:** medium · **Cost:** cheap · **Hits:** 7 as of 2026-09-29
-
-Reading a member off a local that holds null fails with `no type for PrimitiveValue`: the debuggee's
-null arrives as a `PrimitiveValue` with a null payload, which `MirrorTypeOf` does not treat as null.
-Each recovery costs 2–3 calls of bisecting the statement list. Report `cannot read 'isBuiltIn' on null` and name the local.
 
 ### `params` expansion in `eval`
 

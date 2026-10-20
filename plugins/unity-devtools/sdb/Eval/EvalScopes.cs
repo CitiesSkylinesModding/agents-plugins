@@ -65,8 +65,8 @@ public sealed class EvalState {
 
 /// <summary>
 /// The frameless builtin scope: <c>em</c> (selected world's EntityManager), <c>world</c> (the
-/// selected World), <c>entity(index, version)</c> (client-side Entity literal), and <c>_</c>
-/// (last successful result).
+/// selected World), <c>entity(index, version)</c> (client-side Entity literal, its index
+/// bound-checked), and <c>_</c> (last successful result).
 /// ECS access is lazily bound: a non-ECS game evaluates type-rooted expressions fine, and only
 /// touching an ECS builtin fails.
 /// </summary>
@@ -121,8 +121,9 @@ public sealed class BuiltinScope(Invoker inv, Func<Ecs> ecs, EvalState state) : 
     }
 
     // Builds the entity literally, like any other written value: version defaults to 1 and nothing
-    // is resolved or verified. The ecs_* tools RESOLVE the entity they target instead, so a bare
-    // index means different things on the two paths - a documented divergence of the eval contract.
+    // is resolved, the index only checked against the store's bound, past which the accessors read
+    // foreign memory. The ecs_* tools RESOLVE the entity they target instead, so a bare index means
+    // different things on the two paths - a documented divergence of the eval contract.
     if (args.Length is not (1 or 2) ||
       args[0] is not int index ||
       (args.Length is 2 && args[1] is not int)) {
@@ -130,6 +131,8 @@ public sealed class BuiltinScope(Invoker inv, Func<Ecs> ecs, EvalState state) : 
     }
 
     var version = args.Length is 2 ? (int) args[1] : 1;
+
+    ecs().RequireInStore(index);
 
     result = Ecs.MakeEntity(inv, index, version);
 

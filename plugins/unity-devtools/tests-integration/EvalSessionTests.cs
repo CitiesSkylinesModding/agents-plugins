@@ -31,8 +31,62 @@ public sealed class EvalSessionTests(MonoDebuggeeFixture fx) {
       )
     );
 
-    Assert.Contains("garbage-collected", ex.Message);
+    Assert.Contains("garbage-collected the object held by `_`", ex.Message);
     Assert.Contains("re-evaluate", ex.Message);
+  }
+
+  [SkippableFact]
+  public void CollectedLocalMirrorIsNamed() {
+    var state = new EvalState();
+
+    // The debuggee keeps alive an object the debugger touched in the current window, so only a
+    // local bound off `_` without a round trip can hold a mirror the collection takes.
+    _ = fx.Eval("new System.Text.StringBuilder(\"gone\")", state);
+
+    var ex = Assert.Throws<EvalFailedException>(() => fx.Eval(
+        "var sb = _; System.GC.Collect(); sb.ToString()",
+        state
+      )
+    );
+
+    Assert.Contains("garbage-collected the objects held by `sb`, `_`", ex.Message);
+    Assert.Contains("may invalidate", ex.Message);
+  }
+
+  [SkippableFact]
+  public void CollectedMirrorNoLocalHoldsLeavesUnderscoreUnnamed() {
+    var state = new EvalState();
+
+    // `_` is a struct, whose own mirror cannot be collected, holding an object that can.
+    _ = fx.Eval(
+      "new System.Collections.DictionaryEntry(\"k\", new System.Text.StringBuilder(\"gone\"))",
+      state
+    );
+
+    var ex = Assert.Throws<EvalFailedException>(() => fx.Eval(
+        "System.GC.Collect(); _.Value.ToString()",
+        state
+      )
+    );
+
+    Assert.Contains("the statement used an object the game garbage-collected", ex.Message);
+    Assert.DoesNotContain("`_`", ex.Message);
+  }
+
+  [SkippableFact]
+  public void FailureReportClipsALongLocalAndNamesWhatItCut() {
+    var ex = Assert.Throws<EvalFailedException>(() =>
+      fx.Eval("var big = \"x\".PadRight(5000, 'y'); TestFixture.Thrower.Boom()")
+    );
+
+    var big = Assert.Single(ex.Locals, local => local.Key is "big").Value;
+
+    // The rendering quotes the string, so it runs two characters past the value's own length.
+    var elided = 5002 - EvalInterpreter.LocalBudget;
+
+    Assert.StartsWith("\"xyyy", big);
+    Assert.EndsWith($"(+{elided} more characters)", big);
+    Assert.True(big.Length < EvalInterpreter.LocalBudget + 40, big);
   }
 
   [SkippableFact]

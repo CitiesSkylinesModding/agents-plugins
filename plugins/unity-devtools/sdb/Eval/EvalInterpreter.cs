@@ -27,6 +27,11 @@ public sealed class EvalInterpreter(
   IReadOnlyList<IEvalScope> scopes,
   TypeCatalog catalog = null
 ) {
+  /// <summary>
+  /// The characters a local renders in within a failure report, its elided count named past them.
+  /// </summary>
+  public const int LocalBudget = 200;
+
   // ArgumentCost's bands, cheapest first: an exact match, a numeric widening (the target's width
   // rank), an in-range narrowing (the same rank on top of its band), a null into a nullable (the
   // underlying primitive's rank on top of its band, any other underlying type's above every
@@ -67,7 +72,7 @@ public sealed class EvalInterpreter(
         };
       }
       catch (Exception ex) {
-        throw this.Fail(program, i, ex);
+        throw this.Fail(program, i, ex, state);
       }
     }
 
@@ -83,7 +88,7 @@ public sealed class EvalInterpreter(
       };
     }
     catch (Exception ex) {
-      throw this.Fail(program, program.Statements.Count - 1, ex);
+      throw this.Fail(program, program.Statements.Count - 1, ex, state);
     }
 
     state.Store(last);
@@ -396,6 +401,8 @@ public sealed class EvalInterpreter(
     var (current, next) = this.ResolveChainRoot(segments);
 
     for (var i = next; i < segments.Count; i++) {
+      EvalInterpreter.RequireReceiver(current, segments, i);
+
       current = this.ReadMember(current, segments[i].Name, segments[i].Position);
     }
 
@@ -475,6 +482,45 @@ public sealed class EvalInterpreter(
     }
   }
 
+  /// <summary>
+  /// A receiver as written, for a failure to name: the dotted chain, or null for anything else
+  /// (a call result, an indexer), which has no name.
+  /// </summary>
+  private static string ChainName(EvalExpr expr) =>
+    EvalInterpreter.TryFlattenChain(expr, out var segments)
+      ? EvalInterpreter.ChainName(segments, segments.Count)
+      : null;
+
+  private static string ChainName(List<(string Name, int Position)> segments, int count) =>
+    string.Join(".", segments.Take(count).Select(s => s.Name));
+
+  /// <summary>
+  /// Refuses an operation on a null receiver, naming the receiver when it has a name: a debuggee
+  /// null arrives as a mirrored one, which has no type for the operation to look a member up on.
+  /// Callers holding a name check before the operation, so a successful one builds no name.
+  /// </summary>
+  private static EvalRuntimeException NullReceiver(
+    string operation,
+    string receiver,
+    int position
+  ) =>
+    new(receiver is null ? $"cannot {operation}" : $"cannot {operation} ({receiver})", position);
+
+  /// <summary>Refuses reading a chain's next segment off a null, naming the chain so far.</summary>
+  private static void RequireReceiver(
+    object value,
+    List<(string Name, int Position)> segments,
+    int segment
+  ) {
+    if (EvalInterpreter.IsNull(value)) {
+      throw EvalInterpreter.NullReceiver(
+        $"read '{segments[segment].Name}' on null",
+        EvalInterpreter.ChainName(segments, segment),
+        segments[segment].Position
+      );
+    }
+  }
+
   private bool TryScopes(string name, out object value) {
     foreach (var scope in scopes) {
       if (scope.TryResolveValue(name, out value)) {
@@ -493,7 +539,8 @@ public sealed class EvalInterpreter(
     switch (target) {
       case TypeRef typeRef: return this.ReadStaticMember(typeRef.Type, name, position);
 
-      case null: throw new EvalRuntimeException($"cannot read '{name}' on null", position);
+      case var _ when EvalInterpreter.IsNull(target):
+        throw EvalInterpreter.NullReceiver($"read '{name}' on null", null, position);
 
       case ArrayMirror array when name is "Length": return array.Length;
 
@@ -743,7 +790,11 @@ public sealed class EvalInterpreter(
 
     var declaringType = target switch {
       TypeRef typeRef => typeRef.Type,
-      null => throw new EvalRuntimeException($"cannot call '{call.Name}' on null", call.Position),
+      _ when EvalInterpreter.IsNull(target) => throw EvalInterpreter.NullReceiver(
+        $"call '{call.Name}' on null",
+        EvalInterpreter.ChainName(call.Target),
+        call.Position
+      ),
       _ => this.MirrorTypeOf(target, call.Position)
     };
 
@@ -1039,9 +1090,7 @@ public sealed class EvalInterpreter(
     // A miss lists the candidates nearest the call first: those its arguments failed, then those
     // whose type arguments could not be had, then those its shape does not fit.
     EvalRuntimeException Missed(Rejection uninferredBy) {
-      var receiver = EvalInterpreter.TryFlattenChain(call.Target, out var segments)
-        ? string.Join(".", segments.Select(s => s.Name))
-        : "value";
+      var receiver = EvalInterpreter.ChainName(call.Target) ?? "value";
 
       var pooled = fits.Concat(definitionFits).ToList();
       var misfits = pooled.Where(f => !f.IsFit).Select(f => f.Rejection);
@@ -1765,7 +1814,20 @@ public sealed class EvalInterpreter(
       return array[this.ArrayIndexOf(array, args, index.Position)];
     }
 
+    EvalInterpreter.RequireIndexable(target, index);
+
     return this.InvokeIndexerGet(target, args, index.Position);
+  }
+
+  /// <summary>Refuses an index into a null, naming the indexed chain.</summary>
+  private static void RequireIndexable(object target, IndexExpr index) {
+    if (EvalInterpreter.IsNull(target)) {
+      throw EvalInterpreter.NullReceiver(
+        "index null",
+        EvalInterpreter.ChainName(index.Target),
+        index.Position
+      );
+    }
   }
 
   private Value InvokeIndexerGet(object target, object[] args, int position) {
@@ -1979,6 +2041,7 @@ public sealed class EvalInterpreter(
         var args = index.Args.Select(this.Evaluate).ToArray();
         var value = this.Evaluate(assignment.Value);
 
+        EvalInterpreter.RequireIndexable(target.Value, index);
         this.WriteIndex(target.Value, args, value, index.Position);
 
         target.WriteBack?.Invoke();
@@ -2071,6 +2134,8 @@ public sealed class EvalInterpreter(
             : new Lvalue(root, writeBack, true);
 
         for (var i = next; i < segments.Count; i++) {
+          EvalInterpreter.RequireReceiver(current.Value, segments, i);
+
           current = this.ReadLink(current, segments[i].Name, segments[i].Position);
         }
 
@@ -2088,6 +2153,8 @@ public sealed class EvalInterpreter(
       case IndexExpr index: {
         var container = this.EvaluateWritable(index.Target);
         var args = index.Args.Select(this.Evaluate).ToArray();
+
+        EvalInterpreter.RequireIndexable(container.Value, index);
 
         return this.ReadIndexLink(container, args, index.Position);
       }
@@ -2481,8 +2548,9 @@ public sealed class EvalInterpreter(
         p.Value.GetType().FullName,
         position
       ),
+      _ when EvalInterpreter.IsNull(value) =>
+        throw new EvalRuntimeException("no type for null", position),
       Value v => throw new EvalRuntimeException($"no type for {v.GetType().Name}", position),
-      null => throw new EvalRuntimeException("no type for null", position),
       _ => this.ResolveType(value.GetType().FullName, position)
     };
   }
@@ -2830,7 +2898,12 @@ public sealed class EvalInterpreter(
     };
   }
 
-  private EvalFailedException Fail(EvalProgram program, int statementIndex, Exception cause) {
+  private EvalFailedException Fail(
+    EvalProgram program,
+    int statementIndex,
+    Exception cause,
+    EvalState state
+  ) {
     var statement = program.Statements[statementIndex];
 
     var source = program.Source.Substring(
@@ -2847,9 +2920,7 @@ public sealed class EvalInterpreter(
     // The cause travels along, leaving this report to add only the statement context and locals the
     // evaluator knows.
     var message = cause switch {
-      ObjectCollectedException =>
-        "a previous result was garbage-collected after the game resumed; " +
-        "re-evaluate it instead of using `_`",
+      ObjectCollectedException => this.CollectedMessage(state),
       GameException game => game.Message,
       _ => cause.Message
     };
@@ -2865,13 +2936,77 @@ public sealed class EvalInterpreter(
     };
   }
 
-  private string FormatLocalSafely(object value) {
+  /// <summary>
+  /// Names the holders whose mirror the debuggee reports collected: the retained locals, then
+  /// `_`, which is named only when its own mirror is gone. The agent says which mirrors died, not
+  /// what freed them, so the allocation stays a possibility.
+  /// </summary>
+  private string CollectedMessage(EvalState state) {
+    List<string> holders = [
+      .. this.locals.Where(local => this.IsCollected(local.Value)).Select(local => $"`{local.Key}`")
+    ];
+
+    var underscore = state.HasLastResult && this.IsCollected(state.LastResult);
+
+    if (underscore) {
+      holders.Add("`_`");
+    }
+
+    var subject = holders.Count switch {
+      0 => "the statement used an object the game garbage-collected",
+      1 => $"the game garbage-collected the object held by {holders[0]}",
+      _ => $"the game garbage-collected the objects held by {string.Join(", ", holders)}"
+    };
+
+    var hint = underscore
+      ? "; `_` holds a previous result, which the game may collect once it resumes, so " +
+      "re-evaluate it instead of using `_`"
+      : "";
+
+    return $"{subject}: an allocation mid-sequence may invalidate object mirrors held across it" +
+      hint;
+  }
+
+  private bool IsCollected(object value) {
+    // A mirror of an earlier attach asks a dead connection, and is reported as such by `_`.
+    if (value is not ObjectMirror mirror || mirror.VirtualMachine != inv.Vm) {
+      return false;
+    }
+
     try {
-      return this.FormatValue(value, 1);
+      return mirror.IsCollected;
+    }
+    catch {
+      // The report is already about a failure: a check that cannot answer names nothing.
+      return false;
+    }
+  }
+
+  private string FormatLocalSafely(object value) {
+    string formatted;
+
+    try {
+      // A long string reads only the characters the budget keeps: the rendering quotes it, so it
+      // runs two characters past the value's own length.
+      if (value is StringMirror text &&
+        inv.Vm.Version.AtLeast(2, 10) &&
+        text.Length + 2 > EvalInterpreter.LocalBudget) {
+        var kept = new string(text.GetChars(0, EvalInterpreter.LocalBudget - 1));
+
+        return $"\"{kept}... (+{text.Length + 2 - EvalInterpreter.LocalBudget} more characters)";
+      }
+
+      formatted = this.FormatValue(value, 1);
     }
     catch {
       return "<unreadable>";
     }
+
+    var elided = formatted.Length - EvalInterpreter.LocalBudget;
+
+    return elided <= 0
+      ? formatted
+      : $"{formatted[..EvalInterpreter.LocalBudget]}... (+{elided} more characters)";
   }
 
   /// <summary>

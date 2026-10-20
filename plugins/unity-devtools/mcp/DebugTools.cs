@@ -230,7 +230,7 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     [Description("C# statement sequence; the final expression's value is the result.")] string code,
     [Description("Frame whose scope to evaluate in; 0 = top.")]
     int frameIndex = 0,
-    [Description("ECS world name for the em/world builtins; omit for the default world.")]
+    [Description("ECS world name for the em/world/entity() builtins; omit for the default world.")]
     string? world = null
   ) {
     return ToolGuard.Run(() => {

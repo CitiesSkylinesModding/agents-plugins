@@ -94,13 +94,7 @@ public sealed partial class Ecs {
   public StructMirror ResolveEntity(string spec) {
     var (index, version) = Ecs.ParseEntitySpec(spec);
 
-    var highest = this.HighestEntityIndex();
-
-    if (highest is {} bound && (index < 0 || index > bound)) {
-      throw new InvalidOperationException(
-        $"entity index {index} is out of range for world '{this.WorldName}' (valid: 0-{bound})"
-      );
-    }
+    this.RequireInStore(index);
 
     // A named version is verified, not trusted. Where the bound above was unavailable this asks
     // Exists unguarded, a deliberate floor rather than an oversight: refusing instead would leave a
@@ -123,6 +117,7 @@ public sealed partial class Ecs {
     // full still works, and is the one degradation that cannot crash the game.
     // Probing beats inferring the version: Unity.Entities reports assembly version 0.0.0.0.
     var byIndex = this.FindMember("GetEntityByEntityIndex", 1, ["Int32"]);
+    var highest = this.HighestEntityIndex();
 
     if (byIndex is null || highest is null) {
       var absent = byIndex is null ? "GetEntityByEntityIndex" : "HighestEntityIndex";
@@ -146,6 +141,24 @@ public sealed partial class Ecs {
     return live;
   }
 
+  /// <summary>
+  /// Refuses an index outside the store, naming the bound; a target that cannot report its bound
+  /// lets every index through.
+  /// An eval creating entities grows the store inside the window, so an index past the bound read
+  /// earlier is checked against a fresh read before it is refused.
+  /// </summary>
+  public void RequireInStore(int index) {
+    if (index > this.HighestEntityIndex()) {
+      this.storeBoundRead = false;
+    }
+
+    if (this.HighestEntityIndex() is {} bound && (index < 0 || index > bound)) {
+      throw new InvalidOperationException(
+        $"entity index {index} is out of range for world '{this.WorldName}' (valid: 0-{bound})"
+      );
+    }
+  }
+
   private int? storeBound;
 
   private bool storeBoundRead;
@@ -155,8 +168,9 @@ public sealed partial class Ecs {
   /// Every path that indexes the store goes through this FIRST, because the store is indexed
   /// UNCHECKED: out of range, the by-index lookup and Exists alike read foreign memory, and far
   /// enough out both fault the game with an in-game NullReferenceException (verified live on both).
-  /// Read once per instance, which asks nothing of the caller: the store cannot grow while the
-  /// game is suspended, and one instance lives inside one suspend window.
+  /// Read once per instance, which asks nothing of the caller: the game cannot grow the store while
+  /// suspended, and one instance lives inside one suspend window; what an eval creates there is
+  /// <see cref="RequireInStore" />'s to catch.
   /// The flag is what keeps "the target cannot say" distinguishable from "not read yet".
   /// </summary>
   private int? HighestEntityIndex() {

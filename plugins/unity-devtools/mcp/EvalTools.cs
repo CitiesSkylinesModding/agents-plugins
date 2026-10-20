@@ -27,7 +27,7 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     Calls run on the game's main thread; writes mutate live game state.
     Supported: literals, member access, method calls (a type argument is inferred when it is an
     argument's own type, as in em.SetComponentData(e, copy), and written otherwise, as in
-    em.GetComponentData<MyComponent>(entity(123, 1))), indexers, `new` with initializers,
+    world.GetExistingSystemManaged<MySystem>()), indexers, `new` with initializers,
     casts, operators, ternary/`?.`/`??`, typeof(T), default(T), string interpolation with format
     clauses (`$"{x:F1}"`), `out var x` / `out x` / `ref x` arguments, and type aliases such as
     `int` or `string` as roots (`string.Join(", ", names)`).
@@ -37,8 +37,12 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
     `params` expansion, so a `params` method takes exactly one argument already typed as its
     array.
     Roots: fully-qualified type names, plus builtins `em` (the world's EntityManager), `world` (the
-    ECS World), `entity(index, version)` (an Entity value), and `_` (the previous successful eval's
-    result; heap results may be collected once the game resumes).
+    ECS World), `entity(index, version)` (an Entity value; an index past the store's bound is
+    refused), and `_` (the previous successful eval's result; heap results may be collected once
+    the game resumes).
+    `em` reaches the ECS accessors without the presence gate the ecs_* tools apply, and its buffer
+    accessor without the read-only narrowing ecs_get_buffer applies: where an entity may lack the
+    component, read it with ecs_get_component or guard with em.HasComponent<T>(e).
     Struct writes behave as on C# variables: assigning a struct copies it, and chained writes
     through locals, object fields, and array elements persist; a member write into a struct
     temporary returned by a method or property is rejected, and so is one into a struct boxed in
@@ -55,7 +59,7 @@ public sealed class EvalTools(UnitySession session, EvalState state) {
   [UsedImplicitly]
   public EvalToolResult Eval(
     [Description("C# statement sequence; the final expression's value is the result.")] string code,
-    [Description("ECS world name for the em/world builtins; omit for the default world.")]
+    [Description("ECS world name for the em/world/entity() builtins; omit for the default world.")]
     string? world = null
   ) {
     return ToolGuard.Run(() => {
