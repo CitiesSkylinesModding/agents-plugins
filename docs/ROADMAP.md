@@ -1067,7 +1067,8 @@ The rule to add: call `Matches` only on a bounded set of queries with fixed desc
 
 `loader-states.md` says `GeneralError` "in practice means `OnLoad` threw", but `ModInfo.Load` runs `GetTypesDerivedFrom<IMod>()` inside the same `try` (`src/Game/Game.Modding/ModManager.cs:120`, its catch-all at `:141`), so a mod whose assembly loads and whose types do not, such as one a game update left outdated, lands there too.
 Like the other rethrowing states it ends at `Disposed`, and the entry stays in `modManager` with `asset.assembly` set, so reflecting over it throws `ReflectionTypeLoadException` again.
-The rule to add: code that enumerates `modManager` and reflects over each assembly skips a mod whose `state` is not `Loaded`. Found while reviewing Asset Icon Library, whose API calls now do; Find It's API registration does not, and throws in a dispatcher updater on every frame.
+The rule to add: code that enumerates `modManager` and reflects over each assembly skips a mod whose `state` is not `Loaded`. Found while reviewing Asset Icon Library, whose API calls now do; Find It's API registration did not, and threw in a dispatcher updater on every frame.
+The `RegisterUpdater(Action)` row of `mod-lifecycle-and-ordering.md` needs the throw path too: the action unregisters only once it returns, so one that throws re-runs every tick, as Find It's did in game (2026-10-21, with Asset Icon Library's broken-mod fixture).
 
 ### The game's culture is not invariant after boot
 
