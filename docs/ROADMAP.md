@@ -1056,6 +1056,8 @@ Read those first; the scripts could ship nearly as they are.
   Game options go through `runOnce.txt` (already in `debug-menu.md`), Unity's own switches through `steam -applaunch`.
   Readiness is read from `Logs/SceneFlow.log`: `MainMenu reached`, then `Loading completed`, after which the loading screen stays up some 20 s more.
 - Loading a map or a save without blocking the main thread: the editor's `MapPanelSystem.LoadMap` over the `unity` eval, or the gameface `menu.loadGame` trigger; `GameManager.instance.Load` from the eval holds the main thread the load needs, and the game must be killed.
+  `menu.loadGame` looks the save up in the menu's save list (`src/Game/Game.UI.Menu/MenuUISystem.cs:797`), which fills some seconds after `MainMenu reached`: sent before, it throws a `NullReferenceException`. A save's guid changes each time it is saved over, so a script reads it from the save (`unzip -p <Name>.cok <Name>.SaveGameMetadata.cid`).
+- For a screen recording or any scripted run in a loaded city, `CameraController.inputEnabled = false` (`src/Game/Game/CameraController.cs:248`, through `CameraController.TryGet`) stops edge scrolling and the camera keys from moving the view.
 - `autorun.sh` and `crashhunt.sh` run a scenario through the game's own test runner (`--categoryFilter=<category>`, no debugger attached) over and over, and class each run as finished, died, stuck or timeout from `Logs/TestScenarios.log` and the process, counting new crashpad dumps; `scenario.sh` waits for the next result in that log.
 
 Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the scripts as tooling it points to, and the Windows launch and process checks added beside the Linux ones.
