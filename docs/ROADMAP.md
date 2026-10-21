@@ -540,7 +540,7 @@ one is nullable is the fix.
 
 ### Type-argument inference beyond a plain `T` parameter
 
-**Priority:** low · **Cost:** moderate
+**Priority:** low · **Cost:** moderate · **Hits:** 1 as of 2026-10-21
 
 Inference reads only a parameter typed as the type parameter itself and takes each argument's
 runtime type. It refuses two arguments fixing `T` to different types, and a null beside an argument
@@ -606,7 +606,7 @@ that to one call — and it is the same read the prefab-by-name entry above want
 
 ### `eval` cannot read an iterator-backed property
 
-**Priority:** low · **Cost:** moderate
+**Priority:** low · **Cost:** moderate · **Hits:** 1 as of 2026-10-21
 
 `ProxyAction.bindings` is unreachable: `.Count` fails on the compiler-generated iterator type and
 nothing can enumerate it. The read only completed by falling back to the private `m_Bindings` field
@@ -615,13 +615,14 @@ that, "a private backing field is the escape hatch" is a fact the `unity-driving
 carry, because the failure gives no hint that one exists. The same fix serves a plain `List<T>`,
 which renders as its type name: reading the game's binding table (`InputManager.GetBindings`, a
 `List<ProxyBinding>`) took `System.String.Concat<ProxyBinding>(list)` written to a file on the game
-machine.
+machine. A method returning an iterator fails the same way, a cast to
+`System.Collections.IEnumerable` included, since member lookup ignores the cast.
 
 ### The `eval` grammar's type-name surface
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 6 as of 2026-10-04
+**Priority:** medium · **Cost:** moderate · **Hits:** 7 as of 2026-10-21
 
-Two rejections in the same family, both costing a round trip to discover. A *generic* `typeof` or
+Three rejections in the same family, each costing a round trip to discover. A *generic* `typeof` or
 cast with a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives
 `parse error at offset 15: unsupported: qualified name` — while a non-generic qualified `typeof`
 works, so the
@@ -631,7 +632,12 @@ is unreachable through C# `.` syntax, which made every job-attribute check in th
 is the workaround for both, which is the tell that one resolver handles the string form and the
 grammar does not reach it. `new` with a generic qualified type fails the same way; with an instance
 of the type at hand, `System.Activator.CreateInstance(x.GetType())` builds another, which a typed
-parameter and an indexer accept as `object`.
+parameter and an indexer accept as `object`. An explicit method type argument fails too:
+`System.Linq.Enumerable.Any<System.Func<FindIt.Domain.PrefabIndex, System.Boolean>>(x)` gives
+`unsupported: qualified name`, closing the route an inference refusal names when the type needs
+qualifying. And a predefined type keyword fails as a receiver:
+`object.ReferenceEquals(a, b)` gives `unsupported: predefined type`, where
+`System.Object.ReferenceEquals(a, b)` works.
 
 ### `params` expansion in `eval`
 
