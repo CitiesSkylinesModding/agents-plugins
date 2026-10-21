@@ -902,6 +902,14 @@ writing an ICorDebug client is the injected-helper tier above — an in-process 
 protocol restores remote attach, cheap batching and main-thread scheduling for less work, at the
 cost of the injection-free default this plugin is built on.
 
+### A `unity` write right after a UI trigger hung the game
+
+**Priority:** medium · **Cost:** unsure
+
+In Cities: Skylines II, a `unity` eval setting `ToolSystem.activeTool`, sent right after a gameface `engine.trigger`, deadlocked the main thread in `cohtmlNative.EndEvent` ← `RawValueBinding.Update` ← `ToolUISystem.OnToolChanged`: the UI port stopped answering and the watchdog wrote a hang dump.
+Seen once, cause not traced: the write calls into the UI view from inside the eval's suspend window, while the view may still be handling the trigger.
+Reproduce it, then either have `eval` warn on a write that reaches a UI binding, or add the rule to `unity-driving`'s cross-plugin loop: drive the UI through gameface, and keep the `unity` evals between triggers to reads. Found while verifying a Find It review finding.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
@@ -1101,3 +1109,15 @@ Unity keeps what script fields and statics reach, and a managed system is reacha
 The drain tags the old entity `Deleted` before it creates the new one (`src/Game/Game.Prefabs/PrefabSystem.cs:782`, `:798`), so when the rebuilt component set is new, the old entity's `Deleted` archetype is created first and a query over both lists the old entity before its replacement; with an unchanged set the replacement reuses the boot archetype and comes first. Shown in game: an `EditorAssetCategoryOverride` added before the call flipped the order.
 And the old entity keeps its `PrefabData` (`:799` copies it to the new one), so `TryGetPrefab(Entity)` (`:669`) still resolves it to the live prefab during that frame.
 The facts to add there, with the rule: code that pairs an updated prefab's old and new entities matches them by prefab, never by query order, and checks `Deleted` before `TryGetPrefab`. Found while fixing Find It's partial index, which lost an updated prefab's fields to both.
+
+### Escape and the game's UI actions
+
+**Priority:** medium · **Cost:** cheap
+
+No reference says how a key reaches a UI `InputActionConsumer` (`cs2/input`), so a mod that wants Escape to close its panel starts from the decompile.
+Escape is bound to several UI actions (`Back`, `Pause Menu`, `Close`, `Default Tool UI`): the UI input stack sends each action's stack index through `input.setActionPriority`, and `InputActionBindings.ResolveConflicts` (`src/Game/Game.UI/InputActionBindings.cs`) enables only the highest-priority action per key, so a consumer claiming `Back` above them blocks the pause menu and an open panel's `Close`, even when its handler returns `false`.
+An `ignoreFocusState` consumer attaches to the input root in mount order and the last attached wins; changing its `actions` keeps its slot, and on a first mount of the tree React runs child effects first, so a consumer mounted with the game screen lands before the game's own chain.
+The rule: mount the consumer only while it should take the key, and yield to the game's panels while one is open (`game.activeGamePanel$`, `selectedInfo.activeSelection$`).
+While a text field has focus, `InputManager.GetMaskForControlScheme` (`src/Game/Game.Input/InputManager.cs:630`) masks keyboard and mouse to the mouse (`hasInputFieldFocus`), so no keyboard UI action fires and Escape reaches only the field's DOM `keydown`.
+To check routing in game: a `unity` eval of `InputActionBindings.m_UIActionStates[m_ActionOrder["Back"]]` gives each action's `priority` and `state`, and `engine.trigger("input.onActionPerformed.update", {action: "Back", value: null})` fires an action where a real key press can't be queued (an unfocused game window).
+The facts to add to `frontend-and-injection.md`'s `cs2/input` passage. Found while making Escape close Find It's panel.
