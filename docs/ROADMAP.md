@@ -1087,7 +1087,8 @@ The `RegisterUpdater(Action)` row of `mod-lifecycle-and-ordering.md` needs the t
 `localization.md` closes the `ToUpper()`/`ToUpperInvariant()` enum-key mismatch as inert (`:161`, `:675`), because `GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`src/Game/Game.SceneFlow/GameManager.cs:542`).
 But `Awake` is `async void` (`:518`) and sets it before its first `await` (`:557`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
 So culture-sensitive calls (`ToLower()`, `ToUpper()`, `StartsWith(string)`, a culture `IndexOf`) follow the player's locale, and the enum-key mismatch is live under a Turkish or Azeri one.
-Correct both passages, and add the rule: use the invariant or ordinal forms wherever a string must compare the same for every player. Found while reviewing a Find It search change.
+Colossal.Json is one: it decodes a JSON number into a `string` field through `Convert.ChangeType(data, typeof(string))` with no provider (`src/Colossal.Core/Colossal.Json/JSON.cs:199`), so `6.5` arrives as `"6,5"` under a comma-decimal locale (confirmed in game under `fr-FR`; Hall of Fame's photo mode settings read NaN that way).
+Correct both passages, and add the rules: use the invariant or ordinal forms wherever a string must compare the same for every player, and decode a JSON number into a numeric field. Found while reviewing a Find It search change.
 
 ### The local mod details call never suspends
 
