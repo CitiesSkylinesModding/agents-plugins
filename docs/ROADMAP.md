@@ -1124,3 +1124,38 @@ The rule: mount the consumer only while it should take the key, and yield to the
 While a text field has focus, `InputManager.GetMaskForControlScheme` (`src/Game/Game.Input/InputManager.cs:630`) masks keyboard and mouse to the mouse (`hasInputFieldFocus`), so no keyboard UI action fires and Escape reaches only the field's DOM `keydown`.
 To check routing in game: a `unity` eval of `InputActionBindings.m_UIActionStates[m_ActionOrder["Back"]]` gives each action's `priority` and `state`, and `engine.trigger("input.onActionPerformed.update", {action: "Back", value: null})` fires an action where a real key press can't be queued (an unfocused game window).
 The facts to add to `frontend-and-injection.md`'s `cs2/input` passage. Found while making Escape close Find It's panel.
+
+### Harvesting the mods' `docs/solutions/` into the plugins
+
+**Priority:** medium · **Cost:** moderate
+
+A mod built with the cantrips loop records each hard-won problem in `docs/solutions/<slug>.md` (frontmatter `date`, `area`, `symptoms`, `tags`, then the problem, its root cause and the fix), and many of those are engine gotchas no plugin carries: every other mod relearns them, and the mod's copy drifts as the game changes.
+The plugins are the layer meant to carry that knowledge.
+Hall of Fame's folder (`~/Documents/Dev/HallOfFame/docs/solutions/`) is the seed: most of its 16 entries are engine-level, such as `awaiting-a-web-request-resumes-the-caller-twice`, `cs2-value-import-is-undefined-in-the-game`, `mod-ui-vanishes-when-its-module-throws-on-load`, `runtime-css-reads-and-overrides-mislead-in-cohtml`, `saving-settings-inside-a-sync-cancels-it` (`ApplyAndSave` re-entering through `onSettingsApplied`), and its vanilla `Dropdown`, tooltip, portal, input-action and markdown entries; its Crowdin, server and lint entries are the mod's own.
+
+A repo-only skill in `.agents/skills/`, beside `scan-mcp-failures`, would:
+
+- read every `docs/solutions/*.md` of the CS2 mods checked out on the machine, and class each as engine-level or the mod's own;
+- check whether a plugin skill already carries it, and verify the rest against the game: the decompile or the readable UI bundle for a claim about code, the live game through the `unity` and gameface tools for behaviour;
+- fold each verified fix into the skill that owns it (`gameface`, `gameface-driving`, `unity-driving`, `cs2-modding`, `cs2-modding-ui`, `cs2-mod-project`), a `cs2-modding` claim through `docs/authoring/reference-ticket-protocol.md` like any other;
+- delete the harvested files from the mod repos once the plugin change has landed, and leave the mod's own.
+
+Shape, not settled: whether the deletion is a commit the skill makes in each mod repo or a handoff to that repo's session.
+
+### Measuring a mod's cost in the running game
+
+**Priority:** medium · **Cost:** cheap
+
+`performance-and-memory.md` says what a job, a scan or an allocator costs and how to catch a native leak, but not how to measure a mod's own time or managed allocations, so each optimisation pass works its method out again.
+Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-findit` (not in its git history): the Diagnostics section of `CLAUDE.local.md`, and `.scratch/tools/`.
+
+- Time inside compiled code, a bench class the `unity` eval calls or a hooked build: the eval's own timing of ECS work overstates it (`ToComponentDataArray` over one query read ~30 ms from the eval, 0.4–0.6 ms in a hooked build).
+- A managed `for` over a `NativeArray` costs about 10× the same loop in a Burst `IJob` run with `.Run()` on the main thread (198k rows: 18–20 ms against about 2 ms, the ECS copies included), so a scan of every placed object is a Burst job even for a one-off click.
+- Compare two builds only from runs of one sitting, since the same build's work drifted from 6.2 to 8.6 s across a day, and diff the CPU's thermal throttle counters around each run (`.scratch/tools/throttle.sh`).
+- Per-call allocations: set `GarbageCollector.GCMode` to `Disabled` and run several passes reading `GC.GetTotalMemory(false)`, the last agreeing passes giving the figure (`AllocBench` in `.scratch/tools/Item3Bench.cs`).
+  A single pass after `GC.Collect` undercounts small objects, which refill the freed slots (a ~120 B/call `int[]` read 0), and `GC.GetAllocatedBytesForCurrentThread` returns 0 in the game's Mono.
+- A frame-time recording (rAF in the Gameface page) takes no other call into the game while it runs: each `unity` or gameface eval stalls the game and shows as a long frame.
+
+Shape, not settled: a `measuring.md` sibling in `performance-and-memory/`, with the two eval traps also a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
+The figures come from one Linux machine under Proton; verify each in game before it ships.
+The unattended loop driving such runs belongs to the UI-trigger-from-a-shell-loop entry under `coherent-gameface`, and the game threads' OS culture, from the same notes, to the culture entry above.
