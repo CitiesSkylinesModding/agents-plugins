@@ -910,6 +910,35 @@ In Cities: Skylines II, a `unity` eval setting `ToolSystem.activeTool`, sent rig
 Seen once, cause not traced: the write calls into the UI view from inside the eval's suspend window, while the view may still be handling the trigger.
 Reproduce it, then either have `eval` warn on a write that reaches a UI binding, or add the rule to `unity-driving`'s cross-plugin loop: drive the UI through gameface, and keep the `unity` evals between triggers to reads. Found while verifying a Find It review finding.
 
+### The NuGet server lags the skill under one version number
+
+**Priority:** high · **Cost:** cheap
+
+The plugin launches its server with `dotnet dnx UnityDevtools.Mcp --version 1.3.0`, and `dnx` serves a version from the NuGet cache once it holds one.
+On this machine that cache holds a 1.3.0 server built on 2026-10-10, while plugin 1.3.0's skill and source, refreshed on 2026-10-22, document features committed after it under the same version, `default(T)` among them (1c66a8e, 2026-10-17).
+So the skill promises what the server refuses: in ToveruxModTemplate on 2026-10-23, `var s = default(UnityEngine.InputSystem.LowLevel.KeyboardState);` failed with `unsupported: default expression`, and the agent fell back to `new KeyboardState { }`.
+Bumping `<Version>` in `UnityDevtools.Mcp.csproj` and the `.mcp.json` pin with every server change, and a check that fails a server change landing without the bump, keeps the two in step.
+
+### A mutating call on a struct with a fixed buffer fails
+
+**Priority:** medium · **Cost:** unsure
+
+In ToveruxModTemplate on 2026-10-23, on the 2026-10-10 server build above: `var s = new UnityEngine.InputSystem.LowLevel.KeyboardState { }; s.Set(UnityEngine.InputSystem.Key.LeftCtrl, true);` passed, and the next `s.Set(UnityEngine.InputSystem.Key.K, true);` failed with `Unable to cast object of type 'System.Byte[]' to type 'System.Byte'`.
+`KeyboardState` holds its keys in a `fixed byte` buffer, which the wire carries as the compiler's `<keys>e__FixedBuffer` struct, so writing the local back after the call seems to assign the buffer's bytes where one byte is expected.
+Unverified against the current source: reproduce with a fixture struct holding a fixed buffer and a method writing to it.
+The workaround was to build the input from the device's own layout instead (next entry).
+
+### Pressing a key the game reads natively
+
+**Priority:** medium · **Cost:** moderate
+
+`game_key` reaches the UI's DOM handlers only, and nothing in either plugin presses a key that Unity's Input System reads, the route a game's own key bindings take.
+In ToveruxModTemplate on 2026-10-23, verifying a mod's Ctrl+K binding took four evals.
+A state event built from the device's layout (`StateEvent.From(Keyboard.current, out var ev, Allocator.Persistent)`, then `InputControlExtensions.WriteValueIntoEvent(kb.kKey, 1f, ev)` and `InputSystem.QueueEvent(ev)`) was dropped while the game window was unfocused: the Input System's `backgroundBehavior` was `ResetAndDisableNonBackgroundDevices`.
+Switching it to `IgnoreFocus` and calling `InputSystem.EnableDevice(kb)` let the press and release through, after which the setting was restored.
+A `unity` `key` tool taking a chord (`ctrl+k`) would press, advance a frame, release, and lift the background gate only for its own window, restoring it after.
+An agent driving a game on another machine or on Wayland has no other way to send that key.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
@@ -1196,3 +1225,25 @@ Checked on Hall of Fame (mod 90641) on 2026-10-23, through the public `https://a
 
 The facts to add to `publishing.md`, with the practice they lead to: quantize the screenshots (pngquant left 1920×1080 previews indistinguishable at a third of their lossless size) and keep the thumbnail lossless.
 The worked instance is the `images:optimize` task in `~/Documents/Dev/HallOfFame/mise.toml`.
+
+### A settings reset that calls `SetDefaults` leaves key bindings alone
+
+**Priority:** medium · **Cost:** cheap
+
+`settings-and-input.md` covers `ResetKeyBindings()` and the reset-key-bindings button, but not what an all-settings reset button needs.
+`SetDefaults()` never touches key bindings, so a reset that calls only it keeps the player's rebinds: an all-settings reset calls `ResetKeyBindings()` as well.
+`ResetKeyBindings()` applies and saves only when `keyBindingRegistered` (`src/Game/Game.Modding/ModSetting.cs:279-287`), so a reset that must save whatever the mod registers keeps its own `ApplyAndSave()`.
+Verified in game on 2026-10-23: a binding rebound to J stayed J through a `SetDefaults`-only reset, and returned to Ctrl+K once the reset called `ResetKeyBindings()`.
+The worked instance is the template's `ResetSettings` (toverux/ToveruxModTemplate, `ToveruxModTemplate/Settings.cs`); HallOfFame's `Settings.cs` has the gap.
+Both facts belong in `settings-and-input.md`'s `ResetKeyBindings()` passage.
+
+### `getModule(path, 'classes')` returns the game's live classes object
+
+**Priority:** medium · **Cost:** cheap
+
+No `cs2-modding-ui` reference says what `getModule` hands back for a stylesheet module.
+Its `classes` getter returns the object the vanilla component styles with, often its default theme, so a mod writing into it (fallback names for missing classes, say) changes the classes the game and every other mod read; a mod copies it before writing.
+The registry throws one `Module <path>@<export> was not found.` error for a missing module and a missing export alike, so a resolver cannot tell the two apart from the error.
+Traced in the readable bundle copy on 2026-10-23 (the registry's `getModule`, and `game-ui/common/tooltip/tooltip.module.scss`'s registration).
+The worked instance is the template's `getClassesModule` (toverux/ToveruxModTemplate, `ToveruxModTemplate/UI/src/utils/vanilla-modules.ts`); HallOfFame's copy writes into the live object.
+Both facts belong in `frontend-and-injection.md`'s module registry passage.
