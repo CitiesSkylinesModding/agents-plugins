@@ -1182,3 +1182,17 @@ A `ValueBinding`'s `value` survives `Detach`, and `OnSubscribe` re-sends it afte
 Overriding `Attach` needs a `cohtml.Net` reference for `View`.
 The worked instance is `ToveruxModTemplate/Utils/InputActionBinding.cs` in `~/Documents/Dev/ModernModTemplate` (a `ProxyBinding.Watcher` and `ProxyAction.onInteraction`); its review gate of 2026-10-23 caught a fix that released in `Detach` while still acquiring in the constructor.
 The facts to add to `binding-layer.md`'s teardown passage.
+
+### How Paradox Mods serves a mod's published images
+
+**Priority:** low · **Cost:** cheap
+
+`cs2-mod-project`'s `publishing.md` covers the `Thumbnail` and `Screenshot` fields but not what the site does with the files, which decides whether compressing them pays.
+Checked on Hall of Fame (mod 90641) on 2026-10-23, through the public `https://api.paradox-interactive.com/mods?modId=<id>&os=Windows`:
+
+- Screenshots are served byte for byte as uploaded (`content/screenshots/screenshot_NN.png` matched the committed file), plus a generated 240×135 `_thumb.png` for the gallery strip, so a visitor opening one downloads the uploaded file whole.
+- The thumbnail is re-encoded to JPEG (`content/covers/cover_<version>.jpg`), so a lossy pass on it only costs quality.
+- Unverified: whether a JPEG screenshot upload stays JPEG.
+
+The facts to add to `publishing.md`, with the practice they lead to: quantize the screenshots (pngquant left 1920×1080 previews indistinguishable at a third of their lossless size) and keep the thumbnail lossless.
+The worked instance is the `images:optimize` task in `~/Documents/Dev/HallOfFame/mise.toml`.
