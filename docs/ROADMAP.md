@@ -1073,24 +1073,27 @@ Proton install.
 
 ### Restarting the game and waiting on it, unattended
 
-**Priority:** medium · **Cost:** moderate
+**Priority:** high · **Cost:** moderate
 
 No reference says how an agent restarts the game after a build and knows when it is ready, so each mod session works it out again.
-NetworkTools' in-game testing worked it out for Linux under Proton, in machine-local files of `~/Documents/Dev/cs2-networktools` (not in its git history): `.scratch/tunnel-tests.md` (the Cycle section, and the dumps paragraph at line 464) and `.scratch/tools/`.
-Read those first; the scripts could ship nearly as they are.
+Morgan's mod template has a working version to port: `scripts/game.ts`, its log reader `scripts/game-log.ts`, and the `tmt-game-cycle` skill, in `~/Documents/Dev/ModernModTemplate` (`toverux-mod-template`, headed for the CitiesSkylinesModding organisation).
+It supersedes NetworkTools' machine-local `game.sh` (`~/Documents/Dev/cs2-networktools/.scratch/tools/`), which it was built from.
 
-- `game.sh restart` stops the game, launches it and returns at the main menu; `game.sh loaded` returns once a map load has finished.
-  It waits for Steam's reaper to exit, since Steam ignores a launch while the reaper for the app lives, well after `Cities2.exe` is gone.
-  It launches through `systemd-run --user`, because a Steam started from the agent's shell passes that environment, tokens included, into every crashpad dump uploaded to Colossal Order.
-  Game options go through `runOnce.txt` (already in `debug-menu.md`), Unity's own switches through `steam -applaunch`.
-  Readiness is read from `Logs/SceneFlow.log`: `MainMenu reached`, then `Loading completed`, after which the loading screen stays up some 20 s more.
-- Loading a map or a save without blocking the main thread: the editor's `MapPanelSystem.LoadMap` over the `unity` eval, or the gameface `menu.loadGame` trigger; `GameManager.instance.Load` from the eval holds the main thread the load needs, and the game must be killed.
-  `menu.loadGame` looks the save up in the menu's save list (`src/Game/Game.UI.Menu/MenuUISystem.cs:797`), which fills some seconds after `MainMenu reached`: sent before, it throws a `NullReferenceException`. A save's guid changes each time it is saved over, so a script reads it from the save (`unzip -p <Name>.cok <Name>.SaveGameMetadata.cid`).
+- A cross-platform Bun CLI: `restart [--load <save> | --new [<map>]] [<game options>]`, `stop`, `wait-load`.
+  Game options come bare: mise strips the first `--` from a task's arguments. The game's parser (Mono.Options) takes `--opt`, `-opt` and `/opt`, stops at `--` and ignores an unknown option silently, so the launch prints the options it wrote to `runOnce.txt`.
+  It loads through the game's `--startGame=<guid>` option at launch, which races no main-menu trigger, and reads a save's guid from its `.cok`, a stored zip, since the guid changes at each save.
+  Readiness comes from `Logs/SceneFlow.log`: `MainMenu reached`, or a `Loading mode Game|Editor` line followed by `Loading completed`, after which the loading screen stays up some 20 s more.
+- Process control: `Cities2.exe` by exact name and, on Linux, Steam's reaper for the app, which outlives the game and makes Steam ignore a launch while it lives; a launch starts and ends a first reaper before the game's, so a launch waits for `Cities2.exe` itself, and crash detection and the game-left-running report read `Cities2.exe` alone.
+  Launch through `systemd-run --user` on Linux, because a Steam started from the agent's shell passes that environment, tokens included, into crashpad dumps uploaded to Colossal Order.
+  Stop: a minute's grace for a game quitting from the `unity` eval (a script cannot share that session's exclusive debugger slot), then SIGTERM, then SIGKILL (`taskkill`, then `/F`, on Windows).
+- It recovers from a game that crashes, hangs or never launches, or hands the game back with its PIDs: a failed launch stops what it started and deletes `runOnce.txt`, so the next launch does not inherit its options. Verified on Linux by killing, freezing (SIGSTOP) and never launching the game; the Windows branch is unverified.
+- The template's in-game test runner (`scripts/test-game.ts`, `scripts/scenario-log.ts`, the `tmt-game-testing` skill) uses the launcher and could follow it: the game's runner reports a scenario a success when its preparation throws, and aborts a scenario while earlier errors are pending, which the runner and a scenario base class work around.
+  The runner takes one `[TestPrepare]` per scenario, base classes included, and throws on two. An exception a system throws at the main menu lands in `SceneFlow.log`, naming the mod only in its stack. `TestScenarioSystem.instance.scenarios` returns the live dictionary, so registering needs no reflection unless the order matters.
+- Loading another save from a running game: the gameface `menu.loadGame` trigger, once the menu's save list filled (`src/Game/Game.UI.Menu/MenuUISystem.cs:797`), some 30 s after `MainMenu reached`; sent earlier, it throws a `NullReferenceException`. `GameManager.instance.Load` from the eval holds the main thread the load needs, and the game must be killed.
 - For a screen recording or any scripted run in a loaded city, `CameraController.inputEnabled = false` (`src/Game/Game/CameraController.cs:248`, through `CameraController.TryGet`) stops edge scrolling and the camera keys from moving the view.
-- `autorun.sh` and `crashhunt.sh` run a scenario through the game's own test runner (`--categoryFilter=<category>`, no debugger attached) over and over, and class each run as finished, died, stuck or timeout from `Logs/TestScenarios.log` and the process, counting new crashpad dumps; `scenario.sh` waits for the next result in that log.
 
-Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the scripts as tooling it points to, and the Windows launch and process checks added beside the Linux ones.
-The scripts carry NetworkTools' own scenario names and log files, which a generic version takes as arguments.
+Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the CLI as tooling it ships.
+Once it ships, the template drops its copy (`scripts/game.ts`, the `game` mise task, the `tmt-game-cycle` skill) and points its runner and AGENTS.md at the plugin's; annotate the template's spec, `.scratch/mod-template/spec.md`, if it is still there.
 
 ### `EntityQuery.Matches` and the unchecked query-mask limit
 
