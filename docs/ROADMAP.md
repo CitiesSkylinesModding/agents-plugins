@@ -1159,3 +1159,15 @@ Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-f
 Shape, not settled: a `measuring.md` sibling in `performance-and-memory/`, with the two eval traps also a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
 The figures come from one Linux machine under Proton; verify each in game before it ships.
 The unattended loop driving such runs belongs to the UI-trigger-from-a-shell-loop entry under `coherent-gameface`, and the game threads' OS culture, from the same notes, to the culture entry above.
+
+### Shipping the Linux toolchain setup as a script
+
+**Priority:** medium · **Cost:** moderate
+
+`cs2-mod-project`'s `linux-toolchain.md` walks an agent through the Linux toolchain setup by hand, step by step, and each mod repo then keeps its own script that automates the same steps: `scripts/setup-linux-toolchain.sh` in `~/Documents/Dev/HallOfFame` and in `~/Documents/Dev/ModernModTemplate`, run through each repo's `mise setup:linux` task.
+The two copies are byte-identical today and will drift, and a mod started without one of them repeats the manual walk.
+
+- Ship the script with `cs2-mod-project` (a `scripts/` folder beside `references/`), and make `linux-toolchain.md` lead with running it, keeping the manual steps as what the script does and the fallback when it fails.
+- Start from ModernModTemplate's copy: its review gate of 2026-10-23 fixed the search that reads only the root Steam library (a game or Proton in a secondary library dead-ends) and the `tail` that hides the "Unity failed" message under `set -e` when Unity never wrote its log.
+  The same gate confirmed and left two more: `pgrep -f 'Cities2\.exe'` matches any process whose command line mentions the exe, an agent's own shell included, so the script can refuse to run while the game is closed; and the idempotency checks test a path an interrupted extraction creates early, so a rerun after a Ctrl-C reports "Already installed" over a broken runtime.
+- Once the plugin ships it, drop the copy and its `setup:linux` task from each repo that has one, and point the repo's docs at the skill.
