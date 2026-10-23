@@ -1171,3 +1171,14 @@ The two copies are byte-identical today and will drift, and a mod started withou
 - Start from ModernModTemplate's copy: its review gate of 2026-10-23 fixed the search that reads only the root Steam library (a game or Proton in a secondary library dead-ends) and the `tail` that hides the "Unity failed" message under `set -e` when Unity never wrote its log.
   The same gate confirmed and left two more: `pgrep -f 'Cities2\.exe'` matches any process whose command line mentions the exe, an agent's own shell included, so the script can refuse to run while the game is closed; and the idempotency checks test a path an interrupted extraction creates early, so a rerun after a Ctrl-C reports "Already installed" over a broken runtime.
 - Once the plugin ships it, drop the copy and its `setup:linux` task from each repo that has one, and point the repo's docs at the skill.
+
+### A binding's own subscriptions follow `Attach` and `Detach`
+
+**Priority:** medium · **Cost:** cheap
+
+`binding-layer.md` says navigation detaches and re-attaches the whole registry (`UserInterface.OnNavigateTo`, `OnReadyForBindings`), and that a system's `OnDestroy` is where an event subscription is unhooked, but not what that means for a binding that subscribes to something itself.
+Such a binding acquires in an `Attach(View)` override and releases in `Detach()`, the pair the game runs on every navigation and on teardown: a subscription made in the constructor and released in `Detach` is dead after the first navigation, and one released in a finalizer is never released, since the subscription roots the binding.
+A `ValueBinding`'s `value` survives `Detach`, and `OnSubscribe` re-sends it after the re-attach, so transient state (an input action's phase) is reset in `Detach`.
+Overriding `Attach` needs a `cohtml.Net` reference for `View`.
+The worked instance is `ToveruxModTemplate/Utils/InputActionBinding.cs` in `~/Documents/Dev/ModernModTemplate` (a `ProxyBinding.Watcher` and `ProxyAction.onInteraction`); its review gate of 2026-10-23 caught a fix that released in `Detach` while still acquiring in the constructor.
+The facts to add to `binding-layer.md`'s teardown passage.
