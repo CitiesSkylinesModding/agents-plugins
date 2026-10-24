@@ -252,6 +252,22 @@ own connection (prototype: `.scratch/tools/ui-eval.mjs` in Morgan's Find It chec
 the repo). A one-shot CLI in the package, or the pattern in `gameface-driving`, would make this a
 documented route.
 
+### A wrapping flex item with margins is sized short of its content
+
+**Priority:** medium · **Cost:** trivial
+
+At Cohtml 2.2.1.3 in Cities: Skylines II, a flex item in a `flex-wrap: wrap` row came out narrower
+than its content by its `margin-right` minus its `margin-top` and `margin-bottom`: an item with
+`margin: 4rem 24rem 4rem 0` was 16px short, and its text overflowed the box. Nothing shows until the
+box paints, so it read as a misplaced hover background, and three padding tweaks went nowhere before
+measurement found it. The margins were what mattered: `margin-right: 0` made the item 8px too wide,
+40 made it 32 short, all margins 0 made it exact, while the font size, `flex-shrink: 0` and wrapping
+the text in its own element changed nothing. Spacing the items with padding, or with flex `gap`, which
+lays out since 2.2, sizes them right. This belongs in `layout-styling-text.md` beside the margin and
+`gap` notes, verified on one more row shape (no wrap, a column), since the probe covered only a
+wrapping row of inline-content items. Found in Hall of Fame's Creator Dashboard detail caption,
+session `449ee1b0-8f4e-4e34-a306-6263c9118606`.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
