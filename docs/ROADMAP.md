@@ -667,6 +667,16 @@ that route at `unity-driving/SKILL.md:74`, which calls such a method out of reac
 packing the trailing arguments into the parameter's array type when no overload binds them as
 written is the full one.
 
+### Collection initializers in `eval`
+
+**Priority:** low · **Cost:** unsure
+
+`new System.Collections.Generic.List<string> { "x" }` fails with `unsupported: collection
+initializer expression`, though the tool description lists `new` with initializers, which reads as
+covering both forms. Passing a one-string `IList<string>` (`AppBindings.RemoveActiveUIModLocation`)
+took `System.Text.RegularExpressions.Regex.Split("x", ";")`, a `string[]` the grammar cannot build
+directly. Accepting the form, or naming the object-only scope in the description, closes it.
+
 ### Breakpoints in async methods
 
 **Priority:** medium · **Cost:** moderate · **Hits:** 1 as of 2026-09-29
@@ -1203,6 +1213,7 @@ Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-f
 - Per-call allocations: set `GarbageCollector.GCMode` to `Disabled` and run several passes reading `GC.GetTotalMemory(false)`, the last agreeing passes giving the figure (`AllocBench` in `.scratch/tools/Item3Bench.cs`).
   A single pass after `GC.Collect` undercounts small objects, which refill the freed slots (a ~120 B/call `int[]` read 0), and `GC.GetAllocatedBytesForCurrentThread` returns 0 in the game's Mono.
 - A frame-time recording (rAF in the Gameface page) takes no other call into the game while it runs: each `unity` or gameface eval stalls the game and shows as a long frame.
+- A UI mod's load cost: during boot the UI view advances about once per second until the main menu, so each async step of the mod loader takes a tick and in-page timings read seconds; `frontend-and-injection.md`'s loader section does not say so. Hall of Fame timed `UIManager.Update` through Harmony, compared deployed-file variants interleaved, and attributed JS through the CDP `Profiler` domain, which works on Cohtml 2.2.1.3 (`docs/solutions/measuring-the-ui-bundles-load-cost.md` in `toverux/HallOfFame`).
 
 Shape, not settled: a `measuring.md` sibling in `performance-and-memory/`, with the two eval traps also a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
 The figures come from one Linux machine under Proton; verify each in game before it ships.
