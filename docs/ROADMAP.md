@@ -942,14 +942,14 @@ Reproduce it, then either have `eval` warn on a write that reaches a UI binding,
 
 The plugin launches its server with `dotnet dnx UnityDevtools.Mcp --version 1.3.0`, and `dnx` serves a version from the NuGet cache once it holds one.
 On this machine that cache holds a 1.3.0 server built on 2026-10-10, while plugin 1.3.0's skill and source, refreshed on 2026-10-22, document features committed after it under the same version, `default(T)` among them (1c66a8e, 2026-10-17).
-So the skill promises what the server refuses: in ToveruxModTemplate on 2026-10-23, `var s = default(UnityEngine.InputSystem.LowLevel.KeyboardState);` failed with `unsupported: default expression`, and the agent fell back to `new KeyboardState { }`.
+So the skill promises what the server refuses: in the mod template on 2026-10-23, `var s = default(UnityEngine.InputSystem.LowLevel.KeyboardState);` failed with `unsupported: default expression`, and the agent fell back to `new KeyboardState { }`.
 Bumping `<Version>` in `UnityDevtools.Mcp.csproj` and the `.mcp.json` pin with every server change, and a check that fails a server change landing without the bump, keeps the two in step.
 
 ### A mutating call on a struct with a fixed buffer fails
 
 **Priority:** medium · **Cost:** unsure
 
-In ToveruxModTemplate on 2026-10-23, on the 2026-10-10 server build above: `var s = new UnityEngine.InputSystem.LowLevel.KeyboardState { }; s.Set(UnityEngine.InputSystem.Key.LeftCtrl, true);` passed, and the next `s.Set(UnityEngine.InputSystem.Key.K, true);` failed with `Unable to cast object of type 'System.Byte[]' to type 'System.Byte'`.
+In the mod template on 2026-10-23, on the 2026-10-10 server build above: `var s = new UnityEngine.InputSystem.LowLevel.KeyboardState { }; s.Set(UnityEngine.InputSystem.Key.LeftCtrl, true);` passed, and the next `s.Set(UnityEngine.InputSystem.Key.K, true);` failed with `Unable to cast object of type 'System.Byte[]' to type 'System.Byte'`.
 `KeyboardState` holds its keys in a `fixed byte` buffer, which the wire carries as the compiler's `<keys>e__FixedBuffer` struct, so writing the local back after the call seems to assign the buffer's bytes where one byte is expected.
 Unverified against the current source: reproduce with a fixture struct holding a fixed buffer and a method writing to it.
 The workaround was to build the input from the device's own layout instead (next entry).
@@ -959,7 +959,7 @@ The workaround was to build the input from the device's own layout instead (next
 **Priority:** medium · **Cost:** moderate
 
 `game_key` reaches the UI's DOM handlers only, and nothing in either plugin presses a key that Unity's Input System reads, the route a game's own key bindings take.
-In ToveruxModTemplate on 2026-10-23, verifying a mod's Ctrl+K binding took four evals.
+In the mod template on 2026-10-23, verifying a mod's Ctrl+K binding took four evals.
 A state event built from the device's layout (`StateEvent.From(Keyboard.current, out var ev, Allocator.Persistent)`, then `InputControlExtensions.WriteValueIntoEvent(kb.kKey, 1f, ev)` and `InputSystem.QueueEvent(ev)`) was dropped while the game window was unfocused: the Input System's `backgroundBehavior` was `ResetAndDisableNonBackgroundDevices`.
 Switching it to `IgnoreFocus` and calling `InputSystem.EnableDevice(kb)` let the press and release through, after which the setting was restored.
 A `unity` `key` tool taking a chord (`ctrl+k`) would press, advance a frame, release, and lift the background gate only for its own window, restoring it after.
@@ -1102,7 +1102,7 @@ Proton install.
 **Priority:** high · **Cost:** moderate
 
 No reference says how an agent restarts the game after a build and knows when it is ready, so each mod session works it out again.
-Morgan's mod template has a working version to port: `scripts/game.ts`, its log reader `scripts/game-log.ts`, and the `tmt-game-cycle` skill, in `~/Documents/Dev/ModernModTemplate` (`toverux-mod-template`, headed for the CitiesSkylinesModding organisation).
+Morgan's mod template has a working version to port: `scripts/game.ts`, its log reader `scripts/game-log.ts`, and the `gfd-game-cycle` skill, in `~/Documents/Dev/cs2-greenfield-mod-template` (CitiesSkylinesModding/greenfield-mod-template).
 It supersedes NetworkTools' machine-local `game.sh` (`~/Documents/Dev/cs2-networktools/.scratch/tools/`), which it was built from.
 
 - A cross-platform Bun CLI: `restart [--load <save> | --new [<map>]] [<game options>]`, `stop`, `wait-load`.
@@ -1119,7 +1119,7 @@ It supersedes NetworkTools' machine-local `game.sh` (`~/Documents/Dev/cs2-networ
 - For a screen recording or any scripted run in a loaded city, `CameraController.inputEnabled = false` (`src/Game/Game/CameraController.cs:248`, through `CameraController.TryGet`) stops edge scrolling and the camera keys from moving the view.
 
 Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the CLI as tooling it ships.
-Once it ships, the template drops its copy (`scripts/game.ts`, the `game` mise task, the `tmt-game-cycle` skill) and points its runner and AGENTS.md at the plugin's; annotate the template's spec, `.scratch/mod-template/spec.md`, if it is still there.
+Once it ships, the template drops its copy (`scripts/game.ts`, the `game` mise task, the `gfd-game-cycle` skill) and points its runner and AGENTS.md at the plugin's; annotate the template's spec, `.scratch/mod-template/spec.md`, if it is still there.
 
 ### `EntityQuery.Matches` and the unchecked query-mask limit
 
@@ -1223,11 +1223,11 @@ The unattended loop driving such runs belongs to the UI-trigger-from-a-shell-loo
 
 **Priority:** medium · **Cost:** moderate
 
-`cs2-mod-project`'s `linux-toolchain.md` walks an agent through the Linux toolchain setup by hand, step by step, and each mod repo then keeps its own script that automates the same steps: `scripts/setup-linux-toolchain.sh` in `~/Documents/Dev/HallOfFame` and in `~/Documents/Dev/ModernModTemplate`, run through each repo's `mise setup:linux` task.
+`cs2-mod-project`'s `linux-toolchain.md` walks an agent through the Linux toolchain setup by hand, step by step, and each mod repo then keeps its own script that automates the same steps: `scripts/setup-linux-toolchain.sh` in `~/Documents/Dev/HallOfFame` and in `~/Documents/Dev/cs2-greenfield-mod-template`, run through each repo's `mise setup:linux` task.
 The two copies are byte-identical today and will drift, and a mod started without one of them repeats the manual walk.
 
 - Ship the script with `cs2-mod-project` (a `scripts/` folder beside `references/`), and make `linux-toolchain.md` lead with running it, keeping the manual steps as what the script does and the fallback when it fails.
-- Start from ModernModTemplate's copy: its review gate of 2026-10-23 fixed the search that reads only the root Steam library (a game or Proton in a secondary library dead-ends) and the `tail` that hides the "Unity failed" message under `set -e` when Unity never wrote its log.
+- Start from the mod template's copy: its review gate of 2026-10-23 fixed the search that reads only the root Steam library (a game or Proton in a secondary library dead-ends) and the `tail` that hides the "Unity failed" message under `set -e` when Unity never wrote its log.
   The same gate confirmed and left two more: `pgrep -f 'Cities2\.exe'` matches any process whose command line mentions the exe, an agent's own shell included, so the script can refuse to run while the game is closed; and the idempotency checks test a path an interrupted extraction creates early, so a rerun after a Ctrl-C reports "Already installed" over a broken runtime.
 - Once the plugin ships it, drop the copy and its `setup:linux` task from each repo that has one, and point the repo's docs at the skill.
 
@@ -1239,7 +1239,7 @@ The two copies are byte-identical today and will drift, and a mod started withou
 Such a binding acquires in an `Attach(View)` override and releases in `Detach()`, the pair the game runs on every navigation and on teardown: a subscription made in the constructor and released in `Detach` is dead after the first navigation, and one released in a finalizer is never released, since the subscription roots the binding.
 A `ValueBinding`'s `value` survives `Detach`, and `OnSubscribe` re-sends it after the re-attach, so transient state (an input action's phase) is reset in `Detach`.
 Overriding `Attach` needs a `cohtml.Net` reference for `View`.
-The worked instance is `ToveruxModTemplate/Utils/InputActionBinding.cs` in `~/Documents/Dev/ModernModTemplate` (a `ProxyBinding.Watcher` and `ProxyAction.onInteraction`); its review gate of 2026-10-23 caught a fix that released in `Detach` while still acquiring in the constructor.
+The worked instance is `Greenfield/Utils/InputActionBinding.cs` in `~/Documents/Dev/cs2-greenfield-mod-template` (a `ProxyBinding.Watcher` and `ProxyAction.onInteraction`); its review gate of 2026-10-23 caught a fix that released in `Detach` while still acquiring in the constructor.
 The facts to add to `binding-layer.md`'s teardown passage.
 
 ### How Paradox Mods serves a mod's published images
@@ -1264,7 +1264,7 @@ The worked instance is the `images:optimize` task in `~/Documents/Dev/HallOfFame
 `SetDefaults()` never touches key bindings, so a reset that calls only it keeps the player's rebinds: an all-settings reset calls `ResetKeyBindings()` as well.
 `ResetKeyBindings()` applies and saves only when `keyBindingRegistered` (`src/Game/Game.Modding/ModSetting.cs:279-287`), so a reset that must save whatever the mod registers keeps its own `ApplyAndSave()`.
 Verified in game on 2026-10-23: a binding rebound to J stayed J through a `SetDefaults`-only reset, and returned to Ctrl+K once the reset called `ResetKeyBindings()`.
-The worked instance is the template's `ResetSettings` (toverux/ToveruxModTemplate, `ToveruxModTemplate/Settings.cs`); HallOfFame's `Settings.cs` has the gap.
+The worked instance is the template's `ResetSettings` (CitiesSkylinesModding/greenfield-mod-template, `Greenfield/Settings.cs`); HallOfFame's `Settings.cs` has the gap.
 Both facts belong in `settings-and-input.md`'s `ResetKeyBindings()` passage.
 
 ### `getModule(path, 'classes')` returns the game's live classes object
@@ -1275,7 +1275,7 @@ No `cs2-modding-ui` reference says what `getModule` hands back for a stylesheet 
 Its `classes` getter returns the object the vanilla component styles with, often its default theme, so a mod writing into it (fallback names for missing classes, say) changes the classes the game and every other mod read; a mod copies it before writing.
 The registry throws one `Module <path>@<export> was not found.` error for a missing module and a missing export alike, so a resolver cannot tell the two apart from the error.
 Traced in the readable bundle copy on 2026-10-23 (the registry's `getModule`, and `game-ui/common/tooltip/tooltip.module.scss`'s registration).
-The worked instance is the template's `getClassesModule` (toverux/ToveruxModTemplate, `ToveruxModTemplate/UI/src/utils/vanilla-modules.ts`); HallOfFame's copy writes into the live object.
+The worked instance is the template's `getClassesModule` (CitiesSkylinesModding/greenfield-mod-template, `Greenfield/UI/src/utils/vanilla-modules.ts`); HallOfFame's copy writes into the live object.
 Both facts belong in `frontend-and-injection.md`'s module registry passage.
 
 ### Running the game without mods
