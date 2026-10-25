@@ -1277,3 +1277,15 @@ The registry throws one `Module <path>@<export> was not found.` error for a miss
 Traced in the readable bundle copy on 2026-10-23 (the registry's `getModule`, and `game-ui/common/tooltip/tooltip.module.scss`'s registration).
 The worked instance is the template's `getClassesModule` (toverux/ToveruxModTemplate, `ToveruxModTemplate/UI/src/utils/vanilla-modules.ts`); HallOfFame's copy writes into the live object.
 Both facts belong in `frontend-and-injection.md`'s module registry passage.
+
+### Running the game without mods
+
+**Priority:** medium · **Cost:** cheap
+
+No reference says how to start a vanilla run, which an upstream bug report stands on and a mod-conflict bisect starts from.
+Two sources load mods: the user data folder's local mods, and the active Paradox playset.
+The game loads every folder under the user data path whose name does not begin with `.`, so a mod folder renamed to `Mods.disabled` still loads; a hidden name (`.Mods.disabled`) keeps it out.
+`Colossal.IO.FileSystem.Snapshot.IsExcluded` (`src/Colossal.IO/Colossal.IO.FileSystem/Snapshot.cs:49-56`) skips names starting with `.` or `~`; that it is the scan the mod loader uses is not traced.
+Moving the local mods out leaves the playset's mods loading: switching to an empty playset in the game's Paradox Mods screen is the other half, where hand-editing `.cache/Mods/playset_config.json` would fight the playset sync.
+Found on 2026-10-25 setting up a vanilla repro of a photo mode bug in Hall of Fame; the folder-name rule is Morgan's, from experience.
+Both halves belong in `diagnostics.md`, beside the `Enabled Mods` block that lists the playset alone.
