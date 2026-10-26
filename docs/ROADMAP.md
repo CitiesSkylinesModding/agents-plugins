@@ -724,9 +724,22 @@ plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, unt
 Every invoke goes out with `InvokeOptions.None`, so the agent resumes the whole VM while it runs. A
 worker thread paused at a breakpoint runs on during a frameless `eval`: in the fixture, a worker
 paused inside a static constructor finished it and exited, and the next `debug_evaluate` failed with
-`the paused thread has no managed frames`. `SingleThreaded` holds every other thread, at the price
+the `has no managed frames` error. `SingleThreaded` holds every other thread, at the price
 of deadlocking an invoke that waits on one of them; which callers can take that is what the cost
 turns on.
+
+### `debug_pause_state` under a held suspend finds no managed frames
+
+**Priority:** medium · **Cost:** moderate · **Hits:** 2 games as of 2026-10-26
+
+A plain `suspend` flags the main thread wherever it is, and between callbacks that is engine code
+with no managed frame on the stack. `debug_pause_state` reads the frames at once and fails with
+`has no managed frames`, while an `eval` issued in the same state answers within milliseconds,
+since `Invoker.Retrying` waits for the thread to park at a managed safe point. At a release game's
+menu five consecutive held suspends found no frames, and two on the reference target did, before
+one succeeded. Waiting for the park the way invokes do, under the same bound, would make the pause
+state answer on the first call; what that wait costs against a thread that never re-enters managed
+code (a game that stopped advancing frames) is what the cost turns on.
 
 ### The frame-write journal's blind spots
 
@@ -758,13 +771,6 @@ invoke runs there. With the main thread blocked inside `T`'s constructor and a w
 breakpoint, `debug_evaluate` in the worker's frame reads `T`'s partly assigned statics where C# on
 the worker would wait. Scanning only the frame's own thread when a frame scope is present would
 close it.
-
-### Unnamed threads reported as the main thread
-
-**Priority:** low · **Cost:** trivial
-
-`DebugController` labels any thread without a name `(main)`, so a pause on an unnamed worker
-reports `thread=(main)`. Comparing the thread with `Invoker.MainThread` would name it right.
 
 ### Extension methods through instance syntax
 
