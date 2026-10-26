@@ -491,7 +491,10 @@ public sealed class ScreenshotTests {
     /// against a shape the live path never produces.
     /// </summary>
     private static Exception NotParked() {
-      var unparked = new MainThreadNotParkedException(TimeSpan.FromSeconds(15));
+      var unparked = new MainThreadNotParkedException(
+        TimeSpan.FromSeconds(15),
+        "managed id 1, unnamed"
+      );
 
       return new EvalFailedException(unparked.Message, unparked) {
         StatementIndex = 0,

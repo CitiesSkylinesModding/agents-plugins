@@ -4,7 +4,19 @@ using System.Threading;
 namespace TestFixture;
 
 public static class Program {
+  /// <summary>The main thread's name, set before the debugger can see it.</summary>
+  public const string MainThreadName = "FixtureMain";
+
   public static void Main() {
+    // Name the main thread and start an unnamed worker before READY: some games name their main
+    // thread at startup, and a pick going by the name takes the unnamed worker instead, so the
+    // suite's every invoke runs against that shape.
+    Thread.CurrentThread.Name = Program.MainThreadName;
+
+    new Thread(Program.Idle) {
+      IsBackground = true
+    }.Start();
+
     // Mirror reads of static fields do not trigger class constructors, so touch every type holding
     // shared static roots; READY tells the test harness the roots are initialized.
     GC.KeepAlive(Shapes.Greeting);
@@ -35,4 +47,8 @@ public static class Program {
 
     // ReSharper disable once FunctionNeverReturns
   }
+
+  // Blocked in one native wait for good, like a worker idling on a queue: a thread that re-enters
+  // managed code now and then parks for an invoke eventually, and would hide a wrong pick.
+  private static void Idle() => new ManualResetEvent(false).WaitOne();
 }

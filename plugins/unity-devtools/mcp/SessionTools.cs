@@ -161,6 +161,7 @@ public sealed class SessionTools(UnitySession session, BeaconListener beacons) {
       Port = snapshot.Port,
       VmVersion = snapshot.VmVersion,
       Protocol = snapshot.Protocol,
+      MainThread = snapshot.MainThread,
       HeldSuspends = snapshot.HeldSuspends,
       BusySeconds = snapshot.BusyFor is {} busy ? Math.Round(busy.TotalSeconds, 1) : null
     };
@@ -246,6 +247,13 @@ public sealed record SessionInfo {
 
   /// <summary>The negotiated SDB protocol, when attached (generic invokes need 2.24+).</summary>
   public required string? Protocol { [UsedImplicitly] get; init; }
+
+  /// <summary>
+  /// The thread every call runs on, by managed id and name, once a call has picked it:
+  /// the thread the runtime attached first.
+  /// When calls time out on a game that is advancing frames, this is the thread they waited on.
+  /// </summary>
+  public required string? MainThread { [UsedImplicitly] get; init; }
 
   /// <summary>Suspensions currently held via the suspend tool (game frozen while &gt; 0).</summary>
   public required int HeldSuspends { [UsedImplicitly] get; init; }

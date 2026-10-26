@@ -459,7 +459,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     IReadOnlyList<IEvalScope> tailScopes
   ) {
     // Validates the index up front with the frame-count error, before any statement runs.
-    _ = DebugController.FrameAt(thread, frameIndex);
+    _ = this.FrameAt(thread, frameIndex);
 
     var scopes = new List<IEvalScope> {
       new FrameScope(invoker, thread, frameIndex, this.FrameWritesOfCurrentPause())
@@ -751,15 +751,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
 
     var thread = set.Events[0].Thread;
 
-    string threadName;
-
-    try {
-      // Unity's main thread reports an empty name in player builds.
-      threadName = string.IsNullOrEmpty(thread.Name) ? "(main)" : thread.Name;
-    }
-    catch {
-      threadName = null;
-    }
+    var threadName = this.NameOf(thread);
 
     var reason = exception is not null
       ? "exception"
@@ -930,11 +922,18 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     }
   }
 
-  private static StackFrame FrameAt(ThreadMirror thread, int frameIndex) {
+  private StackFrame FrameAt(ThreadMirror thread, int frameIndex) {
     var frames = thread.GetFrames();
 
+    // A suspend lands on the main thread wherever it is, and between callbacks that is engine code
+    // with no managed frame on the stack; a frozen thread answers the same frames on a plain
+    // retry, so the retry comes after a resume. An event pause reaches here too, for a thread an
+    // invoke let run on and exit.
     if (frames.Length is 0) {
-      throw new InvalidOperationException("the paused thread has no managed frames");
+      throw new InvalidOperationException(
+        $"thread {this.NameOf(thread)} has no managed frames: it sits inside engine or native " +
+        "code, or has exited, so resume and retry, or break on a method it runs and debug_wait"
+      );
     }
 
     return frameIndex >= 0 && frameIndex < frames.Length
@@ -963,18 +962,9 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
       )
       .ToArray();
 
-    var selected = DebugController.FrameAt(thread, frameIndex);
+    var selected = this.FrameAt(thread, frameIndex);
 
     var (locals, localsNote) = this.ReadLocals(thread, frameIndex, selected);
-
-    string threadName;
-
-    try {
-      threadName = thread.Name;
-    }
-    catch {
-      threadName = null;
-    }
 
     return new PauseDetails {
       Reason = header.Reason,
@@ -983,7 +973,7 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
       ExceptionType = header.ExceptionType,
       ExceptionMessage = header.ExceptionMessage,
       ConditionError = header.ConditionError,
-      ThreadName = string.IsNullOrEmpty(threadName) ? "(main)" : threadName,
+      ThreadName = this.NameOf(thread),
       ThreadId = thread.Id,
       Frames = lines,
       FramesTruncated = frames.Length > DebugController.MaxFrames,
@@ -1088,17 +1078,8 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
             methods = [];
           }
 
-          string name;
-
-          try {
-            name = t.Name;
-          }
-          catch {
-            name = null;
-          }
-
           return new ThreadView {
-            Name = string.IsNullOrEmpty(name) ? "(unnamed)" : name,
+            Name = this.NameOf(t),
             Id = t.Id,
             State = DebugController.ThreadStateOf(t),
             FrameMethods = methods
@@ -1106,6 +1087,27 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
         }
       )
       .ToArray();
+  }
+
+  /// <summary>
+  /// A thread's name for a report: its own, else "(main)" for the one invokes run on,
+  /// which a player build leaves unnamed, else "(unnamed)".
+  /// </summary>
+  private string NameOf(ThreadMirror thread) {
+    string name;
+
+    try {
+      name = thread.Name;
+    }
+    catch {
+      name = null;
+    }
+
+    if (!string.IsNullOrEmpty(name)) {
+      return name;
+    }
+
+    return thread.Id == invoker.MainThread.Id ? "(main)" : "(unnamed)";
   }
 
   private static string ThreadStateOf(ThreadMirror thread) {

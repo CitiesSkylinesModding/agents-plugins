@@ -10,9 +10,15 @@ namespace UnityDevtools.Sdb;
 /// lateness rather than as a fault keeps its meaning; what changes is the words, since the wire's
 /// own ("The vm is not suspended") describe a state the session is not in and name no way out.
 /// </summary>
-public sealed class MainThreadNotParkedException(TimeSpan waited) : VMNotSuspendedException {
+public sealed class MainThreadNotParkedException(TimeSpan waited, string mainThread)
+  : VMNotSuspendedException {
+  /// <summary>
+  /// Names the thread it waited on: a game whose main thread the pick missed times out this way,
+  /// and the label is what tells that apart from a game that stopped advancing frames.
+  /// </summary>
   public override string Message =>
-    $"the game's main thread stayed inside engine or native code for {waited.TotalSeconds:0.#}s, " +
-    "so no call could be run on it; the session is still attached and nothing was left " +
-    "half-done, and the same call works again once the game is advancing frames - check that it is";
+    $"the game's main thread ({mainThread}) stayed inside engine or native code for " +
+    $"{waited.TotalSeconds:0.#}s, so no call could be run on it; the session is still attached " +
+    "and nothing was left half-done, and the same call works again once the game is advancing " +
+    "frames - check that it is";
 }

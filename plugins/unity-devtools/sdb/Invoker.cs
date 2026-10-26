@@ -26,21 +26,65 @@ namespace UnityDevtools.Sdb;
 public sealed class Invoker(VirtualMachine vm) {
   public VirtualMachine Vm { get; } = vm;
 
-  public SdbThreadMirror MainThread { get; } = Invoker.PickMainThread(vm);
+  // Both read at construction, inside the suspend window the session builds the invoker in, so a
+  // failure or a status report quotes the label without a wire read of its own.
+  private readonly (SdbThreadMirror Thread, string Label) main = Invoker.PickMainThread(vm);
+
+  public SdbThreadMirror MainThread => this.main.Thread;
+
+  /// <summary>
+  /// <see cref="MainThread"/> as a report names it: its managed id and its name.
+  /// </summary>
+  public string MainThreadLabel => this.main.Label;
 
   /// <summary>
   /// The parameter defaults read so far, held for the attach like every memo here.
   /// </summary>
   public ParameterDefaults Defaults { get; } = new();
 
-  private static SdbThreadMirror PickMainThread(VirtualMachine vm) {
+  /// <summary>
+  /// Unity's main thread is the first attached to the runtime, which Mono gives managed id 1;
+  /// its name belongs to the game (empty in player builds, "Main Thread" in some editor builds,
+  /// and some games rename it at startup), so the name decides only where the id cannot be read.
+  /// </summary>
+  private static (SdbThreadMirror Thread, string Label) PickMainThread(VirtualMachine vm) {
     var threads = vm.GetThreads();
 
-    // Unity's main thread is the first attached thread; its name is empty in player builds ("Main
-    // Thread" in some editor builds).
-    return threads.FirstOrDefault(t => t.Name is "Main Thread") ??
+    var thread = threads.FirstOrDefault(t => Invoker.ManagedIdOf(t) is 1) ??
+      threads.FirstOrDefault(t => t.Name is "Main Thread") ??
       threads.Where(t => string.IsNullOrEmpty(t.Name)).OrderBy(t => t.Id).FirstOrDefault() ??
       threads.OrderBy(t => t.Id).First();
+
+    var id = Invoker.ManagedIdOf(thread) is {} managed
+      ? $"managed id {managed}"
+      : $"object id {thread.Id}";
+
+    var label = string.IsNullOrEmpty(thread.Name)
+      ? $"{id}, unnamed"
+      : $"{id}, named \"{thread.Name}\"";
+
+    return (thread, label);
+  }
+
+  /// <summary>
+  /// The thread's <c>ManagedThreadId</c>, read as the two field reads behind that property
+  /// (<c>Thread.internal_thread.managed_id</c>) rather than through the wire's thread id command,
+  /// which answers a native handle.
+  /// Null where the runtime's Thread layout differs.
+  /// </summary>
+  private static int? ManagedIdOf(SdbThreadMirror thread) {
+    var holder = thread.Type.GetField("internal_thread");
+
+    if (holder is null || thread.GetValue(holder) is not ObjectMirror internalThread) {
+      return null;
+    }
+
+    var idField = internalThread.Type.GetField("managed_id");
+
+    return idField is not null &&
+      internalThread.GetValue(idField) is PrimitiveValue { Value: int id }
+        ? id
+        : null;
   }
 
   /// <summary>
@@ -425,7 +469,7 @@ public sealed class Invoker(VirtualMachine vm) {
         Thread.Sleep(refused++ < Invoker.ParkPollsFast ? Invoker.ParkPoll : Invoker.ParkPollSlow);
       }
       catch (VMNotSuspendedException) {
-        throw new MainThreadNotParkedException(Invoker.ParkWait);
+        throw new MainThreadNotParkedException(Invoker.ParkWait, this.MainThreadLabel);
       }
     }
   }

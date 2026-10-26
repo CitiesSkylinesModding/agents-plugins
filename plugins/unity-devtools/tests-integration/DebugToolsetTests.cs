@@ -36,9 +36,15 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
       Assert.Equal("breakpoint", pause.Reason);
       Assert.Contains(binding.Id, pause.BreakpointIds);
 
-      var details = fx.Debug.Describe(pause, 0, false);
+      var details = fx.Debug.Describe(pause, 0, true);
 
       Assert.Contains("Ticker.Tick", details.Frames[0].Method);
+
+      // The pause names threads by their own name, "(unnamed)" for the fixture's idle worker, and
+      // "(main)" only for an unnamed main thread, which this fixture never has.
+      Assert.Equal("FixtureMain", details.ThreadName);
+      Assert.Contains(details.Threads, t => t.Name == "(unnamed)");
+      Assert.DoesNotContain(details.Threads, t => t.Name == "(main)");
 
       var parameter = Assert.Single(details.Parameters);
 

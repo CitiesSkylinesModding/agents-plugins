@@ -625,6 +625,7 @@ public sealed class UnitySession(BeaconListener beacons, TimeSpan? gateWait = nu
         Port = alive ? this.attachedPort : null,
         VmVersion = alive ? this.attachedVmVersion : null,
         Protocol = alive ? this.attachedProtocol : null,
+        MainThread = alive ? this.invoker?.MainThreadLabel : null,
 
         // A dropped connection resumed the game, so a hold reported against a dead attach would be
         // a second falsehood on top of the first.
@@ -856,6 +857,11 @@ public sealed class UnitySessionSnapshot {
 
   /// <summary>The negotiated SDB wire-protocol version, when attached.</summary>
   public string Protocol { get; init; }
+
+  /// <summary>
+  /// <see cref="Invoker.MainThreadLabel"/>, once an operation has built the invoker.
+  /// </summary>
+  public string MainThread { get; init; }
 
   public int HeldSuspends { get; init; }
 
