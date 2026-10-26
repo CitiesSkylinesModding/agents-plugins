@@ -1296,3 +1296,31 @@ The game loads every folder under the user data path whose name does not begin w
 Moving the local mods out leaves the playset's mods loading: switching to an empty playset in the game's Paradox Mods screen is the other half, where hand-editing `.cache/Mods/playset_config.json` would fight the playset sync.
 Found on 2026-10-25 setting up a vanilla repro of a photo mode bug in Hall of Fame; the folder-name rule is Morgan's, from experience.
 Both halves belong in `diagnostics.md`, beside the `Enabled Mods` block that lists the playset alone.
+
+### Phase placement the references teach and the code misses
+
+**Priority:** medium · **Cost:** unsure
+
+Two checklist items failed in all eight baseline runs, treatment and control alike: "The system is registered into `Modification2`, the phase the building initialiser runs in" (`new-building-log`) and "The system whose query names the foreign component is registered after every mod has loaded" (`abandoned-auto-bulldoze`).
+The treatment read each item's cited reference: `mod-lifecycle-and-ordering.md` in three of the four `new-building-log` runs and `phase-catalogue.md` in the fourth, `mod-compatibility.md` in all four `abandoned-auto-bulldoze` runs.
+The rule reaches the agent and not its code, so the passage carrying it is the suspect: whether it states the phase as a step taken while writing the registration call, and whether it is reached before the code is written or after.
+Found in the 2026-10 baseline run that `bench/results.md` records.
+
+### The build references load on tasks that build nothing
+
+**Priority:** medium · **Cost:** unsure
+
+In the 2026-10 baseline run, 75 of 120 treatment runs read `cs2-mod-project`'s `linux-toolchain.md` and 45 read `build-pipeline.md`, though every task's prompt says not to build.
+Each read costs the treatment turns and dollars on nothing a checklist scores.
+What sends the agent there is untraced: `cs2-mod-project`'s description, a pointer from another `cs2-*` skill, or the agent reaching for a build check on its own.
+
+### Benchmark fixes the baseline run surfaced
+
+**Priority:** low · **Cost:** cheap
+
+- Five checklist items were not applicable in any run of either arm, so they cannot separate the arms: `bulldoze-hidden-paths`' "The widening adds to the frame's raycast flags rather than replacing them" and "The hit filter acts only on hits the widening caused", `daily-city-snapshot`'s "The student count queries the citizen-side `Student`", and `unpowered-buildings-button`'s "Sizes are written in rem" and "The badge's font size follows the text-scale setting", the last two because every run reused the game's components and wrote no stylesheet.
+  Each needs a prompt that makes it apply, or a replacement.
+- Judging a UI task costs about fifteen times a C# one: the judge gets every workspace file, so a seeded bug the run never touched stays in front of it, and the UI template's `bindings.d.ts` (147 KB) and `Thumbnail.png` bring its prompt to about 490 KB.
+  Leaving out the template files no task seeds would keep that rule and drop the bulk.
+- `results.md`'s header gives a run's start date only, though `--resume` spreads one run over sittings: the baseline ran from 2026-10-09 to 2026-10-25.
+  `bench:promote` could print the first and last jobs' dates.
