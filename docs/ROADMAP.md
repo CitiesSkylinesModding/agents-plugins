@@ -1066,6 +1066,13 @@ contradicted or could not settle left the key. The 131 items that survived are c
 naming the shipped file it came from on its `Reference` line, across 45 reference files. A sweep can
 take those claims as checked and spend its agents on the rest of each file.
 
+Six items the verifier contradicted are where a sweep starts, since each was drawn from a shipped
+claim and none was fixed: generator-machinery lookups (`daily-city-snapshot`), `GetComponentLookup`
+in `OnUpdate` as a per-update sync (`repeat-fire-ledger`), the tool-mode gate (`tree-species-mix`),
+the `LoadSettings` defaults instance (`low-funds-alert`), the Modify event (`city-festival-policy`)
+and the mutate-in-place panel map (`city-pulse-panel`). Either the claim or the item's reading of it
+is wrong.
+
 ### What serializes a `CallBinding`'s result
 
 **Priority:** medium · **Cost:** cheap
