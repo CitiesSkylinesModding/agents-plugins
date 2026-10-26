@@ -193,13 +193,13 @@ async function main(): Promise<void> {
           throw new Error(`The ${root.kind} root does not exist: ${root.path}`);
         }
 
-        // Both arms are denied the copy's whole directory, so one holding a root blinds them.
+        // The control is denied the copy's whole directory, so one holding a root blinds it.
         const copyDir = machine.uiBundleCopy;
 
         if (copyDir && core.isInside(root.path, copyDir)) {
           throw new Error(oneLine`
             The setup record's UI bundle copy sits in ${copyDir}, which holds the ${root.kind}
-            root, and both arms are denied that directory. Move the copy into a directory of its
+            root, and the control is denied that directory. Move the copy into a directory of its
             own and update the record.
           `);
         }
@@ -335,6 +335,7 @@ async function runJob(job: Job, context: Context): Promise<void> {
   const arm = lastRun
     ? {
         contamination: core.findContamination({
+          arm: job.arm,
           toolCalls: lastRun.run.toolCalls,
           workspace: lastRun.workspace,
           roots: job.roots,

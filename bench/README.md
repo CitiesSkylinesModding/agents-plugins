@@ -5,7 +5,7 @@ Measures whether an agent with the four `cs2-*` skills installed writes better C
 Each task is a request a modder would type: a feature request, or a bug report on seeded code. Two arms get the same prompt in isolated headless workspaces, several times each, and write files. A judge that holds the task's checklist then rules on each item: did the code fall into the trap, avoid it, or never meet it.
 
 - control: a fresh workspace, seeded from the task where it has a seed.
-- treatment: the same, plus the four `cs2-*` skill folders copied to `.claude/skills/`, where the CLI loads them as real skills. The prompt never mentions them, so a skill that fails to trigger shows up as a failure.
+- treatment: the same, plus the four `cs2-*` skill folders copied to `.claude/skills/`, where the CLI loads them as real skills. The prompt never mentions them, so a skill that fails to trigger shows up as a failure. It stands for a modder who also ran the setup skill, so it may read what setup provides: the setup record, the mod corpus and the reformatted UI bundle copy. The control is denied all three.
 
 The prompt is byte-identical across arms. It's the request, then where the task's source roots are on this machine, then two closing lines: write the code without asking questions, and don't build, test or run anything.
 
@@ -45,7 +45,7 @@ Flags, all optional:
 
 An invocation is tasks × 2 arms × runs agent sessions, plus one judge call per job that wrote code. That's real money; `--concurrency` is the throttle.
 
-**Source roots are resolved before the first invocation.** The decompile comes from the setup record at `~/.cs2-modding/setup.md`. The install comes from `CSII_INSTALLATIONPATH`, with the record's `Game install` line as the fallback. The UI bundle root is the install's own `Cities2_Data/Content/Game/UI`, and the prompt names its `index.js`, the minified one-line file a modder without the setup skill has. A root that resolves to nothing, or to `(none)`, aborts the whole invocation rather than running an uneven comparison.
+**Source roots are resolved before the first invocation.** The decompile comes from the setup record at `~/.cs2-modding/setup.md`. The install comes from `CSII_INSTALLATIONPATH`, with the record's `Game install` line as the fallback. The UI bundle root is the install's own `Cities2_Data/Content/Game/UI`, and the prompt names its `index.js`, the minified one-line file a modder without the setup skill has. The treatment finds the reformatted copy through the setup record, as a modder who ran setup would. A root that resolves to nothing, or to `(none)`, aborts the whole invocation rather than running an uneven comparison.
 
 Results land in `bench/results/<timestamp>/`, which is gitignored: `run.json`, `summary.json`, `summary.md`, and a `raw/<task>-<arm>-<run>/` directory per job. It holds the prompt, each attempt's streamed output and stderr, the files the judge read under `files/`, the judge prompt, each judge reply and its stderr, and `record.json`, the job's whole record. A workspace is deleted once its files are copied out. An attempt that failed keeps its workspace, and its fault names the path.
 
@@ -146,7 +146,7 @@ A run that wrote no code is asked again, whole, with the same prompt. That retry
 
 The judge gets the request without its roots, the checklist without its references, the collected files and the final message. It has no tools and is never told the arm. An unreadable reply is retried under the same cap.
 
-A run is contaminated when a call read outside its workspace and roots, named a denied location in shell text, reached this repository on the web, or ran a skill as a forked subagent. A call a deny rule refused never ran, so it doesn't count. Reading back a large tool output the CLI saved under `~/.claude/projects/<project>/<session>/tool-results/` doesn't count either: that's the arm reading its own output. A contaminated run is listed with its findings and kept out of every score.
+A run is contaminated when a call read outside its workspace and roots, named a denied location in shell text, reached this repository on the web, or ran a skill as a forked subagent. A call a deny rule refused never ran, so it doesn't count. Reading back a large tool output the CLI saved under `~/.claude/projects/<project>/<session>/tool-results/` doesn't count either, nor does reading the output of a shell command the CLI moved to the background, under `<tmp>/claude-<uid>/<project>/<session>/tasks/` with the project named after the workspace: that's the arm reading its own output. What setup provides counts as a root for the treatment and as a denied location for the control. A contaminated run is listed with its findings and kept out of every score.
 
 The report gives, per arm, the pass rate over applicable items, the scored runs, the share of finished runs that loaded a `cs2-*` skill, and the contaminated and no-code counts with mean cost, turns, duration and token counts. A line under the header gives the judge's total cost and token counts. Then the pass rates per task kind and per task, the pass/fail/not-applicable counts per item, a row per run with its token totals, the unfinished tasks, the skill files treatment runs read, and the runs left out of the scores.
 
@@ -168,18 +168,24 @@ Each directory holds a `.claude/settings.json`:
     "deny": [
       "Read(/<this repo>/**)",
       "Read(/<home>/.claude/**)",
-      "Read(/<home>/.cs2-modding/**)",
-      "Read(/<mod corpus>/**)",
-      "Read(/<bundle copy>/**)",
       "Skill(code-review)"
     ]
   }
 }
 ```
 
-The control arm's deny list adds `Read(/<tmp>/cs2-bench-*/.claude/skills/**)`, which covers the skill copies in any treatment workspace running at the same time. `cs2-bench-` is the prefix the harness gives every workspace directory, so the rule and the harness change together.
-`<mod corpus>` is the setup record's `Mod corpus root`, and the rule is left out when the record has none: the corpus sits beside the decompile, so an arm listing the decompile's parent finds it, and other mods' sources are not what the bench measures. A control run in the pilot grepped it.
-`<bundle copy>` is the directory of the setup record's `UI bundle copy`, left out the same way. A copy kept inside the decompile, as the setup skill allows, is otherwise readable through the decompile root, and it is not the bundle a modder without the skill has. A copy whose directory holds a root fails validation, since the rule would deny the root too.
+The control arm's deny list adds what the setup skill provides, which a modder without the skills doesn't have, and the treatment workspaces' skill copies:
+
+```json
+"Read(/<home>/.cs2-modding/**)",
+"Read(/<mod corpus>/**)",
+"Read(/<bundle copy>/**)",
+"Read(/<tmp>/cs2-bench-*/.claude/skills/**)"
+```
+
+`<mod corpus>` is the setup record's `Mod corpus root`, and the rule is left out when the record has none: the corpus sits beside the decompile, so a control listing the decompile's parent finds it. A control run in the pilot grepped it.
+`<bundle copy>` is the directory of the setup record's `UI bundle copy`, left out the same way. A copy kept inside the decompile, as the setup skill allows, is otherwise readable through the decompile root. A copy whose directory holds a root fails validation, since the rule would deny the root too.
+The last rule covers the skill copies in any treatment workspace running at the same time. `cs2-bench-` is the prefix the harness gives every workspace directory, so the rule and the harness change together.
 `<this repo>`, `<home>`, `<tmp>`, `<mod corpus>` and `<bundle copy>` are absolute paths, so every rule opens with `//`, which is how a permission rule spells an absolute path.
 
 The arms add:
@@ -232,8 +238,8 @@ An arm doesn't always reach files through `Read` and `Write`. One treatment run 
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Skills kept from the control arm: loaded as skills                               | Enforced                                                                                                 |
 | Skills kept from the control arm: read from a concurrent treatment workspace     | Enforced by the control's extra deny rule for `Read`, `Grep` and plain shell reads; detected-only past that |
-| Reads of this repository, the Claude config directory, the cs2 setup directory and the mod corpus | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
-| Reads of a UI bundle copy kept inside the decompile | Enforced for reads naming the copy's directory, as above; a recursive shell search over the decompile reaches it undetected |
+| Reads of this repository and the Claude config directory; for the control, the cs2 setup directory and the mod corpus too | Enforced for `Read`, `Grep`, `Glob` and plain shell commands naming the path; detected-only through an interpreter or any other shell form the CLI's permission check misses |
+| Control reads of a UI bundle copy kept inside the decompile | Enforced for reads naming the copy's directory, as above; a recursive shell search over the decompile reaches it undetected |
 | Reads anywhere else outside the workspace and roots | Detected for `Read`, `Grep` and `Glob`; through the shell, only reads naming a denied location or another workspace are detected. The grants are unscoped |
 | Writes outside the workspace                                                     | Enforced for `Write` and `Edit`; through the shell, recorded but not classified                          |
 | Subagents | Enforced for the agent tool and `code-review`; detected-only for any other bundled skill that forks, through its `"status":"forked"` result |

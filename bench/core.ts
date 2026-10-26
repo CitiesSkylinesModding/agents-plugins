@@ -61,13 +61,14 @@ export interface Machine {
   readonly home: string;
   readonly tmpDir: string;
   /**
-   * The setup record's mod corpus, when it names one; denied like the setup directory.
+   * The setup record's mod corpus, when it names one.
+   * Denied to the control, like the setup directory.
    */
   readonly modCorpus?: string | undefined;
   /**
    * The directory holding the setup record's reformatted UI bundle copy, when it names one.
-   * Denied so an arm reads only the install's minified bundle, even where the copy sits inside the
-   * decompile.
+   * Denied so the control reads only the install's minified bundle,
+   * even where the copy sits inside the decompile.
    */
   readonly uiBundleCopy?: string | undefined;
 }
@@ -765,8 +766,11 @@ export function resolveRoots(
 
 /**
  * Plans one arm's invocation.
- * The two arms differ in the skills copied into the workspace and in the control's extra deny rule
- * for the treatment workspaces' copies, and in nothing else: the prompt and the flags are shared.
+ * The two arms share the prompt and the flags.
+ * They differ only in the skills copied into the workspace and in the control's extra deny rules.
+ * The control is denied what the setup skill provides and the treatment workspaces' skill copies.
+ * The treatment stands for a modder who ran setup,
+ * so it reads the setup record, the mod corpus, and the bundle copy.
  */
 export function planArm(input: {
   readonly arm: ArmName;
@@ -780,7 +784,7 @@ export function planArm(input: {
   const workspaceRule = `/${input.workspace}/**`;
   const workspaces = path.join(input.machine.tmpDir, workspacePrefix);
   const siblingSkills = `Read(/${workspaces}*/.claude/skills/**)`;
-  const shared = workspaceSettings(input.machine);
+  const settings = workspaceSettings(input.arm, input.machine);
 
   return {
     prompt: buildArmPrompt(input.task, input.roots),
@@ -803,8 +807,8 @@ export function planArm(input: {
     ],
     settings:
       input.arm == 'control'
-        ? { ...shared, permissions: { deny: [...shared.permissions.deny, siblingSkills] } }
-        : shared,
+        ? { ...settings, permissions: { deny: [...settings.permissions.deny, siblingSkills] } }
+        : settings,
     skills: input.arm == 'treatment' ? cs2Skills : []
   };
 }
@@ -819,7 +823,7 @@ export function planJudge(input: {
 }): JudgePlan {
   return {
     args: [...baseArgs(input.model, input.effort), '--disable-slash-commands', '--tools', ''],
-    settings: workspaceSettings(input.machine)
+    settings: workspaceSettings('control', input.machine)
   };
 }
 
@@ -980,19 +984,23 @@ export function jobSpend(attempts: readonly MeteredCall[]): JobSpend {
  * Why a run is contaminated, one finding per offending tool call; a clean run has none.
  * A run is contaminated when a call read outside its workspace and roots, named a denied location
  * in shell text, reached this repository on the web, or ran a skill as a forked subagent.
+ * What the setup skill provides counts among the treatment's roots,
+ * and among the control's denied locations.
  * A call a deny rule refused never ran, so it leaked nothing.
  * The shell scan is best-effort: it sees the locations a command names, never the ones it computes.
  */
 export function findContamination(input: {
+  readonly arm: ArmName;
   readonly toolCalls: readonly ToolCall[];
   readonly workspace: string;
   readonly roots: readonly ResolvedRoot[];
   readonly machine: Machine;
 }): readonly string[] {
   const { workspace, machine } = input;
-  const allowed = [workspace, ...input.roots.map(root => root.path)];
+  const setUp = input.arm == 'treatment' ? setupLocations(machine) : [];
+  const allowed = [workspace, ...input.roots.map(root => root.path), ...setUp];
 
-  const denied = deniedLocations(machine);
+  const denied = deniedLocations(input.arm, machine);
 
   const isOtherWorkspace = (target: string): boolean =>
     target.startsWith(path.join(machine.tmpDir, workspacePrefix)) && !isInside(target, workspace);
@@ -1003,6 +1011,7 @@ export function findContamination(input: {
     readPaths(call, workspace)
       .filter(target => !allowed.some(root => isInside(target, root)))
       .filter(target => !isSavedToolOutput(target, machine.home))
+      .filter(target => !isBackgroundOutput(target, machine.tmpDir, workspace))
       .map(target => `${call.name} read ${target}, outside the workspace and roots`)
   );
 
@@ -1634,12 +1643,12 @@ function baseArgs(model: string, effort: string): readonly string[] {
  * The deny rules every workspace carries.
  * A permission rule spells an absolute path with a leading `//`, hence the extra slash.
  */
-function workspaceSettings(machine: Machine): WorkspaceSettings {
+function workspaceSettings(arm: ArmName, machine: Machine): WorkspaceSettings {
   return {
     autoMemoryEnabled: false,
     permissions: {
       deny: [
-        ...deniedLocations(machine).map(location => `Read(/${location}/**)`),
+        ...deniedLocations(arm, machine).map(location => `Read(/${location}/**)`),
         'Skill(code-review)'
       ]
     }
@@ -1813,14 +1822,41 @@ function isSavedToolOutput(target: string, home: string): boolean {
 }
 
 /**
- * What both arms are denied reading:
- * this repository, the CLI's configuration, the setup record, the mod corpus, and the UI bundle
- * copy's directory.
+ * The CLI moves a long shell command to the background and writes its output under
+ * `<tmp>/claude-<uid>/<project>/<session>/tasks/`, the project named after the workspace.
+ * Reading it back is the arm reading its own output.
+ * The CLI roots that tree at `CLAUDE_CODE_TMPDIR` when set; this check assumes it is unset.
  */
-function deniedLocations(machine: Machine): readonly string[] {
+function isBackgroundOutput(target: string, tmpDir: string, workspace: string): boolean {
+  const [owner, project, session, folder, file] = path.posix.relative(tmpDir, target).split('/');
+
+  return (
+    /^claude-\d+$/u.test(owner ?? '') &&
+    project == workspace.replaceAll(/[^a-zA-Z0-9]/gu, '-') &&
+    session != undefined &&
+    folder == 'tasks' &&
+    file != undefined
+  );
+}
+
+/**
+ * What an arm is denied reading: this repository and the CLI's configuration,
+ * plus for the control what the setup skill provides.
+ */
+function deniedLocations(arm: ArmName, machine: Machine): readonly string[] {
   return [
     machine.repoRoot,
     path.join(machine.home, '.claude'),
+    ...(arm == 'control' ? setupLocations(machine) : [])
+  ];
+}
+
+/**
+ * What the setup skill provides beyond the roots: the setup record's directory, the mod corpus,
+ * and the UI bundle copy's directory.
+ */
+function setupLocations(machine: Machine): readonly string[] {
+  return [
     path.join(machine.home, '.cs2-modding'),
     ...(machine.modCorpus ? [machine.modCorpus] : []),
     ...(machine.uiBundleCopy ? [machine.uiBundleCopy] : [])

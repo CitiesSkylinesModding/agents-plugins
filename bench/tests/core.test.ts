@@ -358,19 +358,19 @@ describe('arm plans', () => {
     ]);
   });
 
-  test('both arms deny the repo, config, setup, corpus and bundle copy; control the skills', () => {
-    const shared = [
+  test('both arms deny the repo and config; control also the setup, corpus, copy, skills', () => {
+    expect(treatment.settings.permissions.deny).toEqual([
+      'Read(//home/modder/agents-plugins/**)',
+      'Read(//home/modder/.claude/**)',
+      'Skill(code-review)'
+    ]);
+    expect(control.settings.permissions.deny).toEqual([
       'Read(//home/modder/agents-plugins/**)',
       'Read(//home/modder/.claude/**)',
       'Read(//home/modder/.cs2-modding/**)',
       'Read(//home/modder/cs2-mods/**)',
       'Read(//data/cs2-decompile/src-ui/**)',
-      'Skill(code-review)'
-    ];
-
-    expect(treatment.settings.permissions.deny).toEqual(shared);
-    expect(control.settings.permissions.deny).toEqual([
-      ...shared,
+      'Skill(code-review)',
       'Read(//tmp/cs2-bench-*/.claude/skills/**)'
     ]);
     expect(control.settings.autoMemoryEnabled).toBe(false);
@@ -686,8 +686,8 @@ describe('contamination', () => {
     };
   }
 
-  function findingsOf(calls: readonly ToolCall[]): readonly string[] {
-    return findContamination({ toolCalls: calls, workspace, roots, machine });
+  function findingsOf(calls: readonly ToolCall[], arm: ArmName = 'control'): readonly string[] {
+    return findContamination({ arm, toolCalls: calls, workspace, roots, machine });
   }
 
   const cleanRun = [
@@ -771,6 +771,40 @@ describe('contamination', () => {
     ['a skill that forked', call('Skill', { skill: 'simplify' }, { isForked: true })]
   ])('%s contaminates the run', (_name, leak) => {
     expect(findingsOf([...cleanRun, leak])).toHaveLength(1);
+  });
+
+  test('the treatment arm reads what the setup skill provides without contamination', () => {
+    const setUp = [
+      call('Read', { file_path: '/home/modder/.cs2-modding/setup.md' }),
+      call('Bash', { command: 'cat ~/.cs2-modding/setup.md' }),
+      call('Grep', { pattern: 'IMod', path: '/home/modder/cs2-mods' }),
+      call('Glob', { pattern: '/home/modder/cs2-mods/**/*.cs' }),
+      call('Bash', { command: 'grep -n initialPosition /data/cs2-decompile/src-ui/source.js' })
+    ];
+
+    expect(findingsOf([...cleanRun, ...setUp], 'treatment')).toEqual([]);
+    expect(findingsOf([...cleanRun, ...setUp], 'control')).toHaveLength(setUp.length);
+  });
+
+  test("reading back the arm's own backgrounded command output is clean", () => {
+    const output = '/tmp/claude-1000/-tmp-cs2-bench-own/12ad0efc/tasks/b9tjsaxwf.output';
+
+    expect(findingsOf([...cleanRun, call('Read', { file_path: output })])).toEqual([]);
+  });
+
+  test("reading another workspace's backgrounded command output contaminates the run", () => {
+    const output = '/tmp/claude-1000/-tmp-cs2-bench-other/12ad0efc/tasks/b9tjsaxwf.output';
+
+    expect(findingsOf([...cleanRun, call('Read', { file_path: output })])).toHaveLength(1);
+  });
+
+  test('the treatment arm still contaminates a run by reading the repository or config', () => {
+    const leaks = [
+      call('Bash', { command: 'cat ~/.claude/CLAUDE.md' }),
+      call('Read', { file_path: '/home/modder/agents-plugins/AGENTS.md' })
+    ];
+
+    expect(findingsOf([...cleanRun, ...leaks], 'treatment')).toHaveLength(leaks.length);
   });
 
   test('a call a deny rule refused leaked nothing', () => {
