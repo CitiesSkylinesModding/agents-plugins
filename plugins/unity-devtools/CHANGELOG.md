@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.3.0...unity-devtools-v1.4.0) (2026-10-26)
+
+
+### Features
+
+* **unity-devtools:** bind eval calls omitting trailing optional parameters, as C# does ([6403e87](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6403e879659f2904fc281f50b4f3ce7144f920a6))
+* **unity-devtools:** evaluate type aliases, ref arguments, format clauses and default(T) in eval ([1c66a8e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1c66a8e54c0ed6c28d5fb969bff16c156fbe2b82))
+* **unity-devtools:** report a held debugger slot, and name the advertised port when an attach fails ([cf97321](https://github.com/CitiesSkylinesModding/agents-plugins/commit/cf973218ef6a39cb38462f9d6178b99e1ac3a636))
+
+
+### Bug Fixes
+
+* **unity-devtools:** make failed evals name what failed, and refuse entity() past the store's bound ([28544c2](https://github.com/CitiesSkylinesModding/agents-plugins/commit/28544c2a5ffaab4528a5e5bd6b2269ef2133db40))
+* **unity-devtools:** pick the main thread by its managed id, so a game that renames it no longer times out every call ([4aae74e](https://github.com/CitiesSkylinesModding/agents-plugins/commit/4aae74edbc8534b829fc1885d51bf232a551994b))
+
 ## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.2.0...unity-devtools-v1.3.0) (2026-10-10)
 
 
