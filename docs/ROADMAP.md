@@ -1056,27 +1056,15 @@ and told that a disagreement was a useful result.
 Run the same fan-out deliberately over every shipped reference file, rather than over the claims a
 benchmark happened to touch. The plugin's `AGENTS.md` already prescribes this briefing for a review
 gate, but a gate runs at authoring time, on prose the same session wrote, aimed at one reference;
-nothing re-derives a shipped claim afterwards. What it costs is an agent per claim family and the
-maintainer's time ruling on what comes back. What it buys is the first evidence about the rest of
-the corpus, against none today.
+afterwards, only the benchmark has re-derived shipped claims. What it costs is an agent per claim
+family and the maintainer's time ruling on what comes back. What it buys is the first evidence about
+the rest of the corpus.
 
-### A second benchmark question set
-
-**Priority:** low · **Cost:** moderate
-
-The first full `bench/` invocation scored 9.81 for the control arm against 10.00 for the treatment
-one, three of its four questions saturating at 10/10 in both: what the skill measurably buys on that
-set is cost and time, roughly a fifth of the dollars and a third of the turns, and not correctness.
-A recall question the references cover is one Opus at medium effort answers cold given the same
-roots. Getting off that ceiling needs harder questions, and the set can only widen once every
-techniques and mechanics file has landed — until then a new question either duplicates one of the
-four or aims at prose that does not exist yet.
-
-Code generation is the candidate shape. A recall question asks what the game does; a code-generation
-one asks for a system, a component or a patch, which is where the traps bite — update ordering,
-values baked at initialisation, surviving a save, the update interval that must be a power of two —
-and where a good practice either shows up in the produced code or does not. It also breaks the
-saturation, since a run can miss one trap while getting everything else right.
+The benchmark's code tasks have already re-derived part of it. A verifier barred from `plugins/` and
+`docs/` ruled every checklist item under `bench/tasks/` from the decompile alone, and an item it
+contradicted or could not settle left the key. The 131 items that survived are confirmed claims, each
+naming the shipped file it came from on its `Reference` line, across 45 reference files. A sweep can
+take those claims as checked and spend its agents on the rest of each file.
 
 ### What serializes a `CallBinding`'s result
 
