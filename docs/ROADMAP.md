@@ -268,6 +268,25 @@ lays out since 2.2, sizes them right. This belongs in `layout-styling-text.md` b
 wrapping row of inline-content items. Found in Hall of Fame's Creator Dashboard detail caption,
 session `449ee1b0-8f4e-4e34-a306-6263c9118606`.
 
+### A type name's first shape bounds later writes
+
+**Priority:** medium · **Cost:** trivial
+
+`scripting-data-binding.md` says two payloads under one type name must carry the same present
+properties, and that an omitted property breaks the cached binding. At Cohtml 2.2.1.3 in Cities:
+Skylines II only one direction fails. Move It 0.5.16 writes `FOEntryState` with and without a
+`Checkbox` object in every update of one value binding, the larger shape first, about 40 times a
+second: over 2,000 updates, each object reached `engine.on` with its own keys and values, and the
+game ran on. A type name first written without `Checkbox` and then with it (`FOPopoutEntryState`,
+injected from the `unity` eval) delivered the extra property under a garbage numeric key, a different
+one per write (`"731839520"`, `"731840096"`), in place of `Checkbox`: the engine reads past the cached
+shape. Hall of Fame's state writer did the same, `{status}` and then `{status, screenshots, stats}`,
+and that crashed the game with an access violation at address 0 in `v8.dll`. The passage should state
+the asymmetry: a later object may omit properties the name's first write carried, a property beyond
+them reads out of bounds, as garbage keys or a native crash, and the first write is whichever a
+payload's order reaches first, so keeping the varying presence in the type name stays the safe rule.
+Session `12ee6d3f-9851-4277-a276-db808e87c85d`.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
