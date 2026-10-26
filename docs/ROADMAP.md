@@ -1197,6 +1197,14 @@ While a text field has focus, `InputManager.GetMaskForControlScheme` (`src/Game/
 To check routing in game: a `unity` eval of `InputActionBindings.m_UIActionStates[m_ActionOrder["Back"]]` gives each action's `priority` and `state`, and `engine.trigger("input.onActionPerformed.update", {action: "Back", value: null})` fires an action where a real key press can't be queued (an unfocused game window).
 The facts to add to `frontend-and-injection.md`'s `cs2/input` passage. Found while making Escape close Find It's panel.
 
+### A second confirmation dialog orphans the first's callback
+
+**Priority:** low · **Cost:** trivial
+
+`AppBindings.ShowConfirmationDialog` (`src/Game/Game.UI/AppBindings.cs`) keeps one callback slot: each request overwrites it, and `OnConfirmationDialogCallback` calls the slot once and clears it, while the UI stacks the dialogs and moves focus to the dialog layer.
+So of two requests in flight only the latest is answered, the first's callback never firing, and a reentrancy guard around a confirmation buys nothing: a second request cannot double-act, it can only strand an awaiter.
+The facts to add to `reporting-to-the-player.md`'s dialog table. Found while reviewing Hall of Fame's delete confirmation, a verifier having checked the decompile.
+
 ### Harvesting the mods' `docs/solutions/` into the plugins
 
 **Priority:** medium · **Cost:** moderate
