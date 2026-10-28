@@ -528,7 +528,7 @@ subtraction. An `any` and a `none` list beside `components` makes both one call.
 
 ### `eval` cannot cast to an array type
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 4 as of 2026-09-29
+**Priority:** medium · **Cost:** moderate · **Hits:** 5 as of 2026-10-28
 
 `(Game.Net.LabelPosition[])em.Debug.GetComponentBoxed(entity, type)` fails to parse:
 `unsupported: array type`. The workaround is `(System.Array)` plus `GetValue(int)`, which reads the
@@ -655,7 +655,7 @@ machine. A method returning an iterator fails the same way, a cast to
 
 ### The `eval` grammar's type-name surface
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 7 as of 2026-10-21
+**Priority:** medium · **Cost:** moderate · **Hits:** 8 as of 2026-10-28
 
 Three rejections in the same family, each costing a round trip to discover. A *generic* `typeof` or
 cast with a fully-qualified name fails — `typeof(Unity.Collections.NativeArray<int>)` gives
