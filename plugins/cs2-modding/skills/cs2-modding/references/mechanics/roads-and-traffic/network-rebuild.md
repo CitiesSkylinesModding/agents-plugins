@@ -45,7 +45,7 @@ An edited edge keeps its entity: `ApplyNetSystem` copies the new `Edge`, `Curve`
 
 ## Replacing a network system
 
-Some behaviour has no data seam — yield flags, for instance, are written onto lanes during generation and regenerated on every relane ([junctions.md](junctions.md)) — and the only route is substituting the generating system whole.
+Some behaviour has no data seam — yield flags, for instance, are written onto lanes during generation and regenerated on every relane ([junctions.md](junctions.md)) — and the only route to changing it is substituting the generating system whole.
 The pattern: `World.GetOrCreateSystemManaged<T>().Enabled = false`, then register the replacement `UpdateBefore<Mine, T>` at the phase vanilla registers `T` — anchoring on the disabled system, which preserves its ordering slot.
 The replacement must also take over the plumbing its original served: `LaneSystem` registers as a terrain height reader, a writer on `LaneReferencesSystem`'s skip-lane queue, and a producer on the modification barrier (`src/Game/Game.Net/LaneSystem.cs`).
 
@@ -55,4 +55,8 @@ Source: `src/Game/Game.Net/LaneReferencesSystem.cs`.
 
 The price is the file: the relane re-derives every lane and the game exposes no hook inside it, so a replacement reproduces nearly all of `LaneSystem` — the largest file in `Game.Net` — to change one branch.
 
-(VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)
+Removing generated output can be cheaper than changing it: a system of the mod's own adds `Deleted` to the secondary lanes or secondary objects it does not want after `SecondaryLaneSystem` and `SecondaryObjectSystem` generate them in Modification4B, leaving both enabled (`src/Game/Game.Net/SecondaryLaneSystem.cs`, `src/Game/Game.Objects/SecondaryObjectSystem.cs`).
+The deletion has to land before `SecondaryLaneReferencesSystem` and `SecondaryObjectReferencesSystem` run in Modification5, whose `Deleted` branch takes the entity out of the owner's `SubLane` or `SubObject` buffer; one added after them leaves the owner holding a dead entity (`src/Game/Game.Net/SecondaryLaneReferencesSystem.cs`, `src/Game/Game.Objects/SecondaryObjectReferencesSystem.cs`).
+(UNVERIFIED: that a post-pass deletion holds across later relanes and a save round trip, and that a late one leaves the dead entity behind — both are read from the code; a run deleting one secondary lane, relaning its owner and reloading the save would settle them.)
+
+(VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Objects`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)
