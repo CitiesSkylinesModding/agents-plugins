@@ -990,6 +990,13 @@ Switching it to `IgnoreFocus` and calling `InputSystem.EnableDevice(kb)` let the
 A `unity` `key` tool taking a chord (`ctrl+k`) would press, advance a frame, release, and lift the background gate only for its own window, restoring it after.
 An agent driving a game on another machine or on Wayland has no other way to send that key.
 
+### Recreating a managed system through `eval` breaks the game until a restart
+
+**Priority:** medium · **Cost:** trivial
+
+`unity-driving` does not say that destroying a managed system and creating it again through `eval` (to rerun its `OnCreate`) leaves the game's `UpdateSystem` holding the destroyed instance: the log then takes `[CRITICAL] System update error during UIUpdate->MenuTourUISystem: InvalidOperationException: system state is not initialized or has already been destroyed` every frame until the game restarts.
+The rule to add beside the managed-systems passage: rerun a system's creation path by relaunching the game, never by recreating the system in place. Hit in Hall of Fame on 2026-10-29 (session `e6cda669-8347-4811-a7a8-465d1e6f75b8`), where it threw 622 times before a clean quit.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
@@ -1345,3 +1352,21 @@ What sends the agent there is untraced: `cs2-mod-project`'s description, a point
   Leaving out the template files no task seeds would keep that rule and drop the bulk.
 - `results.md`'s header gives a run's start date only, though `--resume` spreads one run over sittings: the baseline ran from 2026-10-09 to 2026-10-25.
   `bench:promote` could print the first and last jobs' dates.
+
+### A mod loaded late misses the main menu's loading completion
+
+**Priority:** high · **Cost:** trivial
+
+`mod-lifecycle-and-ordering.md`'s startup sequence puts mod loading before the world is ready, but a Paradox Mods mod can load after the main menu: when the Paradox login and the mod sync outlast the boot, `RegisterDatabase` logs `Defer Mods load` in `SceneFlow.log`, waits for the ready state, then calls `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1501-1526`, `:1643`).
+The systems such a mod creates never get that main menu's `OnGameLoadingComplete` (`:1136`), and nothing logs it.
+The rule to add: a system that acts on a loading completion replays it at the end of `OnCreate` when `gameMode` is `MainMenu` and `state` is `WorldReady`; the game sets that state right after raising the event (`:1137`), so a system sees one or the other, never neither. A read made during the replay sees only the mods loaded before this one, and a late load landing after a city load still misses it.
+Found in Hall of Fame's usage statistics, where about 9% of 2026.6.0 sessions never tracked the main menu; its `docs/solutions/a-late-loaded-mod-misses-the-main-menus-loading-completion.md` carries the evidence.
+
+### A mod's settings are written only on a clean quit
+
+**Priority:** medium · **Cost:** trivial
+
+`settings-and-input.md` says nothing about when settings reach disk: the game writes them only on a clean quit (`AssetDatabase.global.SaveAllSettings()`, `src/Game/Game.SceneFlow/GameManager.cs:798`), so a crash loses every change made since the launch.
+The base `Setting.ApplyAndSave` is the obvious way out and the wrong one: it applies first, raising `onSettingsApplied`, and it picks the file to write from the short class name, so two mods with a `Settings` class write each other's file.
+The rule to add: save a change that must survive a crash through `AssetDatabase.global.SaveAllSettings()`, which writes every mod's settings without applying them; the game queues those saves with one running and one waiting and drops the rest, so a burst costs at most two.
+Found in Hall of Fame, whose menu tour came back after crashes; its `docs/solutions/a-setting-is-lost-when-the-game-crashes.md` carries the fix.
