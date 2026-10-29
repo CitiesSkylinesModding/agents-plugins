@@ -374,6 +374,11 @@ Its serializer reads the block's size prefix and jumps to the end, and each arch
 So **uninstalling a mod loses that mod's components and keeps the city**, with one log line per lost type.
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ObsoleteComponentSerializer.cs` (the skip), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the archetype rebuilt from what resolved).
 
+**An entity the lost types leave bare still loads.**
+The archetype is rebuilt from whatever resolved, even nothing: an entity made only of mod types comes back with no components, and one that also carried `Owner` comes back carrying `Owner` alone.
+Unless what survived includes a save anchor, such an entity matches neither the save query nor the clear query, so no later save writes it and the clear before the next load does not destroy it.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`CreateEntities`), `src/Game/Game.Serialization/SerializerSystem.cs` and `src/Game/Game.Serialization/ClearSystem.cs` (the two queries' `Any` lists).
+
 One further guard: where the resolved type's serializer kind disagrees with the kind recorded in the save — a component that became a shared component, say — the loader logs a type mismatch and falls back to the obsolete serializer, discarding the data rather than misreading it.
 Two crossings escape it deliberately.
 A type recorded as a component and now declared as a buffer is handed to the buffer serializer, which recognises the saved kind and reads each old record into a one-element buffer — so promoting a component to a buffer element migrates every existing save cleanly, with no rename and no version gate.
@@ -388,7 +393,8 @@ Source: `src/Colossal.Core/Colossal.Serialization.Entities/FormerlySerializedAsA
 The prefab system writes an ordered list of prefab ids and entities reference prefabs by index into it.
 An id that no longer resolves becomes an obsolete prefab entity: it gets a negative prefab index, its `PrefabData` is disabled, the missing id is registered and logged, and a further system fills in placeholder data for the object, net, lane and area families.
 So a mod that adds prefabs leaves standing placeholders in the city when it is removed, not a failed load.
-Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the id list), `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the negative index and the disabled `PrefabData`), `src/Game/Game.Serialization/InitializeObsoleteSystem.cs` (the four families it fills).
+Each placeholder keeps its `PrefabRef`, a save anchor, and the prefab system writes the missing id back while anything still references it, so every later save carries them again.
+Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the id list, obsolete ids included), `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the negative index and the disabled `PrefabData`), `src/Game/Game.Serialization/InitializeObsoleteSystem.cs` (the four families it fills).
 
 (VOLATILE: `[FormerlySerializedAs]`'s namespace — `Colossal.Serialization.Entities`, distinct from Unity's own attribute of the same name.)
 
