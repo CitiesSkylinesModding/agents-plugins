@@ -252,10 +252,11 @@ If you need it, write your own size ahead of your payload and `Skip` the remaind
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` (one block for the whole archetype), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSystemSerializer.cs` (the per-section block), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the per-section catch).
 
 **Where the int rides matters.**
-On a buffer element it costs four bytes per _element_, not per entity, so a version on a long buffer is worth hoisting to the owning component or to a system's save section.
+On a buffer element it costs four bytes per _element_, not per entity, and it still cannot be hoisted to the owning component or to a system's save section.
+Each buffer type is read in a job of its own that reaches no other component of the entity, and every system section is read only after all component data, so an element's read sees neither number; a section's version can drive only a migration after the load.
 A component's version describes its own byte layout; a system section's version describes the repairs a format change implies across the city.
 A mod that changes both keeps two numbers.
-Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs`.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the per-type read job), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`Deserialize`: every archetype's components before `DeserializeSystems`).
 
 **What it buys is the ability to add a field later.**
 Without it, the only way to change a component's layout is to break every existing save.
