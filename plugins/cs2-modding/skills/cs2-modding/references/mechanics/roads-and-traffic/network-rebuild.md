@@ -31,8 +31,9 @@ A mod that adds `Updated` to an edge when it wanted one agent to reconsider has 
 Source: `src/Game/Game.Common/CleanUpSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **Marking only the entity you edited under-reaches: a node edit fans out to every connected edge and each edge's far node.**
-An edge's composition is selected from the flags of both its ends, and a node's lanes are generated from the compositions of every connected edge — so a change at one node reaches the far node's lanes through the shared edge.
-Source: `src/Game/Game.Net/CompositionSelectSystem.cs`, `src/Game/Game.Net/LaneSystem.cs`.
+The tools' definition pass writes that fan-out, pulling the connected edges and their far nodes into the edit, and `ApplyNetSystem` adds `Applied` and `Updated` to every original it keeps; `CompositionSelectSystem` only consumes the marker.
+A mod writing network data directly bypasses that pass and adds `Updated` across the fan-out itself, as `GroundHeightSystem` does.
+Source: `src/Game/Game.Tools/GenerateNodesSystem.cs` (`AddConnectedNodes`), `src/Game/Game.Tools/GenerateEdgesSystem.cs` (`ShouldDuplicate`, `DuplicateEdge`), `src/Game/Game.Tools/ApplyNetSystem.cs`, `src/Game/Game.Simulation/GroundHeightSystem.cs`.
 
 A change that moves geometry also marks `BatchesUpdated`, and the road's `Aggregated.m_Aggregate` where one spans it, or the rendering never rebuilds; a routing-only change needs neither.
 A node dies with its edges: the node-generation pass deletes one only once every edge attached to it is going (`GenerateNodesSystem.WillBeOrphan`, `src/Game/Game.Tools/GenerateNodesSystem.cs`), so removing an edge marks the surviving neighbours `Updated` rather than touching the node directly.
@@ -50,4 +51,4 @@ Source: `src/Game/Game.Net/LaneReferencesSystem.cs`.
 
 The price is the file: lanes are regenerated wholesale, the game exposes no hook inside, so a replacement reproduces nearly all of `LaneSystem` — the largest file in `Game.Net` — to change one branch.
 
-(VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Pathfind`, `Game.Prefabs` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)
+(VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)
