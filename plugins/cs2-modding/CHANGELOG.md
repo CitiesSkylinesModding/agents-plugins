@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.1...cs2-modding-v1.2.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **cs2-modding:** eight decompile-verified corrections (game 1.6.2f1) ([#20](https://github.com/CitiesSkylinesModding/agents-plugins/issues/20)) ([153cd94](https://github.com/CitiesSkylinesModding/agents-plugins/commit/153cd94f972253ac16a6ad6a1f11d3e335d76c1b))
+
 ## [1.2.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.0...cs2-modding-v1.2.1) (2026-10-26)
 
 
