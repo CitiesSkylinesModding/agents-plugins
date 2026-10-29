@@ -13,8 +13,8 @@ The pipeline runs inside the `Modification*` phases in a fixed order; `SystemOrd
 | --- | --- |
 | Modification3 | `CompositionSelectSystem` — edge flags become composition prefab references |
 | Modification4 | `NetCompositionSystem`, `Game.Net.GeometrySystem`, `LaneSystem` — the full relane |
-| Modification4B | `LaneOverlapSystem`, `TrafficLightInitializationSystem`, `SecondaryLaneSystem` |
-| Modification5 | `LaneConnectionSystem`, `LaneBlockSystem`, `LanePoliciesSystem` |
+| Modification4B | `LaneOverlapSystem`, `TrafficLightInitializationSystem`, `SecondaryObjectSystem`, `SecondaryLaneSystem` |
+| Modification5 | `Game.Objects.SearchSystem`, `Game.Net.SearchSystem`, `SecondaryObjectReferencesSystem`, `SecondaryLaneReferencesSystem`, `LaneConnectionSystem`, `LaneBlockSystem`, `LanePoliciesSystem` |
 | ModificationEnd | `LaneDataSystem`, `ParkingLaneDataSystem`, `LanesModifiedSystem` — into the pathfind graph |
 
 ## Three triggers of very different weight
@@ -27,17 +27,17 @@ The pipeline runs inside the `Modification*` phases in a fixed order; `SystemOrd
 A mod that adds `Updated` to an edge when it wanted one agent to reconsider has relaned the whole segment for nothing; the agent-side lever is `PathFlags.Obsolete` ([pathfind-queue.md](pathfind-queue.md)).
 
 **A relane re-derives every lane but keeps the lane entities that still match: one whose `LaneKey` — its `Lane` path nodes, its prefab and its `Master`/`Slave` flags — comes out again is overwritten in place and tagged `Updated`, and only the unmatched ones get `Deleted`.**
-A match whose curve now runs the opposite way is not reused; secondary lanes key on path nodes numbered by their position under the owner, so they are reused by position.
-Source: `src/Game/Game.Net/LaneSystem.cs`, `src/Game/Game.Net/SecondaryLaneSystem.cs`.
+An edge lane whose curve now runs the opposite way is the exception: it comes out as a new entity.
+Source: `src/Game/Game.Net/LaneSystem.cs`.
 
 **All the update markers are one-frame tags, so one added during a modification phase reaches only the systems that run later that same frame.**
 `CleanUpSystem` removes `Created`, `Updated`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated` in `SystemUpdatePhase.Cleanup`; a change made inside the pipeline defers its marker to the next frame through a tag of the mod's own.
 Source: `src/Game/Game.Common/CleanUpSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 
 **Marking only the entity you edited under-reaches: a node edit fans out to every connected edge and each edge's far node.**
-The tools' definition pass writes that fan-out, pulling the connected edges and their far nodes into the edit, and `ApplyNetSystem` adds `Applied` and `Updated` to every original it keeps; `CompositionSelectSystem` only consumes the marker.
-A mod writing network data directly bypasses that pass and adds `Updated` across the fan-out itself, as `GroundHeightSystem` does.
-Source: `src/Game/Game.Tools/GenerateNodesSystem.cs` (`AddConnectedNodes`), `src/Game/Game.Tools/GenerateEdgesSystem.cs` (`ShouldDuplicate`, `DuplicateEdge`), `src/Game/Game.Tools/ApplyNetSystem.cs`, `src/Game/Game.Simulation/GroundHeightSystem.cs`.
+An edge's composition is selected from the flags of both its ends, and a node's lanes are generated from the compositions of every connected edge, so a change at one node reaches the far node's lanes through the shared edge.
+The tools' definition pass pulls those edges and far nodes into the edit and `ApplyNetSystem` adds `Applied` and `Updated` to every original it keeps; a mod writing network data directly adds `Updated` across the fan-out itself, as `GroundHeightSystem`'s edge branch does.
+Source: `src/Game/Game.Net/CompositionSelectSystem.cs`, `src/Game/Game.Net/LaneSystem.cs`, `src/Game/Game.Tools/GenerateNodesSystem.cs` (`AddConnectedNodes`), `src/Game/Game.Tools/GenerateEdgesSystem.cs` (`ShouldDuplicate`, `DuplicateEdge`), `src/Game/Game.Tools/ApplyNetSystem.cs`, `src/Game/Game.Simulation/GroundHeightSystem.cs`.
 
 A change that moves geometry also marks `BatchesUpdated`, and the road's `Aggregated.m_Aggregate` where one spans it, or the rendering never rebuilds; a routing-only change needs neither.
 A node dies with its edges: the node-generation pass deletes one only once every edge attached to it is going (`GenerateNodesSystem.WillBeOrphan`, `src/Game/Game.Tools/GenerateNodesSystem.cs`), so removing an edge marks the surviving neighbours `Updated` rather than touching the node directly.
@@ -55,8 +55,10 @@ Source: `src/Game/Game.Net/LaneReferencesSystem.cs`.
 
 The price is the file: the relane re-derives every lane and the game exposes no hook inside it, so a replacement reproduces nearly all of `LaneSystem` — the largest file in `Game.Net` — to change one branch.
 
-Removing generated output can be cheaper than changing it: a system of the mod's own adds `Deleted` to the secondary lanes or secondary objects it does not want after `SecondaryLaneSystem` and `SecondaryObjectSystem` generate them in Modification4B, leaving both enabled (`src/Game/Game.Net/SecondaryLaneSystem.cs`, `src/Game/Game.Objects/SecondaryObjectSystem.cs`).
-The deletion has to land before `SecondaryLaneReferencesSystem` and `SecondaryObjectReferencesSystem` run in Modification5, whose `Deleted` branch takes the entity out of the owner's `SubLane` or `SubObject` buffer; one added after them leaves the owner holding a dead entity (`src/Game/Game.Net/SecondaryLaneReferencesSystem.cs`, `src/Game/Game.Objects/SecondaryObjectReferencesSystem.cs`).
-(UNVERIFIED: that a post-pass deletion holds across later relanes and a save round trip, and that a late one leaves the dead entity behind — both are read from the code; a run deleting one secondary lane, relaning its owner and reloading the save would settle them.)
+Removing generated secondaries can be cheaper than changing them: a system of the mod's own, registered at the front of Modification5 with `UpdateBefore<T>(SystemUpdatePhase.Modification5)`, adds `Deleted` through `EntityManager`, not the phase's command buffer, to the ones it does not want, and leaves the generators enabled.
+`SecondaryObjectSystem` and `SecondaryLaneSystem` create through `ModificationBarrier4B`'s buffer, so their output exists only from Modification5; that phase's Search systems index a new entity unless it already carries `Deleted`, its References systems keep a `Deleted` one out of the owner's `SubLane` or `SubObject` buffer, and `ModificationBarrier5` plays back after both.
+The owner's next relane generates them again, so the system deletes on every relane's output (`src/Game/Game.Common/SystemOrder.cs`, `src/Game/Game.Objects/SearchSystem.cs`, `src/Game/Game.Net/SearchSystem.cs`, `src/Game/Game.Net/SecondaryLaneSystem.cs`, `src/Game/Game.Net/SecondaryLaneReferencesSystem.cs`, `src/Game/Game.Objects/SecondaryObjectReferencesSystem.cs`).
+Delete only the secondary objects no utility lane anchors on: a pole's wires keep their ends where it stood (`src/Game/Game.Objects/SecondaryObjectSystem.cs`).
+(UNVERIFIED: the recipe is read from the code; nobody has run it.)
 
 (VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Objects`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)

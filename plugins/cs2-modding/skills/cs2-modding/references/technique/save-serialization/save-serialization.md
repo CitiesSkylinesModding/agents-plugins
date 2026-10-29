@@ -220,7 +220,7 @@ public void Deserialize<TReader>(TReader reader) where TReader : IReader
 
 **A mod cannot use that.**
 The game's version says nothing about which revision of _your_ component wrote the bytes, and a save can be written by any pairing of game build and mod build.
-So write your own int first and branch on it — on a component, or once in a system's save section, with a named constant per format change.
+So write your own int first and branch on it — on a component, with a named constant per format change.
 
 **Read it into a named local, not a discard**, and branch additively rather than in two directions:
 
@@ -375,15 +375,16 @@ So **uninstalling a mod loses that mod's components and keeps the city**, with o
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ObsoleteComponentSerializer.cs` (the skip), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the archetype rebuilt from what resolved).
 
 **An entity the lost types leave bare still loads.**
-The archetype is rebuilt from whatever resolved, even nothing: an entity made only of mod types comes back with no components, and one that also carried `Owner` comes back carrying `Owner` alone.
-Unless what survived includes a save anchor, such an entity matches neither the save query nor the clear query, so no later save writes it and the clear before the next load does not destroy it.
+The archetype is rebuilt from whatever resolved, even nothing: an entity made only of mod types comes back with no game component, and one that also carried `Owner` keeps `Owner`.
+Unless what survived includes a save anchor or any installed mod's serializable type, such an entity matches neither the save query nor the clear query, so no later save writes it and the clear before the next load does not destroy it.
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`CreateEntities`), `src/Game/Game.Serialization/SerializerSystem.cs` and `src/Game/Game.Serialization/ClearSystem.cs` (the two queries' `Any` lists).
 
 One further guard: where the resolved type's serializer kind disagrees with the kind recorded in the save — a component that became a shared component, say — the loader logs a type mismatch and falls back to the obsolete serializer, discarding the data rather than misreading it.
-Two crossings escape it deliberately.
+Three crossings escape it deliberately.
 A type recorded as a component and now declared as a buffer is handed to the buffer serializer, which recognises the saved kind and reads each old record into a one-element buffer — so promoting a component to a buffer element migrates every existing save cleanly, with no rename and no version gate.
 And the check is skipped whenever either side is the empty kind, so an `IEmptySerializable` tag that gains a payload, or loses one, is resolved by the save's own recorded kind instead — which is why neither of those directions misreads.
-Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the kind check and its two skips), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the one-element read).
+The check also ignores whether either side is enableable, so a component that becomes enableable, or stops being, raises no mismatch.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the kind check and what it lets through), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the one-element read).
 
 **Rename the type that owns a save section and you owe it a `[FormerlySerializedAs]`.**
 This is the serialization library's own attribute, not the Unity attribute of the same name.
