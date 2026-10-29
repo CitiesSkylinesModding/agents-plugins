@@ -1,6 +1,6 @@
 ---
 date: 2026-08-04
-updated: 2026-08-25
+updated: 2026-10-29
 area: docs/research (the cs2-modding discovery pipeline, against any decompile)
 symptoms:
   - 'a correction lands, and the corrected sentence is wrong again for the same reason'
@@ -60,7 +60,7 @@ Read past the confirmation: the rest of the method, the caller that reaches it, 
 immediately after the one you cited. A range that ends exactly where the claim is satisfied is the
 shape to distrust in your own citations.
 
-Three more stops from a later review (2026-08-25), each a dimension the rule above missed:
+Four more stops from later reviews (2026-08-25, 2026-10-29), each a dimension the rule above missed:
 
 - **The modifier on the cited line.** A trap cited `EntityManager.cs:2694-2705` for a lookup route
   whose every overload is `internal` — unreachable from any mod, stated on the very lines cited.
@@ -70,9 +70,14 @@ Three more stops from a later review (2026-08-25), each a dimension the rule abo
 - **The siblings of the member.** "Acquisition is the only wait on the lookup surface" generalized
   from the indexer without sweeping the `SystemAPI` accessors declared in a file the claim already
   cited, each of which completes fences per call.
+- **The other readers in the phase.** A recipe placed its system before the two systems it named
+  and checked only those; `Game.Objects.SearchSystem` and `Game.Net.SearchSystem` run earlier in
+  the same phase and index the entities it deletes (`SystemOrder.cs:197-207`), so the deletion left
+  destroyed entities in the search trees. The recipe came back wrong in three reviews.
 
-So the read also covers the modifiers on the cited line, every override of a virtual you quote, and
-the siblings of the member an "only" generalizes over.
+So the read also covers the modifiers on the cited line, every override of a virtual you quote, the
+siblings of the member an "only" generalizes over, and every system in a phase that reads what a
+system placed there writes.
 
 ## The counting variant
 

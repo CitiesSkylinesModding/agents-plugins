@@ -640,7 +640,7 @@ Source: `FindIt-CSII/FindIt/Systems/AutoVehiclePropGeneratorSystem.cs:140/170` a
 Sentence to add: "Letting the player name and translate their own palettes in-game, writing each locale to a JSON file beside the palette and registering it as an in-memory source, guarded by a check that the game supports that locale at all."
 Source: `Recolor/Recolor/Systems/Palettes/PalettesUISystem.Localization.cs:321-361`, and the load-time counterpart at `Recolor/Recolor/Systems/Palettes/AddPalettePrefabsSystem.cs:205`.
 
-**Not a gap.** `Network Tools`' entry already names its source generator as the answer to C#-and-frontend drift (`mod-catalog.md:86`), and its `I18N` build configuration is the same export technique Platter's sentence covers, implemented in a framework base class that is not in the checkout (`CS2-NetworkTools/NetworkTools.Mod/NetworkToolsMod.cs:32/87`). `Anarchy`, `Better Bulldozer`, `Move It`, `Tree Controller` and `Water Features` all ship the same embedded-JSON block as each other, so none of them demonstrates it better than the others and no entry is proposed.
+**Not a gap.** `Network Tools`' entry already names its codegen console app as an answer to C#-and-frontend drift (`mod-catalog.md:97`), and its `I18N` build configuration is the same export technique Platter's sentence covers, implemented in a framework base class that is not in the checkout (`CS2-NetworkTools/NetworkTools.Mod/NetworkToolsMod.cs:32/87`). `Anarchy`, `Better Bulldozer`, `Move It`, `Tree Controller` and `Water Features` all ship the same embedded-JSON block as each other, so none of them demonstrates it better than the others and no entry is proposed.
 
 ## Bridge
 

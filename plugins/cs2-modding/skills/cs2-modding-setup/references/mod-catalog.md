@@ -94,7 +94,7 @@ A vanilla React widget table that pulls its multi-component float sliders out of
 Resolving an edge raycast hit down to the nearest node.
 One output-mode switch that decides whether a job writes preview definitions or mutates the network directly on apply.
 Interactive 3D handles as their own drawable, cullable entities.
-A source generator that emits the TypeScript binding declarations from the C# side, which is the only answer in this corpus to C#-and-frontend drift.
+A Roslyn console app, run by an MSBuild target before the UI build, that parses the tools' C# and emits the TypeScript for their parameters — keys, metadata, mirrored enums and binding instances — an answer to C#-and-frontend drift that reaches only the tool parameters.
 A read-only structural verifier for the vanilla electricity flow graph — the mod's own mirror of the game's deserialize-time check — shared between a deserialize-phase checker and a runtime watchdog that debounces across two scans because the graph rebuilds asynchronously after every network edit; both ship commented out of registration, a harness for catching corruption during play before a save carries it.
 Consuming five vanilla data providers in one job, four of them taken with their own handle and combined into a single schedule, with one of the five never registered back.
 Vanilla systems disabled per tool rather than per session, each tool declaring which ones it cannot coexist with, and every one restored from both the stop hook and the destroy hook so a tool killed mid-run cannot leave the game's validation off.

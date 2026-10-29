@@ -220,7 +220,7 @@ public void Deserialize<TReader>(TReader reader) where TReader : IReader
 
 **A mod cannot use that.**
 The game's version says nothing about which revision of _your_ component wrote the bytes, and a save can be written by any pairing of game build and mod build.
-So write your own int first and branch on it — on a component, or once in a system's save section, with a named constant per format change.
+So write your own int first and branch on it — on a component, with a named constant per format change.
 
 **Read it into a named local, not a discard**, and branch additively rather than in two directions:
 
@@ -252,10 +252,11 @@ If you need it, write your own size ahead of your payload and `Skip` the remaind
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializer.cs` (one block for the whole archetype), `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSystemSerializer.cs` (the per-section block), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the per-section catch).
 
 **Where the int rides matters.**
-On a buffer element it costs four bytes per _element_, not per entity, so a version on a long buffer is worth hoisting to the owning component or to a system's save section.
+On a buffer element it costs four bytes per _element_, not per entity, and it still cannot be hoisted to the owning component or to a system's save section.
+Each buffer type is read in a job of its own that reaches no other component of the entity, and every system section is read only after all component data, so an element's read sees neither number; a section's version can drive only a migration after the load.
 A component's version describes its own byte layout; a system section's version describes the repairs a format change implies across the city.
 A mod that changes both keeps two numbers.
-Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs`.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the per-type read job), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`Deserialize`: every archetype's components before `DeserializeSystems`).
 
 **What it buys is the ability to add a field later.**
 Without it, the only way to change a component's layout is to break every existing save.
@@ -373,11 +374,17 @@ Its serializer reads the block's size prefix and jumps to the end, and each arch
 So **uninstalling a mod loses that mod's components and keeps the city**, with one log line per lost type.
 Source: `src/Colossal.Core/Colossal.Serialization.Entities/ObsoleteComponentSerializer.cs` (the skip), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the archetype rebuilt from what resolved).
 
+**An entity the lost types leave bare still loads.**
+The archetype is rebuilt from whatever resolved, even nothing: an entity made only of mod types comes back with no game component, and one that also carried `Owner` keeps `Owner`.
+Unless what survived includes a save anchor or any installed mod's serializable type, such an entity matches neither the save query nor the clear query, so no later save writes it and the clear before the next load does not destroy it.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (`CreateEntities`), `src/Game/Game.Serialization/SerializerSystem.cs` and `src/Game/Game.Serialization/ClearSystem.cs` (the two queries' `Any` lists).
+
 One further guard: where the resolved type's serializer kind disagrees with the kind recorded in the save — a component that became a shared component, say — the loader logs a type mismatch and falls back to the obsolete serializer, discarding the data rather than misreading it.
-Two crossings escape it deliberately.
+Three crossings escape it deliberately.
 A type recorded as a component and now declared as a buffer is handed to the buffer serializer, which recognises the saved kind and reads each old record into a one-element buffer — so promoting a component to a buffer element migrates every existing save cleanly, with no rename and no version gate.
 And the check is skipped whenever either side is the empty kind, so an `IEmptySerializable` tag that gains a payload, or loses one, is resolved by the save's own recorded kind instead — which is why neither of those directions misreads.
-Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the kind check and its two skips), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the one-element read).
+The check also ignores whether either side is enableable, so a component that becomes enableable, or stops being, raises no mismatch.
+Source: `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the kind check and what it lets through), `src/Colossal.Core/Colossal.Serialization.Entities/BufferElementDataSerializer.cs` (the one-element read).
 
 **Rename the type that owns a save section and you owe it a `[FormerlySerializedAs]`.**
 This is the serialization library's own attribute, not the Unity attribute of the same name.
@@ -387,7 +394,8 @@ Source: `src/Colossal.Core/Colossal.Serialization.Entities/FormerlySerializedAsA
 The prefab system writes an ordered list of prefab ids and entities reference prefabs by index into it.
 An id that no longer resolves becomes an obsolete prefab entity: it gets a negative prefab index, its `PrefabData` is disabled, the missing id is registered and logged, and a further system fills in placeholder data for the object, net, lane and area families.
 So a mod that adds prefabs leaves standing placeholders in the city when it is removed, not a failed load.
-Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the id list), `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the negative index and the disabled `PrefabData`), `src/Game/Game.Serialization/InitializeObsoleteSystem.cs` (the four families it fills).
+Each placeholder keeps its `PrefabRef`, a save anchor, and the prefab system writes the missing id back while anything still references it, so every later save carries them again.
+Source: `src/Game/Game.Prefabs/PrefabSystem.cs` (the id list, obsolete ids included), `src/Game/Game.Serialization/ResolvePrefabsSystem.cs` (the negative index and the disabled `PrefabData`), `src/Game/Game.Serialization/InitializeObsoleteSystem.cs` (the four families it fills).
 
 (VOLATILE: `[FormerlySerializedAs]`'s namespace — `Colossal.Serialization.Entities`, distinct from Unity's own attribute of the same name.)
 
