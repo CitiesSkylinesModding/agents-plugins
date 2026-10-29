@@ -449,7 +449,7 @@ This is the house style for every balance number the plugin ships.
 
 ### A mod that deletes another mod's data has one worked example and one worked refusal
 
-**Sources.** `save-serialization.md:386` hands `mod-compatibility` "the question of when doing it is legitimate", the mechanism itself being settled there and in `mod-compatibility.md`.
+**Sources.** `save-serialization.md:390` hands `mod-compatibility` "the question of when doing it is legitimate", the mechanism itself being settled there and in `mod-compatibility.md`.
 The corpus takes three positions on reaching into another mod's data and they do not agree.
 Read and delete: `Traffic/Code/Systems/ModCompatibility/TLEDataMigrationSystem.cs` migrates a foreign mod's per-node lane directions and then removes the foreign component from every entity that carried it, commented `// delete TLE data components to prevent data corruption` (`:89-91`), and disables the other mod's system so it cannot act on what is gone (`Traffic/Code/Mod.cs:166`).
 Read only: `Traffic/Code/Systems/ModCompatibility/RoadBuilderCompatibilitySystem.cs:28-76` resolves another mod's tag component by name, queries on it as a signal, and writes only to its own components.
