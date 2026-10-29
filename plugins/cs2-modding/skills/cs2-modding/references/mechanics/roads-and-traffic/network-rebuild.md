@@ -6,7 +6,7 @@ Verified against game version 1.6.2f1.
 Without one you cannot check anything below.
 `cs2-modding-setup` provisions it.
 
-The lane layer is derived, not authored: change what it is derived from — prefabs, composition flags, upgrades, district policy — mark the owner, and let the pipeline regenerate every lane.
+The lane layer is derived, not authored: change what it is derived from — prefabs, composition flags, upgrades, district policy — mark the owner, and let the pipeline re-derive every lane.
 The pipeline runs inside the `Modification*` phases in a fixed order; `SystemOrder.cs` registers it and is regenerated per game version, so re-check it by system name.
 
 | Phase | This topic's systems, in order (`src/Game/Game.Common/SystemOrder.cs`) |
@@ -25,6 +25,10 @@ The pipeline runs inside the `Modification*` phases in a fixed order; `SystemOrd
 
 `LanesModifiedSystem` is the bridge into the graph — created, updated and deleted lanes become `CreateAction`/`UpdateAction`/`DeleteAction`, over the non-slave lanes [route-selection.md](route-selection.md) scopes the graph to (`src/Game/Game.Pathfind/LanesModifiedSystem.cs`).
 A mod that adds `Updated` to an edge when it wanted one agent to reconsider has relaned the whole segment for nothing; the agent-side lever is `PathFlags.Obsolete` ([pathfind-queue.md](pathfind-queue.md)).
+
+**A relane re-derives every lane but keeps the lane entities that still match: one whose `LaneKey` — its `Lane` path nodes, its prefab and its `Master`/`Slave` flags — comes out again is overwritten in place and tagged `Updated`, and only the unmatched ones get `Deleted`.**
+A match whose curve now runs the opposite way is not reused; secondary lanes key on path nodes numbered by their position under the owner, so they are reused by position.
+Source: `src/Game/Game.Net/LaneSystem.cs`, `src/Game/Game.Net/SecondaryLaneSystem.cs`.
 
 **All the update markers are one-frame tags, so one added during a modification phase reaches only the systems that run later that same frame.**
 `CleanUpSystem` removes `Created`, `Updated`, `Applied`, `EffectsUpdated`, `BatchesUpdated` and `PathfindUpdated` in `SystemUpdatePhase.Cleanup`; a change made inside the pipeline defers its marker to the next frame through a tag of the mod's own.
@@ -49,6 +53,6 @@ The replacement must also take over the plumbing its original served: `LaneSyste
 `LaneReferencesSystem.GetSkipLaneQueue()` allocates a fresh queue and overwrites the field on every call, and `AddSkipLaneWriter` overwrites the dependency rather than combining it — two callers lose one queue and one dependency.
 Source: `src/Game/Game.Net/LaneReferencesSystem.cs`.
 
-The price is the file: lanes are regenerated wholesale, the game exposes no hook inside, so a replacement reproduces nearly all of `LaneSystem` — the largest file in `Game.Net` — to change one branch.
+The price is the file: the relane re-derives every lane and the game exposes no hook inside it, so a replacement reproduces nearly all of `LaneSystem` — the largest file in `Game.Net` — to change one branch.
 
 (VOLATILE: every component, field, system, method, phase name and `Source:` path this file names — their declarations under `src/Game/` in `Game.Common`, `Game.Net`, `Game.Pathfind`, `Game.Prefabs`, `Game.Simulation` and `Game.Tools`, at the files cited beside each; the phase table, against `SystemOrder.cs` re-checked by system name.)
