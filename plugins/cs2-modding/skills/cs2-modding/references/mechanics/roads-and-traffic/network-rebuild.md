@@ -36,7 +36,7 @@ Source: `src/Game/Game.Net/CompositionSelectSystem.cs`, `src/Game/Game.Net/LaneS
 
 A change that moves geometry also marks `BatchesUpdated`, and the road's `Aggregated.m_Aggregate` where one spans it, or the rendering never rebuilds; a routing-only change needs neither.
 A node dies with its edges: the node-generation pass deletes one only once every edge attached to it is going (`GenerateNodesSystem.WillBeOrphan`, `src/Game/Game.Tools/GenerateNodesSystem.cs`), so removing an edge marks the surviving neighbours `Updated` rather than touching the node directly.
-Changing an edge's endpoints is delete-and-recreate for the edge, which is why node edits fan markers so widely.
+An edited edge keeps its entity: `ApplyNetSystem` copies the new `Edge`, `Curve`, `PrefabRef` and the rest onto the original, a one-way flip included, and creates a new edge entity only for a split, a `TempFlags.Combine` merge from `NodeReductionSystem`, or a `TempFlags.Replace` the edge pass sets when the zoning or the power connection changes (`src/Game/Game.Tools/ApplyNetSystem.cs`, `src/Game/Game.Tools/GenerateEdgesSystem.cs`, `src/Game/Game.Tools/NodeReductionSystem.cs`).
 
 ## Replacing a network system
 
