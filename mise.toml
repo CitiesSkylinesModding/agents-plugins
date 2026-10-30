@@ -182,8 +182,8 @@ run = "bun scripts/update-vendored-sdb.ts"
 # ===========
 
 [tasks.build]
-description = "Build everything: the gameface server bundle and the unity-devtools MCP tool nupkg."
-run = ["mise build:gameface", "mise build:unity:pack"]
+description = "Build everything: the gameface and cs2-dev server bundles and the unity-devtools MCP tool nupkg."
+run = ["mise build:gameface", "mise build:cs2-dev", "mise build:unity:pack"]
 
 [tasks."build:gameface"]
 description = "Rebuild the shipped gameface server bundle (plugins/coherent-gameface/mcp/dist/server.mjs), commit the result."
@@ -194,7 +194,7 @@ raw = true
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
 [tasks."build:cs2-dev"]
-description = "Rebuild the cs2-dev server bundle (plugins/cs2-modding/mcp/dist/server.mjs)."
+description = "Rebuild the shipped cs2-dev server bundle (plugins/cs2-modding/mcp/dist/server.mjs), commit the result."
 dir = "{{config_root}}/plugins/cs2-modding/mcp"
 raw = true
 run = 'bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs'

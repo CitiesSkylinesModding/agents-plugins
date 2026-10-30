@@ -6,14 +6,13 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // Content check for the cs2-modding plugin's shipped prose, which is a deliverable rather than
-// documentation of one and has no other automated coverage: no runtime, no server, no tests.
+// documentation of one and has no other automated coverage: the server's tests never read it.
 // The rules below are the plugin's own contract, stated in plugins/cs2-modding/AGENTS.md, which is
 // why this check names that plugin instead of discovering every plugin the way
 // check-plugin-sync.ts does. The gameface skills take the two rules named beside their root below
 // and no other. Exits nonzero (via a failed assertion) on the first violation.
 //
-// The matching logic here is itself untested: the repository's only TypeScript tests are the
-// benchmark's (bench/, run by `mise bench:test`), and this check is not wired into them. Each rule
+// The matching logic here is itself untested: no test suite runs this check. Each rule
 // was instead verified once by hand, by planting a violation in the skills tree, watching the
 // assertion fire with the offending file named, and removing the plant. Re-do that when you change
 // a rule, and for a rule with more than one failure mode plant one violation per mode: the

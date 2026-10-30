@@ -8,8 +8,9 @@
 
 - `plugins/coherent-gameface/`: flagship plugin. Drives a running Coherent Gameface UI (Cohtml) over a direct CDP WebSocket; TypeScript MCP server (npm `@csmodding/gameface-devtools-mcp`) + skills.
 - `plugins/unity-devtools/`: drives a running Unity Mono development build over the Mono Soft Debugger protocol (SDB); C# MCP server + SDB class library.
+- `plugins/cs2-modding/`: teaches an agent to write **Cities: Skylines II** code mods; skills + the TypeScript `cs2-dev` MCP server over the game's lifecycle, bundled and never published.
 
-Both are generic toolkits, developed and verified against **Cities: Skylines II** as the reference target.
+The first two are generic toolkits, developed and verified against that game as the reference target.
 Each plugin documents its own architecture and gotchas in its `AGENTS.md` (with a `CLAUDE.md` symlink).
 
 Everything a plugin ships MUST live inside its `plugins/<name>/` directory: marketplace installs copy only that subtree.
@@ -18,13 +19,13 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Tech stack
 
 - [mise-en-place](https://mise.jdx.dev): dev tools, env vars and tasks.
-- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` and `bench/` import; the gameface `mcp/` is the only workspace package, and `bun.lock` lives at the root.
+- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` and `bench/` import; the gameface and `cs2-modding` `mcp/` folders are the workspace packages, and `bun.lock` lives at the root.
 - .NET 10 SDK: the unity-devtools C# projects, grouped by `agents-plugins.slnx` at the repo root.
 
 ## Repository structure
 
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
-- `.mcp.json` (root): LOCAL DEV ONLY, wiring both MCP servers for sessions in this repo (gameface from its committed bundle, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
+- `.mcp.json` (root): LOCAL DEV ONLY, wiring the MCP servers for sessions in this repo (gameface and `cs2-dev` from their committed bundles, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
 - `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules, plus the marker spelling and the baseline lines of the gameface skills), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `research-cite-audit.ts` (`mise research:cite-audit`, the `cs2-game-update` sweep's cite step, reads a local decompile so not in CI).
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint ignores `.agents/hooks` and oxfmt all of `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
 - `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` is the `cs2-modding` version sweep: the `VOLATILE:` markers and the baseline lines are its checklist, and it edits `docs/research/` and `docs/SOURCES.md`, which is why it cannot ship. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it. `scan-mcp-failures` mines this machine's transcripts for failed gameface and unity calls, and feeds the **Hits** of `docs/ROADMAP.md` entries. `terra-nil-debuggee` launches a release Mono game from this machine's Steam library as a second debuggee for the unity server, the shape of a BepInEx-community report.
@@ -37,8 +38,8 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Commands
 
 - `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
-- `mise test`: the .NET test suite. `mise test:gameface` is the gameface MCP server's and `mise bench:test` the benchmark core's, the two TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
-- `mise build:gameface`: rebuild the shipped gameface bundle (commit the result).
+- `mise test`: the .NET test suite. `mise test:gameface` and `mise test:cs2-dev` are the TypeScript MCP servers' and `mise bench:test` the benchmark core's, the three TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
+- `mise build:gameface`, `mise build:cs2-dev`: rebuild a shipped bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).
 Do NOT use npx to run commands; prefer mise shortcuts, or bun/bunx when no shortcut exists.
@@ -55,15 +56,15 @@ SYNC RULE: the shared fields of a plugin's two plugin.json files (name, version,
 ## Versioning and releases
 
 release-please maintains a rolling release PR on `main` from Conventional Commits.
-Each plugin has two release units (the plugin and its mcp) joined by `linked-versions`, so they always share a version; the two plugins version independently and there is no root unit (root-only changes never release).
+Each toolkit plugin has two release units (the plugin and its mcp) joined by `linked-versions`, so they always share a version; `cs2-modding` is one unit, its server carrying the plugin's version and publishing nowhere. The plugins version independently and there is no root unit (root-only changes never release).
 
 Never hand-edit a version: each unit's number lives in a private `package.json` anchor, and release-please syncs it into the plugin manifests, the unity csproj `<Version>`, and the `dotnet dnx` version pins.
 
-- Any releasable commit under a plugin's directory bumps BOTH of that plugin's units.
+- Any releasable commit under a plugin's directory bumps ALL of that plugin's units.
 - Keep a commit inside one release unit: each unit's changelog is written from the commits touching it, so a `feat` spanning a plugin and the root files root tooling under that plugin's release notes.
 - `feat` bumps minor, `fix` patch; a `!` or `BREAKING CHANGE:` commit bumps major once a unit has reached 1.0.0, and only minor while it is below. Any other version comes from a deliberate `Release-As:` footer.
 - An mcp release publishes itself from `release-please.yml` through trusted publishing, the gameface one to npm and the unity one to NuGet. There is no local publish path: a failed or missed publish is retried by running the workflow by hand with the release tag.
-- CI runs `mise check:agents` + `mise build:gameface` with `git diff --exit-code` (catching a stale committed bundle) + `mise test:gameface`, then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the gameface bundle, and runs `dotnet test` on staged C# changes.
+- CI runs `mise check:agents` + both bundle builds with `git diff --exit-code` (catching a stale committed bundle) + `mise test:gameface` + `mise test:cs2-dev`, then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the bundle of each server with staged sources, and runs `dotnet test` on staged C# changes.
 
 ## Boundaries
 
@@ -73,7 +74,7 @@ Never:
 - Commit secrets, tokens, `.env` files, dumps or credentials.
 - Modify generated files unless the generation command was run.
 - Change public API behavior without calling it out.
-- Reference Cities: Skylines 2 in `coherent-gameface` or `unity-devtools` — code, documentation and skills alike, those two stay application-agnostic. `cs2-modding` is the carve-out: a knowledge product about the game that names it throughout, with the reasoning in its own `AGENTS.md`.
+- Reference Cities: Skylines 2 in `coherent-gameface` or `unity-devtools` — code, documentation and skills alike, those two stay application-agnostic. `cs2-modding` is the carve-out: a plugin about the game that names it throughout, with the reasoning in its own `AGENTS.md`.
 - Reference the coherent-gameface project in the unity-devtools one, and vice versa.
 
 Ask first before:

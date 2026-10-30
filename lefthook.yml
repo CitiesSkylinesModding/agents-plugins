@@ -5,14 +5,24 @@ post-checkout:
 
 pre-commit:
   parallel: true
+  jobs:
+    - name: build-bundles
+      # Keep the committed bundles in sync with the sources; stage_fixed would only re-add the
+      # staged src files, so the freshly built bundles are staged explicitly. Each runs from the repo
+      # root and names its bundle by the full path: from a git worktree, an add run inside a
+      # subfolder stages the path as if that subfolder were the root. One job per server keeps a
+      # commit inside its release unit, and the group is piped as two parallel `git add`s would race
+      # for the index lock.
+      group:
+        piped: true
+        jobs:
+          - name: build-gameface
+            glob: "plugins/coherent-gameface/mcp/src/*.ts"
+            run: mise build:gameface && git add plugins/coherent-gameface/mcp/dist/server.mjs
+          - name: build-cs2-dev
+            glob: "plugins/cs2-modding/mcp/src/*.ts"
+            run: mise build:cs2-dev && git add plugins/cs2-modding/mcp/dist/server.mjs
   commands:
-    build-bundle:
-      # Keep the committed bundle in sync with the sources; stage_fixed would only re-add the
-      # staged src files, so the freshly built bundle is staged explicitly. It runs from the repo
-      # root and names the bundle by its full path: from a git worktree, an add run inside a
-      # subfolder stages the path as if that subfolder were the root.
-      glob: "plugins/coherent-gameface/mcp/src/*.ts"
-      run: mise build:gameface && git add plugins/coherent-gameface/mcp/dist/server.mjs
     dotnet-test:
       # The unity-devtools server ships as a NuGet dotnet tool (no committed artifact); staged C#
       # changes just need to compile and pass the offline test suite.
@@ -30,7 +40,7 @@ pre-commit:
       run: mise check:tsc
     plugin-sync:
       # The Claude and Codex plugin manifests duplicate shared metadata; keep them in sync.
-      glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,scripts/check-plugin-sync.ts}"
+      glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,plugins/*/.mcp.json,scripts/check-plugin-sync.ts}"
       run: mise exec bun -- bun scripts/check-plugin-sync.ts
     skill-content:
       # The cs2-modding plugin's shipped prose is a deliverable with no other automated coverage;

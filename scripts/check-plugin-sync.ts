@@ -34,7 +34,7 @@ function checkPlugin(pluginRoot: string): void {
   checkSharedManifestFields(pluginRoot, claudeManifest, codexManifest);
   checkVersionAnchor(pluginRoot, claudeManifest);
 
-  // A knowledge-only plugin ships no server, and the mcp assertions below have no config to read.
+  // A plugin with no server has no config for the mcp assertions below to read.
   // The Codex manifest's "mcpServers" pointer is what declares a server, so checkNoMcpConfigs
   // holds the other side: dropping that pointer from a plugin that does ship one would otherwise
   // switch every server assertion off silently.
@@ -43,6 +43,13 @@ function checkPlugin(pluginRoot: string): void {
 
     return;
   }
+
+  assert.ok(
+    existsSync(path.join(repoRoot, pluginRoot, '.mcp.json')),
+    `${pluginRoot}/.codex-plugin/plugin.json declares a server, but ${pluginRoot}/.mcp.json is ` +
+      `missing, so Claude Code would install the plugin with no server. A plugin with a server ` +
+      `ships both configs.`
+  );
 
   checkCodexMcpConfig(pluginRoot);
   checkMcpVersionPins(pluginRoot);
@@ -94,7 +101,8 @@ function checkNoMcpConfigs(pluginRoot: string): void {
       !existsSync(path.join(repoRoot, configPath)),
       `${configPath} exists, but ${pluginRoot}/.codex-plugin/plugin.json declares no ` +
         `"mcpServers" pointer, so Codex would never launch it. A server-less plugin ships ` +
-        `neither config; a plugin with a server declares it in both harness manifests.`
+        `neither config; a plugin with a server declares it in the Codex manifest and ships both ` +
+        `configs.`
     );
   }
 }
@@ -147,8 +155,8 @@ function checkCodexMcpConfig(pluginRoot: string): void {
     return;
   }
 
-  // The committed artifact the server launches: args[0] when a runtime carries it (gameface's node
-  // bundle), else the command itself.
+  // The committed artifact the server launches: args[0] when a runtime carries it (a node bundle),
+  // else the command itself.
   let artifactRelativePath = command;
 
   if (args != null) {
@@ -190,10 +198,6 @@ function isDnxLaunch(command: unknown, args: unknown): boolean {
 // fail until it exists.
 function checkMcpVersionPins(pluginRoot: string): void {
   for (const configPath of [`${pluginRoot}/.mcp.json`, `${pluginRoot}/.codex-plugin/mcp.json`]) {
-    if (!existsSync(path.join(repoRoot, configPath))) {
-      continue;
-    }
-
     const servers = readJsonObject(configPath).mcpServers;
 
     assert.ok(

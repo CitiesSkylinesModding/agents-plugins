@@ -26,7 +26,7 @@ Encourage my work by putting a star ⭐ if it has been useful to you!
 | --- | --- | --- | --- |
 | 🔬 **[unity-devtools](plugins/unity-devtools/README.md)** | A live line into a **Unity Mono dev build** over the Mono Soft Debugger: see the rendered frame, reflect types, evaluate C# expressions, read & write ECS state. No code injection. Plus a driving skill. | .NET 10 SDK (Windows, Linux) | [README](plugins/unity-devtools/README.md) · [Tools reference](plugins/unity-devtools/README.md#tools) · [NuGet](https://www.nuget.org/packages/UnityDevtools.Mcp) |
 | 🖼️ **[coherent-gameface](plugins/coherent-gameface/README.md)** | Eyes and hands in any **Coherent Gameface** (Cohtml) game UI over CDP: evaluate JS, screenshot, drive the DOM, console, JS breakpoints. Plus an engine skill and a driving skill. | Node 22.4+ | [README](plugins/coherent-gameface/README.md) · [Why](plugins/coherent-gameface/WHY.md) · [Tools reference](plugins/coherent-gameface/mcp/README.md) · [npm](https://www.npmjs.com/package/@csmodding/gameface-devtools-mcp) |
-| 📚 **[cs2-modding](plugins/cs2-modding/README.md)** | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim checked against the game itself, with unconfirmed claims marked. Knowledge only — skills and references, no MCP server. | N/A | [README](plugins/cs2-modding/README.md) |
+| 📚 **[cs2-modding](plugins/cs2-modding/README.md)** | How **Cities: Skylines II** is built and how a mod changes it: the game's architecture, the modding techniques and the game mechanics behind them, every claim checked against the game itself, with unconfirmed claims marked. Plus the `cs2-dev` MCP server, which restarts the game and waits on it. | Node 22.4+ | [README](plugins/cs2-modding/README.md) · [Tools reference](plugins/cs2-modding/README.md#the-server) |
 
 The two toolkit plugins are **generic**: they target any game or application embedding the
 technology, with Cities: Skylines II as the reference target where everything is field-verified.
@@ -46,10 +46,9 @@ technology, with Cities: Skylines II as the reference target where everything is
 
 Add the marketplace once, then install the plugin(s) you want. Each plugin that carries an MCP
 server autoloads it, version-locked to the plugin, with no setup step of your own. How it gets
-there differs: `coherent-gameface` runs a bundle committed alongside the plugin, so it needs
-nothing but Node and works offline. `unity-devtools` needs the .NET 10 SDK and fetches its server
-from NuGet the first time it launches, then caches it. `cs2-modding` carries no server and is
-skills only.
+there differs: `coherent-gameface` and `cs2-modding` run a bundle committed alongside the plugin,
+so they need nothing but Node and work offline. `unity-devtools` needs the .NET 10 SDK and fetches
+its server from NuGet the first time it launches, then caches it.
 
 ### Claude Code
 
@@ -80,8 +79,9 @@ configuration and troubleshooting.
 Uses `mise` + `bun` (never `npx`). The repository is a marketplace: plugin sources live under
 `plugins/<name>/`, and everything a plugin ships lives inside its directory. The root is a bun
 workspace carrying the lint/format tooling (oxlint, oxfmt) and the lefthook git hooks; the
-Gameface MCP server is the `plugins/coherent-gameface/mcp/` workspace package, and the Unity MCP
-server is a .NET solution (`agents-plugins.slnx`).
+Gameface and `cs2-dev` MCP servers are the `plugins/coherent-gameface/mcp/` and
+`plugins/cs2-modding/mcp/` workspace packages, and the Unity MCP server is a .NET solution
+(`agents-plugins.slnx`).
 
 ```sh
 bun install         # install all workspace deps (also installs the git hooks)
