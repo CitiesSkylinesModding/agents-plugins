@@ -1,8 +1,8 @@
 # Roadmap
 
 Planned facets for the `csmodding` marketplace plugins. The two toolkits are generic, developed and
-verified against Cities: Skylines II but application-agnostic; `cs2-modding` is knowledge about that
-game specifically.
+verified against Cities: Skylines II but application-agnostic; `cs2-modding` is about that game
+specifically.
 
 Every entry opens with a triage line: **Priority** (high, medium, low) and **Cost** as the code reads
 at triage (trivial, cheap, moderate, large), either one `unsure` when nobody has judged it yet. An
@@ -1000,8 +1000,8 @@ The rule to add beside the managed-systems passage: rerun a system's creation pa
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
-decompiled game, the wiki and a corpus of open-source mods. Knowledge only: no MCP server, no
-runtime, and no shipped code artifacts.
+decompiled game, the wiki and a corpus of open-source mods, and the `cs2-dev` MCP server over the
+game's lifecycle.
 
 ### A check for the cites research files make into each other
 
@@ -1033,11 +1033,11 @@ decompile step already does. The output worth committing is the group table and 
 distribution, not the strings — the key identifiers are mechanism and the translations are the
 publisher's copyrighted text, which is the line the recipe file states and any script inherits.
 
-Two constraints that would shape it. The plugin ships no executable content by decision, so a script
-here is repository tooling of the kind `scripts/` already holds, not something the marketplace copies
-into a user's install; that makes it a maintenance tool for regenerating a shipped table, which is
-the honest framing rather than a user-facing feature. And every base locale file carries trailing bytes past
-their declared end, so end-of-file is not end-of-data and the decoder has to stop on the counts.
+Two constraints that would shape it. A script here is repository tooling of the kind `scripts/`
+already holds, not something the marketplace copies into a user's install; that makes it a
+maintenance tool for regenerating a shipped table, which is the honest framing rather than a
+user-facing feature. And every base locale file carries trailing bytes past their declared end, so
+end-of-file is not end-of-data and the decoder has to stop on the counts.
 
 A second consumer, met in a mod's translation pass: an agent translating a mod into the game's
 languages wants each locale's official terms (photo mode, milestone, playset) so the mod reads like
