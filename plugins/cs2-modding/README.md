@@ -5,12 +5,13 @@
 **Teach your agent how Cities: Skylines II is built and how a mod changes it —
 verified against the game itself, not against the wiki.**
 
-Knowledge only: four skills and their references. No MCP server, no runtime, no scaffolds.
+Four skills and their references, plus the `cs2-dev` MCP server, which restarts the game and waits
+on it.
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
 
-[The skills](#the-skills) · [How it stays honest](#how-it-stays-honest) ·
+[The skills](#the-skills) · [The server](#the-server) · [How it stays honest](#how-it-stays-honest) ·
 [What it leaves out](#what-it-deliberately-leaves-out) · [Install](#install)
 
 </div>
@@ -40,6 +41,25 @@ Your agent picks these up from their descriptions, so you don't have to name the
 | **cs2-modding-setup** | Provisioning: decompiling your own installed game, the developer launch options, patching the game so a debugger can attach, a curated catalog of mods worth reading, and a readable copy of the game's UI bundle. |
 | **cs2-mod-project** | The official toolchain: creating a project, the build pipeline and its failure modes, testing locally, and publishing. |
 
+## The server
+
+`cs2-dev` gives your agent the game's lifecycle as MCP tools, so it doesn't have to work out the
+process handling in each session.
+
+| Tool | What it does |
+| --- | --- |
+| `restart` | Stops the game if it's running, keeps the ended run's logs and crash reports, launches it through Steam, and returns at the main menu, or once a save or a new city has loaded. |
+| `stop` | Asks the game to close, waits for it to exit, and forces it if it hangs. |
+| `wait_load` | Returns once a load started from the game's UI has finished. |
+
+> [!WARNING]
+> **Your agent can stop or kill a running game without asking you.** `restart` and `stop` ask the
+> game to close and force it after a minute. Neither has a confirmation step. Anything unsaved in a
+> city you're playing is lost. On Codex the plugin approves its own tools. On Claude Code your
+> permission settings still apply.
+
+The tools are proven on Linux and unverified on Windows.
+
 ## How it stays honest
 
 - **Every claim was checked against the game itself** (the decompiled code, the installed game's
@@ -60,7 +80,7 @@ Your agent picks these up from their descriptions, so you don't have to name the
 - **Asset, map and editor authoring.** Meshes, textures, import setup, map creation: a GUI and
   DCC-tool discipline an agent can't drive. The scope is code mods; loading assets *from code* is
   covered.
-- **Code artifacts.** No scaffolds, no templates, no helper classes: the official toolchain
+- **Mod scaffolding.** No scaffolds, no templates, no helper classes: the official toolchain
   generates projects, and the references teach mechanisms your agent writes itself.
 - **Playing with mods.** Consuming or troubleshooting other people's mods as a player is out of
   scope; the plugin is for writing them.
@@ -73,6 +93,7 @@ Your agent picks these up from their descriptions, so you don't have to name the
   through it. The wiki's
   [Modding Toolchain on Linux](https://cs2.paradoxwikis.com/Modding_Toolchain_on_Linux) guide has
   the same steps for you.
+- **Node 22.4+** runs the server. The skills work without it.
 - The setup skill walks you through decompiling your own installed game — nothing copyrighted is
   distributed; the decompile is yours, from the game you own.
 - Optional but a great fit: the sibling **[unity-devtools](../unity-devtools/README.md)** plugin
@@ -98,4 +119,5 @@ codex plugin marketplace add CitiesSkylinesModding/agents-plugins
 codex plugin add cs2-modding@csmodding
 ```
 
-There's no MCP server and no configuration: once installed, the skills are available immediately.
+There's nothing to configure, except on Linux with the game in a Steam library other than the
+default one: set `CSII_USERDATAPATH` to its user data folder.

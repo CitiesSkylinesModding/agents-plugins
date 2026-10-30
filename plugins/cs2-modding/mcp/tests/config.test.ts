@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { readFile } from 'node:fs/promises';
 import { resolveUserDataPath } from '../src/config';
+import {
+  RESTART_CEILING_SECONDS,
+  STOP_CEILING_SECONDS,
+  WAIT_LOAD_CEILING_SECONDS
+} from '../src/cycle';
 
 describe('resolveUserDataPath', () => {
   test(`takes the configured folder`, () => {
@@ -15,5 +21,17 @@ describe('resolveUserDataPath', () => {
 
   test(`takes an empty variable for an absent one`, () => {
     expect(resolveUserDataPath('', 'linux', '/home/a')).toContain('/home/a/.local/share/Steam');
+  });
+});
+
+describe('the Codex config', () => {
+  test(`outlasts every tool's ceiling, as a Codex timeout cancels nothing`, async () => {
+    const config = JSON.parse(
+      await readFile(new URL('../../.codex-plugin/mcp.json', import.meta.url), 'utf8')
+    ) as { mcpServers: { 'cs2-dev': { tool_timeout_sec: number } } };
+
+    expect(config.mcpServers['cs2-dev'].tool_timeout_sec).toBeGreaterThan(
+      Math.max(RESTART_CEILING_SECONDS, STOP_CEILING_SECONDS, WAIT_LOAD_CEILING_SECONDS)
+    );
   });
 });

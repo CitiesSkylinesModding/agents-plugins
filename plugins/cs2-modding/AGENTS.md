@@ -3,8 +3,8 @@
 ## Plugin overview
 
 `cs2-modding` teaches an agent to write **Cities: Skylines II code mods**.
-It is knowledge only: skills and references, no MCP server, no runtime, no shipped code artifacts — no scaffolds, no templates, no generators.
-It names the game throughout, a deliberate carve-out from the repository's genericity rule: that rule exists to keep the two _toolkit_ plugins application-agnostic, and a game-knowledge product cannot obey it and exist.
+It ships skills and references, and the `cs2-dev` MCP server over the game's lifecycle; no scaffolds, no templates, no generators.
+It names the game throughout, a deliberate carve-out from the repository's genericity rule: that rule exists to keep the two _toolkit_ plugins application-agnostic, and a plugin about one game cannot obey it and exist.
 
 Scope is code mods, developed on Windows or on Linux, where the game runs under Proton and the toolchain is set up by hand.
 Loading assets _from code_ belongs here; authoring meshes, textures, maps and editor content does not.
@@ -17,6 +17,13 @@ The pointing is one-way by design: the toolkits stay game-agnostic, so neither e
 Four disclosure tiers, in order of cost: skill descriptions, then `SKILL.md` bodies, then references, then the local decompile and mod corpus grepped on demand.
 A fact earns its tier by how many readers need it, and a trunk body carries what belongs to no single reference — plus the handful a trunk reader cannot act without, which are stated there in a paragraph and developed in their reference.
 What may never move down is a rule whose absence makes a reader **wrong** rather than shallower — a pointer carries depth, and a reference answers correctly for a reader who follows none of its pointers.
+
+## The `cs2-dev` server
+
+`bun build --target=node` bundles `mcp/` with its dependencies into the committed `dist/server.mjs`, so an install has no step and the shipped runtime is Node 22.4+; rebuild with `mise build:cs2-dev`.
+
+Harness wiring: Claude Code's `.mcp.json` hands the server its own environment.
+Codex's holds `tool_timeout_sec` above every tool's ceiling, a bound a test enforces, and approves the tools itself.
 
 ## The shipped-prose contract
 
@@ -167,4 +174,4 @@ Every entry into a local source is conditional, so an agent never greps a path t
 - **The official toolchain**: its build targets, the Unity mod project whose package cache holds the Entities, Collections and Burst packages as C# source, and the UI mod scaffold whose template declares every module a UI mod may import. The game ships all three under the install, in `Cities2_Data/Content/Game/.ModdingToolchain/`, the Unity project as a zip; the installer copies the targets to `CSII_TOOLPATH` and unpacks the project to `CSII_UNITYMODPROJECTPATH`, and those per-user copies are what a build reads — the package cache exists only once an editor has opened the project — so `skills/cs2-mod-project/references/build-pipeline.md` names the environment variables that locate them. The scaffold is used in place instead: the toolchain installs it by linking the npm-global entry to `Cities2_Data/Content/Game/.ModdingToolchain/npx-create-csii-ui-mod`, so the install root reaches it directly and its files version with the game — a global entry that is a plain directory rather than that link is a stale copy, not the source.
   The package cache is where a build failure inside generated code gets settled, since the Entities source generators ship as source there — [reading what a source generator emitted](../../docs/solutions/reading-what-a-source-generator-emitted.md) covers why emitting the generated files instead breaks the next build.
 - **The wiki**: capability-agnostic. Try a web-fetch tool, expect a plain HTTP fetch to come back with the site's JavaScript bot challenge instead of content, and ask the user as the last resort.
-- **The running game**: available only when the sibling Unity plugin is installed and the user's game is patched for debugging, which is what the setup skill's debug patching provides.
+- **The running game**: reading its state takes the sibling Unity plugin and a game patched for debugging, which is what the setup skill's debug patching provides.

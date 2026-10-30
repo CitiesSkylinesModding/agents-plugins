@@ -155,7 +155,8 @@ function main(): Promise<void> {
         Fails on a stopped game, on a game that dies, and on a load that falls back to the main
         menu; a timeout of ${LOAD_SECONDS + LOADING_SCREEN_SECONDS} s leaves the game running.
         Unverified on Windows.
-      `
+      `,
+      annotations: { readOnlyHint: true }
     },
     extra => waitLoad(contextOf(extra))
   );
