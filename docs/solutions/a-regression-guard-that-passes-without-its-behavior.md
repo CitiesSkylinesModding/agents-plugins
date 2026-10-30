@@ -5,6 +5,7 @@ symptoms:
   - 'a test named for a behavior passes with that behavior deleted'
   - 'a review round keeps finding holes in the guard the previous round added'
 tags: [testing, mutation-testing, review, regression-guard]
+updated: 2026-10-30
 ---
 
 # A regression guard that passes without its behavior
@@ -31,6 +32,12 @@ assertion.
 the mechanism silently drops the input before judging it. One extractor filtered claims with
 `startsWith(':')`, so an element-qualified claim was dropped rather than checked, and the assertion
 it should have failed never saw it.
+
+**Ending a call to test what it left behind.** `shares nothing with a copy its call left behind`
+ended a call and raced a second one against it. A later fix added an abort check early in the step,
+so the ended call stopped before the code under test and nothing was left behind to race: green,
+with the guard gone. Aborting right after the call lands in the same place. The abort has to land
+past that check, here through a spy on the check itself.
 
 **Reasoning about it.** Every one of these looked correct on reading, and each was written by the
 same author who had just diagnosed the defect and held it clearly in mind.

@@ -1370,3 +1370,19 @@ Found in Hall of Fame's usage statistics, where about 9% of 2026.6.0 sessions ne
 The base `Setting.ApplyAndSave` is the obvious way out and the wrong one: it applies first, raising `onSettingsApplied`, and it picks the file to write from the short class name, so two mods with a `Settings` class write each other's file.
 The rule to add: save a change that must survive a crash through `AssetDatabase.global.SaveAllSettings()`, which writes every mod's settings without applying them; the game queues those saves with one running and one waiting and drops the rest, so a burst costs at most two.
 Found in Hall of Fame, whose menu tour came back after crashes; its `docs/solutions/a-setting-is-lost-when-the-game-crashes.md` carries the fix.
+
+### A game lock across sessions
+
+**Priority:** low · **Cost:** cheap
+
+`cs2-dev`'s one-call slot lives in its server process, so two sessions hold a slot each and can drive one game at once: a `restart` in one stops the game under the other's wait.
+A lock in the user data's `.cs2-dev` folder, naming its holder's PID so a killed server cannot leave it held, would refuse the second call.
+Found reviewing the server, and hit when a stdio script drove the bundle while `/mcp` reconnected the session's own server beside it.
+
+### A failed load from the UI takes `wait_load`'s whole wait
+
+**Priority:** medium · **Cost:** unsure
+
+A load that fails after a UI trigger holds `wait_load` to its ceiling: the game stays where it was and logs no fallback, so no `MainMenu reached` line ends the wait as it ends a failed `restart` load.
+`MenuUISystem`'s load catch (`MenuUISystem.cs:815`) only logs, which makes that entry the signal to try.
+Found reviewing the server, by reading the catch; no live failed load has been seen.
