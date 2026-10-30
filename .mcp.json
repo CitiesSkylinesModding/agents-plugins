@@ -8,6 +8,10 @@
         "GAMEFACE_PORT": "${GAMEFACE_PORT:-9444}"
       }
     },
+    "cs2-dev": {
+      "command": "node",
+      "args": ["plugins/cs2-modding/mcp/dist/server.mjs"]
+    },
     "unity": {
       "command": "dotnet",
       "args": [

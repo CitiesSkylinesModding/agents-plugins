@@ -30,7 +30,10 @@ export default defineConfig({
   },
   overrides: [
     {
-      files: ['plugins/coherent-gameface/mcp/src/config.ts'],
+      files: [
+        'plugins/coherent-gameface/mcp/src/config.ts',
+        'plugins/cs2-modding/mcp/src/config.ts'
+      ],
       rules: {
         // Config.ts is the designated env boundary; everything else must go through it.
         'node/no-process-env': 'off'
@@ -45,7 +48,7 @@ export default defineConfig({
       }
     },
     {
-      files: ['**/tests/*.test.ts'],
+      files: ['**/tests/*.test.ts', 'plugins/cs2-modding/mcp/tests/*.ts'],
       rules: {
         // A fixture is the test: its numbers, its short property names and its stub functions are
         // what the assertion reads, and naming each one would say the same thing twice.

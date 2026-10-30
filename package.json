@@ -5,7 +5,8 @@
   "description": "Workspace root: lint/format tooling and git hooks for the CS Modding agent plugins marketplace",
   "license": "MIT",
   "workspaces": [
-    "plugins/coherent-gameface/mcp"
+    "plugins/coherent-gameface/mcp",
+    "plugins/cs2-modding/mcp"
   ],
   "type": "module",
   "scripts": {

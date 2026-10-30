@@ -55,6 +55,8 @@ raw = true
 run = [
   "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp",
   "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp/tests",
+  "bun --bun tsc --noEmit -p plugins/cs2-modding/mcp",
+  "bun --bun tsc --noEmit -p plugins/cs2-modding/mcp/tests",
   "bun --bun tsc --noEmit -p tsconfig.json",
   "bun --bun tsc --noEmit -p bench/tsconfig.json"
 ]
@@ -100,6 +102,8 @@ raw = true
 run = [
   "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp",
   "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp/tests",
+  "bun --bun tsc --noEmit --pretty false -p plugins/cs2-modding/mcp",
+  "bun --bun tsc --noEmit --pretty false -p plugins/cs2-modding/mcp/tests",
   "bun --bun tsc --noEmit --pretty false -p tsconfig.json",
   "bun --bun tsc --noEmit --pretty false -p bench/tsconfig.json"
 ]
@@ -120,6 +124,11 @@ run = "dotnet test agents-plugins.slnx"
 description = "Run the gameface MCP server's unit tests. Hermetic: no application, no socket."
 raw = true
 run = "bun test plugins/coherent-gameface/mcp"
+
+[tasks."test:cs2-dev"]
+description = "Run the cs2-dev MCP server's unit tests. Hermetic: no game, a temporary user data folder."
+raw = true
+run = "bun test plugins/cs2-modding/mcp"
 
 [tasks."bench:test"]
 description = "Run the skill-efficacy benchmark's unit tests (bench/core.ts, the tool's pure core)."
@@ -183,6 +192,12 @@ raw = true
 # The shebang banner makes the bundle work as an npm bin script. Never enable minification:
 # page-context functions are serialized via .toString() and must stay readable/self-contained.
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
+
+[tasks."build:cs2-dev"]
+description = "Rebuild the cs2-dev server bundle (plugins/cs2-modding/mcp/dist/server.mjs)."
+dir = "{{config_root}}/plugins/cs2-modding/mcp"
+raw = true
+run = 'bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs'
 
 [tasks."build:unity:pack"]
 description = "Pack the unity-devtools MCP server as the UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; the release workflow publishes it)."
