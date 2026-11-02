@@ -117,7 +117,7 @@ Rots: harness behaviours above belong to the harnesses and to no game file, so t
 The handler (`SafeLoadGame`, `MenuUISystem.cs:784`) enqueues on `SaveLoadGame`; `LoadGame` looks the save up with `m_SavesBinding.value.Find` (`:797`) and dereferences the result (`:798`).
 
 **The NRE is real, and is not thrown to anyone.** With the id absent, `saveInfo` is null, the `NullReferenceException` is caught at `:815` and logged through `COSystemBase.baseLog.Error` (`:817`). So the trigger returns normally, no load starts, and an Error lands in `SceneFlow.log`. A wrong `saveId` takes exactly the same path as a list not yet filled, so the log does not tell them apart.
-Verdict: "it throws a `NullReferenceException`" (`gfd-game-cycle/SKILL.md:26`, `docs/ROADMAP.md:1145`) is true of the frame and false of the caller. Decompile wins.
+Verdict: "it throws a `NullReferenceException`" (`gfd-game-cycle/SKILL.md:26`, `docs/ROADMAP.md:1145` at `ad4a7b4`) is true of the frame and false of the caller. Decompile wins.
 
 **When the list fills.** There is no timer and no constant.
 `m_SavesBinding` is written only by `UpdateSaves` (`MenuUISystem.cs:558-562`, through `MenuHelpers.UpdateMeta`, `src/Game/Game.UI.Menu/MenuHelpers.cs:85-104`), and that runs on two events: `AssetDatabase.global.onAssetDatabaseChanged` for `SaveGameMetadata` (`MenuUISystem.cs:381`, dispatched to the main thread at `:578-581`) and `PrefabSystem.onContentAvailabilityChanged` (`:374`, `:495-500`, fired at `src/Game/Game.Prefabs/PrefabSystem.cs:480/517`). `OnCreate` does not fill it.
@@ -133,7 +133,7 @@ Rots: the trigger name and argument names, `Game.UI.Menu.MenuUISystem` and `Load
 The next line due was `HandleLocaleCaching`, after `await UnityTask.WaitForGPUFrame()` (`GameManager.cs:1097-1100`; `src/Colossal.Core/Game.Threading/UnityTask.cs:30-38`, which waits on an `AsyncGPUReadback` callback, so a rendered frame).
 An eval runs on the main thread inside a debugger invoke (`plugins/unity-devtools/sdb/Invoker.cs:432-448`), and it does not await a returned `Task`: nothing in the eval path holds one. So the part of `Load` before its first real suspension runs inside that invoke.
 **What is established:** the invoke did not return in 60 s, and the load did not progress.
-**What is not:** the exact mechanism. An async method should hand back at its first `await`, so "holds the main thread the load needs" (`gfd-game-cycle/SKILL.md:26`, `docs/ROADMAP.md:1145`) is a plausible reading rather than a demonstrated one, and "the game must be killed" rests on one run in which no `stop` was tried.
+**What is not:** the exact mechanism. An async method should hand back at its first `await`, so "holds the main thread the load needs" (`gfd-game-cycle/SKILL.md:26`, `docs/ROADMAP.md:1145` at `ad4a7b4`) is a plausible reading rather than a demonstrated one, and "the game must be killed" rests on one run in which no `stop` was tried.
 Verdict: ship the move, "never start a load from the eval; load through `restart`'s `save`", with the observation as its evidence, not the mechanism. Settled further by `eval-load`.
 The same is expected of `TestScenarioSystem.RunScenario` from the eval whenever the scenario's synchronous prefix starts a load (the template's reading, `gfd-game-testing/SKILL.md:55`; reasoned here, not run).
 
@@ -143,7 +143,7 @@ The template's rule "`await this.WaitFrames(2)` before `GameManager.instance.Loa
 `CameraController.inputEnabled` exists at `src/Game/Game/CameraController.cs:248`, an auto-property implementing `IGameCameraController` (`src/Game/Game.Rendering/IGameCameraController.cs:18`).
 **Nothing reads it on that class.** A search of `src/Game` and `src/Colossal.Core` finds its reads only in `src/Game/Game/OrbitCameraController.cs:227` and `src/Game/Game/CinematicCameraController.cs:192`, and its writes only in `src/Game/Game.UI.InGame/CinematicCameraUISystem.cs:80-81/507-508`, which target those two controllers. `CameraController.cs` holds the declaration and no use of it.
 `CameraController.UpdateCamera` gates all input, edge scrolling included, on `m_CameraMap.enabled` (`CameraController.cs:351`, edge scrolling at `:356`), and `m_CameraMap` is `InputManager.instance.FindActionMap("Camera")` (`:326`).
-Verdict: "`CameraController.inputEnabled = false` stops edge scrolling and the camera keys" (`docs/ROADMAP.md:1146` as it stood before this ticket corrected it, `gfd-game-cycle/SKILL.md:49`) does not hold from the decompile. The line cite `:248` holds; the effect does not. A corpus search finds the property used only on the cinematic controller. A captured take that looked frozen proves nothing, since a game without focus or with an idle pointer does not move either.
+Verdict: "`CameraController.inputEnabled = false` stops edge scrolling and the camera keys" (`docs/ROADMAP.md:1146` at `ad4a7b4`, `gfd-game-cycle/SKILL.md:49`) does not hold from the decompile. The line cite `:248` holds; the effect does not. A corpus search finds the property used only on the cinematic controller. A captured take that looked frozen proves nothing, since a game without focus or with an idle pointer does not move either.
 
 What does hold, from the source:
 
@@ -310,11 +310,11 @@ All of it is unexercised on Windows; the tools say so themselves ("Unverified on
 
 **Evidence.** Ticket 01, launch 6: quit from the eval during a forced autosave, then `detach`; game gone 16.2 s after `detach`, about 17.2 s after the quit, both pass lines logged, `GameManager destroyed` at 16,023 ms.
 Unconfirmed: whether `detach` is needed when nothing is suspended. An attached but running session may close just as fast, as every run detached. Harmless either way, so the order stands; settled by `quit-no-detach`.
-The template's step 1 made this the cycle's opening move and gave the game "a minute" (`gfd-game-cycle/SKILL.md:13-14`, `docs/ROADMAP.md:1140`). Verdict: both are superseded by the shipped `stop`, which closes on its own, and the eval quit is the fallback only.
+The template's step 1 made this the cycle's opening move and gave the game "a minute" (`gfd-game-cycle/SKILL.md:13-14`, `docs/ROADMAP.md:1141` at `ad4a7b4`). Verdict: both are superseded by the shipped `stop`, which closes on its own, and the eval quit is the fallback only.
 
 ### Template and roadmap claims, with verdicts
 
-"T" is the template's `gfd-game-cycle`, "TT" its `gfd-game-testing`, "R" `docs/ROADMAP.md:1132-1149`.
+"T" is the template's `gfd-game-cycle`, "TT" its `gfd-game-testing`, "R" `docs/ROADMAP.md:1132-1149` at `ad4a7b4`.
 
 **Did not hold.**
 
@@ -330,7 +330,7 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 | `IgnoreLogForTestResult`: `test` still fails on it | ticket | Only for an entry in `TestScenarios.log` or naming the mod |
 | Any logged error fails the test under way | TT:40 | Per-test window; not preparation, not after the last test |
 | `disabled` skips its test bodies | ticket | True, and `OnPrepare`, `OnCleanup` still run |
-| Quit from the eval as step 1; a minute's grace | T:13-14, R:1140 | Superseded; fallback only |
+| Quit from the eval as step 1; a minute's grace | T:13-14, R:1141 | Superseded; fallback only |
 | `mise game`, `refuses to start while the game runs`, the Debug check | T, TT:18 | Obsolete: `test` stops the game, and has no such check |
 
 **Held, some with a scope.**
@@ -342,7 +342,7 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 | `CameraController.cs:248` declares it | R:1146 (since corrected) | The line holds, the effect does not |
 | `Load` from the eval holds the main thread; kill | T:26, R:1145 | Observed no answer, no progress; mechanism not shown, `stop` untried |
 | Launch waits for `Cities2.exe` | R | Holds (`cycle.ts:252`) |
-| `taskkill`, then `/F` | R:1140 | Holds as design, unverified on Windows |
+| `taskkill`, then `/F` | R:1141 | Holds as design, unverified on Windows |
 | Stuck 6 min, 10 min boot, 30 min run | TT:23-24 | Hold: 360, 600, 1800 s |
 | One `[TestPrepare]`, throws on two | R, TT:53 | Holds, and the throw surfaces as Success |
 | `OnPrepare` throw reports success | TT:41 | Holds |

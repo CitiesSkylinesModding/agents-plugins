@@ -463,10 +463,11 @@ trading a rare by-value call into such an assembly for the game staying up.
 
 **Priority:** medium · **Cost:** cheap
 
-The game's own logs are the primary evidence for a whole class of diagnostics claims — the version
-block, the modding runtime line, the debugger-port lines, the absence of a warning — and no tool
-reads them. `System.IO.File.ReadAllText` through `eval` covers `Logs/*.log`, but `Player.log` is
-held open by the player and answers `Sharing violation`; the 1.6.2f1 sweep's workaround was
+A Unity game's own logs are the primary evidence for a whole class of diagnostics claims — the
+version block, the debugger-port lines, the absence of a warning — and no `unity` tool reads them;
+`cs2-dev`'s `logs` serves one game, on its own machine. `System.IO.File.ReadAllText` through `eval`
+covers a game's own log files, but `Player.log` is held open by the player and answers
+`Sharing violation`; the workaround is
 `new FileStream(path, Open, Read, FileShare.ReadWrite)` wrapped in a `StreamReader`, which is a lot
 of incantation for "show me the log". A read-file or tail-N-lines verb, sharing-mode correct by
 construction, would serve every such claim directly.
@@ -1111,44 +1112,6 @@ generator rewrote it at compile time. `ecs-in-this-game.md` lists `SystemAPI.Que
 any of them. Whether the mod template's build does is the fact to establish first; the references
 then either say so or steer to `GetComponentLookup`/`EntityQueryBuilder` on the system itself.
 
-### A crashed session's minidump
-
-**Priority:** medium · **Cost:** cheap
-
-`diagnostics.md` saves a crashed run's logs but never names its minidump, the one record of a native
-crash: one in V8 left `Player.log` without its last seconds and no managed exception anywhere.
-Crashpad writes it to `.cache/backtrace/crashpad/reports/<id>.dmp` under the user data root, beside
-the snapshots it takes on a quit or a hang, which read `Simulated Exception` and are no crash.
-`minidump-stackwalk` reads one on Linux without symbols, and module offsets alone tell a V8 frame
-called from cohtml from Mono (a script or binding crash) from an engine one. Its `--brief` prints
-only the crashing thread, which in a hang snapshot is the Backtrace watchdog: the main thread is
-Thread 0 of the full output. Which quits write a snapshot is the fact to settle first; seen on a
-Proton install.
-
-### Restarting the game and waiting on it, unattended
-
-**Priority:** high · **Cost:** moderate
-
-No reference says how an agent restarts the game after a build and knows when it is ready, so each mod session works it out again.
-Morgan's mod template has a working version to port: `scripts/game.ts`, its log reader `scripts/game-log.ts`, and the `gfd-game-cycle` skill, in `~/Documents/Dev/cs2-greenfield-mod-template` (CitiesSkylinesModding/greenfield-mod-template).
-It supersedes NetworkTools' machine-local `game.sh` (`~/Documents/Dev/cs2-networktools/.scratch/tools/`), which it was built from.
-
-- A cross-platform Bun CLI: `restart [--load <save> | --new [<map>]] [<game options>]`, `stop`, `wait-load`.
-  Game options come bare: mise strips the first `--` from a task's arguments. The game's parser (Mono.Options) takes `--opt`, `-opt` and `/opt`, stops at `--` and ignores an unknown option silently, so the launch prints the options it wrote to `runOnce.txt`.
-  It loads through the game's `--startGame=<guid>` option at launch, which races no main-menu trigger, and reads a save's guid from its `.cok`, a stored zip, since the guid changes at each save.
-  Readiness comes from `Logs/SceneFlow.log`: `MainMenu reached`, or a `Loading mode Game|Editor` line followed by `Loading completed`, after which the loading screen stays up some 20 s more.
-- Process control: `Cities2.exe` by exact name and, on Linux, Steam's reaper for the app, which outlives the game and makes Steam ignore a launch while it lives; a launch starts and ends a first reaper before the game's, so a launch waits for `Cities2.exe` itself, and crash detection and the game-left-running report read `Cities2.exe` alone.
-  Launch through `systemd-run --user` on Linux, because a Steam started from the agent's shell passes that environment, tokens included, into crashpad dumps uploaded to Colossal Order.
-  Stop: a minute's grace for a game quitting from the `unity` eval (a script cannot share that session's exclusive debugger slot), then SIGTERM, then SIGKILL (`taskkill`, then `/F`, on Windows).
-- It recovers from a game that crashes, hangs or never launches, or hands the game back with its PIDs: a failed launch stops what it started and deletes `runOnce.txt`, so the next launch does not inherit its options. Verified on Linux by killing, freezing (SIGSTOP) and never launching the game; the Windows branch is unverified.
-- The template's in-game test runner (`scripts/test-game.ts`, `scripts/scenario-log.ts`, the `tmt-game-testing` skill) uses the launcher and could follow it: the game's runner reports a scenario a success when its preparation throws, and aborts a scenario while earlier errors are pending, which the runner and a scenario base class work around.
-  The runner takes one `[TestPrepare]` per scenario, base classes included, and throws on two. An exception a system throws at the main menu lands in `SceneFlow.log`, naming the mod only in its stack. `TestScenarioSystem.instance.scenarios` returns the live dictionary, so registering needs no reflection unless the order matters.
-- Loading another save from a running game: the gameface `menu.loadGame` trigger, once the menu's save list filled (`src/Game/Game.UI.Menu/MenuUISystem.cs:797`), some 30 s after `MainMenu reached`; sent earlier, it throws a `NullReferenceException`. `GameManager.instance.Load` from the eval holds the main thread the load needs, and the game must be killed.
-- For a screen recording or any scripted run in a loaded city, a blocked barrier on the `Camera` input map stops edge scrolling and the camera keys from moving the view (`src/Game/Game/CameraController.cs:351`); `game-cycle` carries the move.
-
-Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the CLI as tooling it ships.
-Once it ships, the template drops its copy (`scripts/game.ts`, the `game` mise task, the `gfd-game-cycle` skill) and points its runner and AGENTS.md at the plugin's; annotate the template's spec, `.scratch/mod-template/spec.md`, if it is still there.
-
 ### `EntityQuery.Matches` and the unchecked query-mask limit
 
 **Priority:** medium · **Cost:** trivial
@@ -1387,3 +1350,19 @@ Found reviewing the server, and hit when a stdio script drove the bundle while `
 A load that fails after a UI trigger holds `wait_load` to its ceiling: the game stays where it was and logs no fallback, so no `MainMenu reached` line ends the wait as it ends a failed `restart` load.
 `MenuUISystem`'s load catch (`MenuUISystem.cs:815`) only logs, which makes that entry the signal to try.
 Found reviewing the server, by reading the catch; no live failed load has been seen.
+
+### A `crash_dumps` tool
+
+**Priority:** low · **Cost:** moderate
+
+A `cs2-dev` tool that lists a run's crashpad reports and gives each one's verdict, in place of the steps `reading-a-crash-dump.md` teaches.
+Build it when a session answering `A new crash report appeared` or `The game went away with no cs2-dev stop` read another run's report, took a `Simulated Exception` for a crash, or stopped because `minidump-stackwalk` was missing.
+That last case decides the shape: the server would have to bundle a minidump parser, since it cannot install the tool.
+
+### A `saves` tool
+
+**Priority:** low · **Cost:** cheap
+
+A `cs2-dev` tool that lists the saves and maps `restart` accepts.
+Build it when sessions keep listing `Saves/` from the shell before a `restart`, or keep hitting `No save named`.
+Try the smaller fix first: that error naming the saves it did find answers the second case with no new tool.

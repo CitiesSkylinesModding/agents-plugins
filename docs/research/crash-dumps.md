@@ -316,7 +316,7 @@ Verdict: `AnrWatchdogTimeout = 15000` (`src/Colossal.Logging/Colossal.Logging.Ba
 - On a later stall: `a7062766` 88 s, `7a787f3c` 294 s, `8782e9a0` 579 s. In seven of the access-violation runs a hang had fired earlier, by the annotations in finding 9, at unknown moments.
 - At a quit: none. Ticket 01 ended the game 8 ways, reading `reports/` after each, and none wrote a snapshot at exit: `wine taskkill` (launches 1, 5), an X11 close (4), a quit from the eval (6) and from the UI (3), all with both shutdown lines; SIGTERM on a healthy game (7) and a stuck one (2), SIGSTOP then close, SIGTERM and SIGKILL (8), and SIGKILL on a healthy game (9), all with neither.
 
-Verdict: the roadmap's "the snapshots it takes on a quit or a hang" (`docs/ROADMAP.md:1121`) is half right: hang yes, quit no, on 8 ways of ending. No code path in the decompile writes one on quit: the only `NativeReport` call is `HandleAnr`'s.
+Verdict: the roadmap's "the snapshots it takes on a quit or a hang" (`docs/ROADMAP.md:1121` at `a89b064`) is half right: hang yes, quit no, on 8 ways of ending. No code path in the decompile writes one on quit: the only `NativeReport` call is `HandleAnr`'s.
 
 Verdict: `hint.ts:246`, "A new crash report appeared, which may be a hang snapshot", holds. `hint.ts:330`'s comment said a report comes for a hang "and at boot on some machines": the fact held, the boot case being a hang, and "on some machines" was unmeasured, one machine both ways, so ticket 07 dropped it.
 
@@ -436,7 +436,7 @@ Thread 0  (crashed) - tid: 312
  7  cohtml.WindowsDesktop.dll + 0x5d741d
 ```
 
-So a V8 crash is Thread 0, frame 0 in `v8.dll`, `cohtml.WindowsDesktop.dll` below it. One sample. `Crashing address may be the result of a flipped bit` is the tool's stock guess on a low address and no finding; a null read is the plain reading. A later session attributes the cause to a Gameface data-binding shape, "the same superset order" (`9044e84e-33c4-4a50-8a52-ea0583b35b2d.jsonl:3509`), a lead that was not rechecked; the roadmap's "left `Player.log` without its last seconds and no managed exception anywhere" (`docs/ROADMAP.md:1119`) is that report's own observation, not rechecked. Verdict: the roadmap's "module offsets alone tell a V8 frame called from cohtml from Mono (a script or binding crash) from an engine one" holds on the module name, with a real sample for V8 and the engine and none for Mono; the offsets add nothing unsymbolised, and the module names do the telling.
+So a V8 crash is Thread 0, frame 0 in `v8.dll`, `cohtml.WindowsDesktop.dll` below it. One sample. `Crashing address may be the result of a flipped bit` is the tool's stock guess on a low address and no finding; a null read is the plain reading. A later session attributes the cause to a Gameface data-binding shape, "the same superset order" (`9044e84e-33c4-4a50-8a52-ea0583b35b2d.jsonl:3509`), a lead that was not rechecked; the roadmap's "left `Player.log` without its last seconds and no managed exception anywhere" (`docs/ROADMAP.md:1119` at `a89b064`) is that report's own observation, not rechecked. Verdict: the roadmap's "module offsets alone tell a V8 frame called from cohtml from Mono (a script or binding crash) from an engine one" holds on the module name, with a real sample for V8 and the engine and none for Mono; the offsets add nothing unsymbolised, and the module names do the telling.
 
 ### 13. What this corrected elsewhere
 

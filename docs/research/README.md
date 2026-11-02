@@ -48,6 +48,7 @@ Drafting history fits none of the categories below: the corrected claim with its
   Expanding bare cites back is per-cite work against the source, never a script keyed on the nearest preceding type name: a section naming two files anchors its cites to the wrong one.
   A claim nobody can re-check in a year is a claim the next pass has to rediscover.
   A line cite into a living file — a sibling, `SOURCES.md` above all, or a shipped reference — rots the moment that file gains a line above it: amend on the existing line where possible, and otherwise the sweep of every cite below the insertion is part of the amendment ([an amendment that shifted every cite below it](../solutions/an-amendment-that-shifted-every-cite-below-it.md)).
+  A cite whose target line was deleted takes the revision it was read at, `<path>:<line>` at `<commit>`: that line has no current number to move to.
   **Where the source was purpose-built to answer the question and is then gone** — an experiment mod, a probe, a throwaway script — record the method that established the finding, in the finding, and cite nothing. Keeping the artifact alive to satisfy this rule is the wrong trade: the code is throwaway and the method is what a later reader would re-run anyway.
 - **A baseline**, stated once under the title: always the game version its claims were established against, plus the date the corpus was read and the date the wiki was fetched where those sources were used.
   Every reference derived from your file has to state a version of its own.
