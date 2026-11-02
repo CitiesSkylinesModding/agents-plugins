@@ -7682,7 +7682,7 @@ var require_lib = __commonJS((exports) => {
 
 // src/server.ts
 import { readFileSync } from "node:fs";
-import process5 from "node:process";
+import process6 from "node:process";
 
 // ../../../node_modules/.bun/zod@4.4.3/node_modules/zod/v3/helpers/util.js
 var util;
@@ -30345,10 +30345,15 @@ function wineEnvironment(prefix) {
 }
 
 // src/cycle.ts
-import { createReadStream } from "node:fs";
-import { access, readFile as readFile2, rm, stat, writeFile } from "node:fs/promises";
-import path3 from "node:path";
+import { createReadStream as createReadStream2 } from "node:fs";
+import { access, readFile as readFile4, rm as rm2, stat as stat2, writeFile as writeFile2 } from "node:fs/promises";
+import path6 from "node:path";
 import { text } from "node:stream/consumers";
+
+// src/cursor.ts
+import { mkdir, readFile as readFile2, rename, writeFile } from "node:fs/promises";
+import path3 from "node:path";
+import process5 from "node:process";
 
 // src/game-host.ts
 import { spawn } from "node:child_process";
@@ -30529,8 +30534,136 @@ function run(file2, args, options = {}) {
   });
 }
 
+// src/queue.ts
+function createQueue() {
+  let last = Promise.resolve();
+  function enqueue(signal, step) {
+    const previous = last;
+    const result = runAfter(previous, signal, step);
+    last = letGo(previous, result, signal);
+    return result;
+  }
+  return { run: enqueue };
+}
+async function runAfter(previous, signal, step) {
+  await previous;
+  signal.throwIfAborted();
+  return step();
+}
+async function letGo(previous, result, signal) {
+  await previous;
+  await Promise.race([whenSettled(result), whenAborted(signal)]);
+}
+async function whenSettled(step) {
+  try {
+    await step;
+  } catch {}
+}
+function whenAborted(signal) {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    signal.addEventListener("abort", () => {
+      resolve();
+    }, { once: true });
+  });
+}
+
+// src/cursor.ts
+var updates = createQueue();
+var writes = 0;
+function toolFolderPath(userDataPath) {
+  return path3.join(userDataPath, ".cs2-dev");
+}
+async function readCursor(userDataPath) {
+  try {
+    const cursor = JSON.parse(await readFile2(cursorPath(userDataPath), "utf8"));
+    return { ...cursor, offsets: cursor?.offsets ?? {} };
+  } catch (error51) {
+    if (isMissing(error51) || error51 instanceof SyntaxError) {
+      return { offsets: {} };
+    }
+    throw error51;
+  }
+}
+function updateCursor({ userDataPath, signal }, change, shrunk = []) {
+  return updates.run(signal, async () => {
+    const current = await readCursor(userDataPath);
+    const next = change(current);
+    const isSameRun = next.runStart == current.runStart;
+    await writeJson(cursorPath(userDataPath), {
+      ...next,
+      offsets: isSameRun ? keepLarger(current.offsets, next.offsets, shrunk) : next.offsets
+    });
+  });
+}
+function keepLarger(current, next, shrunk) {
+  const larger = Object.entries(next).map(([file2, offset]) => [
+    file2,
+    shrunk.includes(file2) ? offset : Math.max(offset, current[file2] ?? 0)
+  ]);
+  return { ...current, ...Object.fromEntries(larger) };
+}
+async function writeJson(filePath, value) {
+  writes++;
+  const temporaryPath = `${filePath}.${process5.pid}.${writes}.tmp`;
+  await mkdir(path3.dirname(filePath), { recursive: true });
+  await writeFile(temporaryPath, JSON.stringify(value, undefined, 2));
+  await rename(temporaryPath, filePath);
+}
+function cursorPath(userDataPath) {
+  return path3.join(toolFolderPath(userDataPath), "cursor.json");
+}
+
 // src/game-log.ts
+var EXCEPTION_LEVEL = "EXCEPTION";
+var PLAYER_ENTRY_LINES = 2000;
+var taggedLevels = [
+  "VERBOSE",
+  "TRACE",
+  "DEBUG",
+  "INFO",
+  "WARN",
+  "ERROR",
+  "CRITICAL",
+  "FATAL",
+  "EMERGENCY"
+];
+var logLevels = [...taggedLevels, EXCEPTION_LEVEL];
+var errorLevels = new Set([
+  "ERROR",
+  "CRITICAL",
+  "FATAL",
+  "EMERGENCY",
+  EXCEPTION_LEVEL
+]);
 var entryPattern = /^\[(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2}) (?<hours>\d{2}):(?<minutes>\d{2}):(?<seconds>\d{2}),(?<milliseconds>\d{3})\] \[(?<level>[A-Z]+)\] {1,2}(?<message>.*)$/u;
+var taggedPattern = new RegExp(String.raw`^\[(?<logger>[^\]]+)\] \[(?<level>${taggedLevels.join("|")})\] {1,2}(?<message>.*)$`, "u");
+var exceptionPattern = /^[\w.+`]*Exception\b/u;
+var managedFramePattern = /^\s+at (?<frame>.+?)(?: \[0x[\da-f]+\])?(?: in .*)?$/u;
+var unityFramePattern = /^(?<frame>[\w.+<>`$|]+:[\w.<>`$|]+\(.*?\))(?: \(at .*\))?$/u;
+var loggingFramePattern = /^(?:UnityEngine|Colossal\.Logging)\./u;
+var HANDLER_LINE = "UnityEngine.DebugLogHandler:Internal_LogException(";
+var BURST_SENTENCE = `This Exception was thrown from a job compiled with Burst`;
+var nativeFramePattern = /^0x[\da-f]{16} \((?![^()]+_win_x86_64\) [^(\s])/iu;
+function isErrorLevel(level) {
+  return errorLevels.has(level);
+}
+function topFrame(lines) {
+  for (const line of lines) {
+    const managed = managedFramePattern.exec(line)?.groups?.frame;
+    if (managed) {
+      return managed;
+    }
+    const unity = unityFramePattern.exec(line)?.groups?.frame;
+    if (unity && !loggingFramePattern.test(unity)) {
+      return unity;
+    }
+  }
+  return "";
+}
 function parseLog(text, since = new Date(0)) {
   const entries = [];
   for (const line of text.split(/\r?\n/u)) {
@@ -30538,7 +30671,7 @@ function parseLog(text, since = new Date(0)) {
     const last = entries.at(-1);
     if (groups) {
       entries.push({
-        time: new Date(Number(groups.year), Number(groups.month) - 1, Number(groups.day), Number(groups.hours), Number(groups.minutes), Number(groups.seconds), Number(groups.milliseconds)),
+        time: readStamp(groups),
         level: groups.level ?? "",
         message: groups.message ?? ""
       });
@@ -30548,6 +30681,448 @@ ${line}`;
     }
   }
   return entries.filter((entry) => entry.time >= since);
+}
+function createLogParser() {
+  let open;
+  function push(line) {
+    const groups = entryPattern.exec(line.text)?.groups;
+    if (groups) {
+      const ended = open;
+      open = {
+        line,
+        logger: undefined,
+        level: groups.level ?? "",
+        time: readStamp(groups),
+        lines: [groups.message ?? ""]
+      };
+      return ended && closeEntry(ended);
+    }
+    if (line.text && open) {
+      open.lines.push(line.text);
+    }
+    return;
+  }
+  return {
+    push,
+    openOffset: () => open?.line.offset,
+    finish: () => open && closeEntry(open)
+  };
+}
+function createPlayerLogParser() {
+  let open;
+  let exception;
+  let isConfirmed = false;
+  function push(line) {
+    const { text } = line;
+    if (open) {
+      if (!text) {
+        return takeOpen();
+      }
+      const ended = open;
+      if (startTagged(line)) {
+        return closeEntry(ended);
+      }
+      if (!nativeFramePattern.test(text)) {
+        open.lines.push(text);
+      }
+      return open.lines.length < PLAYER_ENTRY_LINES ? undefined : takeOpen();
+    }
+    if (exception) {
+      return pushToException(exception, line);
+    }
+    if (text && !startTagged(line)) {
+      startException(line);
+    }
+    return;
+  }
+  function pushToException(block, line) {
+    const { text } = line;
+    if (!text) {
+      return isConfirmed ? takeException() : undefined;
+    }
+    if (startTagged(line)) {
+      return takeException();
+    }
+    if (exceptionPattern.test(text)) {
+      const ended = takeException();
+      startException(line);
+      return ended;
+    }
+    isConfirmed ||= confirmsException(block, text);
+    if (block.lines.length < PLAYER_ENTRY_LINES && !nativeFramePattern.test(text)) {
+      block.lines.push(text);
+    }
+    return;
+  }
+  function startTagged(line) {
+    const groups = taggedPattern.exec(line.text)?.groups;
+    if (!groups) {
+      return false;
+    }
+    open = {
+      line,
+      logger: groups.logger,
+      level: groups.level ?? "",
+      time: undefined,
+      lines: [groups.message ?? ""]
+    };
+    return true;
+  }
+  function startException(line) {
+    if (exceptionPattern.test(line.text)) {
+      exception = {
+        line,
+        logger: undefined,
+        level: EXCEPTION_LEVEL,
+        time: undefined,
+        lines: [line.text]
+      };
+    }
+  }
+  function takeOpen() {
+    const ended = open;
+    open = undefined;
+    return ended && closeEntry(ended);
+  }
+  function takeException() {
+    const ended = isConfirmed ? exception : undefined;
+    exception = undefined;
+    isConfirmed = false;
+    return ended && closeEntry(ended);
+  }
+  return {
+    push,
+    openOffset: () => (open ?? exception)?.line.offset,
+    finish: () => takeOpen() ?? takeException()
+  };
+}
+function confirmsException({ lines }, text) {
+  return text.startsWith(HANDLER_LINE) || lines.length == 1 && text.startsWith(BURST_SENTENCE);
+}
+function closeEntry({ line, logger, level, time: time3, lines }) {
+  return {
+    line: line.number,
+    logger,
+    level,
+    time: time3,
+    text: lines.join(`
+`)
+  };
+}
+function readStamp(groups) {
+  return new Date(Number(groups.year), Number(groups.month) - 1, Number(groups.day), Number(groups.hours), Number(groups.minutes), Number(groups.seconds), Number(groups.milliseconds));
+}
+
+// src/scanner.ts
+import { createReadStream } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
+import path5 from "node:path";
+
+// src/ignores.ts
+import { readFile as readFile3, rm } from "node:fs/promises";
+import path4 from "node:path";
+import { createContext, Script } from "node:vm";
+var IGNORE_INPUT_CHARACTERS = 4096;
+var MATCH_MILLISECONDS = 50;
+var updates2 = createQueue();
+var matchScript = new Script(`new RegExp(source, 'i').test(text)`);
+var matchSandbox = createContext({ source: "", text: "" });
+async function readIgnores(userDataPath) {
+  try {
+    const parsed = JSON.parse(await readFile3(ignoresPath(userDataPath), "utf8"));
+    return Array.isArray(parsed) ? parsed.filter((item) => isIgnorePattern(item)) : [];
+  } catch (error51) {
+    if (isMissing(error51) || error51 instanceof SyntaxError) {
+      return [];
+    }
+    throw error51;
+  }
+}
+function updateIgnores({ userDataPath, signal }, change) {
+  return updates2.run(signal, async () => {
+    const next = change(await readIgnores(userDataPath));
+    await writeJson(ignoresPath(userDataPath), next);
+    return next;
+  });
+}
+async function markDropped(context, dropped) {
+  if (dropped.length == 0) {
+    return;
+  }
+  const sources = new Set(dropped.map(({ source }) => source));
+  await updateIgnores(context, (stored) => stored.map(({ source, hits, isDropped }) => ({
+    source,
+    hits,
+    isDropped: sources.has(source) ? true : isDropped
+  })));
+}
+function clearIgnores(userDataPath) {
+  return rm(ignoresPath(userDataPath), { force: true });
+}
+function requireValidPattern(source) {
+  try {
+    new RegExp(source, "i");
+  } catch (error51) {
+    throw new Error(`Not a valid regular expression: ${String(error51)}`, { cause: error51 });
+  }
+}
+function matchPattern(source, text) {
+  matchSandbox.source = source;
+  matchSandbox.text = text;
+  try {
+    return Boolean(matchScript.runInContext(matchSandbox, { timeout: MATCH_MILLISECONDS }));
+  } catch (error51) {
+    if (typeof error51 == "object" && error51 != null && "code" in error51 && error51.code == "ERR_SCRIPT_EXECUTION_TIMEOUT") {
+      return "tooSlow";
+    }
+    return false;
+  }
+}
+function isIgnorePattern(item) {
+  return typeof item == "object" && item != null && "source" in item && typeof item.source == "string" && "hits" in item && typeof item.hits == "number";
+}
+function ignoresPath(userDataPath) {
+  return path4.join(toolFolderPath(userDataPath), "ignores.json");
+}
+
+// src/scanner.ts
+var QUIET_SECONDS = 2;
+var TWIN_HOLD_SECONDS = QUIET_SECONDS;
+var HEAD_BYTES = 65536;
+var FIRST_STAMP_BYTES = 1024;
+var KIND_FIRST_LINE_CHARACTERS = 200;
+var SCAN_WINDOW_BYTES = 67108864;
+var PLAYER_LOG = "Player.log";
+var numberPattern = /0x[\da-f]+|\b[\da-f]{8,}\b|\d+/giu;
+async function scanLogs(request) {
+  const { basePath, runStart, offsets, hasFile, signal, windowBytes } = request;
+  const kinds = new Map;
+  const reached = {};
+  const shrunk = [];
+  const twins = createTwinCheck(request);
+  const namesMod = createModCheck(request.mod);
+  const files = await listLogFiles(basePath);
+  for (const file2 of files.filter((name) => hasFile?.(name) ?? true)) {
+    const filePath = path5.join(basePath, file2);
+    const fileStat = await stat(filePath).catch(ignoreMissing);
+    if (!fileStat) {
+      continue;
+    }
+    const isPlayerLog = file2 == PLAYER_LOG;
+    if (!isPlayerLog && fileStat.mtime < runStart) {
+      continue;
+    }
+    const given = offsets[file2] ?? 0;
+    const start = given > fileStat.size ? 0 : given;
+    if (start != given) {
+      shrunk.push(file2);
+    }
+    const seen = { ofRun: 0, older: 0 };
+    const end = Math.min(fileStat.size, start + (windowBytes ?? Infinity));
+    const reachedEnd = await readEntries({
+      filePath,
+      start,
+      end,
+      parser: isPlayerLog ? createPlayerLogParser() : createLogParser(),
+      isSettled: end == fileStat.size && (!request.isRunning || isQuiet(request.host, fileStat.mtime)),
+      signal
+    }, async (entry) => {
+      if (!isPlayerLog && entry.time && entry.time < runStart) {
+        seen.older++;
+        return;
+      }
+      seen.ofRun++;
+      if (request.accepts(entry) && !(isPlayerLog && await twins.isTwin(entry))) {
+        tally(kinds, request, { entry, file: file2, namesMod });
+      }
+    });
+    if (seen.ofRun > 0 || seen.older == 0) {
+      reached[file2] = reachedEnd;
+    }
+  }
+  return { kinds, offsets: reached, shrunk };
+}
+function describeSource(place, { logger, level }) {
+  return `${place}${logger == undefined ? "" : ` [${logger}]`} [${level}]`;
+}
+function readRunStart(basePath) {
+  return readFirstStamp(sceneFlowPath(basePath));
+}
+function sceneFlowPath(basePath) {
+  return path5.join(basePath, "Logs", "SceneFlow.log");
+}
+async function listLogFiles(basePath) {
+  const names = await readdir(path5.join(basePath, "Logs")).catch((error51) => {
+    if (isMissing(error51)) {
+      return [];
+    }
+    throw error51;
+  });
+  return [...names.filter((name) => name.endsWith(".log")).map((name) => `Logs/${name}`), PLAYER_LOG];
+}
+async function readHead(logPath, bytes = HEAD_BYTES) {
+  const lines = [];
+  try {
+    for await (const line of readLines({ filePath: logPath, start: 0, end: bytes })) {
+      lines.push(line.text);
+    }
+  } catch (error51) {
+    if (!isMissing(error51)) {
+      throw new Error(`Cannot read ${logPath}: ${errorMessage(error51)}`, { cause: error51 });
+    }
+  }
+  return lines.join(`
+`);
+}
+async function readEntries(source, visit) {
+  const { filePath, start, end, parser, isSettled, signal } = source;
+  let reached = start;
+  const lines = readLines({ filePath, start, end, shouldIncludePartial: isSettled, signal });
+  for await (const line of lines) {
+    const ended = parser.push(line);
+    if (ended) {
+      await visit(ended);
+    }
+    reached = parser.openOffset() ?? line.offset + line.bytes;
+  }
+  if (isSettled) {
+    const last = parser.finish();
+    if (last) {
+      await visit(last);
+    }
+    return end;
+  }
+  return reached;
+}
+async function* readLines({
+  filePath,
+  start,
+  end,
+  shouldIncludePartial = true,
+  signal
+}) {
+  if (end <= start) {
+    return;
+  }
+  let pending = Buffer.alloc(0);
+  let offset = start;
+  let number5 = 1;
+  const stream = createReadStream(filePath, { start, end: end - 1, signal });
+  for await (const chunk of stream) {
+    pending = Buffer.concat([pending, chunk]);
+    for (;; ) {
+      const newline = pending.indexOf(`
+`);
+      if (newline == -1) {
+        break;
+      }
+      const bytes = newline + 1;
+      const text = pending.toString("utf8", 0, newline).replace(/\r$/u, "");
+      yield { text, number: number5, offset, bytes };
+      pending = pending.subarray(bytes);
+      offset += bytes;
+      number5++;
+    }
+  }
+  if (pending.length > 0 && shouldIncludePartial) {
+    yield {
+      text: pending.toString("utf8").replace(/\r$/u, ""),
+      number: number5,
+      offset,
+      bytes: pending.length
+    };
+  }
+}
+function createTwinCheck(request) {
+  const { basePath, runStart, host, isRunning, shouldKeepTwins } = request;
+  const known = new Map;
+  let hasWaited = !isRunning;
+  return { isTwin };
+  async function isTwin({ logger }) {
+    if (logger == undefined || shouldKeepTwins) {
+      return false;
+    }
+    const answer = known.get(logger) ?? await hasOwnFile(logger);
+    if (answer || hasWaited) {
+      known.set(logger, answer);
+      return answer;
+    }
+    hasWaited = true;
+    await host.sleep(TWIN_HOLD_SECONDS * MILLISECONDS_PER_SECOND);
+    const settled = await hasOwnFile(logger);
+    known.set(logger, settled);
+    return settled;
+  }
+  async function hasOwnFile(logger) {
+    if (/[/\\]/u.test(logger)) {
+      return false;
+    }
+    const logPath = path5.join(basePath, "Logs", `${logger}.log`);
+    const time3 = await readFirstStamp(logPath).catch(() => {
+      return;
+    });
+    return time3 != null && time3 >= runStart;
+  }
+}
+function tally(kinds, request, {
+  entry,
+  file: file2,
+  namesMod
+}) {
+  const logger = entry.logger ?? path5.basename(file2, ".log");
+  const key = kindKey(logger, entry);
+  const known = kinds.get(key);
+  const isModNamed = namesMod(logger, entry.text);
+  if (known) {
+    known.count++;
+    known.modCount += isModNamed ? 1 : 0;
+    known.lastTime = entry.time ?? known.lastTime;
+    return;
+  }
+  kinds.set(key, {
+    key,
+    file: file2,
+    entry,
+    ignoredBy: request.findIgnore(ignoreText(file2, entry)),
+    count: 1,
+    modCount: isModNamed ? 1 : 0,
+    firstTime: entry.time,
+    lastTime: entry.time
+  });
+}
+function ignoreText(file2, entry) {
+  return `${describeSource(file2, entry)}
+${entry.text.slice(0, IGNORE_INPUT_CHARACTERS)}`;
+}
+function kindKey(logger, { level, text }) {
+  const [first = "", ...rest] = text.split(`
+`);
+  const line = maskNumbers(first).slice(0, KIND_FIRST_LINE_CHARACTERS);
+  return [maskNumbers(logger), level, line, maskNumbers(topFrame(rest))].join(`
+`);
+}
+function maskNumbers(text) {
+  return text.replace(numberPattern, "#");
+}
+function createModCheck(mod) {
+  if (mod == undefined) {
+    return () => false;
+  }
+  const name = mod.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
+  const pattern = new RegExp(String.raw`(?:^|[\s(/])${name}[.,]`, "mu");
+  return (logger, text) => logger == mod || logger.startsWith(`${mod}.`) || pattern.test(text);
+}
+async function readFirstStamp(logPath) {
+  return parseLog(await readHead(logPath, FIRST_STAMP_BYTES))[0]?.time;
+}
+function isQuiet(host, modified) {
+  return host.now().getTime() - modified.getTime() >= QUIET_SECONDS * MILLISECONDS_PER_SECOND;
+}
+function ignoreMissing(error51) {
+  if (!isMissing(error51)) {
+    throw error51;
+  }
+  return;
 }
 
 // src/cycle.ts
@@ -30565,6 +31140,7 @@ var FORCE_SECONDS = TERMINATE_SECONDS + KILL_SECONDS;
 var STOP_CEILING_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + CEILING_MARGIN_SECONDS;
 var WAIT_LOAD_CEILING_SECONDS = LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
 var RESTART_CEILING_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + LAUNCH_ATTEMPTS * (FORCE_SECONDS + LAUNCH_SECONDS) + FORCE_SECONDS + BOOT_SECONDS + LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
+var READ_CEILING_SECONDS = 120;
 var MAIN_MENU_REACHED = "MainMenu reached";
 var LOG_END_BYTES = 1048576;
 async function requireUserData(userDataPath) {
@@ -30581,6 +31157,7 @@ async function stopGame(context) {
   if (game.length == 0 && reapers.length == 0) {
     return { kind: "notRunning" };
   }
+  await recordStop(context);
   const closeFailure = game.length > 0 ? await host.askToEnd() : undefined;
   const remaining = STOP_BOUND_SECONDS - secondsSince(host, start);
   if (await waitUntil(host, () => isStopped(host), remaining)) {
@@ -30597,6 +31174,14 @@ async function stopGame(context) {
     ...closeFailure == null ? {} : { closeFailure }
   };
 }
+async function recordStop(context) {
+  try {
+    await updateCursor(context, (cursor) => ({
+      ...cursor,
+      lastStop: context.host.now().toISOString()
+    }));
+  } catch {}
+}
 function requireWholeOptions(gameOptions) {
   const spaced = gameOptions.find((option) => /\s/u.test(option));
   if (spaced != null) {
@@ -30605,20 +31190,20 @@ function requireWholeOptions(gameOptions) {
 }
 async function launchGame(context, gameOptions) {
   const { host, userDataPath, signal } = context;
-  const runOncePath = path3.join(userDataPath, "runOnce.txt");
+  const runOncePath = path6.join(userDataPath, "runOnce.txt");
   const options = ["--noSplash", ...gameOptions].join(" ");
   let isLaunched = false;
   try {
     for (let attempt = 1;attempt <= LAUNCH_ATTEMPTS && !isLaunched; attempt++) {
       await forceGameEnd(host);
       signal.throwIfAborted();
-      await writeFile(runOncePath, options);
+      await writeFile2(runOncePath, options);
       await host.launch();
       isLaunched = await waitUntil(host, () => isGameRunning(host), LAUNCH_SECONDS);
     }
   } finally {
     if (!isLaunched && !signal.aborted) {
-      await rm(runOncePath, { force: true });
+      await rm2(runOncePath, { force: true });
       await forceGameEnd(host);
     }
   }
@@ -30676,11 +31261,8 @@ function secondsSince(host, time3) {
   return Math.round((host.now().getTime() - time3.getTime()) / 1000);
 }
 async function readLog(logPath, since) {
-  const log = await readOrEmpty(logPath, readFile2(logPath, "utf8"));
+  const log = await readOrEmpty(logPath, readFile4(logPath, "utf8"));
   return parseLog(log, since);
-}
-function sceneFlowPath(userDataPath) {
-  return path3.join(userDataPath, "Logs", "SceneFlow.log");
 }
 function readLoad(entries, fallbackSince) {
   const start = entries.findLastIndex((entry) => entry.message.startsWith("Loading mode "));
@@ -30733,7 +31315,7 @@ async function readShutdown(userDataPath) {
   }
 }
 async function hasCleanShutdown(userDataPath) {
-  const playerLogPath = path3.join(userDataPath, "Player.log");
+  const playerLogPath = path6.join(userDataPath, "Player.log");
   const player = await readOrEmpty(playerLogPath, readEnd(playerLogPath));
   if (!/^Game terminated /mu.test(player)) {
     return false;
@@ -30753,8 +31335,8 @@ async function readOrEmpty(logPath, read) {
   }
 }
 async function readEnd(logPath) {
-  const { size } = await stat(logPath);
-  return text(createReadStream(logPath, { start: Math.max(0, size - LOG_END_BYTES) }));
+  const { size } = await stat2(logPath);
+  return text(createReadStream2(logPath, { start: Math.max(0, size - LOG_END_BYTES) }));
 }
 async function describeProcesses(host) {
   try {
@@ -30781,15 +31363,146 @@ async function waitUntil(host, condition, seconds) {
   return condition();
 }
 
+// src/log-report.ts
+import { stat as stat3 } from "node:fs/promises";
+import path7 from "node:path";
+var LOGS_CAP_CHARACTERS = 20000;
+var CLOCK_CHARACTERS = 8;
+function describeLogs(scan, options) {
+  const all = [...scan.kinds.values()].filter((kind) => !options.isModOnly || kind.modCount > 0);
+  const ignored = all.filter((kind) => isHidden(kind));
+  const kinds = all.filter((kind) => !isHidden(kind)).toSorted(byFirstOccurrence);
+  let room = LOGS_CAP_CHARACTERS;
+  let leftOut = 0;
+  const blocks = [];
+  for (const kind of kinds) {
+    if (room <= 0) {
+      leftOut++;
+    } else {
+      const block = describeKind(kind, room);
+      blocks.push(block);
+      room -= block.length;
+    }
+  }
+  const count = kinds.reduce((total, kind) => total + kind.count, 0);
+  const ignoredCount = ignored.reduce((total, kind) => total + kind.count, 0);
+  const footer = [
+    `${count} entries, ${kinds.length} kinds.`,
+    ...leftOut > 0 ? [`${leftOut} kinds left out by the cap: narrow with file, level, mod or errorsOnly.`] : [],
+    ...ignoredCount > 0 ? [`${ignoredCount} ignored entries left out: ignored: true brings them back.`] : [],
+    ...count == 0 && ignoredCount == 0 && options.shouldPointBack ? [`previous: true reads the run before the last restart.`] : [],
+    `Paths are relative to ${options.basePath}.`
+  ].join(" ");
+  return [...blocks, footer].join(`
+
+`);
+  function isHidden(kind) {
+    return kind.ignoredBy != null && !options.shouldShowIgnored;
+  }
+}
+async function describeStatus(userDataPath, pids) {
+  const { game, reapers } = pids;
+  const isRunning = game.length > 0;
+  const report = await readSceneFlow(userDataPath);
+  const debuggerPort = await readDebuggerPort(userDataPath);
+  const patterns = await readIgnores(userDataPath);
+  return [
+    isRunning ? `The game is ${report.state} (PIDs ${game.join(", ")}).` : `The game is stopped${reapers.length > 0 ? `, and Steam is still cleaning up` : ""}.` + ` The rest comes from the last run's logs.`,
+    `Version: ${report.version ?? `not logged`}.`,
+    `Build: ${report.configuration ?? `not logged`}.`,
+    debuggerPort == undefined ? `Player.log shows no managed debugger.` : `Managed debugger on port ${debuggerPort}.`,
+    ...patterns.length > 0 ? [describePatterns(patterns)] : []
+  ].join(`
+`);
+}
+function describePatterns(patterns) {
+  if (patterns.length == 0) {
+    return `No ignore patterns.`;
+  }
+  const lines = patterns.map(({ source, hits, isDropped }) => `${source} (${hits} hits${isDropped ? ", dropped" : ""})`);
+  return `Ignore patterns:
+${lines.join(`
+`)}`;
+}
+function describeKind(kind, room) {
+  const { file: file2, entry, count, firstTime, lastTime } = kind;
+  const place = describeSource(`${file2}:${entry.line}`, entry);
+  const times = [
+    ...count > 1 ? [`x${count}`] : [],
+    ...firstTime ? [describeSpan(firstTime, count > 1 ? lastTime : undefined)] : []
+  ].join(", ");
+  const heading = `${place}${times ? ` ${times}` : ""}
+`;
+  const characters = Math.min(IGNORE_INPUT_CHARACTERS, Math.max(0, room - heading.length));
+  return `${heading}${cutAt(entry.text, characters)}`;
+}
+function cutAt(text2, characters) {
+  return text2.length > characters ? `${text2.slice(0, characters)}
+[cut: ${text2.length - characters} more characters]` : text2;
+}
+function describeSpan(first, last) {
+  return last ? `${clock2(first)} to ${clock2(last)}` : clock2(first);
+}
+function clock2(time3) {
+  return time3.toTimeString().slice(0, CLOCK_CHARACTERS);
+}
+function byFirstOccurrence(a, b) {
+  return (a.firstTime?.getTime() ?? -Infinity) - (b.firstTime?.getTime() ?? -Infinity);
+}
+async function readSceneFlow(userDataPath) {
+  const filePath = sceneFlowPath(userDataPath);
+  let mode;
+  let isComplete = false;
+  let isAtMenu = false;
+  let version2;
+  let configuration;
+  function read({ text: text2 }) {
+    const loading = /^Loading mode (?<mode>\w+)/u.exec(text2)?.groups?.mode;
+    if (loading != null) {
+      mode = loading;
+      isComplete = false;
+      isAtMenu = false;
+    } else if (text2 == "Loading completed") {
+      isComplete = true;
+    } else if (text2 == MAIN_MENU_REACHED) {
+      isAtMenu = true;
+    }
+    version2 ??= /^Game version: (?<value>.+)$/mu.exec(text2)?.groups?.value;
+    configuration ??= /^Game configuration: (?<value>.+)$/mu.exec(text2)?.groups?.value;
+  }
+  const size = await stat3(filePath).then((file2) => file2.size, () => 0);
+  await readEntries({ filePath, start: 0, end: size, parser: createLogParser(), isSettled: true }, (entry) => {
+    read(entry);
+    return Promise.resolve();
+  });
+  return { state: describeState(mode, isComplete, isAtMenu), version: version2, configuration };
+}
+function describeState(mode, isComplete, isAtMenu) {
+  if (mode == undefined) {
+    return `booting`;
+  }
+  if (isAtMenu) {
+    return `at the main menu`;
+  }
+  if (!isComplete) {
+    return `loading`;
+  }
+  return mode == "Editor" ? `in the editor` : mode == "Game" ? `in a city` : `loading`;
+}
+async function readDebuggerPort(userDataPath) {
+  const head = await readHead(path7.join(userDataPath, "Player.log"));
+  return /^Starting managed debugger on port (?<port>\d+)$/mu.exec(head)?.groups?.port;
+}
+
 // src/tools.ts
-import { rm as rm3 } from "node:fs/promises";
-import path6 from "node:path";
+import { rm as rm4 } from "node:fs/promises";
+import path11 from "node:path";
 
 // src/asset-guid.ts
-import { access as access2, open, readdir } from "node:fs/promises";
-import path4 from "node:path";
+import { access as access2, open, readdir as readdir2 } from "node:fs/promises";
+import path8 from "node:path";
 async function readAssetGuid(userDataPath, folder, name, type) {
-  const archivePath = await findArchive(path4.join(userDataPath, folder), name);
+  const archivePath = await findArchive(path8.join(userDataPath, folder), name);
   const archive = await open(archivePath);
   try {
     const entry = await readStoredZipEntry(archive, archivePath, `${name}.${type}.cid`);
@@ -30806,15 +31519,15 @@ function isAssetGuid(text2) {
   return /^[\da-f]{32}$/u.test(text2);
 }
 async function findArchive(root, name) {
-  const users = await readdir(root).catch(() => []);
+  const users = await readdir2(root).catch(() => []);
   for (const user of users) {
-    const candidate = path4.join(root, user, `${name}.cok`);
+    const candidate = path8.join(root, user, `${name}.cok`);
     const isFound = await access2(candidate).then(() => true, () => false);
     if (isFound) {
       return candidate;
     }
   }
-  throw new Error(`No ${path4.basename(root).toLowerCase().slice(0, -1)} named "${name}" in ${root}.`);
+  throw new Error(`No ${path8.basename(root).toLowerCase().slice(0, -1)} named "${name}" in ${root}.`);
 }
 async function readStoredZipEntry(archive, archivePath, entryName) {
   const { size } = await archive.stat();
@@ -30863,26 +31576,176 @@ async function readRange(archive, size, start, end) {
 }
 
 // src/evidence.ts
-import { access as access3, copyFile, cp, mkdir, mkdtemp, readdir as readdir2, rename, rm as rm2, stat as stat2 } from "node:fs/promises";
-import path5 from "node:path";
+import { access as access3, copyFile, cp, mkdir as mkdir2, mkdtemp, readdir as readdir4, rename as rename2, rm as rm3, stat as stat5 } from "node:fs/promises";
+import path10 from "node:path";
+
+// src/hint.ts
+import { readdir as readdir3, stat as stat4 } from "node:fs/promises";
+import path9 from "node:path";
+var hints = createQueue();
+function crashReportsPath(userDataPath) {
+  return path9.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
+}
+function withinCeiling(host, seconds, step) {
+  const abandoned = new AbortController;
+  async function ceiling() {
+    await host.alarm(seconds);
+    abandoned.abort();
+    return;
+  }
+  return Promise.race([step(abandoned.signal), ceiling()]);
+}
+function deliverHint(context) {
+  return hints.run(context.signal, () => announceNews(context, false));
+}
+async function settleIgnored(context) {
+  await hints.run(context.signal, () => announceNews(context, true));
+}
+async function readNews(context, chooseOffsets) {
+  const { host, userDataPath, signal } = context;
+  const runStart = await readRunStart(userDataPath);
+  if (!runStart) {
+    return;
+  }
+  const run2 = runStart.toISOString();
+  const cursor = await readCursor(userDataPath);
+  const { game } = await host.findPids();
+  const isRunning = game.length > 0;
+  const stored = await readIgnores(userDataPath);
+  const matcher = createIgnoreMatcher(stored);
+  const scan = await scanLogs({
+    host,
+    basePath: userDataPath,
+    runStart,
+    isRunning,
+    offsets: chooseOffsets(cursor.runStart == run2 ? cursor.offsets : {}, run2),
+    mod: cursor.mod,
+    signal,
+    windowBytes: SCAN_WINDOW_BYTES,
+    accepts: ({ level }) => isErrorLevel(level),
+    findIgnore: matcher.findIgnore
+  });
+  await markDropped(context, matcher.newlyDropped);
+  return {
+    run: run2,
+    cursor,
+    stored,
+    newlyDropped: matcher.newlyDropped,
+    scan,
+    isGoneUntold: !isRunning && isGoneUnannounced(cursor, run2, runStart),
+    newReport: await readNewReport(userDataPath, runStart, cursor)
+  };
+}
+function createIgnoreMatcher(patterns) {
+  const newlyDropped = [];
+  const live = new Set(patterns.filter(({ isDropped }) => !isDropped).map(({ source }) => source));
+  function findIgnore(text2) {
+    for (const source of live) {
+      const matched = matchPattern(source, text2);
+      if (matched == "tooSlow") {
+        live.delete(source);
+        const pattern = patterns.find((item) => item.source == source);
+        newlyDropped.push({ source, hits: pattern?.hits ?? 0, isDropped: true });
+      } else if (matched) {
+        return source;
+      }
+    }
+    return;
+  }
+  return { newlyDropped, findIgnore };
+}
+function isGoneUnannounced(cursor, run2, runStart) {
+  const lastStop = cursor.lastStop == undefined ? undefined : new Date(cursor.lastStop);
+  return cursor.goneRun != run2 && (lastStop == undefined || lastStop < runStart);
+}
+async function announceNews(context, shouldHoldLine) {
+  const news = await readNews(context, (announced) => announced);
+  if (!news) {
+    return;
+  }
+  const { run: run2, cursor, stored, newlyDropped, scan, isGoneUntold, newReport } = news;
+  const dropped = [...stored, ...newlyDropped].filter(({ isDropped }) => isDropped);
+  const line = [
+    ...isGoneUntold ? [`The game went away with no cs2-dev stop.`] : [],
+    ...newReport ? [`A new crash report appeared, which may be a hang snapshot.`] : [],
+    ...describeErrors(scan, cursor.mod),
+    ...dropped.map(({ source }) => `Dropped ignore pattern ${source}: it took too long.`)
+  ].join(" ");
+  if (shouldHoldLine && line) {
+    return;
+  }
+  await settleIgnores(context, scan, dropped);
+  await updateCursor(context, (current) => ({
+    ...current,
+    runStart: run2,
+    ...isGoneUntold ? { goneRun: run2 } : {},
+    ...newReport ? { lastReport: newReport.toISOString() } : {},
+    offsets: scan.offsets
+  }), scan.shrunk);
+  return line || undefined;
+}
+function describeErrors(scan, mod) {
+  const kinds = [...scan.kinds.values()];
+  const shown = kinds.filter((kind) => kind.ignoredBy == undefined);
+  const count = sum(shown, (kind) => kind.count);
+  if (count == 0) {
+    return [];
+  }
+  const ignored = sum(kinds, (kind) => kind.ignoredBy == undefined ? 0 : kind.count);
+  const naming = mod == undefined ? "" : `, ${sum(shown, (kind) => kind.modCount)} naming ${mod}`;
+  const suffix = ignored > 0 ? ` (${ignored} ignored)` : "";
+  const kindCount = `${shown.length} kind${shown.length == 1 ? "" : "s"}`;
+  return [`Errors: ${count} new, ${kindCount}${naming}${suffix}. See logs.`];
+}
+async function settleIgnores(context, scan, named) {
+  const added = new Map;
+  for (const { ignoredBy, count } of scan.kinds.values()) {
+    if (ignoredBy != null) {
+      added.set(ignoredBy, (added.get(ignoredBy) ?? 0) + count);
+    }
+  }
+  const retired = new Set(named.map(({ source }) => source));
+  if (added.size == 0 && retired.size == 0) {
+    return;
+  }
+  await updateIgnores(context, (stored) => stored.filter(({ source }) => !retired.has(source)).map(({ source, hits, isDropped }) => ({
+    source,
+    hits: hits + (added.get(source) ?? 0),
+    isDropped
+  })));
+}
+async function readNewReport(userDataPath, runStart, { lastReport }) {
+  const folder = crashReportsPath(userDataPath);
+  const names = await readdir3(folder).catch(() => []);
+  const after = Math.max(runStart.getTime(), lastReport ? Date.parse(lastReport) : 0);
+  const times = await Promise.all(names.map((name) => stat4(path9.join(folder, name)).then(({ mtime }) => mtime.getTime(), () => 0)));
+  const newest = Math.max(0, ...times);
+  return newest > after ? new Date(newest) : undefined;
+}
+function sum(items, value) {
+  return items.reduce((total, item) => total + value(item), 0);
+}
+
+// src/evidence.ts
+var PREVIOUS_RUN_FOLDER = "previous-run";
 async function keepPreviousRun(userDataPath, signal) {
-  const folderPath = path5.join(userDataPath, ".cs2-dev");
-  const copyPath = path5.join(folderPath, "previous-run");
-  const nextPrefix = "previous-run.next-";
-  await mkdir(folderPath, { recursive: true });
-  const leftovers = await readdir2(folderPath);
+  const folderPath = toolFolderPath(userDataPath);
+  const copyPath = path10.join(folderPath, PREVIOUS_RUN_FOLDER);
+  const nextPrefix = `${PREVIOUS_RUN_FOLDER}.next-`;
+  await mkdir2(folderPath, { recursive: true });
+  const leftovers = await readdir4(folderPath);
   signal.throwIfAborted();
-  await Promise.allSettled(leftovers.filter((name) => name.startsWith(nextPrefix)).map((name) => rm2(path5.join(folderPath, name), { recursive: true, force: true })));
-  const nextPath = await mkdtemp(path5.join(folderPath, nextPrefix));
+  await Promise.allSettled(leftovers.filter((name) => name.startsWith(nextPrefix)).map((name) => rm3(path10.join(folderPath, name), { recursive: true, force: true })));
+  const nextPath = await mkdtemp(path10.join(folderPath, nextPrefix));
   try {
-    await copyIfPresent(path5.join(userDataPath, "Logs"), path5.join(nextPath, "Logs"));
-    await copyIfPresent(path5.join(userDataPath, "Player.log"), path5.join(nextPath, "Player.log"));
+    await copyIfPresent(path10.join(userDataPath, "Logs"), path10.join(nextPath, "Logs"));
+    await copyIfPresent(path10.join(userDataPath, "Player.log"), path10.join(nextPath, "Player.log"));
     await copyCrashReports(userDataPath, nextPath);
     signal.throwIfAborted();
-    await rm2(copyPath, { recursive: true, force: true });
-    await rename(nextPath, copyPath);
+    await rm3(copyPath, { recursive: true, force: true });
+    await rename2(nextPath, copyPath);
   } finally {
-    await rm2(nextPath, { recursive: true, force: true });
+    await rm3(nextPath, { recursive: true, force: true });
   }
 }
 async function copyIfPresent(source, destination) {
@@ -30901,16 +31764,16 @@ async function copyCrashReports(userDataPath, nextPath) {
   if (!runStart) {
     return;
   }
-  const reportsPath = path5.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
-  const reports = await readdir2(reportsPath).catch(() => []);
-  const copiedPath = path5.join(nextPath, "crashpad", "reports");
-  await mkdir(copiedPath, { recursive: true });
+  const reportsPath = crashReportsPath(userDataPath);
+  const reports = await readdir4(reportsPath).catch(() => []);
+  const copiedPath = path10.join(nextPath, "crashpad", "reports");
+  await mkdir2(copiedPath, { recursive: true });
   for (const report of reports) {
-    const source = path5.join(reportsPath, report);
+    const source = path10.join(reportsPath, report);
     try {
-      const { mtime } = await stat2(source);
+      const { mtime } = await stat5(source);
       if (mtime >= runStart) {
-        await copyFile(source, path5.join(copiedPath, report));
+        await copyFile(source, path10.join(copiedPath, report));
       }
     } catch (error51) {
       if (!isMissing(error51)) {
@@ -30919,12 +31782,16 @@ async function copyCrashReports(userDataPath, nextPath) {
     }
   }
 }
-async function readRunStart(userDataPath) {
-  const entries = await readLog(sceneFlowPath(userDataPath), new Date(0));
-  return entries[0]?.time;
-}
 
 // src/tool-run.ts
+var HINT_CEILING_SECONDS = 10;
+async function readHint(context) {
+  try {
+    return await withinCeiling(context.host, HINT_CEILING_SECONDS, (ceiling) => deliverHint({ ...context, signal: AbortSignal.any([ceiling, context.signal]) }));
+  } catch {
+    return;
+  }
+}
 async function runTool(context, run2, tool) {
   const { host, signal, slot } = context;
   if (signal.aborted) {
@@ -30937,6 +31804,7 @@ async function runTool(context, run2, tool) {
     slot.running = run2.name;
   }
   const ended = new AbortController;
+  const carried = [];
   let step = `Starting`;
   let hasGivenUp = false;
   const giveUp = new Promise((_resolve, reject) => {
@@ -30957,6 +31825,9 @@ async function runTool(context, run2, tool) {
     ...context,
     host: guardHost(host, ended.signal),
     signal: ended.signal,
+    carry: (line) => {
+      carried.push(line);
+    },
     progress: (message) => {
       if (ended.signal.aborted) {
         return;
@@ -30972,13 +31843,18 @@ async function runTool(context, run2, tool) {
     await requireUserData(context.userDataPath);
     return tool(guarded);
   }
+  function endCall(result) {
+    const content = [...carried.map((line) => toTextBlock(line)), ...result.content];
+    const told = { ...result, content };
+    return hasGivenUp ? Promise.resolve(told) : withHint(context, told);
+  }
   try {
-    return textResult(await Promise.race([runGuarded(), giveUp]));
+    return await endCall(textResult(await Promise.race([runGuarded(), giveUp])));
   } catch (error51) {
     if (hasGivenUp) {
       cleanUp(run2);
     }
-    return errorResult(errorMessage(error51));
+    return await endCall(errorResult(errorMessage(error51)));
   } finally {
     ended.abort();
     if (run2.isExclusive) {
@@ -31005,16 +31881,23 @@ function guardHost(host, ended) {
     sleep: guard(host.sleep)
   };
 }
+async function withHint(context, result) {
+  const hint = await readHint(context);
+  return hint == undefined ? result : { ...result, content: [...result.content, toTextBlock(hint)] };
+}
 async function cleanUp(run2) {
   try {
     await run2.onGiveUp?.();
   } catch {}
 }
 function textResult(text2) {
-  return { content: [{ type: "text", text: text2 }] };
+  return { content: [toTextBlock(text2)] };
 }
 function errorResult(text2) {
-  return { content: [{ type: "text", text: text2 }], isError: true };
+  return { content: [toTextBlock(text2)], isError: true };
+}
+function toTextBlock(text2) {
+  return { type: "text", text: text2 };
 }
 
 // src/tools.ts
@@ -31031,40 +31914,15 @@ function restart(context, request) {
     name: "restart",
     ceilingSeconds: RESTART_CEILING_SECONDS,
     isExclusive: true,
-    onGiveUp: () => rm3(path6.join(context.userDataPath, "runOnce.txt"), { force: true })
+    onGiveUp: () => rm4(path11.join(context.userDataPath, "runOnce.txt"), { force: true })
   };
   return runTool(context, run2, async (guarded) => {
-    const { host, userDataPath, progress, signal } = guarded;
     if (request.save != null && request.newCity) {
       throw new Error(`Pass a save or a new city, not both.`);
     }
     requireWholeOptions(request.gameOptions ?? []);
-    const startGuid = await readStartGuid(userDataPath, request);
-    progress(`Stopping the game`);
-    const stopOutcome = await stopGame(guarded);
-    progress(`Keeping the ended run's evidence`);
-    await keepPreviousRun(userDataPath, signal);
-    const launchTime = host.now();
-    progress(`Launching the game`);
-    const options = await launchGame(guarded, [
-      ...startGuid ? [`--startGame=${startGuid}`] : [],
-      ...request.gameOptions ?? []
-    ]);
-    progress(startGuid ? `Waiting for the load` : `Waiting for the main menu`);
-    await withGameLeftRunning(host, () => startGuid ? waitForLoad(guarded, {
-      since: launchTime,
-      fallbackSince: launchTime,
-      seconds: BOOT_SECONDS + LOAD_SECONDS
-    }) : waitForMainMenu(guarded, launchTime));
-    const seconds = secondsSince(host, launchTime);
-    const reached = startGuid ? `The game loaded it` : `The game is at the main menu`;
-    return [
-      `${reached}, ${seconds} s after the launch.`,
-      ...stopOutcome.kind == "notRunning" ? [] : [describeStop(stopOutcome)],
-      `Options written to runOnce.txt: ${options}`,
-      ...request.mod ? await describeModLoad(userDataPath, request.mod, launchTime) : []
-    ].join(`
-`);
+    const startGuid = await readStartGuid(guarded.userDataPath, request);
+    return restartGame(guarded, request, startGuid);
   });
 }
 function waitLoad(context) {
@@ -31083,6 +31941,110 @@ function waitLoad(context) {
     return `The game loaded it.`;
   });
 }
+function status(context) {
+  const run2 = { name: "status", ceilingSeconds: READ_CEILING_SECONDS, isExclusive: false };
+  return runTool(context, run2, async (guarded) => {
+    const { host, userDataPath, progress } = guarded;
+    progress(`Reading the game's state`);
+    return describeStatus(userDataPath, await host.findPids());
+  });
+}
+function logs(context, request) {
+  const run2 = { name: "logs", ceilingSeconds: READ_CEILING_SECONDS, isExclusive: false };
+  return runTool(context, run2, async (guarded) => {
+    const { host, userDataPath, progress } = guarded;
+    const basePath = request.previous ? path11.join(toolFolderPath(userDataPath), PREVIOUS_RUN_FOLDER) : userDataPath;
+    progress(`Reading the logs`);
+    const runStart = await readRunStart(basePath);
+    if (!runStart) {
+      return request.previous ? `No previous run was kept.` : `No run has logged yet.`;
+    }
+    const stored = await readIgnores(userDataPath);
+    const matcher = createIgnoreMatcher(stored);
+    const level = request.level?.toUpperCase();
+    const hasFile = fileFilter(request.file);
+    if (level != null && !logLevels.includes(level)) {
+      throw new Error(`No level ${level}: it is one of ${logLevels.join(", ")}.`);
+    }
+    if (hasFile) {
+      await requireLogFile(basePath, request.file, hasFile);
+    }
+    const scan = await scanLogs({
+      host,
+      basePath,
+      runStart,
+      isRunning: request.previous ? false : await isGameRunning(host),
+      offsets: {},
+      mod: request.mod,
+      signal: guarded.signal,
+      hasFile,
+      shouldKeepTwins: hasFile?.("Player.log") ?? false,
+      accepts: (entry) => (level == undefined || entry.level == level) && (!request.errorsOnly || isErrorLevel(entry.level)),
+      findIgnore: matcher.findIgnore
+    });
+    await markDropped(guarded, matcher.newlyDropped);
+    return describeLogs(scan, {
+      basePath,
+      shouldShowIgnored: request.ignored ?? false,
+      isModOnly: request.mod != null,
+      shouldPointBack: !request.previous && level == undefined && !hasFile && request.mod == undefined
+    });
+  });
+}
+function ignoreError(context, request) {
+  const run2 = { name: "ignore_error", ceilingSeconds: READ_CEILING_SECONDS, isExclusive: false };
+  return runTool(context, run2, async (guarded) => {
+    const { pattern, remove } = request;
+    if (!remove) {
+      requireValidPattern(pattern);
+    }
+    const next = await updateIgnores(guarded, (stored) => {
+      const isKnown = stored.some(({ source }) => source == pattern);
+      if (remove && !isKnown) {
+        throw new Error(`No ignore pattern ${pattern}.`);
+      }
+      return remove ? stored.filter(({ source }) => source != pattern) : [...stored, ...isKnown ? [] : [{ source: pattern, hits: 0 }]];
+    });
+    return describePatterns(next);
+  });
+}
+async function restartGame(guarded, request, startGuid) {
+  const { host, userDataPath, progress, signal, carry } = guarded;
+  if (request.mod != null) {
+    const { mod } = request;
+    await updateCursor(guarded, (cursor) => ({ ...cursor, mod }));
+  }
+  progress(`Stopping the game`);
+  const stopOutcome = await stopGame(guarded);
+  progress(`Keeping the ended run's evidence`);
+  await keepPreviousRun(userDataPath, signal);
+  progress(`Reading the ended run's errors`);
+  const ended = await readHint(guarded);
+  if (ended != null) {
+    carry(`The run this restart ends: ${ended} logs reads it with previous: true.`);
+  }
+  const launchTime = host.now();
+  progress(`Launching the game`);
+  const options = await launchGame(guarded, [
+    ...startGuid ? [`--startGame=${startGuid}`] : [],
+    ...request.gameOptions ?? []
+  ]);
+  progress(startGuid ? `Waiting for the load` : `Waiting for the main menu`);
+  await withGameLeftRunning(host, () => startGuid ? waitForLoad(guarded, {
+    since: launchTime,
+    fallbackSince: launchTime,
+    seconds: BOOT_SECONDS + LOAD_SECONDS
+  }) : waitForMainMenu(guarded, launchTime));
+  const seconds = secondsSince(host, launchTime);
+  const reached = startGuid ? `The game loaded it` : `The game is at the main menu`;
+  return [
+    `${reached}, ${seconds} s after the launch.`,
+    ...stopOutcome.kind == "notRunning" ? [] : [describeStop(stopOutcome)],
+    `Options written to runOnce.txt: ${options}`,
+    ...request.mod ? await describeModLoad(userDataPath, request.mod, launchTime) : []
+  ].join(`
+`);
+}
 function readStartGuid(userDataPath, { save, newCity }) {
   if (save != null) {
     return readAssetGuid(userDataPath, "Saves", save, "SaveGameMetadata");
@@ -31096,19 +32058,32 @@ function readStartGuid(userDataPath, { save, newCity }) {
 async function describeModLoad(userDataPath, mod, launchTime) {
   let entries;
   try {
-    entries = await readLog(path6.join(userDataPath, "Logs", "Modding.log"), launchTime);
+    entries = await readLog(path11.join(userDataPath, "Logs", "Modding.log"), launchTime);
   } catch (error51) {
     return [`Mod ${mod}: ${errorMessage(error51)}`];
   }
   const burstPrefix = `Loaded additional Burst code `;
   const burstFile = `${mod}_win_x86_64.dll`;
-  const burst = entries.find(({ message }) => message.startsWith(burstPrefix) && path6.posix.basename(message) == burstFile);
+  const burst = entries.find(({ message }) => message.startsWith(burstPrefix) && path11.posix.basename(message) == burstFile);
   const errors3 = entries.map(({ message }) => message.split(`
 `)[0] ?? "").filter((line) => line.startsWith(`Error initializing mod ${mod}, `));
   return [
     burst ? `Mod ${mod}: Burst code loaded from ${burst.message.slice(burstPrefix.length)}` : `No Burst code logged for ${mod}.`,
     ...errors3.map((line) => `Mod ${mod}: ${line}`)
   ];
+}
+async function requireLogFile(basePath, name, hasFile) {
+  const files = await listLogFiles(basePath);
+  if (!files.some((file2) => hasFile(file2))) {
+    throw new Error(`No log ${name}: it is one of ${files.join(", ")}.`);
+  }
+}
+function fileFilter(name) {
+  if (name == undefined) {
+    return;
+  }
+  const wanted = path11.win32.basename(name, ".log");
+  return (file2) => path11.posix.basename(file2, ".log") == wanted;
 }
 function describeStop(outcome) {
   switch (outcome.kind) {
@@ -31137,7 +32112,7 @@ With the unity ` + `plugin installed, quit from its eval first, UnityEngine.Appl
 // src/server.ts
 var { version: VERSION } = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 var SHUTDOWN_GRACE_MILLISECONDS = 200;
-function main() {
+async function main() {
   const userDataPath = loadUserDataPath();
   const host = createGameHost(userDataPath);
   const slot = { running: undefined };
@@ -31166,6 +32141,7 @@ function main() {
       }
     };
   }
+  await clearIgnores(userDataPath).catch(() => {});
   const server = new McpServer({ name: "cs2-dev", version: VERSION });
   server.registerTool("restart", {
     title: `Restart the game`,
@@ -31194,7 +32170,10 @@ function main() {
             a city or the editor never reaches unless the load fails: load through save or newCity.
             An option holding whitespace is refused, as the game takes no quoting.
           `),
-      mod: exports_external.string().optional().describe(`Assembly name of a mod whose load the result reports from the logs`)
+      mod: exports_external.string().min(1).optional().describe(import_common_tags.oneLine`
+            Assembly name of a mod: the result reports its load from the logs, and later hints count
+            the errors naming it
+          `)
     }
   }, (request, extra) => restart(contextOf(extra), request));
   server.registerTool("stop", {
@@ -31219,28 +32198,82 @@ function main() {
       `,
     annotations: { readOnlyHint: true }
   }, (extra) => waitLoad(contextOf(extra)));
+  server.registerTool("status", {
+    title: `Read the game's state`,
+    description: import_common_tags.oneLine`
+        Say whether the game is stopped, booting, at the main menu, loading or in a city, with its
+        PIDs, its version, the debug-patch signals its logs show, and the active ignore patterns.
+        On a stopped game it reads the last run's logs and says so.
+        Blocks up to ${READ_CEILING_SECONDS} s.
+        Unverified on Windows.
+      `,
+    annotations: { readOnlyHint: true }
+  }, (extra) => status(contextOf(extra)));
+  server.registerTool("logs", {
+    title: `Read the game's logs`,
+    description: import_common_tags.oneLine`
+        Return one entry per kind of error or message, a storm costing one entry: the file and line
+        of its first occurrence, its count, its first and last stamps, and its text with its stack,
+        cut past ${IGNORE_INPUT_CHARACTERS} characters.
+        Reads the run from its start, unlike the hint, which says what is new.
+        An untagged Player.log line is no entry, Debug.LogError output included, unless it opens an
+        exception Unity logged.
+        Capped at ${LOGS_CAP_CHARACTERS} characters, with a footer saying what was left out and how
+        to narrow it.
+        Cited lines hold until a launch rewrites the file, or a restart replaces the previous run's
+        copy.
+        Blocks up to ${READ_CEILING_SECONDS} s.
+        Unverified on Windows.
+      `,
+    inputSchema: {
+      file: exports_external.string().optional().describe(`One log, ex. HallOfFame, or Player.log with what Logs/ also holds`),
+      level: exports_external.string().optional().describe(`One of ${logLevels.join(", ")}`),
+      mod: exports_external.string().min(1).optional().describe(`Assembly name of a mod the entries must name`),
+      errorsOnly: exports_external.boolean().optional().describe(`Only ERROR and above, and exceptions Unity logged`),
+      previous: exports_external.boolean().optional().describe(`Read the run before the last restart, from its kept copy`),
+      ignored: exports_external.boolean().optional().describe(`Bring back the entries ignore_error silenced`)
+    },
+    annotations: { readOnlyHint: true }
+  }, (request, extra) => logs(contextOf(extra), request));
+  server.registerTool("ignore_error", {
+    title: `Ignore an error for the session`,
+    description: import_common_tags.oneLine`
+        Silence the errors matching a pattern in the hint and the notification, for this session.
+        A pattern is a case-insensitive regular expression tested on what logs prints for an entry,
+        less its line number: its file, tagged logger, bracketed level, first line and stack.
+        It lasts until the server restarts, a reconnect or a resume included, and changes no test
+        verdict and no restart report.
+        A pattern that takes too long is dropped, and the hint says so.
+        Returns the active patterns with their approximate hit counts.
+        Unverified on Windows.
+      `,
+    inputSchema: {
+      pattern: exports_external.string().min(1).describe(`Regular expression, ex. HTTP: Error sending request`),
+      remove: exports_external.boolean().optional().describe(`Remove this exact pattern instead`)
+    }
+  }, (request, extra) => ignoreError(contextOf(extra), request));
   const transport = new StdioServerTransport;
   function shutDown(signal) {
     transport.close();
     const ending = signal ?? "SIGTERM";
     const end = setTimeout(() => {
-      process5.removeAllListeners(ending);
-      process5.kill(process5.pid, ending);
+      process6.removeAllListeners(ending);
+      process6.kill(process6.pid, ending);
     }, SHUTDOWN_GRACE_MILLISECONDS);
     if (!signal) {
       end.unref();
     }
   }
-  for (const stream of [process5.stdin, process5.stdout]) {
+  for (const stream of [process6.stdin, process6.stdout]) {
     stream.on("error", () => {
       shutDown();
     });
   }
-  process5.stdin.once("end", () => {
+  process6.stdin.once("end", () => {
     shutDown();
   });
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
-    process5.once(signal, () => {
+    process6.once(signal, () => {
       shutDown(signal);
     });
   }

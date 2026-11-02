@@ -4,6 +4,36 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { requireUserData, type ToolContext } from './cycle';
 import { errorMessage, type GameHost } from './game-host';
+import { deliverHint, type HintContext, withinCeiling } from './hint';
+
+/**
+ * Seconds a hint gets: it must never cost a call its result.
+ */
+export const HINT_CEILING_SECONDS = 10;
+
+/**
+ * The hint due now, undefined if it fails, never settles, or the caller cancels first.
+ */
+export async function readHint(context: HintContext): Promise<string | undefined> {
+  try {
+    return await withinCeiling(context.host, HINT_CEILING_SECONDS, ceiling =>
+      deliverHint({ ...context, signal: AbortSignal.any([ceiling, context.signal]) })
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * What a tool runs on.
+ */
+export interface GuardedContext extends ToolContext {
+  /**
+   * Keeps a line for the head of the result, however the call ends.
+   * For what a later failure must not cost the caller, as nothing else can tell it again.
+   */
+  readonly carry: (line: string) => void;
+}
 
 export interface ToolRun {
   readonly name: string;
@@ -29,11 +59,12 @@ export interface ToolRun {
  * A call ends at its ceiling or when the caller cancels it,
  * even with a step inside it that never settles.
  * The step left behind fails at its next touch of the game rather than acting on it later, unseen.
+ * A call that ended on its own carries the hint, failed or not.
  */
 export async function runTool(
   context: ToolContext,
   run: ToolRun,
-  tool: (guarded: ToolContext) => Promise<string>
+  tool: (guarded: GuardedContext) => Promise<string>
 ): Promise<CallToolResult> {
   const { host, signal, slot } = context;
 
@@ -52,6 +83,9 @@ export async function runTool(
   }
 
   const ended = new AbortController();
+
+  // Mutable: the tool adds to it as it goes.
+  const carried: string[] = [];
 
   let step = `Starting`;
   let hasGivenUp = false;
@@ -80,10 +114,13 @@ export async function runTool(
     );
   });
 
-  const guarded: ToolContext = {
+  const guarded: GuardedContext = {
     ...context,
     host: guardHost(host, ended.signal),
     signal: ended.signal,
+    carry: line => {
+      carried.push(line);
+    },
     progress: message => {
       // A step left behind must not take the slot back from whoever holds it by now.
       if (ended.signal.aborted) {
@@ -106,14 +143,21 @@ export async function runTool(
     return tool(guarded);
   }
 
+  function endCall(result: CallToolResult): Promise<CallToolResult> {
+    const content = [...carried.map(line => toTextBlock(line)), ...result.content];
+    const told = { ...result, content };
+
+    return hasGivenUp ? Promise.resolve(told) : withHint(context, told);
+  }
+
   try {
-    return textResult(await Promise.race([runGuarded(), giveUp]));
+    return await endCall(textResult(await Promise.race([runGuarded(), giveUp])));
   } catch (error) {
     if (hasGivenUp) {
       void cleanUp(run);
     }
 
-    return errorResult(errorMessage(error));
+    return await endCall(errorResult(errorMessage(error)));
   } finally {
     ended.abort();
 
@@ -150,6 +194,17 @@ function guardHost(host: GameHost, ended: AbortSignal): GameHost {
   };
 }
 
+/**
+ * Adds the hint to a result.
+ */
+async function withHint(context: ToolContext, result: CallToolResult): Promise<CallToolResult> {
+  const hint = await readHint(context);
+
+  return hint == undefined
+    ? result
+    : { ...result, content: [...result.content, toTextBlock(hint)] };
+}
+
 async function cleanUp(run: ToolRun): Promise<void> {
   try {
     await run.onGiveUp?.();
@@ -159,9 +214,13 @@ async function cleanUp(run: ToolRun): Promise<void> {
 }
 
 function textResult(text: string): CallToolResult {
-  return { content: [{ type: 'text', text }] };
+  return { content: [toTextBlock(text)] };
 }
 
 function errorResult(text: string): CallToolResult {
-  return { content: [{ type: 'text', text }], isError: true };
+  return { content: [toTextBlock(text)], isError: true };
+}
+
+function toTextBlock(text: string): CallToolResult['content'][number] {
+  return { type: 'text', text };
 }

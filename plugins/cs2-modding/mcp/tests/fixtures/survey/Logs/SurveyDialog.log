@@ -1,0 +1,3 @@
+[2026-10-31 08:48:30,822] [ERROR]  Survey logger showing a dialog
+ErrorSurvey.Cases:Run(String) (at D:/Mods/ErrorSurvey/Cases.cs:225)
+ErrorSurvey.CommandPoller:Update() (at D:/Mods/ErrorSurvey/Mod.cs:57)

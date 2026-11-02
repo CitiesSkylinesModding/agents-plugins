@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -183,7 +183,16 @@ export class FakeGame implements GameHost {
    * Appends an entry stamped with the game's clock to a log of `Logs/`.
    */
   public async log(file: string, message: string, level = 'INFO'): Promise<void> {
-    await appendFile(this.logPath(file), `[${stamp(this.now())}] [${level}]  ${message}\n`);
+    await this.append(this.logPath(file), `[${stamp(this.now())}] [${level}]  ${message}\n`);
+  }
+
+  /**
+   * Appends text to a file as the game does now, on its clock:
+   * how old a write is decides whether an entry counts as whole.
+   */
+  public async append(filePath: string, text: string): Promise<void> {
+    await appendFile(filePath, text);
+    await utimes(filePath, this.now(), this.now());
   }
 
   /**

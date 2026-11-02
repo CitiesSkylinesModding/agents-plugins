@@ -20,12 +20,16 @@ import {
   type CallSlot,
   LOAD_SECONDS,
   LOADING_SCREEN_SECONDS,
+  READ_CEILING_SECONDS,
   RESTART_CEILING_SECONDS,
   STOP_BOUND_SECONDS,
   type ToolContext
 } from './cycle';
 import { createGameHost } from './game-host';
-import { restart, stop, waitLoad } from './tools';
+import { logLevels } from './game-log';
+import { clearIgnores, IGNORE_INPUT_CHARACTERS } from './ignores';
+import { LOGS_CAP_CHARACTERS } from './log-report';
+import { ignoreError, logs, restart, status, stop, waitLoad } from './tools';
 
 // The plugin's version, the server having no release of its own. Read at runtime, as both execution
 // modes sit two levels below the plugin's package.json (dist/server.mjs and src/server.ts).
@@ -40,7 +44,7 @@ const { version: VERSION } = JSON.parse(
  */
 const SHUTDOWN_GRACE_MILLISECONDS = 200;
 
-function main(): Promise<void> {
+async function main(): Promise<void> {
   const userDataPath = loadUserDataPath();
   const host = createGameHost(userDataPath);
   const slot: CallSlot = { running: undefined };
@@ -83,6 +87,11 @@ function main(): Promise<void> {
     };
   }
 
+  // A session is the server's life, and no folder yet is no pattern either.
+  await clearIgnores(userDataPath).catch(() => {
+    // Patterns left over silence a little too much, which beats a server that cannot start.
+  });
+
   const server = new McpServer({ name: 'cs2-dev', version: VERSION });
 
   server.registerTool(
@@ -120,10 +129,10 @@ function main(): Promise<void> {
             a city or the editor never reaches unless the load fails: load through save or newCity.
             An option holding whitespace is refused, as the game takes no quoting.
           `),
-        mod: z
-          .string()
-          .optional()
-          .describe(`Assembly name of a mod whose load the result reports from the logs`)
+        mod: z.string().min(1).optional().describe(oneLine`
+            Assembly name of a mod: the result reports its load from the logs, and later hints count
+            the errors naming it
+          `)
       }
     },
     (request, extra) => restart(contextOf(extra), request)
@@ -159,6 +168,87 @@ function main(): Promise<void> {
       annotations: { readOnlyHint: true }
     },
     extra => waitLoad(contextOf(extra))
+  );
+
+  server.registerTool(
+    'status',
+    {
+      title: `Read the game's state`,
+      description: oneLine`
+        Say whether the game is stopped, booting, at the main menu, loading or in a city, with its
+        PIDs, its version, the debug-patch signals its logs show, and the active ignore patterns.
+        On a stopped game it reads the last run's logs and says so.
+        Blocks up to ${READ_CEILING_SECONDS} s.
+        Unverified on Windows.
+      `,
+      annotations: { readOnlyHint: true }
+    },
+    extra => status(contextOf(extra))
+  );
+
+  server.registerTool(
+    'logs',
+    {
+      title: `Read the game's logs`,
+      description: oneLine`
+        Return one entry per kind of error or message, a storm costing one entry: the file and line
+        of its first occurrence, its count, its first and last stamps, and its text with its stack,
+        cut past ${IGNORE_INPUT_CHARACTERS} characters.
+        Reads the run from its start, unlike the hint, which says what is new.
+        An untagged Player.log line is no entry, Debug.LogError output included, unless it opens an
+        exception Unity logged.
+        Capped at ${LOGS_CAP_CHARACTERS} characters, with a footer saying what was left out and how
+        to narrow it.
+        Cited lines hold until a launch rewrites the file, or a restart replaces the previous run's
+        copy.
+        Blocks up to ${READ_CEILING_SECONDS} s.
+        Unverified on Windows.
+      `,
+      inputSchema: {
+        file: z
+          .string()
+          .optional()
+          .describe(`One log, ex. HallOfFame, or Player.log with what Logs/ also holds`),
+        level: z
+          .string()
+          .optional()
+          .describe(`One of ${logLevels.join(', ')}`),
+        mod: z.string().min(1).optional().describe(`Assembly name of a mod the entries must name`),
+        errorsOnly: z
+          .boolean()
+          .optional()
+          .describe(`Only ERROR and above, and exceptions Unity logged`),
+        previous: z
+          .boolean()
+          .optional()
+          .describe(`Read the run before the last restart, from its kept copy`),
+        ignored: z.boolean().optional().describe(`Bring back the entries ignore_error silenced`)
+      },
+      annotations: { readOnlyHint: true }
+    },
+    (request, extra) => logs(contextOf(extra), request)
+  );
+
+  server.registerTool(
+    'ignore_error',
+    {
+      title: `Ignore an error for the session`,
+      description: oneLine`
+        Silence the errors matching a pattern in the hint and the notification, for this session.
+        A pattern is a case-insensitive regular expression tested on what logs prints for an entry,
+        less its line number: its file, tagged logger, bracketed level, first line and stack.
+        It lasts until the server restarts, a reconnect or a resume included, and changes no test
+        verdict and no restart report.
+        A pattern that takes too long is dropped, and the hint says so.
+        Returns the active patterns with their approximate hit counts.
+        Unverified on Windows.
+      `,
+      inputSchema: {
+        pattern: z.string().min(1).describe(`Regular expression, ex. HTTP: Error sending request`),
+        remove: z.boolean().optional().describe(`Remove this exact pattern instead`)
+      }
+    },
+    (request, extra) => ignoreError(contextOf(extra), request)
   );
 
   const transport = new StdioServerTransport();

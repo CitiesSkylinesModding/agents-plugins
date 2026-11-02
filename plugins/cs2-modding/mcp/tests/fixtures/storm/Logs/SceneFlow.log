@@ -1,0 +1,664 @@
+[2026-10-31 08:58:43,736] [INFO]  Odin Serializer ArchitectureInfo initialization with defaults (all unaligned read/writes disabled).
+[2026-10-31 08:58:43,779] [INFO]  Odin Serializer detected whitelisted runtime platform WindowsPlayer and memory read test succeeded; enabling all unaligned memory read/writes.
+[2026-10-31 08:58:44,340] [INFO]  Command line: S:\steamapps\common\Cities Skylines II\Cities2.exe
+--developerMode
+--qaDeveloperMode
+--uiDeveloperMode
+--noSplash
+startGame=********************************
+--uiDeveloperMode
+[2026-10-31 08:58:49,024] [INFO]  GameManager created! (4824.4536ms)
+[2026-10-31 08:58:50,034] [INFO]  Applying quality scaling profile based on 23 GB VRAM
+[2026-10-31 08:58:50,109] [INFO]  Applying quality scaling profile based on 23 GB VRAM
+[2026-10-31 08:58:50,430] [INFO]  Applying resolution: 1920x1080x60Hz Window
+[2026-10-31 08:58:50,431] [INFO]  Creating ECS world
+[2026-10-31 08:58:51,823] [INFO]  Date: 10/31/2026 07:58:51
+Game version: 1.6.2f1 (767.21d1) [6300.26419] Windows Steamworks
+Game configuration: Development (Mono)
+COre version: 1.0.0f1 (0.0000) [0.0]
+Localization version: 1.0.0a1 (767.21d1) [6300.26396]
+UI version: 1.0.0f1 (767.21d1) [6300.26396]
+Unity version: 2022.3.71f1
+Cohtml version: 2.2.1.3
+ATL Version: 3.4.1.0
+Steamworks.NET Version: 20.2.0
+Steamworks SDK Version: 1.57
+Steam API DLL Version:  08.02.21.95
+Landmark Buildings: 1.6.2f1 (767.21d1) [6300.26419]
+San Francisco Set: 1.6.2f1 (767.21d1) [6300.26419]
+CS 1 Treasure Hunt: 1.6.2f1 (767.21d1) [6300.26419]
+Bridges And Ports: 1.6.2f1 (767.21d1) [6300.26419]
+Deluxe Relax Radio: 1.0.3f1 (767.21d1) [6300.26888]
+Game: 1.6.2f1 (767.21d1) [6300.28345]
+[2026-10-31 08:58:51,823] [INFO]  Type: Desktop
+OS: Windows 10  (10.0.19045) 64bit
+System memory: 31.027 GB
+Graphics device: Intel(R) Iris(R) Xe Graphics (RPL-P) (Version: Direct3D 11.0 [level 11.1])
+Graphics memory: 23.271 GB
+Max texture size: 16384
+Shader level: 50
+3D textures: True
+Shadows: True
+Compute: True
+CPU: 13th Gen Intel(R) Core(TM) i9-13900H
+Core count: 20
+Platform: WindowsPlayer
+Screen resolution: 3840x2400x60
+Window resolution: 1920x1080
+DPI: 96
+Rendering Threading Mode: LegacyJobified
+CLR: 4.0.30319.42000
+Modding runtime: Builtin
+Scripting runtime: Mono 6.13.0 (Visual Studio built mono)
+[2026-10-31 08:58:51,827] [INFO]  Configuration: {"startGame":"a68357be8c7b1c2852b00b7d994b4394","disablePDXSDK":false,"noThumbnails":false,"profilerTarget":null,"saveAllSettings":false,"cleanupSettings":true,"developerMode":true,"uiDeveloperMode":true,"qaDeveloperMode":true,"logTelemetry":false,"duplicateLogToDefault":false,"disableUserSection":false,"disableModding":false,"disableCodeModding":false,"captureStdout":"None","showHelp":null,"continuelastsave":false,"startEditor":false,"benchmark":false,"noSplash":true}
+[2026-10-31 08:58:52,740] [INFO]  Added 9034/9034 explicitly referenced prefabs in 0.7204742s
+[2026-10-31 08:58:52,744] [INFO]  LoadAssetLibraryAsync performed in 968.2233ms
+[2026-10-31 08:58:58,062] [INFO]  Added 9034/9034 explicitly referenced prefabs in 0.0136917s
+[2026-10-31 08:58:58,062] [INFO]  LoadAssetLibraryAsync performed in 198.8872ms
+[2026-10-31 08:58:59,374] [INFO]  Preload Mods at boot
+[2026-10-31 08:59:00,311] [INFO]  Creating ECS systems
+[2026-10-31 08:59:04,176] [INFO]  Applying resolution: 1920x1080x60Hz Window
+[2026-10-31 08:59:04,183] [INFO]  Initializing VT with mipbias 1 - Trilinear
+[2026-10-31 08:59:04,710] [INFO]  Current resolution: 1920x1080x60Hz Window - Current quality settings: DynamicResolutionScaleSettings: Medium - AntiAliasingQualitySettings: Medium - CloudsQualitySettings: Medium - FogQualitySettings: Low - VolumetricsQualitySettings: Medium - SSAOQualitySettings: Medium - SSGIQualitySettings: Disabled - SSRQualitySettings: Medium - DepthOfFieldQualitySettings: Medium - MotionBlurQualitySettings: Medium - ShadowsQualitySettings: Medium - TerrainQualitySettings: Medium - WaterQualitySettings: Medium - LevelOfDetailQualitySettings: Medium - TextureQualitySettings: Medium
+[2026-10-31 08:59:06,287] [INFO]  Loaded 137 prefabs in 1.5525493s
+[2026-10-31 08:59:11,373] [INFO]  Boot completed
+[2026-10-31 08:59:11,374] [INFO]  Starting game from 'SurveyHeader (SaveGameMetadata:a68357be8c7b1c2852b00b7d994b4394 $460 [assetdb://user/Saves/0/SurveyHeader.cok@SurveyHeader.SaveGameMetadata])'
+[2026-10-31 08:59:11,376] [INFO]  Loading mode Game with purpose LoadGame
+[2026-10-31 08:59:11,752] [INFO]  HandleLocaleCaching (0.6039ms)
+[2026-10-31 08:59:12,580] [CRITICAL]  System update error during Deserialize->SerializerSystem:
+IOException: Failed to read from C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Saves/0/SurveyHeader.cok!
+  at Colossal.IO.AssetDatabase.StreamBinaryReader.ReadBytes (System.Void* data, System.Int32 bytes) [0x0007d] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Game.Serialization.ReadSystem.ReadData (Colossal.IO.AssetDatabase.StreamBinaryReader reader, Unity.Collections.NativeArray`1[T] data) [0x00010] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.ReadSystem.GetBuffer (Colossal.Serialization.Entities.BufferFormat format) [0x0015b] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Colossal.Serialization.Entities.EntityDeserializer`1[TReadBuffer].DeserializeMetadata[TReader,TFormatTags] (Colossal.Serialization.Entities.Context& context) [0x00000] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Colossal.Serialization.Entities.EntityDeserializer`1[TReadBuffer].Deserialize[TReader,TFormatTags] (Colossal.Serialization.Entities.Context& context, Unity.Entities.ComponentType[] extraComponents) [0x00012] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.SerializerSystem.OnUpdate () [0x00116] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,660] [CRITICAL]  System update error during Deserialize->RequiredComponentSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.RequiredComponentSystem.OnUpdate () [0x02207] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,674] [CRITICAL]  System update error during Deserialize->ShortLaneRemoveSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.ShortLaneRemoveSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,687] [CRITICAL]  System update error during Deserialize->HomelessAndWorkerFixSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.HomelessAndWorkerFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,701] [CRITICAL]  System update error during Deserialize->CompanyAndCargoFixSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.CompanyAndCargoFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,718] [CRITICAL]  System update error during Deserialize->TradeCostFixSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.TradeCostFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,730] [CRITICAL]  System update error during Deserialize->CargoPortCleanupSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.CargoPortCleanupSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,743] [CRITICAL]  System update error during Deserialize->BicyclePathfindFixSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.BicyclePathfindFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,755] [CRITICAL]  System update error during Deserialize->HouseholdPetLimitSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.HouseholdPetLimitSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,767] [CRITICAL]  System update error during Deserialize->UpdateCitizenFlagsFromHouseholdsSystem:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.UpdateCitizenFlagsFromHouseholdsSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,831] [CRITICAL]  System update error during Deserialize->PostDeserialize`1:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Simulation.WaterSystem.PostDeserialize (Colossal.Serialization.Entities.Context context) [0x0003c] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.PostDeserialize`1[T].OnUpdate () [0x00016] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,868] [CRITICAL]  System update error during Deserialize->PostDeserialize`1:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Simulation.NaturalResourceSystem.PostDeserialize (Colossal.Serialization.Entities.Context context) [0x00008] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.PostDeserialize`1[T].OnUpdate () [0x00016] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:12,886] [CRITICAL]  System update error during Deserialize->PostDeserialize`1:
+NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Areas.AreaResourceSystem.PostDeserialize (Colossal.Serialization.Entities.Context context) [0x00008] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.PostDeserialize`1[T].OnUpdate () [0x00016] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.Serialization.LoadGameSystem:OnUpdate()
+Unity.Entities.SystemBase:Update()
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:13,292] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:13,764] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:13,912] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,038] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,137] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,239] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,347] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,458] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,698] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:14,866] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,049] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,239] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,397] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,586] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,759] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:15,941] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:16,118] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:16,265] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:16,454] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:16,666] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:16,850] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,038] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,208] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,387] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,537] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,741] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,942] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:17,987] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:18,095] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:18,181] [CRITICAL]  System update error during MainLoop->RaycastSystem:
+AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:59:44,985] [INFO]  Loading completed
+[2026-10-31 08:59:44,986] [INFO]  GameManager initialized! (60146.8713ms)

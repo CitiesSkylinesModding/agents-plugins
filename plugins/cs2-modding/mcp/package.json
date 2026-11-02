@@ -1,7 +1,7 @@
 {
   "name": "@csmodding/cs2-dev-mcp",
   "private": true,
-  "description": "MCP server that drives Cities: Skylines II's lifecycle for an agent: restart, stop and wait on the game. Never published: it ships bundled in the cs2-modding plugin, whose version it carries.",
+  "description": "MCP server that drives Cities: Skylines II's lifecycle for an agent: restart, stop and wait on the game, and report its errors. Never published: it ships bundled in the cs2-modding plugin, whose version it carries.",
   "license": "MIT",
   "type": "module",
   "scripts": {

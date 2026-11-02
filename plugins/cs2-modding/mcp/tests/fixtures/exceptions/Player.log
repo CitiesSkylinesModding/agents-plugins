@@ -1,0 +1,159 @@
+Exception: Survey throw with a trailing newline
+  at ErrorSurvey.Cases.Run (System.String name) [0x00778] in D:/Mods/ErrorSurvey/Cases.cs:80 
+  at ErrorSurvey.CommandPoller.Update () [0x00075] in D:/Mods/ErrorSurvey/Mod.cs:57 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:CallOverridenDebugHandler(Exception, Object)
+
+(Filename: D:/Mods/ErrorSurvey/Cases.cs Line: 80)
+
+Exception: Survey throw first
+
+Survey throw after the blank line
+  at ErrorSurvey.Cases.Run (System.String name) [0x00783] in D:/Mods/ErrorSurvey/Cases.cs:82 
+  at ErrorSurvey.CommandPoller.Update () [0x00075] in D:/Mods/ErrorSurvey/Mod.cs:57 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:CallOverridenDebugHandler(Exception, Object)
+
+(Filename: D:/Mods/ErrorSurvey/Cases.cs Line: 82)
+
+Exception: Survey throw with two newlines
+
+  at ErrorSurvey.Cases.Run (System.String name) [0x0078e] in D:/Mods/ErrorSurvey/Cases.cs:84 
+  at ErrorSurvey.CommandPoller.Update () [0x00075] in D:/Mods/ErrorSurvey/Mod.cs:57 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:CallOverridenDebugHandler(Exception, Object)
+
+(Filename: D:/Mods/ErrorSurvey/Cases.cs Line: 84)
+
+InvalidProgramException: Invalid IL code in Survey.Type:Method (): IL_0000: ldarg.0    
+  at ErrorSurvey.Cases.Run (System.String name) [0x00799] in D:/Mods/ErrorSurvey/Cases.cs:86 
+  at ErrorSurvey.CommandPoller.Update () [0x00075] in D:/Mods/ErrorSurvey/Mod.cs:57 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:CallOverridenDebugHandler(Exception, Object)
+
+(Filename: D:/Mods/ErrorSurvey/Cases.cs Line: 86)
+
+NullReferenceException: Object reference not set to an instance of an object
+  at ErrorSurvey.Cases.NullRefA (System.String value) [0x00000] in <623262be86cd46848b78c54f53ba9967>:0 
+  at ErrorSurvey.Cases.Run (System.String name) [0x00881] in <623262be86cd46848b78c54f53ba9967>:0 
+  at ErrorSurvey.CommandPoller.Update () [0x00075] in <623262be86cd46848b78c54f53ba9967>:0 
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:CallOverridenDebugHandler(Exception, Object)
+
+InvalidOperationException: Survey never thrown
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception)
+ErrorSurvey.Cases:Run(String)
+ErrorSurvey.CommandPoller:Update()
+
+InvalidOperationException: Survey: a caught exception
+  at ErrorSurvey.Cases.Caught () [0x00002] in <c050ed2c6390477389422fd7527d116e>:0 
+Rethrow as InvalidOperationException: Survey wrapper never thrown
+
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception)
+ErrorSurvey.Cases:Run(String)
+ErrorSurvey.CommandPoller:Update()
+
+InvalidOperationException: Survey: a caught exception
+  at ErrorSurvey.Cases.Caught () [0x00002] in <c050ed2c6390477389422fd7527d116e>:0 
+Rethrow as ArgumentException: Survey middle never thrown
+
+Rethrow as InvalidOperationException: Survey outer never thrown
+
+UnityEngine.DebugLogHandler:Internal_LogException(Exception, Object)
+UnityEngine.DebugLogHandler:LogException(Exception, Object)
+Colossal.Logging.CustomLogHandler:LogException(Exception, Object)
+UnityEngine.Logger:LogException(Exception, Object)
+UnityEngine.Debug:LogException(Exception)
+ErrorSurvey.Cases:Run(String)
+ErrorSurvey.CommandPoller:Update()
+
+System.InvalidOperationException: Survey: a caught exception
+  at ErrorSurvey.Cases.Caught () [0x00002] in <c050ed2c6390477389422fd7527d116e>:0 
+System.InvalidOperationException: Survey: a caught exception
+  at ErrorSurvey.Cases.Caught () [0x00002] in <c050ed2c6390477389422fd7527d116e>:0 
+System.InvalidOperationException: Survey: a caught exception
+  at ErrorSurvey.Cases.Caught () [0x00002] in <c050ed2c6390477389422fd7527d116e>:0 
+0x00006ffffc30c90d (unityplayer) 
+0x00006ffffc30c688 (unityplayer) 
+0x00006ffffc2f30d9 (unityplayer) 
+0x00006ffffc9936c1 (unityplayer) 
+0x00006ffffb97ae85 (unityplayer) 
+0x00000000750bf3f3 (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x00000000750bf32b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x000000007160f78f (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x00000000750bef48 (Mono JIT Code) UnityEngine.Logger:Log (UnityEngine.LogType,object)
+0x00000002c6bd672c (Mono JIT Code) UnityEngine.Debug:LogError (object)
+0x00000002c6bd4353 (Mono JIT Code) ErrorSurvey.Cases:Run (string)
+0x00000002c64fe823 (Mono JIT Code) ErrorSurvey.CommandPoller:Update ()
+0x000000013fdce3c8 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffffa25504e (mono-2.0-bdwgc) 
+0x00006ffffa18d4a4 (mono-2.0-bdwgc) 
+0x00006ffffa18d61c (mono-2.0-bdwgc) 
+0x00006ffffc0792b6 (unityplayer) 
+0x00006ffffc0793f1 (unityplayer) 
+0x00006ffffbd49520 (unityplayer) 
+0x00006ffffbeb8e98 (unityplayer) 
+0x00006ffffbeb9084 (unityplayer) 
+0x00006ffffbeb95a2 (unityplayer) 
+0x00006ffffc10cc8b (unityplayer) 
+0x00006ffffc10f66b (unityplayer) 
+0x00006ffffc1129cb (unityplayer) 
+0x00006ffffc112c6b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+System.InvalidOperationException: Survey text reading as one
+0x00006ffffc30c90d (unityplayer) 
+0x00006ffffc30c688 (unityplayer) 
+0x00006ffffc2f30d9 (unityplayer) 
+0x00006ffffc9936c1 (unityplayer) 
+0x00006ffffb97ae85 (unityplayer) 
+0x00000000750bf3f3 (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x00000000750bf32b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x000000007160f78f (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x00000000750bef48 (Mono JIT Code) UnityEngine.Logger:Log (UnityEngine.LogType,object)
+0x00000002c6bd672c (Mono JIT Code) UnityEngine.Debug:LogError (object)
+0x00000002c6bd4143 (Mono JIT Code) ErrorSurvey.Cases:Run (string)
+0x00000002c64fe823 (Mono JIT Code) ErrorSurvey.CommandPoller:Update ()
+0x000000013fdce3c8 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffffa25504e (mono-2.0-bdwgc) 
+0x00006ffffa18d4a4 (mono-2.0-bdwgc) 
+0x00006ffffa18d61c (mono-2.0-bdwgc) 
+0x00006ffffc0792b6 (unityplayer) 
+0x00006ffffc0793f1 (unityplayer) 
+0x00006ffffbd49520 (unityplayer) 
+0x00006ffffbeb8e98 (unityplayer) 
+0x00006ffffbeb9084 (unityplayer) 
+0x00006ffffbeb95a2 (unityplayer) 
+0x00006ffffc10cc8b (unityplayer) 
+0x00006ffffc10f66b (unityplayer) 
+0x00006ffffc1129cb (unityplayer) 
+0x00006ffffc112c6b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+

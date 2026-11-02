@@ -1,0 +1,67 @@
+[2026-10-31 08:42:42,578] [INFO]  Loaded additional Burst code C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Mods/SurveyOnLoadThrow/SurveyOnLoadThrow_win_x86_64.dll
+[2026-10-31 08:42:42,587] [INFO]  Loaded SurveyOnLoadThrow, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null in 17.5671ms
+[2026-10-31 08:42:42,892] [ERROR]  Error initializing mod SurveyOnLoadThrow, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null (SurveyOnLoadThrow, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)
+InvalidOperationException: Survey: OnLoad threw on purpose
+  at SurveyOnLoadThrow.Mod.OnLoad (Game.UpdateSystem updateSystem) [0x00000] in D:/Mods/SurveyOnLoadThrow/Mod.cs:8 
+  at Game.Modding.ModManager+ModInfo.OnLoad (Game.UpdateSystem updateSystem) [0x00015] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager+ModInfo.Load (Game.UpdateSystem updateSystem) [0x001b4] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager.InitializeMods (Game.UpdateSystem updateSystem) [0x0006a] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.Modding.ModManager:InitializeMods(UpdateSystem)
+Game.Modding.ModManager:Initialize(UpdateSystem, Boolean)
+Game.SceneFlow.GameManager:InitializeModManager()
+Game.SceneFlow.<Initialize>d__50:MoveNext()
+System.Runtime.CompilerServices.MoveNextRunner:InvokeMoveNext(Object)
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Threading.ExecutionContext:Run(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:InvokeAction(Object)
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task:FinishStageThree()
+System.Threading.Tasks.Task`1:TrySetResult(Boolean)
+System.Threading.Tasks.TaskCompletionSource`1:TrySetResult(Boolean)
+Colossal.Core.MainThreadDispatcher:UpdateWaitFrameCount()
+Colossal.Core.MainThreadDispatcher:UpdateUpdaters()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:42:43,011] [INFO]  Loaded SurveyMissingRef, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null in 2.5618ms
+[2026-10-31 08:42:43,158] [INFO]  Loaded additional Burst code C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Mods/SurveyHarmonyMissing/SurveyHarmonyMissing_win_x86_64.dll
+[2026-10-31 08:42:43,186] [INFO]  Loaded SurveyHarmonyMissing, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null in 35.7153ms
+[2026-10-31 08:42:43,207] [ERROR]  Error initializing mod SurveyHarmonyMissing, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null (SurveyHarmonyMissing, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)
+ArgumentException: Undefined target method for patch method static System.Void SurveyHarmonyMissing.MissingPatch::Postfix()
+  at HarmonyLib.PatchClassProcessor.PatchWithAttributes (System.Reflection.MethodBase& lastOriginal) [0x00047] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.PatchClassProcessor.Patch () [0x00068] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+Rethrow as HarmonyException: Patching exception in method null
+  at HarmonyLib.PatchClassProcessor.ReportException (System.Exception exception, System.Reflection.MethodBase original) [0x00127] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.PatchClassProcessor.Patch () [0x00093] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.Harmony.<PatchAll>b__10_0 (System.Type type) [0x00007] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.CollectionExtensions.Do[T] (System.Collections.Generic.IEnumerable`1[T] sequence, System.Action`1[T] action) [0x00014] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.Harmony.PatchAll (System.Reflection.Assembly assembly) [0x00006] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at SurveyHarmonyMissing.Mod.OnLoad (Game.UpdateSystem updateSystem) [0x00000] in D:/Mods/SurveyHarmonyMissing/Mod.cs:8 
+  at Game.Modding.ModManager+ModInfo.OnLoad (Game.UpdateSystem updateSystem) [0x00015] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager+ModInfo.Load (Game.UpdateSystem updateSystem) [0x001b4] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager.InitializeMods (Game.UpdateSystem updateSystem) [0x0006a] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.Modding.ModManager:InitializeMods(UpdateSystem)
+Game.Modding.ModManager:Initialize(UpdateSystem, Boolean)
+Game.SceneFlow.GameManager:InitializeModManager()
+Game.SceneFlow.<Initialize>d__50:MoveNext()
+System.Runtime.CompilerServices.MoveNextRunner:InvokeMoveNext(Object)
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Threading.ExecutionContext:Run(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:InvokeAction(Object)
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task:FinishStageThree()
+System.Threading.Tasks.Task`1:TrySetResult(Boolean)
+System.Threading.Tasks.TaskCompletionSource`1:TrySetResult(Boolean)
+Colossal.Core.MainThreadDispatcher:UpdateWaitFrameCount()
+Colossal.Core.MainThreadDispatcher:UpdateUpdaters()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:42:43,226] [INFO]  Loaded additional Burst code C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Mods/ErrorSurvey/ErrorSurvey_win_x86_64.dll
+[2026-10-31 08:42:43,243] [INFO]  Loaded ErrorSurvey, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null in 25.0806ms
+[2026-10-31 08:42:43,256] [INFO]  Loaded additional Burst code C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Mods/SurveyUI/SurveyUI_win_x86_64.dll
+[2026-10-31 08:42:43,257] [INFO]  Loaded SurveyUI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null in 10.6743ms
+[2026-10-31 08:42:43,592] [INFO]  Registered UI Module {"m_ModuleId":null,"m_Author":null,"m_ModuleVersion":null,"m_UIModuleDependencies":null} from SurveyUI (UIModuleAsset:7eb138c83a931ede6c1498ee59abc4f3 $511 [assetdb://user/Mods/SurveyUI/SurveyUI.mjs])
+[2026-10-31 08:42:43,627] [INFO]  Registered UI Module {"m_ModuleId":null,"m_Author":null,"m_ModuleVersion":null,"m_UIModuleDependencies":null} from ErrorSurvey (UIModuleAsset:c3c15702cbcc572878591cbf04ed2d43 $646 [assetdb://user/Mods/ErrorSurvey/ErrorSurvey.mjs])

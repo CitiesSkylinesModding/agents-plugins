@@ -2,10 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { resolveUserDataPath } from '../src/config';
 import {
+  READ_CEILING_SECONDS,
   RESTART_CEILING_SECONDS,
   STOP_CEILING_SECONDS,
   WAIT_LOAD_CEILING_SECONDS
 } from '../src/cycle';
+import { HINT_CEILING_SECONDS } from '../src/tool-run';
 
 describe('resolveUserDataPath', () => {
   test(`takes the configured folder`, () => {
@@ -30,8 +32,15 @@ describe('the Codex config', () => {
       await readFile(new URL('../../.codex-plugin/mcp.json', import.meta.url), 'utf8')
     ) as { mcpServers: { 'cs2-dev': { tool_timeout_sec: number } } };
 
+    const longest = Math.max(
+      READ_CEILING_SECONDS,
+      RESTART_CEILING_SECONDS,
+      STOP_CEILING_SECONDS,
+      WAIT_LOAD_CEILING_SECONDS
+    );
+
     expect(config.mcpServers['cs2-dev'].tool_timeout_sec).toBeGreaterThan(
-      Math.max(RESTART_CEILING_SECONDS, STOP_CEILING_SECONDS, WAIT_LOAD_CEILING_SECONDS)
+      longest + HINT_CEILING_SECONDS
     );
   });
 });

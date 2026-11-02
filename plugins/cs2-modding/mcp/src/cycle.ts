@@ -4,8 +4,10 @@ import { createReadStream } from 'node:fs';
 import { access, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { text } from 'node:stream/consumers';
+import { updateCursor } from './cursor';
 import { errorMessage, type GameHost, isMissing } from './game-host';
 import { type LogEntry, parseLog } from './game-log';
+import { sceneFlowPath } from './scanner';
 
 /**
  * Seconds a game asked to close gets before it is forced: above the slowest close of a loaded city
@@ -73,7 +75,15 @@ export const RESTART_CEILING_SECONDS =
   LOADING_SCREEN_SECONDS +
   CEILING_MARGIN_SECONDS;
 
-const MAIN_MENU_REACHED = 'MainMenu reached';
+/**
+ * Seconds a read-only tool may take: reading a log, however large, is its only wait.
+ */
+export const READ_CEILING_SECONDS = 120;
+
+/**
+ * (VOLATILE: this line -- `Game.SceneFlow.GameManager`.)
+ */
+export const MAIN_MENU_REACHED = 'MainMenu reached';
 
 /**
  * Bytes read off the end of `Player.log` for its shutdown line, past which only the engine's own
@@ -154,6 +164,8 @@ export async function stopGame(context: ToolContext): Promise<StopOutcome> {
     return { kind: 'notRunning' };
   }
 
+  await recordStop(context);
+
   // Only the reaper left: the game is already on its way out.
   const closeFailure = game.length > 0 ? await host.askToEnd() : undefined;
 
@@ -176,6 +188,21 @@ export async function stopGame(context: ToolContext): Promise<StopOutcome> {
     seconds: secondsSince(host, start),
     ...(closeFailure == null ? {} : { closeFailure })
   };
+}
+
+/**
+ * Tells the hint this end is the tool's own, before the game goes.
+ * A stop must never fail on it: at worst a hint reports the game going away.
+ */
+async function recordStop(context: ToolContext): Promise<void> {
+  try {
+    await updateCursor(context, cursor => ({
+      ...cursor,
+      lastStop: context.host.now().toISOString()
+    }));
+  } catch {
+    // The stop is what the caller asked for, and a cancelled one asked nothing of the game.
+  }
 }
 
 /**
@@ -337,14 +364,11 @@ export async function readLog(logPath: string, since: Date): Promise<LogEntry[]>
   return parseLog(log, since);
 }
 
-export function sceneFlowPath(userDataPath: string): string {
-  return path.join(userDataPath, 'Logs', 'SceneFlow.log');
-}
-
 /**
  * Where the last logged load stands: when it completed, `fellBack` when it ended at the main menu
  * after `fallbackSince`, or `pending`.
  * The main menu takes a load of its own, which is what a failed load falls back through.
+ * (VOLATILE: the `Loading` lines -- `Game.SceneFlow.GameManager`.)
  */
 function readLoad(
   entries: readonly LogEntry[],
@@ -459,6 +483,7 @@ async function readShutdown(
  * neither.
  * Unity rewrites `Player.log` at launch, while `SceneFlow.log` may still be the last run's, so the
  * first keeps a stale line of the second from passing for this run's.
+ * (VOLATILE: the two lines -- `Game.SceneFlow.GameManager`.)
  */
 async function hasCleanShutdown(userDataPath: string): Promise<boolean> {
   const playerLogPath = path.join(userDataPath, 'Player.log');

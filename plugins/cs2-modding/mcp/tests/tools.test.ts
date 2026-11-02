@@ -58,6 +58,15 @@ function modError(mod: string): string {
   return `Error initializing mod ${assembly} (${assembly})`;
 }
 
+/**
+ * The evidence copies in the tool's folder, finished or not.
+ */
+async function copies(): Promise<string[]> {
+  const names = await readdir(path.join(game.userDataPath, '.cs2-dev'));
+
+  return names.filter(name => name.startsWith('previous-run'));
+}
+
 async function failureOf(call: Promise<unknown>): Promise<string> {
   try {
     await call;
@@ -299,6 +308,7 @@ describe('restart', () => {
 
   test(`stops a running game itself, and says how it ended`, async () => {
     await runningGame();
+    await game.log('SceneFlow', 'GameManager created!');
     bootsToMenu();
 
     const text = resultText(await restart(context, {}));
@@ -742,7 +752,7 @@ describe('restart', () => {
 
       expect(await failureOf(keepPreviousRun(game.userDataPath, signal))).not.toBe('');
       expect(await readFile(copy('Logs', 'MyMod.log'), 'utf8')).not.toBe('');
-      expect(await readdir(path.join(game.userDataPath, '.cs2-dev'))).toEqual(['previous-run']);
+      expect(await copies()).toEqual(['previous-run']);
     });
 
     test(`clears what a killed server left of a copy`, async () => {
@@ -755,7 +765,7 @@ describe('restart', () => {
       bootsToMenu();
       await restart(context, {});
 
-      expect(await readdir(path.join(game.userDataPath, '.cs2-dev'))).toEqual(['previous-run']);
+      expect(await copies()).toEqual(['previous-run']);
     });
 
     test(`shares nothing with a copy its call left behind`, async () => {

@@ -1,0 +1,579 @@
+[2026-10-31 08:42:19,603] [INFO]  Odin Serializer ArchitectureInfo initialization with defaults (all unaligned read/writes disabled).
+[2026-10-31 08:42:19,647] [INFO]  Odin Serializer detected whitelisted runtime platform WindowsPlayer and memory read test succeeded; enabling all unaligned memory read/writes.
+[2026-10-31 08:42:20,180] [INFO]  Command line: S:\steamapps\common\Cities Skylines II\Cities2.exe
+--developerMode
+--qaDeveloperMode
+--uiDeveloperMode
+--noSplash
+startGame=********************************
+--uiDeveloperMode
+[2026-10-31 08:42:24,858] [INFO]  GameManager created! (4833.3797ms)
+[2026-10-31 08:42:25,918] [INFO]  Applying quality scaling profile based on 23 GB VRAM
+[2026-10-31 08:42:25,986] [INFO]  Applying quality scaling profile based on 23 GB VRAM
+[2026-10-31 08:42:26,352] [INFO]  Applying resolution: 1920x1080x60Hz Window
+[2026-10-31 08:42:26,354] [INFO]  Creating ECS world
+[2026-10-31 08:42:27,943] [INFO]  Date: 10/31/2026 07:42:27
+Game version: 1.6.2f1 (767.21d1) [6300.26419] Windows Steamworks
+Game configuration: Development (Mono)
+COre version: 1.0.0f1 (0.0000) [0.0]
+Localization version: 1.0.0a1 (767.21d1) [6300.26396]
+UI version: 1.0.0f1 (767.21d1) [6300.26396]
+Unity version: 2022.3.71f1
+Cohtml version: 2.2.1.3
+ATL Version: 3.4.1.0
+Steamworks.NET Version: 20.2.0
+Steamworks SDK Version: 1.57
+Steam API DLL Version:  08.02.21.95
+Landmark Buildings: 1.6.2f1 (767.21d1) [6300.26419]
+San Francisco Set: 1.6.2f1 (767.21d1) [6300.26419]
+CS 1 Treasure Hunt: 1.6.2f1 (767.21d1) [6300.26419]
+Bridges And Ports: 1.6.2f1 (767.21d1) [6300.26419]
+Deluxe Relax Radio: 1.0.3f1 (767.21d1) [6300.26888]
+Game: 1.6.2f1 (767.21d1) [6300.28345]
+[2026-10-31 08:42:27,944] [INFO]  Type: Desktop
+OS: Windows 10  (10.0.19045) 64bit
+System memory: 31.027 GB
+Graphics device: Intel(R) Iris(R) Xe Graphics (RPL-P) (Version: Direct3D 11.0 [level 11.1])
+Graphics memory: 23.271 GB
+Max texture size: 16384
+Shader level: 50
+3D textures: True
+Shadows: True
+Compute: True
+CPU: 13th Gen Intel(R) Core(TM) i9-13900H
+Core count: 20
+Platform: WindowsPlayer
+Screen resolution: 3840x2400x60
+Window resolution: 1920x1080
+DPI: 96
+Rendering Threading Mode: LegacyJobified
+CLR: 4.0.30319.42000
+Modding runtime: Builtin
+Scripting runtime: Mono 6.13.0 (Visual Studio built mono)
+[2026-10-31 08:42:27,950] [INFO]  Configuration: {"startGame":"b6b8f86f51786ed2fc337275416b6b35","disablePDXSDK":false,"noThumbnails":false,"profilerTarget":null,"saveAllSettings":false,"cleanupSettings":true,"developerMode":true,"uiDeveloperMode":true,"qaDeveloperMode":true,"logTelemetry":false,"duplicateLogToDefault":false,"disableUserSection":false,"disableModding":false,"disableCodeModding":false,"captureStdout":"None","showHelp":null,"continuelastsave":false,"startEditor":false,"benchmark":false,"noSplash":true}
+[2026-10-31 08:42:29,055] [INFO]  Added 9034/9034 explicitly referenced prefabs in 0.8595978s
+[2026-10-31 08:42:29,056] [INFO]  LoadAssetLibraryAsync performed in 1175.353ms
+[2026-10-31 08:42:34,795] [INFO]  Added 9034/9034 explicitly referenced prefabs in 0.0156704s
+[2026-10-31 08:42:34,796] [INFO]  LoadAssetLibraryAsync performed in 208.6378ms
+[2026-10-31 08:42:35,933] [INFO]  Preload Mods at boot
+[2026-10-31 08:42:37,049] [INFO]  Creating ECS systems
+[2026-10-31 08:42:43,662] [INFO]  Applying resolution: 1920x1080x60Hz Window
+[2026-10-31 08:42:43,671] [INFO]  Initializing VT with mipbias 1 - Trilinear
+[2026-10-31 08:42:44,474] [INFO]  Current resolution: 1920x1080x60Hz Window - Current quality settings: DynamicResolutionScaleSettings: Medium - AntiAliasingQualitySettings: Medium - CloudsQualitySettings: Medium - FogQualitySettings: Low - VolumetricsQualitySettings: Medium - SSAOQualitySettings: Medium - SSGIQualitySettings: Disabled - SSRQualitySettings: Medium - DepthOfFieldQualitySettings: Medium - MotionBlurQualitySettings: Medium - ShadowsQualitySettings: Medium - TerrainQualitySettings: Medium - WaterQualitySettings: Medium - LevelOfDetailQualitySettings: Medium - TextureQualitySettings: Medium
+[2026-10-31 08:42:46,151] [INFO]  Loaded 137 prefabs in 1.65448s
+[2026-10-31 08:42:52,953] [INFO]  Boot completed
+[2026-10-31 08:42:52,955] [INFO]  Starting game from 'SNDiag (SaveGameMetadata:b6b8f86f51786ed2fc337275416b6b35 $452 [assetdb://user/Saves/0/SNDiag.cok@SNDiag.SaveGameMetadata])'
+[2026-10-31 08:42:52,958] [INFO]  Loading mode Game with purpose LoadGame
+[2026-10-31 08:42:53,459] [INFO]  HandleLocaleCaching (0.1696ms)
+[2026-10-31 08:42:57,582] [INFO]  Serialized version: 1.6.2f1 (767.21d1) [6300.26419]
+[2026-10-31 08:42:57,583] [INFO]  Format tags: ShortLaneOptimization, HomelessAndWorkerFix, CompanyAndCargoFix, TradeCostFix, TerrainSystemCleanup, FishResource, AquacultureLandAmbience, BpPrefabData, ContentPrefabInCityConfiguration, SeagullAmbience, BPDLCAchievement, StandingLegOffset, CargoPortCleanup, NewWaterSources, RemoveConsumptionAccumulator, TrackCompanyCustomersAndTaxes, ActivityProps, UnifyCompanyStatistics, UnemploymentAffectHappiness, HouseholdConsumptionFix, MovingAwayReason, SicknessHealthPenalty, LevelingFixReset, IndustrialConsumptionAccumulator, LevelUpStatistics, WaterfrontLowCommercialZone, OldTownAmbience, WaterSourceYPositionFix, TrackProcessingMail, TrackCitizenEconomyStats, DelayMoveAwayCompany, TrackCityMaxProduction, BicycleDataMigration, WaterRenderSettings, TerrainRenderSettings, PrefabIDHash, EasyModeDeathRateFix, HouseholdPetLimit, TerrainUserSplatmap, UpdateCitizenFlagsFromHousehold, RefreshBatteryNotifications, TripPriority
+[2026-10-31 08:42:57,685] [WARN]  Unknown prefab ID: CarPrefab:MuscleCar01
+[2026-10-31 08:42:57,686] [WARN]  Unknown prefab ID: CarPrefab:MuscleCar02
+[2026-10-31 08:42:57,686] [WARN]  Unknown prefab ID: CarPrefab:MuscleCar03
+[2026-10-31 08:42:57,699] [WARN]  Unknown prefab ID: CarPrefab:MuscleCar04
+[2026-10-31 08:42:57,700] [WARN]  Unknown prefab ID: CarPrefab:MuscleCar05
+[2026-10-31 08:42:57,700] [WARN]  Unknown prefab ID: BrandPrefab:CalamariTangle
+[2026-10-31 08:42:57,700] [WARN]  Unknown prefab ID: CompanyPrefab:Industrial_FishExtractor
+[2026-10-31 08:42:57,701] [WARN]  Unknown prefab ID: ContentPrefab:BridgesAndPorts
+[2026-10-31 08:42:57,701] [WARN]  Unknown prefab ID: ContentPrefab:SanFranciscoSet
+[2026-10-31 08:46:51,608] [INFO]  Loading completed
+[2026-10-31 08:46:51,609] [INFO]  GameManager initialized! (270921.4884ms)
+[2026-10-31 08:48:08,498] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey: a system threw once
+  at ErrorSurvey.StormSystem.OnUpdate () [0x000cd] in D:/Mods/ErrorSurvey/Systems.cs:35 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:13,044] [CRITICAL]  Unobserved exception triggered
+InvalidOperationException: Survey: a task threw
+  at ErrorSurvey.Cases+<>c.<Run>b__1_0 () [0x00000] in D:/Mods/ErrorSurvey/Cases.cs:143 
+  at System.Threading.Tasks.Task`1[TResult].InnerInvoke () [0x0000f] in <ec44db4194e74e18bbf336ba559460da>:0 
+  at System.Threading.Tasks.Task.Execute () [0x00000] in <ec44db4194e74e18bbf336ba559460da>:0 
+Rethrow as AggregateException: A Task's exception(s) were not observed either by Waiting on the Task or accessing its Exception property. As a result, the unobserved exception was rethrown by the finalizer thread. (Survey: a task threw)
+
+Game.SceneFlow.<>c:<TryCatchUnhandledExceptions>b__165_0(Object, UnobservedTaskExceptionEventArgs)
+System.Threading.Tasks.TaskScheduler:PublishUnobservedTaskException(Object, UnobservedTaskExceptionEventArgs)
+System.Threading.Tasks.TaskExceptionHolder:Finalize()
+[2026-10-31 08:48:46,500] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:46,905] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:47,227] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:47,539] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:47,869] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:48,149] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:48,452] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:48,753] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:49,039] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:49,339] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:49,633] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:50,012] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:50,355] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:50,979] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:51,342] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:51,639] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:51,946] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:52,218] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:52,478] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:52,799] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:53,059] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:53,354] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:53,626] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:53,951] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:54,020] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:54,429] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:54,532] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:54,665] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:48:54,848] [CRITICAL]  System update error during MainLoop->StormSystem:
+InvalidOperationException: Survey storm: a system threw every frame
+  at ErrorSurvey.StormSystem.OnUpdate () [0x00056] in D:/Mods/ErrorSurvey/Systems.cs:18 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:11,159] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:11,612] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:11,886] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:11,948] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:12,133] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:12,294] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:12,527] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:12,748] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:12,961] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:13,169] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:13,672] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:13,740] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:13,957] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:14,189] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:14,698] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:15,027] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:15,347] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:15,418] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:15,630] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:15,850] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:16,007] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:16,252] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:16,420] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:16,630] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:16,872] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:17,027] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:17,060] [CRITICAL]  Unhandled domain exception triggered
+InvalidOperationException: Survey: a thread threw
+  at ErrorSurvey.Cases+<>c.<Run>b__1_1 () [0x00000] in D:/Mods/ErrorSurvey/Cases.cs:153 
+  at System.Threading.ThreadHelper.ThreadStart_Context (System.Object state) [0x00014] in <ec44db4194e74e18bbf336ba559460da>:0 
+  at System.Threading.ExecutionContext.RunInternal (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state, System.Boolean preserveSyncCtx) [0x00071] in <ec44db4194e74e18bbf336ba559460da>:0 
+  at System.Threading.ExecutionContext.Run (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state, System.Boolean preserveSyncCtx) [0x00000] in <ec44db4194e74e18bbf336ba559460da>:0 
+  at System.Threading.ExecutionContext.Run (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state) [0x0002b] in <ec44db4194e74e18bbf336ba559460da>:0 
+  at System.Threading.ThreadHelper.ThreadStart () [0x00008] in <ec44db4194e74e18bbf336ba559460da>:0 
+Game.SceneFlow.<>c:<TryCatchUnhandledExceptions>b__165_1(Object, UnhandledExceptionEventArgs)
+[2026-10-31 08:50:17,349] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:17,526] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:17,757] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()
+[2026-10-31 08:50:18,006] [CRITICAL]  System update error during MainLoop->VictimSystem:
+InvalidOperationException: system state is not initialized or has already been destroyed
+  at Unity.Entities.ComponentSystemBase.CheckedState () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Unity.Entities.SystemBase.Update () [0x00000] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+Game.UpdateSystem:Update(SystemUpdatePhase)
+Game.SceneFlow.GameManager:UpdateWorld()
+Game.SceneFlow.GameManager:Update()

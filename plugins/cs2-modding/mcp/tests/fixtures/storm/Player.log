@@ -1,0 +1,1795 @@
+Failed to load WinPixEventRuntime.dll. PIX event markers will not be emitted. Install Visual C++ 2019 redistributable to fix this issue.
+Mono path[0] = 'S:/steamapps/common/Cities Skylines II/Cities2_Data/Managed'
+Mono config path = 'S:/steamapps/common/Cities Skylines II/MonoBleedingEdge/etc'
+Starting managed debugger on port 56474
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=0.0.0.0:56474
+Found 4 interfaces on host : 0) 10.0.0.1 1) 10.0.0.1 2) 10.0.0.1 3) 10.0.0.1
+Player connection [312]  Target information:
+
+Player connection [312]  * "[IP] 10.0.0.1 [Port] 55000 [Flags] 2 [Guid] 3966185474 [EditorId] 0 [Version] 1048832 [Id] WindowsPlayer(2,host) [Debug] 1 [PackageName] WindowsPlayer [ProjectName] <no name>" 
+
+Player connection [312] Started UDP target info broadcast (1) on [225.0.0.222:54997].
+
+Input System module state changed to: Initialized.
+[PhysX] Initialized MultithreadedTaskDispatcher with 20 workers.
+Initialize engine version: 2022.3.71f1 (c9bf13b0b844)
+[Subsystems] Discovering subsystems at path S:/steamapps/common/Cities Skylines II/Cities2_Data/UnitySubsystems
+GfxDevice: creating device client; threaded=1; jobified=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: Intel(R) Iris(R) Xe Graphics (RPL-P) (ID=0xa7a0)
+    Vendor:   Intel
+    VRAM:     23829 MB
+    Driver:   35.0.65535.65535
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.232 seconds
+- Finished resetting the current domain, in  0.001 seconds
+<RI> Initializing input.
+Using Windows.Gaming.Input
+<RI> Input initialized.
+<RI> Initialized touch support.
+[PhysX] Initialized MultithreadedTaskDispatcher with 20 workers.
+UnloadTime: 1.093300 ms
+Logs at C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Logs
+Game version: 1.6.2f1 (767.21d1) [6300.26419]
+Type: Desktop
+OS: Windows 10  (10.0.19045) 64bit
+System memory: 31.027 GB
+Graphics device: Intel(R) Iris(R) Xe Graphics (RPL-P) (Version: Direct3D 11.0 [level 11.1])
+Graphics memory: 23.271 GB
+Max texture size: 16384
+Shader level: 50
+3D textures: True
+Shadows: True
+Compute: True
+CPU: 13th Gen Intel(R) Core(TM) i9-13900H
+Core count: 20
+Platform: WindowsPlayer
+Screen resolution: 3840x2400x60
+Window resolution: 1920x1080
+DPI: 96
+Rendering Threading Mode: LegacyJobified
+CLR: 4.0.30319.42000
+Modding runtime: Builtin
+Scripting runtime: Mono 6.13.0 (Visual Studio built mono)
+Uploaded shader variant to the GPU driver: BH/NetCompositionMeshLitShader (instance 0x280), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON, time: 27 ms
+Uploaded shader variant to the GPU driver: BH/NetCompositionMeshLitShader (instance 0x280), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT, time: 0.22 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _DOUBLESIDED_ON _GPU_ANIMATION_OFF, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT _DOUBLESIDED_ON, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_HEIGHT_MODE_TERRAIN PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_HEIGHT_MODE_TERRAIN PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.27 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterCloth (instance 0x2AC), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF, time: 0.18 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterCloth (instance 0x2AC), pass: ShadowCaster, stage: pixel, keywords _DISABLE_DECALS _DISABLE_SSR_TRANSPARENT, time: 0.2 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON, time: 0.39 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT, time: 0.5 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DOUBLESIDED_ON _GPU_ANIMATION_OFF, time: 0.47 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT _DOUBLESIDED_ON, time: 0.41 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT _HASHED_ALPHATEST, time: 0.35 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetArrow (instance 0x1FC), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.36 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetArrow (instance 0x1FC), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.45 ms
+Uploaded shader variant to the GPU driver: BH/WatShader (instance 0x228), pass: ShadowCaster, stage: vertex, keywords _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TANGENTSPACE_OCTO _TRANSPARENT_WRITES_MOTION_VEC, time: 0.25 ms
+Uploaded shader variant to the GPU driver: BH/WatShader (instance 0x228), pass: ShadowCaster, stage: pixel, keywords _ENABLE_FOG_ON_TRANSPARENT _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.13 ms
+Uploaded shader variant to the GPU driver: BH/SG_FallbackShader (instance 0x1F8), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: BH/SG_FallbackShader (instance 0x1F8), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.12 ms
+Uploaded shader variant to the GPU driver: BH/GraShader (instance 0x234), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/GraShader (instance 0x234), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.31 ms
+Uploaded shader variant to the GPU driver: BH/Overlay/CurvedOverlayShader (instance 0x13E), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_HEIGHT_MODE_CURVE _SURFACE_TYPE_TRANSPARENT, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/Overlay/CurvedOverlayShader (instance 0x13E), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_HEIGHT_MODE_CURVE _SURFACE_TYPE_TRANSPARENT, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _GPU_ANIMATION_OFF, time: 0.14 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT, time: 0.19 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterSkin (instance 0x254), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _GPU_ANIMATION_OFF, time: 0.23 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterSkin (instance 0x254), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DISABLE_DECALS _DISABLE_SSR_TRANSPARENT, time: 0.21 ms
+Uploaded shader variant to the GPU driver: BH/Impostors/Render/SG_ImpostorTree (instance 0x1D0), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _IMPOSTORMAPPINGTYPE_HEMI_OCTAHEDRAL, time: 0.23 ms
+Uploaded shader variant to the GPU driver: BH/Impostors/Render/SG_ImpostorTree (instance 0x1D0), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DEPTHOFFSET_ON _DISABLE_SSR_TRANSPARENT _IMPOSTORMAPPINGTYPE_HEMI_OCTAHEDRAL, time: 0.36 ms
+Uploaded shader variant to the GPU driver: BH/Pipeline/DefaultPipelineShader (instance 0x270), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.84 ms
+Uploaded shader variant to the GPU driver: BH/Pipeline/DefaultPipelineShader (instance 0x270), pass: ShadowCaster, stage: pixel, keywords <no keywords>, time: 0.22 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/RouteShader (instance 0x218), pass: ShadowCaster, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.35 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/RouteShader (instance 0x218), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.37 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/TornadoMesh/Output Particle Unlit Mesh (instance 0x148), pass: ShadowCaster, stage: vertex, keywords _SURFACE_TYPE_TRANSPARENT, time: 0.46 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/TornadoMesh/Output Particle Unlit Mesh (instance 0x148), pass: ShadowCaster, stage: pixel, keywords _ENABLE_FOG_ON_TRANSPARENT _SURFACE_TYPE_TRANSPARENT, time: 0.21 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _GPU_ANIMATION_OFF, time: 0.15 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT, time: 0.24 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/OverlayObject (instance 0x20A), pass: ShadowCaster, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.32 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/OverlayObject (instance 0x20A), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.25 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/TerrainBrush (instance 0x184), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.084 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/TerrainBrush (instance 0x184), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterGeneric (instance 0x220), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _GPU_ANIMATION_OFF, time: 0.13 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterGeneric (instance 0x220), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DISABLE_DECALS _DISABLE_SSR_TRANSPARENT, time: 0.34 ms
+Uploaded shader variant to the GPU driver: BH/Pipeline/CurvedPipelineShader (instance 0x15E), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.31 ms
+Uploaded shader variant to the GPU driver: BH/Pipeline/CurvedPipelineShader (instance 0x15E), pass: ShadowCaster, stage: pixel, keywords <no keywords>, time: 0.25 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SurfaceOverlay (instance 0x264), pass: ShadowCaster, stage: vertex, keywords _SURFACE_TYPE_TRANSPARENT, time: 0.58 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SurfaceOverlay (instance 0x264), pass: ShadowCaster, stage: pixel, keywords _SURFACE_TYPE_TRANSPARENT, time: 0.2 ms
+Uploaded shader variant to the GPU driver: BH/SG_VegLeavesShader (instance 0x236), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _ANIM_OFF _DOUBLESIDED_ON, time: 0.44 ms
+Uploaded shader variant to the GPU driver: BH/SG_VegLeavesShader (instance 0x236), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT _DOUBLESIDED_ON, time: 0.22 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_HairCardsDyed (instance 0x1DA), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _DOUBLESIDED_ON _GPU_ANIMATION_OFF _RECALCULATE_CARD_NORMALS _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.11 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_HairCardsDyed (instance 0x1DA), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _CONSERVATIVE_DEPTH_OFFSET _DEPTHOFFSET_ON _DISABLE_SSR_TRANSPARENT _DOUBLESIDED_ON _ENABLE_FOG_ON_TRANSPARENT _RECALCULATE_CARD_NORMALS _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.32 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterCloth (instance 0x2AC), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _GPU_ANIMATION_OFF, time: 0.085 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterCloth (instance 0x2AC), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DISABLE_DECALS _DISABLE_SSR_TRANSPARENT, time: 0.26 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT _HASHED_ALPHATEST, time: 0.26 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterEyelash (instance 0x28C), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF _SURFACE_TYPE_TRANSPARENT, time: 0.08 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterEyelash (instance 0x28C), pass: ShadowCaster, stage: pixel, keywords _DISABLE_DECALS _DISABLE_SSR _DISABLE_SSR_TRANSPARENT _ENABLE_FOG_ON_TRANSPARENT _SURFACE_TYPE_TRANSPARENT, time: 0.17 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/OverlayCurve (instance 0x156), pass: ShadowCaster, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.32 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/OverlayCurve (instance 0x156), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.34 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: ShadowCaster, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _REFRACTION_OFF, time: 0.41 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _DISABLE_SSR_TRANSPARENT _REFRACTION_OFF, time: 0.32 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaName (instance 0x202), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.54 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaName (instance 0x202), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.36 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/Debris/Output Particle HDRP Lit Mesh (instance 0x14A), pass: <Unnamed Pass 1>, stage: vertex, keywords <no keywords>, time: 0.59 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/Debris/Output Particle HDRP Lit Mesh (instance 0x14A), pass: <Unnamed Pass 1>, stage: pixel, keywords <no keywords>, time: 0.29 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterMouth (instance 0x23C), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF, time: 0.31 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterMouth (instance 0x23C), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.25 ms
+Uploaded shader variant to the GPU driver: BH/SG_VegRootShader (instance 0x272), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH _ANIM_OFF, time: 0.14 ms
+Uploaded shader variant to the GPU driver: BH/SG_VegRootShader (instance 0x272), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT, time: 0.22 ms
+Uploaded shader variant to the GPU driver: BH/SG_DefaultShader (instance 0x2BC), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _ALPHATEST_ON _DISABLE_SSR_TRANSPARENT _DOUBLESIDED_ON _HASHED_ALPHATEST, time: 0.28 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterEye (instance 0x268), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF, time: 0.31 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterEye (instance 0x268), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.26 ms
+Uploaded shader variant to the GPU driver: BH/GlsShader (instance 0x1E4), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _GPU_ANIMATION_OFF _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.28 ms
+Uploaded shader variant to the GPU driver: BH/GlsShader (instance 0x1E4), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DEPTHOFFSET_ON _ENABLE_FOG_ON_TRANSPARENT _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.27 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/WaterSourceName (instance 0x28A), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.31 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/WaterSourceName (instance 0x28A), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.14 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_HEIGHT_MODE_TRIANGLE PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.12 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_HEIGHT_MODE_TRIANGLE PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.12 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _SURFACE_TYPE_TRANSPARENT, time: 0.18 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT _ENABLE_FOG_ON_TRANSPARENT _SURFACE_TYPE_TRANSPARENT, time: 0.15 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetName (instance 0x1E0), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.45 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetName (instance 0x1E0), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.24 ms
+Uploaded shader variant to the GPU driver: BH/SG_BaseShader (instance 0x1FE), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_QUALITY_TIER_HIGH, time: 0.28 ms
+Uploaded shader variant to the GPU driver: BH/SG_BaseShader (instance 0x1FE), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT, time: 0.18 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterGenericTransparent (instance 0x15C), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF _REFRACTION_THIN _SURFACE_TYPE_TRANSPARENT, time: 0.12 ms
+Uploaded shader variant to the GPU driver: BH/Characters/SG_CharacterGenericTransparent (instance 0x15C), pass: ShadowCaster, stage: pixel, keywords _DISABLE_DECALS _DISABLE_SSR_TRANSPARENT _ENABLE_FOG_ON_TRANSPARENT _REFRACTION_THIN _SURFACE_TYPE_TRANSPARENT, time: 0.16 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NotificationIcon (instance 0x25C), pass: ShadowCaster, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.24 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NotificationIcon (instance 0x25C), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _SURFACE_TYPE_TRANSPARENT, time: 0.15 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH, time: 0.14 ms
+Uploaded shader variant to the GPU driver: BH/SG_CurvedShader (instance 0x122), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_GEOMETRY_DEFAULT COLOSSAL_QUALITY_TIER_HIGH _DISABLE_SSR_TRANSPARENT, time: 0.061 ms
+Uploaded shader variant to the GPU driver: BH/GlsShader (instance 0x1E4), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _DOUBLESIDED_ON _GPU_ANIMATION_OFF _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.046 ms
+Uploaded shader variant to the GPU driver: BH/GlsShader (instance 0x1E4), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _DEPTHOFFSET_ON _DOUBLESIDED_ON _ENABLE_FOG_ON_TRANSPARENT _REFRACTION_PLANE _SURFACE_TYPE_TRANSPARENT _TRANSPARENT_WRITES_MOTION_VEC, time: 0.19 ms
+Uploaded shader variant to the GPU driver: BH/SG_WinShader (instance 0x1C6), pass: ShadowCaster, stage: vertex, keywords _GPU_ANIMATION_OFF, time: 0.16 ms
+Uploaded shader variant to the GPU driver: BH/SG_WinShader (instance 0x1C6), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.13 ms
+Uploaded shader variant to the GPU driver: BH/NetCompositionMeshLitShader (instance 0x280), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.18 ms
+Uploaded shader variant to the GPU driver: BH/NetCompositionMeshLitShader (instance 0x280), pass: ShadowCaster, stage: pixel, keywords _DISABLE_SSR_TRANSPARENT, time: 0.15 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/ZoneBlock (instance 0x158), pass: ShadowCaster, stage: vertex, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.24 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/ZoneBlock (instance 0x158), pass: ShadowCaster, stage: pixel, keywords _ALPHATEST_ON _SURFACE_TYPE_TRANSPARENT, time: 0.24 ms
+Uploaded shader variant to the GPU driver: HDRP/Unlit (instance 0x2B8), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.15 ms
+Uploaded shader variant to the GPU driver: HDRP/Unlit (instance 0x2B8), pass: ShadowCaster, stage: pixel, keywords _EMISSIVE_COLOR_MAP, time: 0.16 ms
+Uploaded shader variant to the GPU driver: Hidden/BlitCopy (instance 0x34), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.23 ms
+Uploaded shader variant to the GPU driver: Hidden/BlitCopy (instance 0x34), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.13 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/WaterCaustics (instance 0x124), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.63 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/WaterCaustics (instance 0x124), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.26 ms
+[FileSystem] [ERROR]  Error occurred creating 989922b98de92731a13e624187519b0a [ErrorSurveySettings.coc] (ErrorSurveySettings) Colossal.IO.AssetDatabase.COCParser+COCParserUnexpectedEndException: Unexpected end of input at 1:26 from 1:1
+  at Colossal.IO.AssetDatabase.COCParser.ParseObject (System.Int32& startIndex, System.Int32& length) [0x000cd] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Colossal.IO.AssetDatabase.COCParser.Parse (System.String source, System.Collections.Generic.IReadOnlyList`1[System.String]& outReport) [0x00155] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Colossal.IO.AssetDatabase.DefaultAssetFactory.CreateSettingAssets (Colossal.IO.AssetDatabase.Identifier id, Colossal.IO.AssetDatabase.IAssetDatabase db) [0x00034] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Colossal.IO.AssetDatabase.DefaultAssetFactory.CreateAndRegisterAsset[T] (System.Type type, Colossal.IO.AssetDatabase.Identifier id, Colossal.IO.AssetDatabase.IAssetDatabase db) [0x00010] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Colossal.IO.AssetDatabase.AssetDatabase`1[T].PopulateFromDataSource (System.Boolean priorityData, System.Threading.CancellationToken ct, Colossal.TaskProgress progress) [0x001c1] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000007fd54fc3 (Mono JIT Code) Colossal.Logging.UnityLogger:ErrorFormat (System.Exception,string,object,object)
+0x000000007f9b9b20 (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase`1/<PopulateFromDataSource>d__109<Colossal.IO.AssetDatabase.User>:MoveNext ()
+0x000000007f9b8383 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:Start<Colossal.IO.AssetDatabase.AssetDatabase`1/<PopulateFromDataSource>d__109<Colossal.IO.AssetDatabase.User>> (Colossal.IO.AssetDatabase.AssetDatabase`1/<PopulateFromDataSource>d__109<Colossal.IO.AssetDatabase.User>&)
+0x000000007f9b8053 (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase`1<Colossal.IO.AssetDatabase.User>:PopulateFromDataSource (bool,System.Threading.CancellationToken,Colossal.TaskProgress)
+0x000000007f99dcfc (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>g__UpdateDatabase|0>d:MoveNext ()
+0x000000007f99d72b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:Start<Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>g__UpdateDatabase|0>d> (Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>g__UpdateDatabase|0>d&)
+0x000000007f99d313 (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0:<CacheAssets>g__UpdateDatabase|0 (Colossal.IO.AssetDatabase.IAssetDatabaseInternal)
+0x000000007f412dd4 (Mono JIT Code) System.Linq.Enumerable/SelectEnumerableIterator`2<TSource_REF, TResult_REF>:MoveNext ()
+0x000000007f90f98b (Mono JIT Code) System.Threading.Tasks.Task:WhenAll (System.Collections.Generic.IEnumerable`1<System.Threading.Tasks.Task>)
+0x000000007f99c403 (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>b__1>d:MoveNext ()
+0x000000007f99bad3 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:Start<Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>b__1>d> (Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0/<<CacheAssets>b__1>d&)
+0x000000007f99b0d3 (Mono JIT Code) Colossal.IO.AssetDatabase.AssetDatabase/<>c__DisplayClass115_0:<CacheAssets>b__1 ()
+0x000000007bebddd5 (Mono JIT Code) System.Threading.Tasks.Task`1<TResult_REF>:InnerInvoke ()
+0x0000000077111425 (Mono JIT Code) System.Threading.Tasks.Task:Execute ()
+0x00000000771111e3 (Mono JIT Code) System.Threading.Tasks.Task:ExecutionContextCallback (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000076e0ead3 (Mono JIT Code) System.Threading.Tasks.Task:ExecuteWithThreadLocal (System.Threading.Tasks.Task&)
+0x0000000076e0d4cb (Mono JIT Code) System.Threading.Tasks.Task:ExecuteEntry (bool)
+0x0000000076e0cfa3 (Mono JIT Code) System.Threading.Tasks.Task:System.Threading.IThreadPoolWorkItem.ExecuteWorkItem ()
+0x0000000076e05ba5 (Mono JIT Code) System.Threading.ThreadPoolWorkQueue:Dispatch ()
+0x0000000076e047d3 (Mono JIT Code) System.Threading._ThreadPoolWaitCallback:PerformWaitCallback ()
+0x0000000076e04bc5 (Mono JIT Code) (wrapper runtime-invoke) <Module>:runtime_invoke_bool (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff895ec6d (mono-2.0-bdwgc) 
+0x00006ffff8961ed3 (mono-2.0-bdwgc) 
+0x00006ffff894fc4b (mono-2.0-bdwgc) 
+0x00006ffff894fe5e (mono-2.0-bdwgc) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Uploaded shader variant to the GPU driver: Hidden/HDRP/PreIntegratedFGD_Ward (instance 0x240), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.31 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/PreIntegratedFGD_Ward (instance 0x240), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.12 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/PreIntegratedFGD_CookTorrance (instance 0x222), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.031 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/PreIntegratedFGD_CookTorrance (instance 0x222), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.055 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/preIntegratedFGD_CharlieFabricLambert (instance 0x19A), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.02 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/preIntegratedFGD_CharlieFabricLambert (instance 0x19A), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.063 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/preIntegratedFGD_GGXDisneyDiffuse (instance 0x1AA), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.14 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/preIntegratedFGD_GGXDisneyDiffuse (instance 0x1AA), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.21 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Material/Decal/DecalNormalBuffer (instance 0x152), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.16 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Material/Decal/DecalNormalBuffer (instance 0x152), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.056 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/DownsampleDepth (instance 0x250), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.085 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/DownsampleDepth (instance 0x250), pass: <Unnamed Pass 0>, stage: pixel, keywords CHECKERBOARD_DOWNSAMPLE, time: 0.11 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/CombineLighting (instance 0x170), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 17 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/CombineLighting (instance 0x170), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/ClearStencilBuffer (instance 0x154), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.14 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/ClearStencilBuffer (instance 0x154), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.096 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 1>, stage: vertex, keywords <no keywords>, time: 0.038 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 1>, stage: pixel, keywords <no keywords>, time: 0.02 ms
+Uploaded shader variant to the GPU driver: Hidden/ColorPyramidPS (instance 0x232), pass: <Unnamed Pass 1>, stage: vertex, keywords <no keywords>, time: 0.032 ms
+Uploaded shader variant to the GPU driver: Hidden/ColorPyramidPS (instance 0x232), pass: <Unnamed Pass 1>, stage: pixel, keywords <no keywords>, time: 0.1 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.48 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 0>, stage: pixel, keywords SMAA_PRESET_HIGH, time: 0.44 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 1>, stage: vertex, keywords <no keywords>, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 1>, stage: pixel, keywords SMAA_PRESET_HIGH, time: 0.28 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 2>, stage: vertex, keywords <no keywords>, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 2>, stage: pixel, keywords SMAA_PRESET_HIGH, time: 0.15 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/FinalPass (instance 0x266), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.43 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/FinalPass (instance 0x266), pass: <Unnamed Pass 0>, stage: pixel, keywords APPLY_AFTER_POST DITHER, time: 0.18 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITextureClip (instance 0x40), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITextureClip (instance 0x40), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.088 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITextureClipText (instance 0x42), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITextureClipText (instance 0x42), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.08 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITexture (instance 0x44), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.12 ms
+Uploaded shader variant to the GPU driver: Hidden/Internal-GUITexture (instance 0x44), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.075 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/CameraMotionVectors (instance 0x1D4), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.18 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/CameraMotionVectors (instance 0x1D4), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.12 ms
+Uploaded shader variant to the GPU driver: Coherent/ViewShader (instance 0x29E), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.092 ms
+Uploaded shader variant to the GPU driver: Coherent/ViewShader (instance 0x29E), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.12 ms
+[UI] [WARN]  Custom CSS expressions are not supported in shorthand declaration, please use the long versions of the CSS property: background - var(--toolbarToolButtonColor)
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: ShadowCaster, stage: pixel, keywords PROCEDURAL_INSTANCING_ON _REFRACTION_OFF, time: 0.3 ms
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F105BBF0.dll
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F1340460.dll
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F1A8AC80.dll
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F3346450.dll
+[Modding] [ERROR]  Error initializing mod SurveyOnLoadThrow, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null (SurveyOnLoadThrow, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null) System.InvalidOperationException: Survey: OnLoad threw on purpose
+  at SurveyOnLoadThrow.Mod.OnLoad (Game.UpdateSystem updateSystem) [0x00000] in D:/Mods/SurveyOnLoadThrow/Mod.cs:8 
+  at Game.Modding.ModManager+ModInfo.OnLoad (Game.UpdateSystem updateSystem) [0x00015] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager+ModInfo.Load (Game.UpdateSystem updateSystem) [0x001b4] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager.InitializeMods (Game.UpdateSystem updateSystem) [0x0006a] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000007fd54fc3 (Mono JIT Code) Colossal.Logging.UnityLogger:ErrorFormat (System.Exception,string,object,object)
+0x00000002f2b7c417 (Mono JIT Code) Game.Modding.ModManager:InitializeMods (Game.UpdateSystem)
+0x00000002f1b2093b (Mono JIT Code) Game.Modding.ModManager:Initialize (Game.UpdateSystem,bool)
+0x00000002f1b0eda3 (Mono JIT Code) Game.SceneFlow.GameManager:InitializeModManager ()
+0x000000007852c3f3 (Mono JIT Code) Game.SceneFlow.GameManager/<Initialize>d__50:MoveNext ()
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x000000007854faa3 (Mono JIT Code) System.Threading.Tasks.Task`1<bool>:TrySetResult (bool)
+0x000000007854f76b (Mono JIT Code) System.Threading.Tasks.TaskCompletionSource`1<bool>:TrySetResult (bool)
+0x000000007851588b (Mono JIT Code) Colossal.Core.MainThreadDispatcher:UpdateWaitFrameCount ()
+0x0000000078514d5b (Mono JIT Code) Colossal.Core.MainThreadDispatcher:UpdateUpdaters ()
+0x0000000078514aeb (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F33633A0.dll
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000002F344A010.dll
+Curl error 7: Failed to connect to localhost port 4000 after 5 ms: Could not connect to server
+Fallback handler could not load library S:/steamapps/common/Cities Skylines II/Cities2_Data/MonoBleedingEdge/data-00000000735DD420.dll
+[Modding] [ERROR]  Error initializing mod SurveyHarmonyMissing, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null (SurveyHarmonyMissing, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null) HarmonyLib.HarmonyException: Patching exception in method null ---> System.ArgumentException: Undefined target method for patch method static System.Void SurveyHarmonyMissing.MissingPatch::Postfix()
+  at HarmonyLib.PatchClassProcessor.PatchWithAttributes (System.Reflection.MethodBase& lastOriginal) [0x00047] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.PatchClassProcessor.Patch () [0x00068] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+   --- End of inner exception stack trace ---
+  at HarmonyLib.PatchClassProcessor.ReportException (System.Exception exception, System.Reflection.MethodBase original) [0x00127] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.PatchClassProcessor.Patch () [0x00093] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.Harmony.<PatchAll>b__10_0 (System.Type type) [0x00007] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.CollectionExtensions.Do[T] (System.Collections.Generic.IEnumerable`1[T] sequence, System.Action`1[T] action) [0x00014] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at HarmonyLib.Harmony.PatchAll (System.Reflection.Assembly assembly) [0x00006] in <0020ee40255b4dc7a0eb8b2a76225b38>:0 
+  at SurveyHarmonyMissing.Mod.OnLoad (Game.UpdateSystem updateSystem) [0x00000] in D:/Mods/SurveyHarmonyMissing/Mod.cs:8 
+  at Game.Modding.ModManager+ModInfo.OnLoad (Game.UpdateSystem updateSystem) [0x00015] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager+ModInfo.Load (Game.UpdateSystem updateSystem) [0x001b4] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Modding.ModManager.InitializeMods (Game.UpdateSystem updateSystem) [0x0006a] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000007fd54fc3 (Mono JIT Code) Colossal.Logging.UnityLogger:ErrorFormat (System.Exception,string,object,object)
+0x00000002f2b7c417 (Mono JIT Code) Game.Modding.ModManager:InitializeMods (Game.UpdateSystem)
+0x00000002f1b2093b (Mono JIT Code) Game.Modding.ModManager:Initialize (Game.UpdateSystem,bool)
+0x00000002f1b0eda3 (Mono JIT Code) Game.SceneFlow.GameManager:InitializeModManager ()
+0x000000007852c3f3 (Mono JIT Code) Game.SceneFlow.GameManager/<Initialize>d__50:MoveNext ()
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x000000007854faa3 (Mono JIT Code) System.Threading.Tasks.Task`1<bool>:TrySetResult (bool)
+0x000000007854f76b (Mono JIT Code) System.Threading.Tasks.TaskCompletionSource`1<bool>:TrySetResult (bool)
+0x000000007851588b (Mono JIT Code) Colossal.Core.MainThreadDispatcher:UpdateWaitFrameCount ()
+0x0000000078514d5b (Mono JIT Code) Colossal.Core.MainThreadDispatcher:UpdateUpdaters ()
+0x0000000078514aeb (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 0>, stage: pixel, keywords SMAA_PRESET_LOW, time: 0.14 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 1>, stage: pixel, keywords SMAA_PRESET_LOW, time: 0.19 ms
+Uploaded shader variant to the GPU driver: Hidden/PostProcessing/SubpixelMorphologicalAntialiasing (instance 0x244), pass: <Unnamed Pass 2>, stage: pixel, keywords SMAA_PRESET_LOW, time: 0.04 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/FinalPass (instance 0x266), pass: <Unnamed Pass 0>, stage: pixel, keywords APPLY_AFTER_POST DITHER RCAS, time: 0.28 ms
+[UI] [ERROR]  JS Error: coui://ui-mods/SurveyUI.mjs:2: SyntaxError: Unexpected identifier
+ While executing JS assetdb://gameui/index.js:1:800332
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10dacce (cohtml.windowsdesktop) 
+0x00006ffff10dd427 (cohtml.windowsdesktop) 
+0x00006ffff1062382 (cohtml.windowsdesktop) 
+0x00006ffff0ebf82a (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0f9a856 (cohtml.windowsdesktop) 
+0x00006ffff0f5f256 (cohtml.windowsdesktop) 
+0x00006ffff0f5ec98 (cohtml.windowsdesktop) 
+0x00006ffff10d443c (cohtml.windowsdesktop) 
+0x00006fffef7d20fb (v8) 
+0x00006fffef7d1360 (v8) 
+0x00006fffef7d17b0 (v8) 
+0x00006fffef7d1593 (v8) 
+0x00006fffef5a2f10 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef5ee14c (v8) 
+0x00006fffef553744 (v8) 
+0x00006fffef52e7af (v8) 
+0x00006fffef8d4585 (v8) 
+0x00006fffef8d47eb (v8) 
+0x00006fffef8d55ca (v8) 
+0x00006fffef90ade5 (v8) 
+0x00006fffef90aa6a (v8) 
+0x00006fffef8f3b44 (v8) 
+0x00006fffef70606b (v8) 
+0x00006fffef72c031 (v8) 
+0x00006ffff0ebb5ea (cohtml.windowsdesktop) 
+0x00006ffff1061d13 (cohtml.windowsdesktop) 
+0x00006ffff0ec1a72 (cohtml.windowsdesktop) 
+0x00006ffff0ebf8e3 (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[UI] [ERROR]  JS Error (Line):   this is a syntax error on purpose
+ While executing JS assetdb://gameui/index.js:1:800332
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10da884 (cohtml.windowsdesktop) 
+0x00006ffff10dd48a (cohtml.windowsdesktop) 
+0x00006ffff1062382 (cohtml.windowsdesktop) 
+0x00006ffff0ebf82a (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0f9a856 (cohtml.windowsdesktop) 
+0x00006ffff0f5f256 (cohtml.windowsdesktop) 
+0x00006ffff0f5ec98 (cohtml.windowsdesktop) 
+0x00006ffff10d443c (cohtml.windowsdesktop) 
+0x00006fffef7d20fb (v8) 
+0x00006fffef7d1360 (v8) 
+0x00006fffef7d17b0 (v8) 
+0x00006fffef7d1593 (v8) 
+0x00006fffef5a2f10 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef5ee14c (v8) 
+0x00006fffef553744 (v8) 
+0x00006fffef52e7af (v8) 
+0x00006fffef8d4585 (v8) 
+0x00006fffef8d47eb (v8) 
+0x00006fffef8d55ca (v8) 
+0x00006fffef90ade5 (v8) 
+0x00006fffef90aa6a (v8) 
+0x00006fffef8f3b44 (v8) 
+0x00006fffef70606b (v8) 
+0x00006fffef72c031 (v8) 
+0x00006ffff0ebb5ea (cohtml.windowsdesktop) 
+0x00006ffff1061d13 (cohtml.windowsdesktop) 
+0x00006ffff0ec1a72 (cohtml.windowsdesktop) 
+0x00006ffff0ebf8e3 (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[UI] [ERROR]  JS Error (Stack): SyntaxError: Unexpected identifier
+    at wR (assetdb://gameui/index.js:1:800332)
+    at assetdb://gameui/index.js:1:2306668
+ While executing JS assetdb://gameui/index.js:1:800332
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10da984 (cohtml.windowsdesktop) 
+0x00006ffff10dd514 (cohtml.windowsdesktop) 
+0x00006ffff1062382 (cohtml.windowsdesktop) 
+0x00006ffff0ebf82a (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0f9a856 (cohtml.windowsdesktop) 
+0x00006ffff0f5f256 (cohtml.windowsdesktop) 
+0x00006ffff0f5ec98 (cohtml.windowsdesktop) 
+0x00006ffff10d443c (cohtml.windowsdesktop) 
+0x00006fffef7d20fb (v8) 
+0x00006fffef7d1360 (v8) 
+0x00006fffef7d17b0 (v8) 
+0x00006fffef7d1593 (v8) 
+0x00006fffef5a2f10 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef530834 (v8) 
+0x00006fffef5ee14c (v8) 
+0x00006fffef553744 (v8) 
+0x00006fffef52e7af (v8) 
+0x00006fffef8d4585 (v8) 
+0x00006fffef8d47eb (v8) 
+0x00006fffef8d55ca (v8) 
+0x00006fffef90ade5 (v8) 
+0x00006fffef90aa6a (v8) 
+0x00006fffef8f3b44 (v8) 
+0x00006fffef70606b (v8) 
+0x00006fffef72c031 (v8) 
+0x00006ffff0ebb5ea (cohtml.windowsdesktop) 
+0x00006ffff1061d13 (cohtml.windowsdesktop) 
+0x00006ffff0ec1a72 (cohtml.windowsdesktop) 
+0x00006ffff0ebf8e3 (cohtml.windowsdesktop) 
+0x00006ffff0ec0445 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[UI] [WARN]  Unable to parse declaration: max-height - none
+[UI] [ERROR]  JS Error: coui://ui-mods/ErrorSurvey.mjs:3: Error: Survey: mjs register threw on purpose
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10dacce (cohtml.windowsdesktop) 
+0x00006ffff10dd427 (cohtml.windowsdesktop) 
+0x00006ffff10d9697 (cohtml.windowsdesktop) 
+0x00006ffff0cb84c0 (cohtml.windowsdesktop) 
+0x00006ffff0b36749 (cohtml.windowsdesktop) 
+0x00006ffff0b2f784 (cohtml.windowsdesktop) 
+0x00006ffff0ba764d (cohtml.windowsdesktop) 
+0x00006ffff0ba62e7 (cohtml.windowsdesktop) 
+0x00006ffff0ba6077 (cohtml.windowsdesktop) 
+0x00006ffff0ba7568 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[UI] [ERROR]  JS Error (Line):   throw new Error('Survey: mjs register threw on purpose');
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10da884 (cohtml.windowsdesktop) 
+0x00006ffff10dd48a (cohtml.windowsdesktop) 
+0x00006ffff10d9697 (cohtml.windowsdesktop) 
+0x00006ffff0cb84c0 (cohtml.windowsdesktop) 
+0x00006ffff0b36749 (cohtml.windowsdesktop) 
+0x00006ffff0b2f784 (cohtml.windowsdesktop) 
+0x00006ffff0ba764d (cohtml.windowsdesktop) 
+0x00006ffff0ba62e7 (cohtml.windowsdesktop) 
+0x00006ffff0ba6077 (cohtml.windowsdesktop) 
+0x00006ffff0ba7568 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[UI] [ERROR]  JS Error (Stack): Error: Survey: mjs register threw on purpose
+    at register (coui://ui-mods/ErrorSurvey.mjs:3:9)
+    at AR (assetdb://gameui/index.js:1:800500)
+    at o (assetdb://gameui/index.js:1:2306487)
+    at HTMLLinkElement.s.onload (assetdb://gameui/index.js:1:800279)
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d21af4 (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033d317893 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (object)
+0x00000001383be223 (Mono JIT Code) Colossal.UI.CoLogHandler:WriteLog (cohtml.Net.Severity,string,ulong)
+0x00000001383bcf0b (Mono JIT Code) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,string,ulong,intptr)
+0x00000001383a71cb (Mono JIT Code) (wrapper native-to-managed) cohtml.Net.LogHandler:SwigDirectorWriteLog (int,intptr,ulong,intptr)
+0x00006ffff1624a92 (cohtml_unity3dplugin) 
+0x00006ffff163041a (cohtml_unity3dplugin) 
+0x00006ffff10da984 (cohtml.windowsdesktop) 
+0x00006ffff10dd514 (cohtml.windowsdesktop) 
+0x00006ffff10d9697 (cohtml.windowsdesktop) 
+0x00006ffff0cb84c0 (cohtml.windowsdesktop) 
+0x00006ffff0b36749 (cohtml.windowsdesktop) 
+0x00006ffff0b2f784 (cohtml.windowsdesktop) 
+0x00006ffff0ba764d (cohtml.windowsdesktop) 
+0x00006ffff0ba62e7 (cohtml.windowsdesktop) 
+0x00006ffff0ba6077 (cohtml.windowsdesktop) 
+0x00006ffff0ba7568 (cohtml.windowsdesktop) 
+0x00006ffff0b87ec5 (cohtml.windowsdesktop) 
+0x00006ffff0b7abcf (cohtml.windowsdesktop) 
+0x00006ffff1633b37 (cohtml_unity3dplugin) 
+0x000000013cb3cc7e (Mono JIT Code) (wrapper managed-to-native) cohtml.Net.cohtmlNativePINVOKE:View_Advance (System.Runtime.InteropServices.HandleRef,uint,double)
+0x000000013cb3c69b (Mono JIT Code) cohtml.Net.View:Advance (uint,double)
+0x000000013cb3c133 (Mono JIT Code) Colossal.UI.UIView:Update ()
+0x000000013cb3b9eb (Mono JIT Code) Colossal.UI.UISystem:Update ()
+0x000000013cb3ab6b (Mono JIT Code) Colossal.UI.UIManager:Update ()
+0x000000013cb3a2f3 (Mono JIT Code) Game.SceneFlow.GameManager:UpdateUI ()
+0x0000000078514a6b (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Uploaded shader variant to the GPU driver: Hidden/VirtualTexturingBiasReadback (instance 0x1BA), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/VirtualTexturingBiasReadback (instance 0x1BA), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.45 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetArrow (instance 0x1FC), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.14 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/NetArrow (instance 0x1FC), pass: ShadowCaster, stage: pixel, keywords <no keywords>, time: 0.12 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: vertex, keywords COLOSSAL_HEIGHT_MODE_TERRAIN PROCEDURAL_INSTANCING_ON, time: 0.43 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/AreaShader (instance 0x208), pass: ShadowCaster, stage: pixel, keywords COLOSSAL_HEIGHT_MODE_TERRAIN PROCEDURAL_INSTANCING_ON, time: 0.042 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/TornadoMesh/Output Particle Unlit Mesh (instance 0x148), pass: ShadowCaster, stage: vertex, keywords <no keywords>, time: 0.94 ms
+Uploaded shader variant to the GPU driver: Hidden/VFX/Tornado/TornadoMesh/Output Particle Unlit Mesh (instance 0x148), pass: ShadowCaster, stage: pixel, keywords <no keywords>, time: 0.28 ms
+Uploaded shader variant to the GPU driver: Hidden/ScriptableRenderPipeline/ShadowClear (instance 0x2C0), pass: ClearShadow, stage: vertex, keywords <no keywords>, time: 0.1 ms
+Uploaded shader variant to the GPU driver: Hidden/ScriptableRenderPipeline/ShadowClear (instance 0x2C0), pass: ClearShadow, stage: pixel, keywords <no keywords>, time: 0.085 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 4>, stage: vertex, keywords <no keywords>, time: 0.13 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 4>, stage: pixel, keywords <no keywords>, time: 1.2 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 7>, stage: vertex, keywords DISABLE_TEXTURE2D_X_ARRAY, time: 0.31 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Blit (instance 0x188), pass: <Unnamed Pass 7>, stage: pixel, keywords DISABLE_TEXTURE2D_X_ARRAY, time: 0.1 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/PbrSky (instance 0x18A), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.069 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/PbrSky (instance 0x18A), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.26 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/CloudLayer (instance 0x24C), pass: <Unnamed Pass 0>, stage: vertex, keywords LAYER1_PROCEDURAL LAYER2_OFF PHYSICALLY_BASED_SUN, time: 0.53 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/CloudLayer (instance 0x24C), pass: <Unnamed Pass 0>, stage: pixel, keywords LAYER1_PROCEDURAL LAYER2_OFF PHYSICALLY_BASED_SUN, time: 0.2 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 3>, stage: vertex, keywords <no keywords>, time: 0.3 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 3>, stage: pixel, keywords <no keywords>, time: 0.059 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 4>, stage: vertex, keywords <no keywords>, time: 0.063 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 4>, stage: pixel, keywords <no keywords>, time: 0.34 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 6>, stage: vertex, keywords <no keywords>, time: 0.08 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/VolumetricCloudsCombine (instance 0x27E), pass: <Unnamed Pass 6>, stage: pixel, keywords <no keywords>, time: 0.072 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/GGXConvolve (instance 0x166), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.19 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/GGXConvolve (instance 0x166), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.18 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: DepthOnly, stage: vertex, keywords PROCEDURAL_INSTANCING_ON WRITE_DECAL_BUFFER _REFRACTION_OFF, time: 0.28 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: DepthOnly, stage: pixel, keywords PROCEDURAL_INSTANCING_ON WRITE_DECAL_BUFFER _DISABLE_SSR_TRANSPARENT _REFRACTION_OFF, time: 0.21 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: GBuffer, stage: vertex, keywords PROCEDURAL_INSTANCING_ON _REFRACTION_OFF, time: 0.3 ms
+Uploaded shader variant to the GPU driver: BH/Terrain/SG_TerrainCBT (instance 0x288), pass: GBuffer, stage: pixel, keywords DECALS_4RT PROBE_VOLUMES_OFF PROCEDURAL_INSTANCING_ON _DISABLE_SSR_TRANSPARENT _REFRACTION_OFF, time: 0.64 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/PbrSky (instance 0x18A), pass: <Unnamed Pass 2>, stage: vertex, keywords <no keywords>, time: 0.44 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/PbrSky (instance 0x18A), pass: <Unnamed Pass 2>, stage: pixel, keywords <no keywords>, time: 0.21 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/CloudLayer (instance 0x24C), pass: <Unnamed Pass 1>, stage: vertex, keywords CLOUD_RENDER_OPACITY_MRT LAYER1_PROCEDURAL LAYER2_OFF PHYSICALLY_BASED_SUN, time: 0.057 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/Sky/CloudLayer (instance 0x24C), pass: <Unnamed Pass 1>, stage: pixel, keywords CLOUD_RENDER_OPACITY_MRT LAYER1_PROCEDURAL LAYER2_OFF PHYSICALLY_BASED_SUN, time: 0.16 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/OpaqueAtmosphericScattering (instance 0x162), pass: NoMSAA, stage: vertex, keywords <no keywords>, time: 0.058 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/OpaqueAtmosphericScattering (instance 0x162), pass: NoMSAA, stage: pixel, keywords <no keywords>, time: 0.1 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SG_WaterV2 (instance 0x2A0), pass: GBufferTesselation, stage: vertex, keywords PROCEDURAL_INSTANCING_ON WATER_FLOW WATER_THREE_BANDS, time: 0.62 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SG_WaterV2 (instance 0x2A0), pass: GBufferTesselation, stage: pixel, keywords AREA_SHADOW_MEDIUM DECALS_4RT PROCEDURAL_INSTANCING_ON SHADOW_HIGH WATER_FLOW WATER_THREE_BANDS, time: 0.46 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SG_WaterV2 (instance 0x2A0), pass: GBufferTesselation, stage: hull, keywords PROCEDURAL_INSTANCING_ON WATER_FLOW WATER_THREE_BANDS, time: 0.16 ms
+Uploaded shader variant to the GPU driver: Shader Graphs/SG_WaterV2 (instance 0x2A0), pass: GBufferTesselation, stage: domain, keywords PROCEDURAL_INSTANCING_ON WATER_FLOW WATER_THREE_BANDS, time: 0.17 ms
+Uploaded shader variant to the GPU driver: Hidden/BH/CustomPass/Blit (instance 0x1F0), pass: Custom Pass 0, stage: vertex, keywords <no keywords>, time: 2 ms
+Uploaded shader variant to the GPU driver: Hidden/BH/CustomPass/Blit (instance 0x1F0), pass: Custom Pass 0, stage: pixel, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: BH/Selection/OutlinesCompose (instance 0x21A), pass: Custom Pass 0, stage: vertex, keywords <no keywords>, time: 0.083 ms
+Uploaded shader variant to the GPU driver: BH/Selection/OutlinesCompose (instance 0x21A), pass: Custom Pass 0, stage: pixel, keywords <no keywords>, time: 0.17 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalErrorShader (instance 0x6C), pass: <Unnamed Pass 0>, stage: vertex, keywords <no keywords>, time: 0.11 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalErrorShader (instance 0x6C), pass: <Unnamed Pass 0>, stage: pixel, keywords <no keywords>, time: 0.049 ms
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 5 unused Assets / (346.6 KB). Loaded Objects now: 200647.
+Memory consumption went from 1.25 GB to 1.25 GB.
+Total: 115.965700 ms (FindLiveObjects: 6.397500 ms CreateObjectMapping: 6.620000 ms MarkObjects: 102.140300 ms  DeleteObjects: 0.805400 ms)
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->SerializerSystem: System.IO.IOException: Failed to read from C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Saves/0/SurveyHeader.cok!
+  at Colossal.IO.AssetDatabase.StreamBinaryReader.ReadBytes (System.Void* data, System.Int32 bytes) [0x0007d] in <18a3ce90e3764629aeda4dd80b6b27ec>:0 
+  at Game.Serialization.ReadSystem.ReadData (Colossal.IO.AssetDatabase.StreamBinaryReader reader, Unity.Collections.NativeArray`1[T] data) [0x00010] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.ReadSystem.GetBuffer (Colossal.Serialization.Entities.BufferFormat format) [0x0015b] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Colossal.Serialization.Entities.EntityDeserializer`1[TReadBuffer].DeserializeMetadata[TReader,TFormatTags] (Colossal.Serialization.Entities.Context& context) [0x00000] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Colossal.Serialization.Entities.EntityDeserializer`1[TReadBuffer].Deserialize[TReader,TFormatTags] (Colossal.Serialization.Entities.Context& context, Unity.Entities.ComponentType[] extraComponents) [0x00012] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.SerializerSystem.OnUpdate () [0x00116] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->RequiredComponentSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.RequiredComponentSystem.OnUpdate () [0x02207] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->ShortLaneRemoveSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.ShortLaneRemoveSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->HomelessAndWorkerFixSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.HomelessAndWorkerFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->CompanyAndCargoFixSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.CompanyAndCargoFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->TradeCostFixSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.TradeCostFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->CargoPortCleanupSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.CargoPortCleanupSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->BicyclePathfindFixSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.BicyclePathfindFixSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->HouseholdPetLimitSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.HouseholdPetLimitSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->UpdateCitizenFlagsFromHouseholdsSystem: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Serialization.DataMigration.UpdateCitizenFlagsFromHouseholdsSystem.OnUpdate () [0x00014] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during Deserialize->PostDeserialize`1: System.NullReferenceException: Object reference not set to an instance of an object
+  at Unity.Collections.LowLevel.Unsafe.UnsafeList`1[T].get_Item (System.Int32 index) [0x0000c] in <f4ddbc30cb47406191074a184ca0481e>:0 
+  at Colossal.Serialization.Entities.ContextFormat.Has[TFormatTags] (TFormatTags tag) [0x00009] in <b5ff7e4e51b04c1fa1772afdfc22906b>:0 
+  at Game.Simulation.WaterSystem.PostDeserialize (Colossal.Serialization.Entities.Context context) [0x0003c] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Serialization.PostDeserialize`1[T].OnUpdate () [0x00016] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x00000003acbdd953 (Mono JIT Code) Game.Serialization.LoadGameSystem:OnUpdate ()
+0x000000033ed4e73c (Mono JIT Code) Unity.Entities.SystemBase:Update ()
+0x000000033ed42001 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Uploaded shader variant to the GPU driver: Hidden/Satellites (instance 0x206), pass: Clear, stage: vertex, keywords <no keywords>, time: 0.22 ms
+Uploaded shader variant to the GPU driver: Hidden/Satellites (instance 0x206), pass: Clear, stage: pixel, keywords <no keywords>, time: 0.051 ms
+Uploaded shader variant to the GPU driver: Hidden/Satellites (instance 0x206), pass: LitSatellite, stage: vertex, keywords <no keywords>, time: 0.039 ms
+Uploaded shader variant to the GPU driver: Hidden/Satellites (instance 0x206), pass: LitSatellite, stage: pixel, keywords <no keywords>, time: 0.083 ms
+[SceneFlow] [CRITICAL]  System update error during MainLoop->RaycastSystem: UnityEngine.Assertions.AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[SceneFlow] [CRITICAL]  System update error during MainLoop->RaycastSystem: UnityEngine.Assertions.AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Internal: JobTempAlloc has allocations that are more than the maximum lifespan of 4 frames old - this is not allowed and likely a leak
+To Debug, run app with -diag-job-temp-memory-leak-validation cmd line argument. This will output the callstacks of the leaked allocations.
+[SceneFlow] [CRITICAL]  System update error during MainLoop->RaycastSystem: UnityEngine.Assertions.AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Backtrace report limit hit(50/min) – Ignoring errors for 1 minute
+Internal: JobTempAlloc has allocations that are more than the maximum lifespan of 4 frames old - this is not allowed and likely a leak
+To Debug, run app with -diag-job-temp-memory-leak-validation cmd line argument. This will output the callstacks of the leaked allocations.
+[SceneFlow] [CRITICAL]  System update error during MainLoop->RaycastSystem: UnityEngine.Assertions.AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 6>, stage: vertex, keywords <no keywords>, time: 0.67 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 6>, stage: pixel, keywords <no keywords>, time: 0.031 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 1>, stage: vertex, keywords <no keywords>, time: 0.039 ms
+Uploaded shader variant to the GPU driver: Hidden/InternalClear (instance 0x6E), pass: <Unnamed Pass 1>, stage: pixel, keywords <no keywords>, time: 0.025 ms
+Uploaded shader variant to the GPU driver: Hidden/HDRP/DownsampleDepth (instance 0x250), pass: <Unnamed Pass 0>, stage: pixel, keywords GATHER_DOWNSAMPLE MIN_DOWNSAMPLE, time: 0.31 ms
+Internal: JobTempAlloc has allocations that are more than the maximum lifespan of 4 frames old - this is not allowed and likely a leak
+To Debug, run app with -diag-job-temp-memory-leak-validation cmd line argument. This will output the callstacks of the leaked allocations.
+[SceneFlow] [CRITICAL]  System update error during MainLoop->RaycastSystem: UnityEngine.Assertions.AssertionException: Assertion failure. Values are not equal.
+Expected: int2(0, 0) == int2(2, 2)
+  at UnityEngine.Assertions.Assert.Fail (System.String message, System.String userMessage) [0x00043] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message, System.Collections.Generic.IEqualityComparer`1[T] comparer) [0x0005f] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual, System.String message) [0x00009] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at UnityEngine.Assertions.Assert.AreEqual[T] (T expected, T actual) [0x00001] in <3f4ee31e4ddf4e8a936eabcff96e3617>:0 
+  at Game.Common.RaycastSystem.PerformRaycast (Colossal.Collections.NativeAccumulator`1[T] accumulator) [0x001f2] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Game.Common.RaycastSystem.OnUpdate () [0x0005d] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+  at Unity.Entities.SystemBase.Update () [0x0004e] in <3d6b23aeb28144a6a5f4cbd5fd3d75e6>:0 
+  at Game.UpdateSystem.Update (Game.SystemUpdatePhase phase) [0x00051] in <e15551e93dea48558dde1da3cea7d7ef>:0 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000041dcf2613 (Mono JIT Code) Colossal.Logging.UnityLogger:CriticalFormat (System.Exception,string,object,object)
+0x000000033ed422e5 (Mono JIT Code) Game.UpdateSystem:Update (Game.SystemUpdatePhase)
+0x000000013cb39f1b (Mono JIT Code) Game.SceneFlow.GameManager:UpdateWorld ()
+0x0000000078514a33 (Mono JIT Code) Game.SceneFlow.GameManager:Update ()
+0x000000007145b218 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2ee9fc (unityplayer) 
+0x00006ffffb2eead9 (unityplayer) 
+0x00006ffffaabfb90 (unityplayer) 
+0x00006ffffaac800d (unityplayer) 
+0x00006ffffae25dae (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Curl error 7: Failed to connect to localhost port 4000 after 5 ms: Could not connect to server
+Unloading 417 unused Assets / (168.3 KB). Loaded Objects now: 200284.
+Memory consumption went from 7.85 GB to 7.85 GB.
+Total: 119.014000 ms (FindLiveObjects: 15.489500 ms CreateObjectMapping: 6.930200 ms MarkObjects: 94.960100 ms  DeleteObjects: 1.632400 ms)
+
+[HallOfFame] [ERROR]  HTTP: Error sending request #2. HallOfFame.Http.HttpNetworkException: Cannot connect to destination host (log request ID #2).
+  at HallOfFame.Http.HttpQueries.ParseResponse[T] (UnityEngine.Networking.UnityWebRequest request, System.Boolean isDecodedOffMainThread) [0x000b4] in C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:282 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x000000033c228173 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (System.Exception,object)
+0x000000033c22801b (Mono JIT Code) HallOfFame.Logging.ModLog/<>c__DisplayClass10_0:<ErrorSilent>b__0 () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:32)
+0x000000033c227ee8 (Mono JIT Code) HallOfFame.Logging.ModLog:Silently (System.Action) (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:56)
+0x000000033c227c73 (Mono JIT Code) HallOfFame.Logging.ModLog:ErrorSilent (System.Exception,string) (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:32)
+0x000000033c225d30 (Mono JIT Code) HallOfFame.Http.HttpQueries/<ParseResponse>d__14`1<T_REF>:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:320)
+0x00000002f4f8fd2e (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<TResult_REF>:Start<TStateMachine_REF> (TStateMachine_REF&)
+0x000000033c22443b (Mono JIT Code) HallOfFame.Http.HttpQueries:ParseResponse<T_REF> (UnityEngine.Networking.UnityWebRequest,bool)
+0x00000007002904cb (Mono JIT Code) HallOfFame.Http.HttpQueries/<SendForNoContent>d__10:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:156)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x0000000078519d13 (Mono JIT Code) System.Threading.Tasks.Task`1<System.Threading.Tasks.VoidTaskResult>:TrySetResult (System.Threading.Tasks.VoidTaskResult)
+0x000000007851996b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetResult (System.Threading.Tasks.VoidTaskResult)
+0x0000000078519623 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetResult (System.Threading.Tasks.Task`1<System.Threading.Tasks.VoidTaskResult>)
+0x000000007851949b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:SetResult ()
+0x00000002f4f9685b (Mono JIT Code) HallOfFame.Http.HttpQueries/<SendRequest>d__8:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:120)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000033c224099 (Mono JIT Code) System.Runtime.CompilerServices.YieldAwaitable/YieldAwaiter:RunAction (object)
+0x00000000785188db (Mono JIT Code) UnityEngine.UnitySynchronizationContext/WorkRequest:Invoke ()
+0x000000007851707b (Mono JIT Code) UnityEngine.UnitySynchronizationContext:Exec ()
+0x0000000078516b73 (Mono JIT Code) UnityEngine.UnitySynchronizationContext:ExecuteTasks ()
+0x0000000064a82b15 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2f80b5 (unityplayer) 
+0x00006ffffb3b471b (unityplayer) 
+0x00006ffffae25ea7 (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+
+[HallOfFame] [ERROR]  Cannot connect to destination host (log request ID #2). HallOfFame.Http.HttpNetworkException: Cannot connect to destination host (log request ID #2).
+  at HallOfFame.Http.HttpQueries.ParseResponse[T] (UnityEngine.Networking.UnityWebRequest request, System.Boolean isDecodedOffMainThread) [0x00394] in C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:334 
+  at HallOfFame.Http.HttpQueries.SendForNoContent (UnityEngine.Networking.UnityWebRequest request) [0x000ae] in C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:156 
+  at HallOfFame.Http.HttpQueries.PostUsageEvents (HallOfFame.Services.UsageBatch batch) [0x00087] in C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.PostUsageEvents.cs:23 
+  at HallOfFame.Services.UsageTracker.Flush () [0x0009f] in C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Services/UsageTracker.cs:93 
+0x00006ffffb573a7d (unityplayer) 
+0x00006ffffb579e19 (unityplayer) 
+0x00006ffffb55bdbe (unityplayer) 
+0x00006ffffbfbc3f9 (unityplayer) 
+0x00006ffffa3f368a (unityplayer) 
+0x0000000076d0d0fa (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000000076d0cf8b (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d2195c (Mono JIT Code) Colossal.Logging.CustomLogHandler:PostProcessFormat (UnityEngine.LogType,Colossal.Logging.Level,UnityEngine.Object,string,Colossal.Logging.ILog,System.Exception)
+0x0000000073d20a13 (Mono JIT Code) Colossal.Logging.CustomLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000000073d1fee8 (Mono JIT Code) UnityEngine.Logger:LogFormat (UnityEngine.LogType,string,object[])
+0x0000000073d1edba (Mono JIT Code) Colossal.Logging.UnityLogger:Log (Colossal.Logging.Level,string,System.Exception)
+0x00000007004b5863 (Mono JIT Code) Colossal.Logging.UnityLogger:Error (System.Exception)
+0x00000007004b5701 (Mono JIT Code) HallOfFame.Logging.ModLog/<>c__DisplayClass9_0:<ErrorSilent>b__0 () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:29)
+0x000000033c227ee8 (Mono JIT Code) HallOfFame.Logging.ModLog:Silently (System.Action) (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:56)
+0x00000007004b5553 (Mono JIT Code) HallOfFame.Logging.ModLog:ErrorSilent (System.Exception) (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Logging/ModLog.cs:29)
+0x000000038b7c43a8 (Mono JIT Code) HallOfFame.Services.UsageTracker/<Flush>d__10:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Services/UsageTracker.cs:96)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x00000000784edae3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageTwo ()
+0x00000000784ed00b (Mono JIT Code) System.Threading.Tasks.Task:Finish (bool)
+0x000000033c228753 (Mono JIT Code) System.Threading.Tasks.Task:TrySetException (object)
+0x00000007004b51e3 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetException (System.Exception)
+0x00000007004b4f4b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:SetException (System.Exception)
+0x000000041f03d9fb (Mono JIT Code) HallOfFame.Http.HttpQueries/<PostUsageEvents>d__27:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.PostUsageEvents.cs:23)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x00000000784edae3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageTwo ()
+0x00000000784ed00b (Mono JIT Code) System.Threading.Tasks.Task:Finish (bool)
+0x000000033c228753 (Mono JIT Code) System.Threading.Tasks.Task:TrySetException (object)
+0x00000007004b51e3 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetException (System.Exception)
+0x00000007004b4f4b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:SetException (System.Exception)
+0x00000007002907eb (Mono JIT Code) HallOfFame.Http.HttpQueries/<SendForNoContent>d__10:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:156)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000007851a2b9 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:InvokeAction (object)
+0x00000000784f0634 (Mono JIT Code) System.Threading.Tasks.AwaitTaskContinuation:RunCallback (System.Threading.ContextCallback,object,System.Threading.Tasks.Task&)
+0x00000000784f014b (Mono JIT Code) System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run (System.Threading.Tasks.Task,bool)
+0x00000000784ef2d9 (Mono JIT Code) System.Threading.Tasks.Task:FinishContinuations ()
+0x00000000784eead3 (Mono JIT Code) System.Threading.Tasks.Task:FinishStageThree ()
+0x0000000078519d13 (Mono JIT Code) System.Threading.Tasks.Task`1<System.Threading.Tasks.VoidTaskResult>:TrySetResult (System.Threading.Tasks.VoidTaskResult)
+0x000000007851996b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetResult (System.Threading.Tasks.VoidTaskResult)
+0x0000000078519623 (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<System.Threading.Tasks.VoidTaskResult>:SetResult (System.Threading.Tasks.Task`1<System.Threading.Tasks.VoidTaskResult>)
+0x000000007851949b (Mono JIT Code) System.Runtime.CompilerServices.AsyncTaskMethodBuilder:SetResult ()
+0x00000002f4f9685b (Mono JIT Code) HallOfFame.Http.HttpQueries/<SendRequest>d__8:MoveNext () (at C:/Users/modder/Documents/Dev/HallOfFame/HallOfFame/Http/HttpQueries.cs:120)
+0x0000000078519076 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+0x0000000073e34256 (Mono JIT Code) System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000073e3383b (Mono JIT Code) System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+0x0000000078518d33 (Mono JIT Code) System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+0x000000033c224099 (Mono JIT Code) System.Runtime.CompilerServices.YieldAwaitable/YieldAwaiter:RunAction (object)
+0x00000000785188db (Mono JIT Code) UnityEngine.UnitySynchronizationContext/WorkRequest:Invoke ()
+0x000000007851707b (Mono JIT Code) UnityEngine.UnitySynchronizationContext:Exec ()
+0x0000000078516b73 (Mono JIT Code) UnityEngine.UnitySynchronizationContext:ExecuteTasks ()
+0x0000000064a82b15 (Mono JIT Code) (wrapper runtime-invoke) object:runtime_invoke_void (object,intptr,intptr,intptr)
+0x00006ffff89e504e (mono-2.0-bdwgc) 
+0x00006ffff891d4a4 (mono-2.0-bdwgc) 
+0x00006ffff891d61c (mono-2.0-bdwgc) 
+0x00006ffffb317dfd (unityplayer) 
+0x00006ffffb2fb9ac (unityplayer) 
+0x00006ffffb2f80b5 (unityplayer) 
+0x00006ffffb3b471b (unityplayer) 
+0x00006ffffae25ea7 (unityplayer) 
+0x00006ffffae0bf09 (unityplayer) 
+0x00006ffffae0bfda (unityplayer) 
+0x00006ffffae103ea (unityplayer) 
+0x00006ffffb3976bf (unityplayer) 
+0x00006ffffb3962ab (unityplayer) 
+0x00006ffffb39ceed (unityplayer) 
+0x00006ffffb39ef7b (unityplayer) 
+0x00000001400011f6 (cities2) 
+0x00006fffffec1699 (kernel32) 
+0x00006ffffff40e0f (ntdll) 
+

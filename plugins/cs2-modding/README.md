@@ -5,8 +5,8 @@
 **Teach your agent how Cities: Skylines II is built and how a mod changes it —
 verified against the game itself, not against the wiki.**
 
-Four skills and their references, plus the `cs2-dev` MCP server, which restarts the game and waits
-on it.
+Four skills and their references, plus the `cs2-dev` MCP server, which restarts the game, waits on
+it, and reports its errors.
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
@@ -51,6 +51,14 @@ process handling in each session.
 | `restart` | Stops the game if it's running, keeps the ended run's logs and crash reports, launches it through Steam, and returns at the main menu, or once a save or a new city has loaded. |
 | `stop` | Asks the game to close, waits for it to exit, and forces it if it hangs. |
 | `wait_load` | Returns once a load started from the game's UI has finished. |
+| `status` | Says whether the game is stopped, booting, at the main menu, loading or in a city, with its version and build. |
+| `logs` | Returns each kind of error or message once, with its count and the file and line it first appeared on. It can also read the run before the last restart. |
+| `ignore_error` | Hides errors matching a regular expression from the error notices until the server restarts. |
+
+Each tool result ends with a one-line notice when the game logged new errors, went away, or wrote a
+crash report. On Claude Code, a monitor brings your agent the same notice while it's using other
+tools, and spaces its notices out during an error storm. It starts once your agent has used the
+cs2-modding skill in a session.
 
 > [!WARNING]
 > **Your agent can stop or kill a running game without asking you.** `restart` and `stop` ask the

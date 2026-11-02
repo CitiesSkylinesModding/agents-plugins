@@ -22,7 +22,7 @@ const COMMAND_TIMEOUT_MILLISECONDS = 30_000;
  */
 const DRAIN_MILLISECONDS = 200;
 
-const MILLISECONDS_PER_SECOND = 1000;
+export const MILLISECONDS_PER_SECOND = 1000;
 
 /**
  * The exit codes of a `pgrep` that answered, 1 saying it matched nothing.

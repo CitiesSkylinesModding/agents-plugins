@@ -1,0 +1,8 @@
+[
+  {
+    "name": "cs2-dev-errors",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}/mcp/dist/monitor.mjs\"",
+    "description": "Reports new Cities: Skylines II errors, a game gone with no cs2-dev stop, and new crash reports.",
+    "when": "on-skill-invoke:cs2-modding:cs2-modding"
+  }
+]

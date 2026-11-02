@@ -2,8 +2,15 @@
 
 import { access, copyFile, cp, mkdir, mkdtemp, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { readLog, sceneFlowPath } from './cycle';
+import { toolFolderPath } from './cursor';
 import { isMissing } from './game-host';
+import { crashReportsPath } from './hint';
+import { readRunStart } from './scanner';
+
+/**
+ * The folder under the tool's own holding the previous run's copy.
+ */
+export const PREVIOUS_RUN_FOLDER = 'previous-run';
 
 /**
  * Copies the ended run's `Logs/`, `Player.log`, and crash reports into the tool's own folder,
@@ -14,9 +21,9 @@ import { isMissing } from './game-host';
  * the ended run's own files stay for a retry.
  */
 export async function keepPreviousRun(userDataPath: string, signal: AbortSignal): Promise<void> {
-  const folderPath = path.join(userDataPath, '.cs2-dev');
-  const copyPath = path.join(folderPath, 'previous-run');
-  const nextPrefix = 'previous-run.next-';
+  const folderPath = toolFolderPath(userDataPath);
+  const copyPath = path.join(folderPath, PREVIOUS_RUN_FOLDER);
+  const nextPrefix = `${PREVIOUS_RUN_FOLDER}.next-`;
 
   await mkdir(folderPath, { recursive: true });
 
@@ -76,7 +83,7 @@ async function copyCrashReports(userDataPath: string, nextPath: string): Promise
     return;
   }
 
-  const reportsPath = path.join(userDataPath, '.cache', 'backtrace', 'crashpad', 'reports');
+  const reportsPath = crashReportsPath(userDataPath);
   const reports = await readdir(reportsPath).catch((): string[] => []);
   const copiedPath = path.join(nextPath, 'crashpad', 'reports');
 
@@ -98,10 +105,4 @@ async function copyCrashReports(userDataPath: string, nextPath: string): Promise
       }
     }
   }
-}
-
-async function readRunStart(userDataPath: string): Promise<Date | undefined> {
-  const entries = await readLog(sceneFlowPath(userDataPath), new Date(0));
-
-  return entries[0]?.time;
 }
