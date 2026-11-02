@@ -98,6 +98,35 @@ export async function settleIgnored(context: HintContext): Promise<void> {
 }
 
 /**
+ * Moves the cursor past the errors a result listed itself and counts their hits,
+ * leaving the rest of what a line tells to the next hint.
+ * Takes the listing's own scan, so that nothing newer goes past unlisted.
+ * That scan covers the run since the launch, so hits a monitor settled during it count twice.
+ */
+export async function moveCursorPastListing(
+  context: HintContext,
+  scan: LogScan,
+  newlyDropped: readonly IgnorePattern[]
+): Promise<void> {
+  await hints.run(context.signal, async () => {
+    const runStart = await readRunStart(context.userDataPath);
+
+    if (!runStart) {
+      return;
+    }
+
+    await markDropped(context, newlyDropped);
+    await settleIgnores(context, scan, []);
+
+    await updateCursor(
+      context,
+      current => ({ ...current, runStart: runStart.toISOString(), offsets: scan.offsets }),
+      scan.shrunk
+    );
+  });
+}
+
+/**
  * Scans the current run's errors from the offsets `chooseOffsets` picks given what was announced,
  * undefined before a run logged.
  * Marks the patterns that ran out of time, which a scan telling no line would otherwise lose.
@@ -324,6 +353,6 @@ async function readNewReport(
   return newest > after ? new Date(newest) : undefined;
 }
 
-function sum<T>(items: readonly T[], value: (item: T) => number): number {
+export function sum<T>(items: readonly T[], value: (item: T) => number): number {
   return items.reduce((total, item) => total + value(item), 0);
 }

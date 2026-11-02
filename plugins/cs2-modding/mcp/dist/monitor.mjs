@@ -61,6 +61,13 @@ function resolveUserDataPath(configured, platform, home) {
   const profile = platform == "win32" ? home : path.join(home, `.local/share/Steam/steamapps/compatdata/${STEAM_APP_ID}/pfx/drive_c/users/steamuser`);
   return path.join(profile, "AppData/LocalLow/Colossal Order/Cities Skylines II");
 }
+function loadLocalModsPath(userDataPath) {
+  const configured = process.env.CSII_LOCALMODSPATH;
+  if (configured) {
+    return configured;
+  }
+  return path.join(userDataPath, "Mods");
+}
 function userManagerEnvironment() {
   const { env } = process;
   return env.XDG_RUNTIME_DIR || env.DBUS_SESSION_BUS_ADDRESS ? env : { ...env, XDG_RUNTIME_DIR: `/run/user/${os.userInfo().uid}` };
@@ -865,6 +872,17 @@ function deliverHint(context) {
 }
 async function settleIgnored(context) {
   await hints.run(context.signal, () => announceNews(context, true));
+}
+async function moveCursorPastListing(context, scan, newlyDropped) {
+  await hints.run(context.signal, async () => {
+    const runStart = await readRunStart(context.userDataPath);
+    if (!runStart) {
+      return;
+    }
+    await markDropped(context, newlyDropped);
+    await settleIgnores(context, scan, []);
+    await updateCursor(context, (current) => ({ ...current, runStart: runStart.toISOString(), offsets: scan.offsets }), scan.shrunk);
+  });
 }
 async function readNews(context, chooseOffsets) {
   const { host, userDataPath, signal } = context;

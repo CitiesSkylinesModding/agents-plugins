@@ -1,0 +1,13 @@
+[2026-10-23 14:02:11,120] [INFO]  25 test scenario available: Test JSON, Test all maps, Greenfield: Sample
+[2026-10-23 14:03:20,500] [INFO]  ---| START TEST SCENARIO: Greenfield: Sample
+[2026-10-23 14:03:41,512] [INFO]  ---| START TEST: CountsEachKindOfEntity
+[2026-10-23 14:03:41,580] [INFO]    [FAILED] Buildings: counted 11, the query holds 12
+[2026-10-23 14:03:41,640] [INFO]    [PASSED] Citizens: counted 0, the query holds 0
+[2026-10-23 14:03:41,700] [INFO]    [PASSED] Vehicles: counted 0, the query holds 0
+[2026-10-23 14:03:41,705] [ERROR]  Colossal.TestFramework.TestScenario+TestScenarioException: 1 checks failed, see the lines above.
+[2026-10-23 14:03:41,706] [INFO]  Test result includes exception: Colossal.TestFramework.TestScenario+TestScenarioException: 1 checks failed, see the lines above.
+[2026-10-23 14:03:41,710] [INFO]  ---| FINISH TEST (Failure, exceptions: 0, errors: 1): CountsEachKindOfEntity 
+[2026-10-23 14:03:41,711] [INFO]  ---| START TEST: ReadsTheSimulationDate
+[2026-10-23 14:03:41,712] [INFO]    [PASSED] year 2042, the city started in 2042
+[2026-10-23 14:03:41,730] [INFO]  ---| FINISH TEST (Success, exceptions: 0, errors: 0): ReadsTheSimulationDate 
+[2026-10-23 14:03:44,950] [INFO]  ---| FINISH TEST SCENARIO (Failure, exceptions: 0, errors: 1): Greenfield: Sample 

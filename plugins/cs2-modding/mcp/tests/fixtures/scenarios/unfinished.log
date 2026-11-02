@@ -1,0 +1,3 @@
+[2026-10-23 14:02:11,120] [INFO]  25 test scenario available: Test JSON, Test all maps, Greenfield: Sample
+[2026-10-23 14:03:20,500] [INFO]  ---| START TEST SCENARIO: Greenfield: Sample
+[2026-10-23 14:03:41,512] [INFO]  ---| START TEST: CountsEachKindOfEntity

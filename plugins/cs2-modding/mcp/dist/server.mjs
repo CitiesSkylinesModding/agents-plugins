@@ -30336,6 +30336,13 @@ function resolveUserDataPath(configured, platform, home) {
   const profile = platform == "win32" ? home : path.join(home, `.local/share/Steam/steamapps/compatdata/${STEAM_APP_ID}/pfx/drive_c/users/steamuser`);
   return path.join(profile, "AppData/LocalLow/Colossal Order/Cities Skylines II");
 }
+function loadLocalModsPath(userDataPath) {
+  const configured = process3.env.CSII_LOCALMODSPATH;
+  if (configured) {
+    return configured;
+  }
+  return path.join(userDataPath, "Mods");
+}
 function userManagerEnvironment() {
   const { env } = process3;
   return env.XDG_RUNTIME_DIR || env.DBUS_SESSION_BUS_ADDRESS ? env : { ...env, XDG_RUNTIME_DIR: `/run/user/${os.userInfo().uid}` };
@@ -31135,11 +31142,14 @@ var POLL_MILLISECONDS = 1000;
 var BOOT_SECONDS = 600;
 var LOAD_SECONDS = 300;
 var LOADING_SCREEN_SECONDS = 20;
+var SCENARIO_RUN_SECONDS = 1800;
 var CEILING_MARGIN_SECONDS = 120;
 var FORCE_SECONDS = TERMINATE_SECONDS + KILL_SECONDS;
 var STOP_CEILING_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + CEILING_MARGIN_SECONDS;
 var WAIT_LOAD_CEILING_SECONDS = LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
-var RESTART_CEILING_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + LAUNCH_ATTEMPTS * (FORCE_SECONDS + LAUNCH_SECONDS) + FORCE_SECONDS + BOOT_SECONDS + LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
+var STOP_AND_LAUNCH_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + LAUNCH_ATTEMPTS * (FORCE_SECONDS + LAUNCH_SECONDS) + FORCE_SECONDS;
+var RESTART_CEILING_SECONDS = STOP_AND_LAUNCH_SECONDS + BOOT_SECONDS + LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
+var TEST_CEILING_SECONDS = STOP_AND_LAUNCH_SECONDS + SCENARIO_RUN_SECONDS + STOP_BOUND_SECONDS + FORCE_SECONDS + CEILING_MARGIN_SECONDS;
 var READ_CEILING_SECONDS = 120;
 var MAIN_MENU_REACHED = "MainMenu reached";
 var LOG_END_BYTES = 1048576;
@@ -31246,7 +31256,7 @@ async function waitForLoad(context, {
 }
 async function withGameLeftRunning(host, wait) {
   try {
-    await wait();
+    return await wait();
   } catch (error51) {
     const message = errorMessage(error51);
     const processes = await describeProcesses(host);
@@ -31390,7 +31400,7 @@ function describeLogs(scan, options) {
     `${count} entries, ${kinds.length} kinds.`,
     ...leftOut > 0 ? [`${leftOut} kinds left out by the cap: narrow with file, level, mod or errorsOnly.`] : [],
     ...ignoredCount > 0 ? [`${ignoredCount} ignored entries left out: ignored: true brings them back.`] : [],
-    ...count == 0 && ignoredCount == 0 && options.shouldPointBack ? [`previous: true reads the run before the last restart.`] : [],
+    ...count == 0 && ignoredCount == 0 && options.shouldPointBack ? [`previous: true reads the run before the last restart or test.`] : [],
     `Paths are relative to ${options.basePath}.`
   ].join(" ");
   return [...blocks, footer].join(`
@@ -31494,97 +31504,16 @@ async function readDebuggerPort(userDataPath) {
   return /^Starting managed debugger on port (?<port>\d+)$/mu.exec(head)?.groups?.port;
 }
 
-// src/tools.ts
-import { rm as rm4 } from "node:fs/promises";
-import path11 from "node:path";
-
-// src/asset-guid.ts
-import { access as access2, open, readdir as readdir2 } from "node:fs/promises";
-import path8 from "node:path";
-async function readAssetGuid(userDataPath, folder, name, type) {
-  const archivePath = await findArchive(path8.join(userDataPath, folder), name);
-  const archive = await open(archivePath);
-  try {
-    const entry = await readStoredZipEntry(archive, archivePath, `${name}.${type}.cid`);
-    const guid3 = new TextDecoder().decode(entry).trim();
-    if (!isAssetGuid(guid3)) {
-      throw new Error(`${archivePath} holds no guid in its ${name}.${type}.cid.`);
-    }
-    return guid3;
-  } finally {
-    await archive.close();
-  }
-}
-function isAssetGuid(text2) {
-  return /^[\da-f]{32}$/u.test(text2);
-}
-async function findArchive(root, name) {
-  const users = await readdir2(root).catch(() => []);
-  for (const user of users) {
-    const candidate = path8.join(root, user, `${name}.cok`);
-    const isFound = await access2(candidate).then(() => true, () => false);
-    if (isFound) {
-      return candidate;
-    }
-  }
-  throw new Error(`No ${path8.basename(root).toLowerCase().slice(0, -1)} named "${name}" in ${root}.`);
-}
-async function readStoredZipEntry(archive, archivePath, entryName) {
-  const { size } = await archive.stat();
-  const endOfDirectorySignature = 101010256;
-  const tailStart = Math.max(0, size - 22 - 65535);
-  const tail = await readRange(archive, size, tailStart, size);
-  let end = tail.byteLength - 22;
-  while (end >= 0 && tail.getUint32(end, true) != endOfDirectorySignature) {
-    end--;
-  }
-  if (end < 0) {
-    throw new Error(`${archivePath} is not a zip archive.`);
-  }
-  const directoryOffset = tail.getUint32(end + 16, true);
-  const directorySize = tail.getUint32(end + 12, true);
-  const directory = await readRange(archive, size, directoryOffset, directoryOffset + directorySize);
-  let offset = 0;
-  while (offset + 46 <= directory.byteLength) {
-    const nameLength = directory.getUint16(offset + 28, true);
-    const name = new TextDecoder().decode(new Uint8Array(directory.buffer, directory.byteOffset + offset + 46, nameLength));
-    if (name == entryName) {
-      break;
-    }
-    offset += 46 + nameLength + directory.getUint16(offset + 30, true) + directory.getUint16(offset + 32, true);
-  }
-  if (offset + 46 > directory.byteLength) {
-    throw new Error(`${archivePath} holds no ${entryName}.`);
-  }
-  if (directory.getUint16(offset + 10, true) != 0) {
-    throw new Error(`${archivePath} compresses ${entryName}, which this reader does not read.`);
-  }
-  const entrySize = directory.getUint32(offset + 20, true);
-  const headerOffset = directory.getUint32(offset + 42, true);
-  const header = await readRange(archive, size, headerOffset, headerOffset + 30);
-  const dataStart = headerOffset + 30 + header.getUint16(26, true) + header.getUint16(28, true);
-  const data = await readRange(archive, size, dataStart, dataStart + entrySize);
-  return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-}
-async function readRange(archive, size, start, end) {
-  if (end > size) {
-    throw new Error(`The archive is damaged: it holds no bytes ${start} to ${end}.`);
-  }
-  const buffer = new Uint8Array(end - start);
-  await archive.read(buffer, 0, buffer.length, start);
-  return new DataView(buffer.buffer);
-}
-
-// src/evidence.ts
-import { access as access3, copyFile, cp, mkdir as mkdir2, mkdtemp, readdir as readdir4, rename as rename2, rm as rm3, stat as stat5 } from "node:fs/promises";
-import path10 from "node:path";
+// src/scenario-run.ts
+import { readdir as readdir3, stat as stat5 } from "node:fs/promises";
+import path9 from "node:path";
 
 // src/hint.ts
-import { readdir as readdir3, stat as stat4 } from "node:fs/promises";
-import path9 from "node:path";
+import { readdir as readdir2, stat as stat4 } from "node:fs/promises";
+import path8 from "node:path";
 var hints = createQueue();
 function crashReportsPath(userDataPath) {
-  return path9.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
+  return path8.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
 }
 function withinCeiling(host, seconds, step) {
   const abandoned = new AbortController;
@@ -31600,6 +31529,17 @@ function deliverHint(context) {
 }
 async function settleIgnored(context) {
   await hints.run(context.signal, () => announceNews(context, true));
+}
+async function moveCursorPastListing(context, scan, newlyDropped) {
+  await hints.run(context.signal, async () => {
+    const runStart = await readRunStart(context.userDataPath);
+    if (!runStart) {
+      return;
+    }
+    await markDropped(context, newlyDropped);
+    await settleIgnores(context, scan, []);
+    await updateCursor(context, (current) => ({ ...current, runStart: runStart.toISOString(), offsets: scan.offsets }), scan.shrunk);
+  });
 }
 async function readNews(context, chooseOffsets) {
   const { host, userDataPath, signal } = context;
@@ -31716,9 +31656,9 @@ async function settleIgnores(context, scan, named) {
 }
 async function readNewReport(userDataPath, runStart, { lastReport }) {
   const folder = crashReportsPath(userDataPath);
-  const names = await readdir3(folder).catch(() => []);
+  const names = await readdir2(folder).catch(() => []);
   const after = Math.max(runStart.getTime(), lastReport ? Date.parse(lastReport) : 0);
-  const times = await Promise.all(names.map((name) => stat4(path9.join(folder, name)).then(({ mtime }) => mtime.getTime(), () => 0)));
+  const times = await Promise.all(names.map((name) => stat4(path8.join(folder, name)).then(({ mtime }) => mtime.getTime(), () => 0)));
   const newest = Math.max(0, ...times);
   return newest > after ? new Date(newest) : undefined;
 }
@@ -31726,20 +31666,375 @@ function sum(items, value) {
   return items.reduce((total, item) => total + value(item), 0);
 }
 
+// src/scenario-log.ts
+var SCENARIOS_STARTING = `Starting test scenarios.`;
+var SCENARIOS_FINISHED = `Finished test scenarios.`;
+var scenarioStartPattern = /^---\| START TEST SCENARIO: (?<name>.+?)\s*$/u;
+var scenarioFinishPattern = /^---\| FINISH TEST SCENARIO \((?<outcome>Success|Failure), exceptions: \d+, errors: \d+\): (?<name>.+?)\s*$/u;
+var testFinishPattern = /^---\| FINISH TEST \((?<outcome>Success|Failure), /u;
+function readScenarios(entries) {
+  const scenarios = [];
+  let current;
+  for (const entry of entries) {
+    const startName = scenarioStartPattern.exec(entry.message)?.groups?.name;
+    if (startName != null) {
+      if (current) {
+        scenarios.push(judgeScenario(current.name, current.entries));
+      }
+      current = { name: startName, entries: [entry] };
+      continue;
+    }
+    if (!current) {
+      continue;
+    }
+    current.entries.push(entry);
+    const finish = scenarioFinishPattern.exec(entry.message)?.groups;
+    if (finish?.name == current.name) {
+      scenarios.push(judgeScenario(current.name, current.entries, finish.outcome));
+      current = undefined;
+    }
+  }
+  if (current) {
+    scenarios.push(judgeScenario(current.name, current.entries));
+  }
+  return scenarios;
+}
+function classifyRun(state, limits) {
+  const elapsedSeconds = (state.now.getTime() - state.launchTime.getTime()) / 1000;
+  if (findEntry(state.automation, SCENARIOS_FINISHED)) {
+    return "finished";
+  }
+  if (!state.isGameAlive) {
+    return "died";
+  }
+  const scenariosStart = findEntry(state.automation, SCENARIOS_STARTING);
+  if (!scenariosStart) {
+    return elapsedSeconds >= limits.bootSeconds ? "did not start" : "running";
+  }
+  const lastActivity = Math.max(scenariosStart.time.getTime(), state.scenarios.at(-1)?.time.getTime() ?? 0);
+  if ((state.now.getTime() - lastActivity) / 1000 >= limits.stallSeconds) {
+    return "stuck";
+  }
+  return elapsedSeconds >= limits.runSeconds ? "timed out" : "running";
+}
+function findEntry(entries, message) {
+  return entries.find((entry) => entry.message == message);
+}
+function judgeScenario(name, entries, outcome) {
+  const failures = [];
+  if (outcome == null) {
+    failures.push(`it did not finish`);
+  } else if (outcome != "Success") {
+    failures.push(`the game reported a failure`);
+  }
+  const testOutcomes = entries.flatMap((entry) => {
+    const testOutcome = testFinishPattern.exec(entry.message)?.groups?.outcome;
+    return testOutcome == null ? [] : [testOutcome];
+  });
+  if (outcome != null && testOutcomes.length == 0) {
+    failures.push(`it ran no test: none finished, or its preparation threw`);
+  }
+  const failedTests = testOutcomes.filter((testOutcome) => testOutcome != "Success").length;
+  if (failedTests > 0) {
+    failures.push(`${failedTests} of its ${testOutcomes.length} tests failed`);
+  }
+  if (entries.some((entry) => isErrorLevel(entry.level))) {
+    failures.push(`it logged an error`);
+  }
+  return { name, entries, failures };
+}
+
+// src/scenario-run.ts
+var HEARTBEAT_SECONDS = 60;
+var STALL_SECONDS = LOAD_SECONDS + HEARTBEAT_SECONDS;
+var NO_SCENARIO = `no scenario ran: a Release build, no scenario written, or a category mismatch`;
+var SCENARIOS_FILE = "Logs/TestScenarios.log";
+var METRICS_PREFIX = "[Metrics]";
+var limits = {
+  bootSeconds: BOOT_SECONDS,
+  stallSeconds: STALL_SECONDS,
+  runSeconds: SCENARIO_RUN_SECONDS
+};
+async function readStaleBuild({ localModsPath }, { mod, sources }) {
+  const names = await readdir3(sources, { recursive: true }).catch((error51) => {
+    throw new Error(`Cannot read the sources at ${sources}: ${errorMessage(error51)}`, {
+      cause: error51
+    });
+  });
+  const assemblyPath = path9.join(localModsPath, mod, `${mod}.dll`);
+  const built = await stat5(assemblyPath).catch(() => {
+    return;
+  });
+  if (!built) {
+    return `Warning: no deployed build at ${assemblyPath} to compare the sources with.`;
+  }
+  for (const name of names.filter((file2) => isSourceFile(file2))) {
+    const modified = await stat5(path9.join(sources, name)).then(({ mtime }) => mtime, () => {
+      return;
+    });
+    if (modified && modified > built.mtime) {
+      return `Warning: ${name} changed after the deployed build, so this run tested older code.`;
+    }
+  }
+  return;
+}
+async function watchScenarios(context, launchTime) {
+  const { host, progress } = context;
+  let started = 0;
+  let step = `Waiting for the scenarios to start`;
+  let lastBeat = launchTime;
+  progress(step);
+  for (;; ) {
+    const isGameAlive = await isGameRunning(host);
+    const automation = await readLog(logPath(context, "Automation"), launchTime);
+    const entries = await readLog(logPath(context, "TestScenarios"), launchTime);
+    const verdict = classifyRun({ automation, scenarios: entries, isGameAlive, launchTime, now: host.now() }, limits);
+    if (verdict != "running") {
+      return verdict;
+    }
+    const scenarios = readScenarios(entries);
+    const newest = scenarios.at(-1);
+    if (scenarios.length > started && newest) {
+      started = scenarios.length;
+      step = `Running the scenario ${newest.name}`;
+      lastBeat = host.now();
+      progress(step);
+    } else if (secondsSince(host, lastBeat) >= HEARTBEAT_SECONDS) {
+      lastBeat = host.now();
+      progress(`${step}, ${secondsSince(host, launchTime)} s after the launch`);
+    }
+    await host.sleep(POLL_MILLISECONDS);
+  }
+}
+async function readScenarioRun(context, { verdict, launchTime }) {
+  const entries = await readLog(logPath(context, "TestScenarios"), launchTime);
+  return {
+    verdict,
+    scenarios: readScenarios(entries),
+    seconds: secondsSince(context.host, launchTime)
+  };
+}
+async function readModErrors(context, { mod, launchTime }) {
+  const { host, userDataPath, signal } = context;
+  try {
+    const isRunning = await isGameRunning(host);
+    if (isRunning) {
+      await host.sleep(QUIET_SECONDS * MILLISECONDS_PER_SECOND);
+    }
+    const matcher = createIgnoreMatcher(await readIgnores(userDataPath));
+    const scan = await scanLogs({
+      host,
+      basePath: userDataPath,
+      runStart: launchTime,
+      isRunning,
+      offsets: {},
+      mod,
+      signal,
+      accepts: ({ level }) => isErrorLevel(level),
+      findIgnore: matcher.findIgnore
+    });
+    const kinds = [...scan.kinds.values()].filter(({ file: file2 }) => file2 != SCENARIOS_FILE);
+    const named = kinds.filter(({ modCount }) => modCount > 0);
+    if (named.length == 0) {
+      return { count: 0, otherCount: 0, listing: undefined };
+    }
+    const listing = describeLogs({ ...scan, kinds: new Map(named.map((kind) => [kind.key, kind])) }, {
+      basePath: userDataPath,
+      shouldShowIgnored: true,
+      isModOnly: true,
+      shouldPointBack: false
+    });
+    await moveCursorPastListing(context, scan, matcher.newlyDropped).catch(() => {
+      return;
+    });
+    return {
+      count: sum(named, (kind) => kind.modCount),
+      otherCount: sum(kinds, (kind) => kind.count - kind.modCount),
+      listing
+    };
+  } catch (error51) {
+    return { count: 0, otherCount: 0, listing: undefined, failure: errorMessage(error51) };
+  }
+}
+function describeRun(run2, {
+  userDataPath,
+  mod,
+  errors: errors3,
+  lines
+}) {
+  const { verdict, scenarios, seconds } = run2;
+  const failedScenarios = scenarios.filter((scenario) => scenario.failures.length > 0);
+  const failures = [
+    ...describeEnd(run2),
+    ...failedScenarios.length > 0 ? [`${failedScenarios.length} of ${scenarios.length} scenarios failed`] : [],
+    ...errors3.count > 0 ? [`the mod logged ${errors3.count} errors`] : [],
+    ...errors3.failure == undefined ? [] : [`the mod's errors could not be counted: ${errors3.failure}`]
+  ];
+  const hasPassed = failures.length == 0;
+  const summary = hasPassed ? `PASSED: ${scenarios.length} scenarios, ${seconds} s after the launch.` : `FAILED: ${failures.join("; ")}.`;
+  return {
+    hasPassed,
+    text: [
+      [
+        summary,
+        ...verdict == "died" ? [`Crash dumps: ${crashReportsPath(userDataPath)}`] : [],
+        ...errors3.otherCount > 0 ? [`${errors3.otherCount} other errors name no ${mod}: logs reads them.`] : [],
+        ...lines,
+        ...scenarios.map((scenario) => describeOutcome(scenario))
+      ].join(`
+`),
+      ...errors3.listing == undefined ? [] : [errors3.listing],
+      cutAt(scenarios.map((scenario) => describeLines(scenario)).join(`
+
+`), LOGS_CAP_CHARACTERS)
+    ].filter(Boolean).join(`
+
+`)
+  };
+}
+function describeEnd({ verdict, scenarios }) {
+  const isEmpty = verdict == "finished" || verdict == "did not start";
+  if (isEmpty && scenarios.length == 0) {
+    return [NO_SCENARIO];
+  }
+  switch (verdict) {
+    case "finished": {
+      return [];
+    }
+    case "died": {
+      return [`the game died`];
+    }
+    case "stuck": {
+      return [`a scenario logged nothing for ${limits.stallSeconds} s`];
+    }
+    case "did not start": {
+      return [`the scenarios did not start within ${limits.bootSeconds} s`];
+    }
+    case "timed out": {
+      return [`the run passed its ${limits.runSeconds} s`];
+    }
+    default: {
+      throw new Error(`Unhandled verdict ${JSON.stringify(verdict)}.`);
+    }
+  }
+}
+function describeOutcome({ name, failures }) {
+  return failures.length == 0 ? `${name}: passed` : `${name}: FAILED: ${failures.join("; ")}.`;
+}
+function describeLines({ name, entries }) {
+  const lines = entries.filter(({ level, message }) => !(level == "INFO" && message.startsWith(METRICS_PREFIX))).map(({ level, message }) => {
+    const tag = level == "INFO" ? "" : `[${level}] `;
+    return `  ${tag}${message.replaceAll(`
+`, `
+    `)}`;
+  });
+  return [name, ...lines].join(`
+`);
+}
+function isSourceFile(name) {
+  return !/(?:^|[/\\])(?:bin|obj|node_modules)[/\\]/u.test(name) && /\.(?:cs|csproj|props|targets)$|(?:^|[/\\])Locales[/\\][^/\\]+\.json$/u.test(name);
+}
+function logPath({ userDataPath }, name) {
+  return path9.join(userDataPath, "Logs", `${name}.log`);
+}
+
+// src/tools.ts
+import { rm as rm4 } from "node:fs/promises";
+import path12 from "node:path";
+
+// src/asset-guid.ts
+import { access as access2, open, readdir as readdir4 } from "node:fs/promises";
+import path10 from "node:path";
+async function readAssetGuid(userDataPath, folder, name, type) {
+  const archivePath = await findArchive(path10.join(userDataPath, folder), name);
+  const archive = await open(archivePath);
+  try {
+    const entry = await readStoredZipEntry(archive, archivePath, `${name}.${type}.cid`);
+    const guid3 = new TextDecoder().decode(entry).trim();
+    if (!isAssetGuid(guid3)) {
+      throw new Error(`${archivePath} holds no guid in its ${name}.${type}.cid.`);
+    }
+    return guid3;
+  } finally {
+    await archive.close();
+  }
+}
+function isAssetGuid(text2) {
+  return /^[\da-f]{32}$/u.test(text2);
+}
+async function findArchive(root, name) {
+  const users = await readdir4(root).catch(() => []);
+  for (const user of users) {
+    const candidate = path10.join(root, user, `${name}.cok`);
+    const isFound = await access2(candidate).then(() => true, () => false);
+    if (isFound) {
+      return candidate;
+    }
+  }
+  throw new Error(`No ${path10.basename(root).toLowerCase().slice(0, -1)} named "${name}" in ${root}.`);
+}
+async function readStoredZipEntry(archive, archivePath, entryName) {
+  const { size } = await archive.stat();
+  const endOfDirectorySignature = 101010256;
+  const tailStart = Math.max(0, size - 22 - 65535);
+  const tail = await readRange(archive, size, tailStart, size);
+  let end = tail.byteLength - 22;
+  while (end >= 0 && tail.getUint32(end, true) != endOfDirectorySignature) {
+    end--;
+  }
+  if (end < 0) {
+    throw new Error(`${archivePath} is not a zip archive.`);
+  }
+  const directoryOffset = tail.getUint32(end + 16, true);
+  const directorySize = tail.getUint32(end + 12, true);
+  const directory = await readRange(archive, size, directoryOffset, directoryOffset + directorySize);
+  let offset = 0;
+  while (offset + 46 <= directory.byteLength) {
+    const nameLength = directory.getUint16(offset + 28, true);
+    const name = new TextDecoder().decode(new Uint8Array(directory.buffer, directory.byteOffset + offset + 46, nameLength));
+    if (name == entryName) {
+      break;
+    }
+    offset += 46 + nameLength + directory.getUint16(offset + 30, true) + directory.getUint16(offset + 32, true);
+  }
+  if (offset + 46 > directory.byteLength) {
+    throw new Error(`${archivePath} holds no ${entryName}.`);
+  }
+  if (directory.getUint16(offset + 10, true) != 0) {
+    throw new Error(`${archivePath} compresses ${entryName}, which this reader does not read.`);
+  }
+  const entrySize = directory.getUint32(offset + 20, true);
+  const headerOffset = directory.getUint32(offset + 42, true);
+  const header = await readRange(archive, size, headerOffset, headerOffset + 30);
+  const dataStart = headerOffset + 30 + header.getUint16(26, true) + header.getUint16(28, true);
+  const data = await readRange(archive, size, dataStart, dataStart + entrySize);
+  return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+}
+async function readRange(archive, size, start, end) {
+  if (end > size) {
+    throw new Error(`The archive is damaged: it holds no bytes ${start} to ${end}.`);
+  }
+  const buffer = new Uint8Array(end - start);
+  await archive.read(buffer, 0, buffer.length, start);
+  return new DataView(buffer.buffer);
+}
+
 // src/evidence.ts
+import { access as access3, copyFile, cp, mkdir as mkdir2, mkdtemp, readdir as readdir5, rename as rename2, rm as rm3, stat as stat6 } from "node:fs/promises";
+import path11 from "node:path";
 var PREVIOUS_RUN_FOLDER = "previous-run";
 async function keepPreviousRun(userDataPath, signal) {
   const folderPath = toolFolderPath(userDataPath);
-  const copyPath = path10.join(folderPath, PREVIOUS_RUN_FOLDER);
+  const copyPath = path11.join(folderPath, PREVIOUS_RUN_FOLDER);
   const nextPrefix = `${PREVIOUS_RUN_FOLDER}.next-`;
   await mkdir2(folderPath, { recursive: true });
-  const leftovers = await readdir4(folderPath);
+  const leftovers = await readdir5(folderPath);
   signal.throwIfAborted();
-  await Promise.allSettled(leftovers.filter((name) => name.startsWith(nextPrefix)).map((name) => rm3(path10.join(folderPath, name), { recursive: true, force: true })));
-  const nextPath = await mkdtemp(path10.join(folderPath, nextPrefix));
+  await Promise.allSettled(leftovers.filter((name) => name.startsWith(nextPrefix)).map((name) => rm3(path11.join(folderPath, name), { recursive: true, force: true })));
+  const nextPath = await mkdtemp(path11.join(folderPath, nextPrefix));
   try {
-    await copyIfPresent(path10.join(userDataPath, "Logs"), path10.join(nextPath, "Logs"));
-    await copyIfPresent(path10.join(userDataPath, "Player.log"), path10.join(nextPath, "Player.log"));
+    await copyIfPresent(path11.join(userDataPath, "Logs"), path11.join(nextPath, "Logs"));
+    await copyIfPresent(path11.join(userDataPath, "Player.log"), path11.join(nextPath, "Player.log"));
     await copyCrashReports(userDataPath, nextPath);
     signal.throwIfAborted();
     await rm3(copyPath, { recursive: true, force: true });
@@ -31765,15 +32060,15 @@ async function copyCrashReports(userDataPath, nextPath) {
     return;
   }
   const reportsPath = crashReportsPath(userDataPath);
-  const reports = await readdir4(reportsPath).catch(() => []);
-  const copiedPath = path10.join(nextPath, "crashpad", "reports");
+  const reports = await readdir5(reportsPath).catch(() => []);
+  const copiedPath = path11.join(nextPath, "crashpad", "reports");
   await mkdir2(copiedPath, { recursive: true });
   for (const report of reports) {
-    const source = path10.join(reportsPath, report);
+    const source = path11.join(reportsPath, report);
     try {
-      const { mtime } = await stat5(source);
+      const { mtime } = await stat6(source);
       if (mtime >= runStart) {
-        await copyFile(source, path10.join(copiedPath, report));
+        await copyFile(source, path11.join(copiedPath, report));
       }
     } catch (error51) {
       if (!isMissing(error51)) {
@@ -31902,6 +32197,7 @@ function toTextBlock(text2) {
 
 // src/tools.ts
 var ARCHIPELAGO_GUID = "bf8036b291428535b986c757fda3e627";
+var DEFAULT_CATEGORY = 1048576;
 function stop(context) {
   const run2 = { name: "stop", ceilingSeconds: STOP_CEILING_SECONDS, isExclusive: true };
   return runTool(context, run2, async (guarded) => {
@@ -31914,7 +32210,7 @@ function restart(context, request) {
     name: "restart",
     ceilingSeconds: RESTART_CEILING_SECONDS,
     isExclusive: true,
-    onGiveUp: () => rm4(path11.join(context.userDataPath, "runOnce.txt"), { force: true })
+    onGiveUp: () => rm4(path12.join(context.userDataPath, "runOnce.txt"), { force: true })
   };
   return runTool(context, run2, async (guarded) => {
     if (request.save != null && request.newCity) {
@@ -31923,6 +32219,20 @@ function restart(context, request) {
     requireWholeOptions(request.gameOptions ?? []);
     const startGuid = await readStartGuid(guarded.userDataPath, request);
     return restartGame(guarded, request, startGuid);
+  });
+}
+function testMod(context, request) {
+  const run2 = {
+    name: "test",
+    ceilingSeconds: TEST_CEILING_SECONDS,
+    isExclusive: true,
+    onGiveUp: () => rm4(path12.join(context.userDataPath, "runOnce.txt"), { force: true })
+  };
+  return runTool(context, run2, async (guarded) => {
+    requireWholeOptions(request.gameOptions ?? []);
+    const { mod, sources } = request;
+    const staleBuild = sources == undefined ? undefined : await readStaleBuild(guarded, { mod, sources });
+    return runScenarios(guarded, request, staleBuild);
   });
 }
 function waitLoad(context) {
@@ -31953,7 +32263,7 @@ function logs(context, request) {
   const run2 = { name: "logs", ceilingSeconds: READ_CEILING_SECONDS, isExclusive: false };
   return runTool(context, run2, async (guarded) => {
     const { host, userDataPath, progress } = guarded;
-    const basePath = request.previous ? path11.join(toolFolderPath(userDataPath), PREVIOUS_RUN_FOLDER) : userDataPath;
+    const basePath = request.previous ? path12.join(toolFolderPath(userDataPath), PREVIOUS_RUN_FOLDER) : userDataPath;
     progress(`Reading the logs`);
     const runStart = await readRunStart(basePath);
     if (!runStart) {
@@ -32009,20 +32319,8 @@ function ignoreError(context, request) {
   });
 }
 async function restartGame(guarded, request, startGuid) {
-  const { host, userDataPath, progress, signal, carry } = guarded;
-  if (request.mod != null) {
-    const { mod } = request;
-    await updateCursor(guarded, (cursor) => ({ ...cursor, mod }));
-  }
-  progress(`Stopping the game`);
-  const stopOutcome = await stopGame(guarded);
-  progress(`Keeping the ended run's evidence`);
-  await keepPreviousRun(userDataPath, signal);
-  progress(`Reading the ended run's errors`);
-  const ended = await readHint(guarded);
-  if (ended != null) {
-    carry(`The run this restart ends: ${ended} logs reads it with previous: true.`);
-  }
+  const { host, userDataPath, progress } = guarded;
+  const stopOutcome = await endRun(guarded, "restart", request.mod);
   const launchTime = host.now();
   progress(`Launching the game`);
   const options = await launchGame(guarded, [
@@ -32045,6 +32343,58 @@ async function restartGame(guarded, request, startGuid) {
   ].join(`
 `);
 }
+async function runScenarios(guarded, request, staleBuild) {
+  const { host, progress } = guarded;
+  const { mod, category = DEFAULT_CATEGORY, keepOpen, gameOptions = [] } = request;
+  const stopOutcome = await endRun(guarded, "test", mod);
+  const launchTime = host.now();
+  progress(`Launching the game`);
+  const options = await launchGame(guarded, [`--categoryFilter=${category}`, ...gameOptions]);
+  const verdict = await withGameLeftRunning(host, () => watchScenarios(guarded, launchTime));
+  const gameLines = keepOpen ? await describeProcesses(host) : await endScenarioRun(guarded);
+  const errors3 = await readModErrors(guarded, { mod, launchTime });
+  const report = describeRun(await readScenarioRun(guarded, { verdict, launchTime }), {
+    userDataPath: guarded.userDataPath,
+    mod,
+    errors: errors3,
+    lines: [
+      ...staleBuild == undefined ? [] : [staleBuild],
+      ...stopOutcome.kind == "notRunning" ? [] : [`Before the launch: ${describeStop(stopOutcome)}`],
+      ...gameLines,
+      `Options written to runOnce.txt: ${options}`,
+      ...await describeModLoad(guarded.userDataPath, mod, launchTime)
+    ]
+  });
+  if (!report.hasPassed) {
+    throw new Error(report.text);
+  }
+  return report.text;
+}
+async function endScenarioRun(guarded) {
+  guarded.progress(`Stopping the game`);
+  try {
+    const outcome = await stopGame(guarded);
+    return outcome.kind == "notRunning" ? [] : [describeStop(outcome)];
+  } catch (error51) {
+    return [`The game could not be stopped: ${errorMessage(error51)}`];
+  }
+}
+async function endRun(guarded, caller, mod) {
+  const { userDataPath, progress, signal, carry } = guarded;
+  if (mod != null) {
+    await updateCursor(guarded, (cursor) => ({ ...cursor, mod }));
+  }
+  progress(`Stopping the game`);
+  const stopOutcome = await stopGame(guarded);
+  progress(`Keeping the ended run's evidence`);
+  await keepPreviousRun(userDataPath, signal);
+  progress(`Reading the ended run's errors`);
+  const ended = await readHint(guarded);
+  if (ended != null) {
+    carry(`The run this ${caller} ends: ${ended} logs reads it with previous: true.`);
+  }
+  return stopOutcome;
+}
 function readStartGuid(userDataPath, { save, newCity }) {
   if (save != null) {
     return readAssetGuid(userDataPath, "Saves", save, "SaveGameMetadata");
@@ -32058,13 +32408,13 @@ function readStartGuid(userDataPath, { save, newCity }) {
 async function describeModLoad(userDataPath, mod, launchTime) {
   let entries;
   try {
-    entries = await readLog(path11.join(userDataPath, "Logs", "Modding.log"), launchTime);
+    entries = await readLog(path12.join(userDataPath, "Logs", "Modding.log"), launchTime);
   } catch (error51) {
     return [`Mod ${mod}: ${errorMessage(error51)}`];
   }
   const burstPrefix = `Loaded additional Burst code `;
   const burstFile = `${mod}_win_x86_64.dll`;
-  const burst = entries.find(({ message }) => message.startsWith(burstPrefix) && path11.posix.basename(message) == burstFile);
+  const burst = entries.find(({ message }) => message.startsWith(burstPrefix) && path12.posix.basename(message) == burstFile);
   const errors3 = entries.map(({ message }) => message.split(`
 `)[0] ?? "").filter((line) => line.startsWith(`Error initializing mod ${mod}, `));
   return [
@@ -32082,8 +32432,8 @@ function fileFilter(name) {
   if (name == undefined) {
     return;
   }
-  const wanted = path11.win32.basename(name, ".log");
-  return (file2) => path11.posix.basename(file2, ".log") == wanted;
+  const wanted = path12.win32.basename(name, ".log");
+  return (file2) => path12.posix.basename(file2, ".log") == wanted;
 }
 function describeStop(outcome) {
   switch (outcome.kind) {
@@ -32114,6 +32464,7 @@ var { version: VERSION } = JSON.parse(readFileSync(new URL("../../package.json",
 var SHUTDOWN_GRACE_MILLISECONDS = 200;
 async function main() {
   const userDataPath = loadUserDataPath();
+  const localModsPath = loadLocalModsPath(userDataPath);
   const host = createGameHost(userDataPath);
   const slot = { running: undefined };
   function contextOf(extra) {
@@ -32134,6 +32485,7 @@ async function main() {
     return {
       host,
       userDataPath,
+      localModsPath,
       slot,
       signal: extra.signal,
       progress: (message) => {
@@ -32198,6 +32550,39 @@ async function main() {
       `,
     annotations: { readOnlyHint: true }
   }, (extra) => waitLoad(contextOf(extra)));
+  server.registerTool("test", {
+    title: `Run a mod's in-game scenarios`,
+    description: import_common_tags.oneLine`
+        Stop the game if it runs, keep the ended run's logs and crash reports, launch it with the
+        scenario category as its test filter, watch until the game finishes its scenarios, and
+        return each scenario's result and lines.
+        A scenario passes when the game reports a success, one of its tests finished, and nothing in
+        it logged an error: the game alone calls a scenario whose preparation threw a success.
+        Any error naming the mod in any log but TestScenarios.log fails the run, an exception Unity
+        logged and one ignore_error silences included, listed one per kind.
+        A run with no scenario fails, which is how a Release build ends.
+        The game stops when the run ends unless keepOpen.
+        Its stops are the stop tool's: up to ${STOP_BOUND_SECONDS} s, then forced, and only a close
+        past boot saves settings.
+        Blocks up to ${TEST_CEILING_SECONDS} s in all, of which ${SCENARIO_RUN_SECONDS} s from the
+        launch for the run, ${BOOT_SECONDS} s for the scenarios to start, and ${STALL_SECONDS} s for
+        a scenario to log nothing.
+        Unverified on Windows.
+      `,
+    inputSchema: {
+      mod: exports_external.string().min(1).describe(`Assembly name of the mod: later hints count the errors naming it too`),
+      category: exports_external.number().int().positive().optional().describe(`The scenarios' TestDescriptor category (default: 1 << 20, ${DEFAULT_CATEGORY})`),
+      sources: exports_external.string().min(1).optional().describe(import_common_tags.oneLine`
+            Absolute path of the mod's project folder: the result warns when a source changed after
+            the deployed build
+          `),
+      keepOpen: exports_external.boolean().optional().describe(`Leave the game running, to inspect what a scenario left`),
+      gameOptions: exports_external.array(exports_external.string()).optional().describe(import_common_tags.oneLine`
+            The game's own options, as for restart: an unknown one is ignored silently, and one
+            holding whitespace is refused
+          `)
+    }
+  }, (request, extra) => testMod(contextOf(extra), request));
   server.registerTool("status", {
     title: `Read the game's state`,
     description: import_common_tags.oneLine`
@@ -32220,8 +32605,8 @@ async function main() {
         exception Unity logged.
         Capped at ${LOGS_CAP_CHARACTERS} characters, with a footer saying what was left out and how
         to narrow it.
-        Cited lines hold until a launch rewrites the file, or a restart replaces the previous run's
-        copy.
+        Cited lines hold until a launch rewrites the file, or a restart or test replaces the
+        previous run's copy.
         Blocks up to ${READ_CEILING_SECONDS} s.
         Unverified on Windows.
       `,
@@ -32230,7 +32615,7 @@ async function main() {
       level: exports_external.string().optional().describe(`One of ${logLevels.join(", ")}`),
       mod: exports_external.string().min(1).optional().describe(`Assembly name of a mod the entries must name`),
       errorsOnly: exports_external.boolean().optional().describe(`Only ERROR and above, and exceptions Unity logged`),
-      previous: exports_external.boolean().optional().describe(`Read the run before the last restart, from its kept copy`),
+      previous: exports_external.boolean().optional().describe(`Read the run before the last restart or test, from its kept copy`),
       ignored: exports_external.boolean().optional().describe(`Bring back the entries ignore_error silenced`)
     },
     annotations: { readOnlyHint: true }

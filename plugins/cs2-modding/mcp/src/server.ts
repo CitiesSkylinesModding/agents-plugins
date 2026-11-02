@@ -14,7 +14,7 @@ import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/proto
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { oneLine } from 'common-tags';
 import { z } from 'zod';
-import { loadUserDataPath } from './config';
+import { loadLocalModsPath, loadUserDataPath } from './config';
 import {
   BOOT_SECONDS,
   type CallSlot,
@@ -22,14 +22,26 @@ import {
   LOADING_SCREEN_SECONDS,
   READ_CEILING_SECONDS,
   RESTART_CEILING_SECONDS,
+  SCENARIO_RUN_SECONDS,
   STOP_BOUND_SECONDS,
+  TEST_CEILING_SECONDS,
   type ToolContext
 } from './cycle';
 import { createGameHost } from './game-host';
 import { logLevels } from './game-log';
 import { clearIgnores, IGNORE_INPUT_CHARACTERS } from './ignores';
 import { LOGS_CAP_CHARACTERS } from './log-report';
-import { ignoreError, logs, restart, status, stop, waitLoad } from './tools';
+import { STALL_SECONDS } from './scenario-run';
+import {
+  DEFAULT_CATEGORY,
+  ignoreError,
+  logs,
+  restart,
+  status,
+  stop,
+  testMod,
+  waitLoad
+} from './tools';
 
 // The plugin's version, the server having no release of its own. Read at runtime, as both execution
 // modes sit two levels below the plugin's package.json (dist/server.mjs and src/server.ts).
@@ -46,6 +58,7 @@ const SHUTDOWN_GRACE_MILLISECONDS = 200;
 
 async function main(): Promise<void> {
   const userDataPath = loadUserDataPath();
+  const localModsPath = loadLocalModsPath(userDataPath);
   const host = createGameHost(userDataPath);
   const slot: CallSlot = { running: undefined };
 
@@ -79,6 +92,7 @@ async function main(): Promise<void> {
     return {
       host,
       userDataPath,
+      localModsPath,
       slot,
       signal: extra.signal,
       progress: message => {
@@ -171,6 +185,57 @@ async function main(): Promise<void> {
   );
 
   server.registerTool(
+    'test',
+    {
+      title: `Run a mod's in-game scenarios`,
+      description: oneLine`
+        Stop the game if it runs, keep the ended run's logs and crash reports, launch it with the
+        scenario category as its test filter, watch until the game finishes its scenarios, and
+        return each scenario's result and lines.
+        A scenario passes when the game reports a success, one of its tests finished, and nothing in
+        it logged an error: the game alone calls a scenario whose preparation threw a success.
+        Any error naming the mod in any log but TestScenarios.log fails the run, an exception Unity
+        logged and one ignore_error silences included, listed one per kind.
+        A run with no scenario fails, which is how a Release build ends.
+        The game stops when the run ends unless keepOpen.
+        Its stops are the stop tool's: up to ${STOP_BOUND_SECONDS} s, then forced, and only a close
+        past boot saves settings.
+        Blocks up to ${TEST_CEILING_SECONDS} s in all, of which ${SCENARIO_RUN_SECONDS} s from the
+        launch for the run, ${BOOT_SECONDS} s for the scenarios to start, and ${STALL_SECONDS} s for
+        a scenario to log nothing.
+        Unverified on Windows.
+      `,
+      inputSchema: {
+        mod: z
+          .string()
+          .min(1)
+          .describe(`Assembly name of the mod: later hints count the errors naming it too`),
+        category: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe(
+            `The scenarios' TestDescriptor category (default: 1 << 20, ${DEFAULT_CATEGORY})`
+          ),
+        sources: z.string().min(1).optional().describe(oneLine`
+            Absolute path of the mod's project folder: the result warns when a source changed after
+            the deployed build
+          `),
+        keepOpen: z
+          .boolean()
+          .optional()
+          .describe(`Leave the game running, to inspect what a scenario left`),
+        gameOptions: z.array(z.string()).optional().describe(oneLine`
+            The game's own options, as for restart: an unknown one is ignored silently, and one
+            holding whitespace is refused
+          `)
+      }
+    },
+    (request, extra) => testMod(contextOf(extra), request)
+  );
+
+  server.registerTool(
     'status',
     {
       title: `Read the game's state`,
@@ -199,8 +264,8 @@ async function main(): Promise<void> {
         exception Unity logged.
         Capped at ${LOGS_CAP_CHARACTERS} characters, with a footer saying what was left out and how
         to narrow it.
-        Cited lines hold until a launch rewrites the file, or a restart replaces the previous run's
-        copy.
+        Cited lines hold until a launch rewrites the file, or a restart or test replaces the
+        previous run's copy.
         Blocks up to ${READ_CEILING_SECONDS} s.
         Unverified on Windows.
       `,
@@ -221,7 +286,7 @@ async function main(): Promise<void> {
         previous: z
           .boolean()
           .optional()
-          .describe(`Read the run before the last restart, from its kept copy`),
+          .describe(`Read the run before the last restart or test, from its kept copy`),
         ignored: z.boolean().optional().describe(`Bring back the entries ignore_error silenced`)
       },
       annotations: { readOnlyHint: true }

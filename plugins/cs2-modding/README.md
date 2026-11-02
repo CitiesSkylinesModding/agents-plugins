@@ -6,7 +6,7 @@
 verified against the game itself, not against the wiki.**
 
 Four skills and their references, plus the `cs2-dev` MCP server, which restarts the game, waits on
-it, and reports its errors.
+it, reports its errors, and runs a mod's in-game scenarios.
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
@@ -51,8 +51,9 @@ process handling in each session.
 | `restart` | Stops the game if it's running, keeps the ended run's logs and crash reports, launches it through Steam, and returns at the main menu, or once a save or a new city has loaded. |
 | `stop` | Asks the game to close, waits for it to exit, and forces it if it hangs. |
 | `wait_load` | Returns once a load started from the game's UI has finished. |
+| `test` | Runs a mod's in-game scenarios unattended and returns each one's result and lines. A run fails on any error naming the mod, inside a scenario or not, and on a run with no scenario. |
 | `status` | Says whether the game is stopped, booting, at the main menu, loading or in a city, with its version and build. |
-| `logs` | Returns each kind of error or message once, with its count and the file and line it first appeared on. It can also read the run before the last restart. |
+| `logs` | Returns each kind of error or message once, with its count and the file and line it first appeared on. It can also read the run before the last restart or test. |
 | `ignore_error` | Hides errors matching a regular expression from the error notices until the server restarts. |
 
 Each tool result ends with a one-line notice when the game logged new errors, went away, or wrote a
@@ -61,9 +62,9 @@ tools, and spaces its notices out during an error storm. It starts once your age
 cs2-modding skill in a session.
 
 > [!WARNING]
-> **Your agent can stop or kill a running game without asking you.** `restart` and `stop` ask the
-> game to close and force it after a minute. Neither has a confirmation step. Anything unsaved in a
-> city you're playing is lost. On Codex the plugin approves its own tools. On Claude Code your
+> **Your agent can stop or kill a running game without asking you.** `restart`, `stop` and `test`
+> ask the game to close and force it after a minute. None has a confirmation step. Anything unsaved
+> in a city you're playing is lost. On Codex the plugin approves its own tools. On Claude Code your
 > permission settings still apply.
 
 The tools are proven on Linux and unverified on Windows.

@@ -31,7 +31,7 @@ let writes = 0;
 
 export interface Cursor {
   /**
-   * The mod last given to `restart`, whose errors a hint counts apart.
+   * The mod last given to `restart` or `test`, whose errors a hint counts apart.
    */
   readonly mod?: string | undefined;
 

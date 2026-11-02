@@ -37,6 +37,7 @@ beforeEach(async () => {
   context = {
     host: game,
     userDataPath: game.userDataPath,
+    localModsPath: path.join(game.userDataPath, 'Mods'),
     progress: () => {},
     slot: { running: undefined },
     signal: new AbortController().signal
@@ -783,7 +784,7 @@ describe('logs', () => {
   });
 
   test(`points at the kept run when the current one holds nothing`, async () => {
-    const pointer = `previous: true reads the run before the last restart.`;
+    const pointer = `previous: true reads the run before the last restart or test.`;
 
     await runningGame();
 

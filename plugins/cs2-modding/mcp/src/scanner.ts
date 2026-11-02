@@ -21,7 +21,7 @@ import { IGNORE_INPUT_CHARACTERS } from './ignores';
  * Seconds a file must go unwritten before its last entry counts as whole.
  * The game writes an entry in one piece, so this only has to outlast a write.
  */
-const QUIET_SECONDS = 2;
+export const QUIET_SECONDS = 2;
 
 /**
  * Seconds a `Player.log` entry waits for its `Logs/` twin, which lands within milliseconds of it.

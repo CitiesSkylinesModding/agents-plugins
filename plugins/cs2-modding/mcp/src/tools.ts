@@ -7,10 +7,12 @@ import { isAssetGuid, readAssetGuid } from './asset-guid';
 import { toolFolderPath, updateCursor } from './cursor';
 import {
   BOOT_SECONDS,
+  describeProcesses,
   LOAD_SECONDS,
   READ_CEILING_SECONDS,
   RESTART_CEILING_SECONDS,
   STOP_CEILING_SECONDS,
+  TEST_CEILING_SECONDS,
   WAIT_LOAD_CEILING_SECONDS,
   isGameRunning,
   launchGame,
@@ -31,6 +33,13 @@ import { createIgnoreMatcher } from './hint';
 import { markDropped, readIgnores, requireValidPattern, updateIgnores } from './ignores';
 import { describeLogs, describePatterns, describeStatus } from './log-report';
 import { listLogFiles, readRunStart, scanLogs } from './scanner';
+import {
+  describeRun,
+  readModErrors,
+  readScenarioRun,
+  readStaleBuild,
+  watchScenarios
+} from './scenario-run';
 import { type GuardedContext, readHint, runTool } from './tool-run';
 
 /**
@@ -38,11 +47,24 @@ import { type GuardedContext, readHint, runTool } from './tool-run';
  */
 const ARCHIPELAGO_GUID = 'bf8036b291428535b986c757fda3e627';
 
+/**
+ * The scenario category a mod made from the template uses, `1 << 20`.
+ */
+export const DEFAULT_CATEGORY = 1_048_576;
+
 export interface RestartRequest {
   readonly save?: string | undefined;
   readonly newCity?: { readonly map?: string | undefined } | undefined;
   readonly gameOptions?: readonly string[] | undefined;
   readonly mod?: string | undefined;
+}
+
+export interface TestRequest {
+  readonly mod: string;
+  readonly category?: number | undefined;
+  readonly sources?: string | undefined;
+  readonly keepOpen?: boolean | undefined;
+  readonly gameOptions?: readonly string[] | undefined;
 }
 
 export interface LogsRequest {
@@ -94,6 +116,30 @@ export function restart(context: ToolContext, request: RestartRequest): Promise<
     const startGuid = await readStartGuid(guarded.userDataPath, request);
 
     return restartGame(guarded, request, startGuid);
+  });
+}
+
+/**
+ * Stops the game, keeps the ended run's evidence,
+ * launches it with a mod's scenarios as its test filter, and returns how they went.
+ */
+export function testMod(context: ToolContext, request: TestRequest): Promise<CallToolResult> {
+  const run = {
+    name: 'test',
+    ceilingSeconds: TEST_CEILING_SECONDS,
+    isExclusive: true,
+    onGiveUp: () => rm(path.join(context.userDataPath, 'runOnce.txt'), { force: true })
+  };
+
+  return runTool(context, run, async guarded => {
+    requireWholeOptions(request.gameOptions ?? []);
+
+    // Before the stop: a folder that does not exist leaves a running game alone.
+    const { mod, sources } = request;
+    const staleBuild =
+      sources == undefined ? undefined : await readStaleBuild(guarded, { mod, sources });
+
+    return runScenarios(guarded, request, staleBuild);
   });
 }
 
@@ -241,32 +287,8 @@ async function restartGame(
   request: RestartRequest,
   startGuid: string | undefined
 ): Promise<string> {
-  const { host, userDataPath, progress, signal, carry } = guarded;
-
-  if (request.mod != null) {
-    const { mod } = request;
-
-    await updateCursor(guarded, cursor => ({ ...cursor, mod }));
-  }
-
-  progress(`Stopping the game`);
-
-  const stopOutcome = await stopGame(guarded);
-
-  progress(`Keeping the ended run's evidence`);
-
-  await keepPreviousRun(userDataPath, signal);
-
-  // The launch starts the scan over, so this is the last call to tell of the ended run, and only
-  // now does `previous` read it and do its shutdown's errors count.
-  progress(`Reading the ended run's errors`);
-
-  const ended = await readHint(guarded);
-
-  if (ended != undefined) {
-    carry(`The run this restart ends: ${ended} logs reads it with previous: true.`);
-  }
-
+  const { host, userDataPath, progress } = guarded;
+  const stopOutcome = await endRun(guarded, 'restart', request.mod);
   const launchTime = host.now();
 
   progress(`Launching the game`);
@@ -298,6 +320,101 @@ async function restartGame(
     `Options written to runOnce.txt: ${options}`,
     ...(request.mod ? await describeModLoad(userDataPath, request.mod, launchTime) : [])
   ].join('\n');
+}
+
+/**
+ * The stop, the kept evidence, the launch with the mod's scenarios as the test filter, the watch,
+ * and the game's end unless it is to stay, returning how the run went or failing with it.
+ */
+async function runScenarios(
+  guarded: GuardedContext,
+  request: TestRequest,
+  staleBuild: string | undefined
+): Promise<string> {
+  const { host, progress } = guarded;
+  const { mod, category = DEFAULT_CATEGORY, keepOpen, gameOptions = [] } = request;
+
+  const stopOutcome = await endRun(guarded, 'test', mod);
+  const launchTime = host.now();
+
+  progress(`Launching the game`);
+
+  const options = await launchGame(guarded, [`--categoryFilter=${category}`, ...gameOptions]);
+
+  const verdict = await withGameLeftRunning(host, () => watchScenarios(guarded, launchTime));
+  const gameLines = keepOpen ? await describeProcesses(host) : await endScenarioRun(guarded);
+  const errors = await readModErrors(guarded, { mod, launchTime });
+
+  const report = describeRun(await readScenarioRun(guarded, { verdict, launchTime }), {
+    userDataPath: guarded.userDataPath,
+    mod,
+    errors,
+    lines: [
+      ...(staleBuild == undefined ? [] : [staleBuild]),
+      ...(stopOutcome.kind == 'notRunning'
+        ? []
+        : [`Before the launch: ${describeStop(stopOutcome)}`]),
+      ...gameLines,
+      `Options written to runOnce.txt: ${options}`,
+      ...(await describeModLoad(guarded.userDataPath, mod, launchTime))
+    ]
+  });
+
+  if (!report.hasPassed) {
+    throw new Error(report.text);
+  }
+
+  return report.text;
+}
+
+/**
+ * Ends the game a run left. Its failure joins the report: the scenarios still ran.
+ */
+async function endScenarioRun(guarded: GuardedContext): Promise<readonly string[]> {
+  guarded.progress(`Stopping the game`);
+
+  try {
+    const outcome = await stopGame(guarded);
+
+    return outcome.kind == 'notRunning' ? [] : [describeStop(outcome)];
+  } catch (error) {
+    return [`The game could not be stopped: ${errorMessage(error)}`];
+  }
+}
+
+/**
+ * Stops the game and keeps its evidence, ahead of a launch.
+ */
+async function endRun(
+  guarded: GuardedContext,
+  caller: 'restart' | 'test',
+  mod: string | undefined
+): Promise<StopOutcome> {
+  const { userDataPath, progress, signal, carry } = guarded;
+
+  if (mod != null) {
+    await updateCursor(guarded, cursor => ({ ...cursor, mod }));
+  }
+
+  progress(`Stopping the game`);
+
+  const stopOutcome = await stopGame(guarded);
+
+  progress(`Keeping the ended run's evidence`);
+
+  await keepPreviousRun(userDataPath, signal);
+
+  // The launch starts the scan over, so this is the last call to tell of the ended run, and only
+  // now does `previous` read it and do its shutdown's errors count.
+  progress(`Reading the ended run's errors`);
+
+  const ended = await readHint(guarded);
+
+  if (ended != undefined) {
+    carry(`The run this ${caller} ends: ${ended} logs reads it with previous: true.`);
+  }
+
+  return stopOutcome;
 }
 
 /**

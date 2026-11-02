@@ -80,7 +80,7 @@ export function describeLogs(
       ? [`${ignoredCount} ignored entries left out: ignored: true brings them back.`]
       : []),
     ...(count == 0 && ignoredCount == 0 && options.shouldPointBack
-      ? [`previous: true reads the run before the last restart.`]
+      ? [`previous: true reads the run before the last restart or test.`]
       : []),
     `Paths are relative to ${options.basePath}.`
   ].join(' ');
@@ -145,7 +145,7 @@ function describeKind(kind: Kind, room: number): string {
   return `${heading}${cutAt(entry.text, characters)}`;
 }
 
-function cutAt(text: string, characters: number): string {
+export function cutAt(text: string, characters: number): string {
   return text.length > characters
     ? `${text.slice(0, characters)}\n[cut: ${text.length - characters} more characters]`
     : text;

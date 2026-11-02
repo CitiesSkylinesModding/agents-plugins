@@ -34,6 +34,19 @@ export function resolveUserDataPath(
 }
 
 /**
+ * The folder the toolchain deploys a mod to, by default the game's own.
+ */
+export function loadLocalModsPath(userDataPath: string): string {
+  const configured = process.env.CSII_LOCALMODSPATH;
+
+  if (configured) {
+    return configured;
+  }
+
+  return path.join(userDataPath, 'Mods');
+}
+
+/**
  * The environment `systemd-run --user` runs in: it exits 1 with neither `XDG_RUNTIME_DIR` nor
  * `DBUS_SESSION_BUS_ADDRESS` to find the user's service manager, and a harness may pass neither.
  */

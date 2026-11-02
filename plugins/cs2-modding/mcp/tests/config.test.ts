@@ -5,6 +5,7 @@ import {
   READ_CEILING_SECONDS,
   RESTART_CEILING_SECONDS,
   STOP_CEILING_SECONDS,
+  TEST_CEILING_SECONDS,
   WAIT_LOAD_CEILING_SECONDS
 } from '../src/cycle';
 import { HINT_CEILING_SECONDS } from '../src/tool-run';
@@ -36,6 +37,7 @@ describe('the Codex config', () => {
       READ_CEILING_SECONDS,
       RESTART_CEILING_SECONDS,
       STOP_CEILING_SECONDS,
+      TEST_CEILING_SECONDS,
       WAIT_LOAD_CEILING_SECONDS
     );
 

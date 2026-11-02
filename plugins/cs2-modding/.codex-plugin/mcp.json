@@ -5,7 +5,7 @@
       "args": ["./mcp/dist/server.mjs"],
       "cwd": ".",
       "env_vars": ["CSII_USERDATAPATH", "CSII_LOCALMODSPATH"],
-      "tool_timeout_sec": 2400,
+      "tool_timeout_sec": 2460,
       "default_tools_approval_mode": "approve"
     }
   }

@@ -35,7 +35,7 @@ const LAUNCH_SECONDS = 60;
 /**
  * Milliseconds between two checks of the game or of its logs.
  */
-const POLL_MILLISECONDS = 1000;
+export const POLL_MILLISECONDS = 1000;
 
 /**
  * Seconds a boot may take, above the slowest seen: the prefabs' load varies by the day.
@@ -53,6 +53,11 @@ export const LOAD_SECONDS = 300;
 export const LOADING_SCREEN_SECONDS = 20;
 
 /**
+ * Seconds a run of scenarios may take from the launch.
+ */
+export const SCENARIO_RUN_SECONDS = 1800;
+
+/**
  * Seconds a tool's ceiling keeps above the sum of its waits, for the commands and the copies
  * between them: only what the waits did not foresee reaches a ceiling.
  */
@@ -65,14 +70,27 @@ export const STOP_CEILING_SECONDS = STOP_BOUND_SECONDS + FORCE_SECONDS + CEILING
 export const WAIT_LOAD_CEILING_SECONDS =
   LOAD_SECONDS + LOADING_SCREEN_SECONDS + CEILING_MARGIN_SECONDS;
 
-export const RESTART_CEILING_SECONDS =
+/**
+ * Seconds from a call's start to a launched game, a failed launch's own cleanup included.
+ */
+const STOP_AND_LAUNCH_SECONDS =
   STOP_BOUND_SECONDS +
   FORCE_SECONDS +
   LAUNCH_ATTEMPTS * (FORCE_SECONDS + LAUNCH_SECONDS) +
-  FORCE_SECONDS +
+  FORCE_SECONDS;
+
+export const RESTART_CEILING_SECONDS =
+  STOP_AND_LAUNCH_SECONDS +
   BOOT_SECONDS +
   LOAD_SECONDS +
   LOADING_SCREEN_SECONDS +
+  CEILING_MARGIN_SECONDS;
+
+export const TEST_CEILING_SECONDS =
+  STOP_AND_LAUNCH_SECONDS +
+  SCENARIO_RUN_SECONDS +
+  STOP_BOUND_SECONDS +
+  FORCE_SECONDS +
   CEILING_MARGIN_SECONDS;
 
 /**
@@ -105,6 +123,11 @@ export interface CallSlot {
 export interface ToolContext {
   readonly host: GameHost;
   readonly userDataPath: string;
+
+  /**
+   * The folder holding a deployed mod's own folder.
+   */
+  readonly localModsPath: string;
 
   /**
    * Tells the caller where a long call is at.
@@ -333,12 +356,9 @@ export async function waitForLoad(
  * Runs a wait on a game, adding to its error what to do about the game it leaves:
  * a hung game stays up, for a look with the `unity` eval before it is stopped.
  */
-export async function withGameLeftRunning(
-  host: GameHost,
-  wait: () => Promise<void>
-): Promise<void> {
+export async function withGameLeftRunning<T>(host: GameHost, wait: () => Promise<T>): Promise<T> {
   try {
-    await wait();
+    return await wait();
   } catch (error) {
     const message = errorMessage(error);
     const processes = await describeProcesses(host);
@@ -528,10 +548,10 @@ async function readEnd(logPath: string): Promise<string> {
 }
 
 /**
- * The lines a failed wait's error gets about the game it leaves.
+ * The lines a call gets about the game it leaves running, a failed wait's error among them.
  * A failed look at the processes must not hide why the wait failed.
  */
-async function describeProcesses(host: GameHost): Promise<readonly string[]> {
+export async function describeProcesses(host: GameHost): Promise<readonly string[]> {
   try {
     const { game } = await host.findPids();
 

@@ -31,6 +31,11 @@ export class FakeGame implements GameHost {
   public onClose: () => void = () => {};
 
   /**
+   * What the game does just as a tool looks for it, between two of the tool's reads.
+   */
+  public onFindPids: () => Promise<void> = () => Promise.resolve();
+
+  /**
    * What a forced end does: by default a signal ends everything at once.
    */
   public onForce: (stage: ForceStage) => void = () => {
@@ -82,6 +87,8 @@ export class FakeGame implements GameHost {
     if (this.stuckOn == 'findPids') {
       await this.hang();
     }
+
+    await this.onFindPids();
 
     if (this.findPidsFailure != null) {
       throw new Error(this.findPidsFailure);

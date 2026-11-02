@@ -1,0 +1,6 @@
+[2026-10-23 14:02:11,120] [INFO]  25 test scenario available: Test JSON, Test all maps, Greenfield: Sample
+[2026-10-23 14:03:20,500] [INFO]  ---| START TEST SCENARIO: Greenfield: Sample
+[2026-10-23 14:03:22,100] [ERROR]  Colossal.TestFramework.TestScenario+TestScenarioException: The new game on Archipelago did not load.
+  at Greenfield.Scenarios.SampleScenario.OnPrepare () [0x00000] in <00000000000000000000000000000000>:0
+[2026-10-23 14:03:22,105] [INFO]  [Metrics] Total reserved memory: 9.12 GB
+[2026-10-23 14:03:24,300] [INFO]  ---| FINISH TEST SCENARIO (Success, exceptions: 0, errors: 0): Greenfield: Sample 

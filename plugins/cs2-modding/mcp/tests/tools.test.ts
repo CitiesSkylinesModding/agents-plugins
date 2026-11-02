@@ -38,6 +38,7 @@ beforeEach(async () => {
   context = {
     host: game,
     userDataPath: game.userDataPath,
+    localModsPath: path.join(game.userDataPath, 'Mods'),
     progress: () => {},
     slot: { running: undefined },
     signal: cancellation.signal

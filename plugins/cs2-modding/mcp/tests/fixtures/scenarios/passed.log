@@ -1,0 +1,18 @@
+[2026-10-23 13:11:06,387] [INFO]  24 test scenario available: PDX SDK Services, Test JSON, Test LongFile, Test MultiPartFileStream, Start New Game and Save, Test all maps, Start New Game, Save, Load and Save on top, Test AssetImporter Settings, Test Editor, Test JSON Diff, Test Modding Toolchain, Test AssetDatabase, Test AssetDatabase API, Test AssetDatabase Search Filtering, Test AssetDataPath, Test AssetReferences, Electricity, Profile Graphics Performance, Profile Memory Use, Profile Performances, Test TextureAsset, Water, Test Sun Moon Data, Test Variant Merge
+[2026-10-23 13:12:02,863] [INFO]  ---| START TEST SCENARIO: Greenfield: Sample
+[2026-10-23 13:12:38,439] [INFO]  ---| START TEST: CountsEachKindOfEntity
+[2026-10-23 13:12:38,623] [INFO]    [PASSED] Buildings: counted 26, the query holds 26
+[2026-10-23 13:12:38,822] [INFO]    [PASSED] Citizens: counted 0, the query holds 0
+[2026-10-23 13:12:39,022] [INFO]    [PASSED] Vehicles: counted 118, the query holds 118
+[2026-10-23 13:12:39,093] [INFO]  ---| FINISH TEST (Success, exceptions: 0, errors: 0): CountsEachKindOfEntity 
+[2026-10-23 13:12:39,095] [INFO]  ---| START TEST: ReadsTheSimulationDate
+[2026-10-23 13:12:39,096] [INFO]    [PASSED] year 2042, the city started in 2042
+[2026-10-23 13:12:39,156] [INFO]  ---| FINISH TEST (Success, exceptions: 0, errors: 0): ReadsTheSimulationDate 
+[2026-10-23 13:12:39,159] [INFO]  [Metrics] Total reserved memory: 2.076 GB
+[Metrics] Total allocated memory: 1.639 GB
+[Metrics] Total reserved but not allocated memory: 448.40 MB
+[Metrics] GC total memory: 471.13 MB
+[Metrics] Mono heap: 1.126 GB
+[Metrics] Mono used: 471.13 MB
+
+[2026-10-23 13:12:43,680] [INFO]  ---| FINISH TEST SCENARIO (Success, exceptions: 0, errors: 0): Greenfield: Sample 
