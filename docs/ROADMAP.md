@@ -575,14 +575,15 @@ one is nullable is the fix.
 
 ### Type-argument inference beyond a plain `T` parameter
 
-**Priority:** low · **Cost:** moderate · **Hits:** 1 as of 2026-10-21
+**Priority:** low · **Cost:** moderate · **Hits:** 2 as of 2026-11-02
 
 Inference reads only a parameter typed as the type parameter itself and takes each argument's
 runtime type. It refuses two arguments fixing `T` to different types, and a null beside an argument
 fixing `T` to a type that takes null. C# also infers through `T[]` and `List<T>`, and fixes `T` to a
-type every argument converts to. Each refusal is loud and names its fix, writing the type argument.
-Reading `T[]` and generic-instance parameters is the step agents would reach first; the common-type
-cases need static types the evaluator does not track.
+type every argument converts to. Each refusal is loud and names its fix, writing the type argument,
+as `Enumerable.ToList` over an `IReadOnlyCollection<T>` did with `ToList is generic and TSource
+cannot be inferred`. Reading `T[]` and generic-instance parameters is the step agents would reach
+first; the common-type cases need static types the evaluator does not track.
 
 ### Calls C# rejects as ambiguous bind silently
 
@@ -1143,7 +1144,7 @@ It supersedes NetworkTools' machine-local `game.sh` (`~/Documents/Dev/cs2-networ
 - The template's in-game test runner (`scripts/test-game.ts`, `scripts/scenario-log.ts`, the `tmt-game-testing` skill) uses the launcher and could follow it: the game's runner reports a scenario a success when its preparation throws, and aborts a scenario while earlier errors are pending, which the runner and a scenario base class work around.
   The runner takes one `[TestPrepare]` per scenario, base classes included, and throws on two. An exception a system throws at the main menu lands in `SceneFlow.log`, naming the mod only in its stack. `TestScenarioSystem.instance.scenarios` returns the live dictionary, so registering needs no reflection unless the order matters.
 - Loading another save from a running game: the gameface `menu.loadGame` trigger, once the menu's save list filled (`src/Game/Game.UI.Menu/MenuUISystem.cs:797`), some 30 s after `MainMenu reached`; sent earlier, it throws a `NullReferenceException`. `GameManager.instance.Load` from the eval holds the main thread the load needs, and the game must be killed.
-- For a screen recording or any scripted run in a loaded city, `CameraController.inputEnabled = false` (`src/Game/Game/CameraController.cs:248`, through `CameraController.TryGet`) stops edge scrolling and the camera keys from moving the view.
+- For a screen recording or any scripted run in a loaded city, a blocked barrier on the `Camera` input map stops edge scrolling and the camera keys from moving the view (`src/Game/Game/CameraController.cs:351`); `game-cycle` carries the move.
 
 Shape, not settled: a `cs2-modding` technique reference on the dev loop's run half, with the CLI as tooling it ships.
 Once it ships, the template drops its copy (`scripts/game.ts`, the `game` mise task, the `gfd-game-cycle` skill) and points its runner and AGENTS.md at the plugin's; annotate the template's spec, `.scratch/mod-template/spec.md`, if it is still there.

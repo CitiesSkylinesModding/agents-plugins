@@ -186,6 +186,9 @@ Each logger writes its own `<Name>.log`, and `Player.log` sits at the root besid
 Two properties decide whether a log can answer your question at all, and both are the shipped `diagnostics` reference's to explain: which severities reach which file, and that a file is truncated at each session's first message rather than appended, so only `Player-prev.log` survives a relaunch.
 `FallbackSettings.coc` at the same root governs what these files contain — it holds the persisted settings for every logger, so it is read with them rather than separately.
 
+`.cache/backtrace/crashpad/` under the same root holds the crash reporter's dumps, and `TestScenarios.log` under `Logs/` the game's test framework runs.
+A dump carries the process's environment block, so read its names only, and no value goes into a repo.
+
 ## 15. The Unity package sources on the machine
 
 `Library/PackageCache/` under `%CSII_UNITYMODPROJECTPATH%`, one directory per package of entry 7's manifest — `com.unity.entities`, `com.unity.collections`, `com.unity.burst`, `com.unity.mathematics` and the rest — as full C# source with the upstream `#if` directives intact.
