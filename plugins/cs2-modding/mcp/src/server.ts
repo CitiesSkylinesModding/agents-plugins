@@ -173,8 +173,8 @@ async function main(): Promise<void> {
       title: `Wait for a load`,
       description: oneLine`
         Return once the last logged city or map load completed and its loading screen went.
-        Follows a load started from the UI, which may not be logged yet the moment after its
-        trigger.
+        Follows a load started from the main menu, which may not be logged yet the moment after
+        its trigger; from a city it reports the load already done until the new one is logged.
         Fails on a stopped game, on a game that dies, and on a load that falls back to the main
         menu; a timeout of ${LOAD_SECONDS + LOADING_SCREEN_SECONDS} s leaves the game running.
         Unverified on Windows.

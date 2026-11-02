@@ -50,7 +50,7 @@ process handling in each session.
 | --- | --- |
 | `restart` | Stops the game if it's running, keeps the ended run's logs and crash reports, launches it through Steam, and returns at the main menu, or once a save or a new city has loaded. |
 | `stop` | Asks the game to close, waits for it to exit, and forces it if it hangs. |
-| `wait_load` | Returns once a load started from the game's UI has finished. |
+| `wait_load` | Returns once the last logged load has finished; from a city, that is the old load until the new one is logged. |
 | `test` | Runs a mod's in-game scenarios unattended and returns each one's result and lines. A run fails on any error naming the mod, inside a scenario or not, and on a run with no scenario. |
 | `status` | Says whether the game is stopped, booting, at the main menu, loading or in a city, with its version and build. |
 | `logs` | Returns each kind of error or message once, with its count and the file and line it first appeared on. It can also read the run before the last restart or test. |
