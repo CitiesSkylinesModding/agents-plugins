@@ -1,12 +1,12 @@
 ---
 name: scan-mcp-failures
-description: Mines this machine's agent transcripts for failed gameface and unity MCP calls, and turns them into roadmap hits and entries.
+description: Mines this machine's agent transcripts for failed gameface, unity and cs2-dev MCP calls, and turns them into roadmap hits and entries.
 disable-model-invocation: true
 ---
 
 # Scanning transcripts for MCP failures
 
-Every failed `gameface` or `unity` call an agent made is evidence of a gap: grammar `eval` lacks, a message that sent the agent the wrong way, a mode a tool is missing. This skill counts the failures no earlier run counted, and lands them in `docs/ROADMAP.md` as **Hits** on the entry each one bears on, or as new entries.
+Every failed `gameface`, `unity` or `cs2-dev` call an agent made is evidence of a gap: grammar `eval` lacks, a message that sent the agent the wrong way, a mode a tool is missing. This skill counts the failures no earlier run counted, and lands them in `docs/ROADMAP.md` as **Hits** on the entry each one bears on, or as new entries.
 
 [`scan.ts`](scan.ts) does the mining; its header states the ledger contract. Its state lives in `.scratch/mcp-failures/` and is machine-local, like the transcripts it reads.
 

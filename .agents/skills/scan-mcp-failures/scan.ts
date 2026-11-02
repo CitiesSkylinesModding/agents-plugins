@@ -15,8 +15,8 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
-// Finds failed gameface and unity MCP calls in the Claude Code and Codex transcripts on this
-// machine, skipping what earlier scans already counted.
+// Finds failed gameface, unity and cs2-dev MCP calls in the Claude Code and Codex transcripts on
+// this machine, skipping what earlier scans already counted.
 //
 // The ledger maps each transcript to a watermark: calls stamped before it were counted. A scan
 // reads only transcripts modified since their watermark, reports the failures at or after it, and
@@ -34,18 +34,23 @@ const roots = [
   { dir: path.join(homedir(), '.codex/sessions'), parse: parseCodex },
 ];
 
+const SERVERS = 'gameface|unity|cs2-dev';
+
 // Matches direct servers (mcp__unity__eval) and plugin-installed ones (mcp__plugin_<plugin>_...).
 const toolPattern = new RegExp(
-  String.raw`^(?:mcp__)?(?:plugin_(?:unity-devtools|coherent-gameface)_)?` +
-    String.raw`(?<server>gameface|unity)__(?<tool>\w+)$`,
+  String.raw`^(?:mcp__)?(?:plugin_(?:unity-devtools|coherent-gameface|cs2-modding)_)?` +
+    String.raw`(?<server>${SERVERS})__(?<tool>\w+)$`,
   'u'
 );
+
+const serverCallPattern = new RegExp(`(?:${SERVERS})__`, 'u');
 
 // A call the user refused is counted apart from the failures. Pressing Esc on a running call writes
 // the same result, so a hang the user escaped lands here too.
 const rejectedPattern = /doesn't want to proceed/u;
 
-// Codex outputs carry no error flag, so they fall back to the prefixes the servers emit.
+// Codex outputs carry no error flag, so they fall back to the prefixes the servers emit. cs2-dev
+// errors share no prefix, so its failures on Codex go uncounted.
 const codexFailurePattern =
   /^(?:An error occurred invoking|Evaluation threw|Gameface CDP error|Cannot reach|Timed out)/u;
 
@@ -161,6 +166,12 @@ function scan(): void {
 
     for (const relative of globSync('**/*.jsonl', { cwd: root.dir })) {
       const file = path.join(root.dir, relative);
+
+      // A moved project leaves symlinks to its old transcripts, which the glob still lists.
+      if (!existsSync(file)) {
+        continue;
+      }
+
       const since = ledger[file] ?? '';
 
       if (since && statSync(file).mtime.toISOString() < since) {
@@ -172,7 +183,7 @@ function scan(): void {
 
       pending[file] = startedAt;
 
-      if (!/(?:gameface|unity)__/u.test(raw)) {
+      if (!serverCallPattern.test(raw)) {
         continue;
       }
 
@@ -270,7 +281,7 @@ function nextMoves(transcript: Transcript, index: number): string[] {
       return `TEXT ${event.text.slice(0, MOVE_WIDTH)}`;
     }
 
-    const name = event.name.replace(/^mcp__(?:plugin_[a-z-]+_)?/u, '');
+    const name = event.name.replace(/^mcp__(?:plugin_[a-z\d-]+_)?/u, '');
     const input = JSON.stringify(event.input).slice(0, MOVE_WIDTH);
     const answer = (transcript.results.get(event.id)?.text ?? '').replaceAll(/\s+/gu, ' ');
 
@@ -332,7 +343,8 @@ function parseClaude(raw: string): Transcript {
 }
 
 // Codex: response_item function_call answered by function_call_output, paired by call_id.
-// Unverified against a real MCP call: no recorded Codex session has made one yet.
+// Code-mode sessions log one custom_tool_call named exec per script and no record per nested
+// tool, so MCP calls made there go unseen. A direct MCP call remains unverified: none is recorded.
 function parseCodex(raw: string): Transcript {
   const events: Event[] = [];
   const results = new Map<string, Result>();
