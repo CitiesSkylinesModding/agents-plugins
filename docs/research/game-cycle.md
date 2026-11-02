@@ -18,7 +18,7 @@ The topic is the run half of the dev loop: what surrounds the `cs2-dev` tools, a
 - The tools' own traps stay on their descriptions (the next section lists them, so the reference does not repeat them).
 - The log catalogue, the diagnosis order and what each line proves belong to `diagnostics`, shipped at `plugins/cs2-modding/skills/cs2-modding/references/technique/diagnostics/diagnostics.md`. It already states that a relaunch destroys a crashed run's evidence, and that `Player-prev.log` is the only automatic copy (`plugins/cs2-modding/skills/cs2-modding/references/technique/diagnostics/diagnostics.md:77-79`). This topic adds what the tool keeps beside that.
 - Launch flags and `runOnce.txt` as a mechanism belong to `debug-menu` (`plugins/cs2-modding/skills/cs2-modding/references/technique/debug-menu/debug-menu.md:65-68`). This topic adds only that `restart`'s `gameOptions` go through that file.
-- Reading a minidump is ticket 07's, and nothing here teaches it.
+- Reading a minidump is `crash-dumps`', and nothing here teaches it.
 
 ### What each tool's description already says
 
@@ -83,13 +83,13 @@ Consequence: asking is the agent's own judgement, not the tool's. A session shar
 
 - **Managed reports.** `Annotations.SetEnvironmentVariables` copies every environment variable (`src/Backtrace.Unity/Backtrace.Unity.Model.JsonData/Annotations.cs:56-74`, JSON key `Environment Variables` at `:79`), through `src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceData.cs:105`. Such a report goes out for every log above `Warn` unless `disableBacktrace` is set, and for `LogException` (`src/Colossal.Logging/Colossal.Logging/CustomLogHandler.cs:142-152`, `:182`). **So an ordinary logged error uploads the environment.**
 - **Minidumps.** A dump holds the process's environment block. The one boot dump opened, kept in ticket 01 (139 MB), held 111 entries in UTF-16; only the names were read, among them `STEAM_COMPAT_*`, `SteamUser`, `USER`, `WINEPREFIX` and `LD_PRELOAD`.
-- **Every boot writes one.** In ticket 01 every boot wrote a dump 38 to 44 s in, `Simulated Exception` with `error.type` `Hang`, top frame `BacktraceCrashpadWindows.dll`, and 7 of 8 reports carried `{"response":"ok"}` in crashpad's `metadata`: uploaded. The hang path is `NativeClient.HandleAnr` (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Windows/NativeClient.cs:115-150`).
+- **Most boots write one.** In ticket 01 every boot wrote a dump 38 to 44 s in, `Simulated Exception`, top frame `BacktraceCrashpadWindows.dll`, 10 of 17 launches with ticket 01's nine counted (`crash-dumps.md`, finding 8), and 7 of 8 reports carried `{"response":"ok"}` in crashpad's `metadata`: uploaded. The hang path is `NativeClient.HandleAnr` (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Windows/NativeClient.cs:115-150`).
 
-The trigger is the game's configured `AnrWatchdogTimeout = 15000` (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`), overriding the library's default of 5000 (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:19`).
-Verdict: the template's "blocked over 5 s" (`gfd-game-cycle/SKILL.md:44`) reads the library default; the game's configured value wins. It is 15 s, and the watchdog compares two samples a sleep apart (`NativeClient.cs:125-142`, `:154`), so the exact blocked time at which it fires is between one and two sleeps.
+The trigger is `AnrWatchdogTimeout`: the game sets 15000 (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`) after the native client copied the library's default of 5000 (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:19`), which a live read confirmed (`crash-dumps.md`, finding 8).
+Verdict: the template's "blocked over 5 s" (`gfd-game-cycle/SKILL.md:44`) holds. The sleep is 5 s, and the watchdog compares two samples a sleep apart (`NativeClient.cs:125-142`, `:154`), so the exact blocked time at which it fires is between one and two sleeps.
 
 Unconfirmed: that a token was actually seen in an upload. It settles nothing that matters here, since the dump held the block and the report said uploaded. That a running Steam's forwarded URL carries no caller environment is reasoned from Steam forwarding the URL to its own process, not observed; the Linux launch does not depend on it. The Windows launch does (section 8).
-Rots: the watchdog value, `Colossal.Logging.Backtrace.BacktraceHelper`; the annotation key, `Backtrace.Unity.Model.JsonData.Annotations`.
+Rots: the watchdog value, `Backtrace.Unity.Model.BacktraceConfiguration` and `_nativeClient.AnrWatchdogTimeout` on a running game; the annotation key, `Backtrace.Unity.Model.JsonData.Annotations`.
 
 ### 2. Arrival: how a long call reaches the agent
 
@@ -178,10 +178,10 @@ Rots: the setting's name and defaults, `Game.Settings.GeneralSettings`; the phas
 A `restart` right after a boot that died replaces a useful run with a useless one, as the keep is unconditional (`evidence.ts:23`).
 The move: copy `.cs2-dev/previous-run` aside, or read it, before the next `restart` or `test` whenever it holds something the session still needs.
 
-**What outlives it, and what does not.** `Player-prev.log` is the engine's one copy (`plugins/cs2-modding/skills/cs2-modding/references/technique/diagnostics/diagnostics.md:79`). Crashpad prunes reports on its own: in ticket 01 reports went at about 10 minutes, rule unknown. Only the next `restart` or `test` makes the copy (`plugins/cs2-modding/mcp/src/tools.ts:403-405`), so a report pruned before that is gone.
-Verdict: "Crashpad prunes them within the hour" (`gfd-game-cycle/SKILL.md:44`) is looser than ticket 01's observation. The observation wins: about 10 minutes on this machine, and the rule is not established.
+**What outlives it, and what does not.** `Player-prev.log` is the engine's one copy (`plugins/cs2-modding/skills/cs2-modding/references/technique/diagnostics/diagnostics.md:79`). Crashpad prunes reports on its own, about 10 minutes into a run (`crash-dumps.md`, finding 2). Only the next `restart` or `test` makes the copy (`plugins/cs2-modding/mcp/src/tools.ts:403-405`), so a report pruned before that is gone.
+Verdict: "Crashpad prunes them within the hour" (`gfd-game-cycle/SKILL.md:44`) is wrong: a report lasts until a run reaches about 10 minutes with it already on disk, days if runs are short (`crash-dumps.md`, finding 2).
 Verdict: "Every log is written afresh at each launch" (`gfd-game-cycle/SKILL.md:43`): a `Logs/<Name>.log` is truncated at its session's first message and never deleted, so a logger silent this run leaves last run's file standing (`plugins/cs2-modding/skills/cs2-modding/references/technique/diagnostics/diagnostics.md:68-79`). `diagnostics` wins, and it follows that `previous-run/Logs` can hold files older than the run it copies.
-Crash reports are in `.cache/backtrace/crashpad/reports` (`plugins/cs2-modding/mcp/src/hint.ts:56-58`). A hint says "A new crash report appeared, which may be a hang snapshot" (`hint.ts:246`), and every boot writes one, so a report alone means nothing.
+Crash reports are in `.cache/backtrace/crashpad/reports` (`plugins/cs2-modding/mcp/src/hint.ts:56-58`). A hint says "A new crash report appeared, which may be a hang snapshot" (`hint.ts:246`), and most boots write one, so a report alone means nothing.
 
 ### 5. The build check
 
@@ -322,10 +322,9 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 |---|---|---|
 | `CameraController.inputEnabled = false` stops edge scrolling and the camera keys | T:49, R:1146 (since corrected) | Nothing reads it on that class; input gates on `m_CameraMap.enabled` |
 | Autosaves every five minutes | T:28 | New-player default; a setting, off on this machine |
-| Blocked over 5 s makes a hang report | T:44 | Configured 15,000 ms; 5 s is the library default |
 | Sent early, `menu.loadGame` throws | T:26, R:1145 | Caught and logged; the caller sees nothing |
 | List fills some 30 s after the main menu | T:26, R:1145 | No such timer; event driven; time unmeasured |
-| Crashpad prunes within the hour | T:44 | About 10 minutes in ticket 01, rule unknown |
+| Crashpad prunes within the hour | T:44 | About 10 minutes into a run, `crash-dumps.md` |
 | Every log is written afresh at each launch | T:43 | Truncated at first message; stale files stay |
 | The running game holds the mod's DLL open | T:15 | Managed loaded from bytes; Burst library held, PDB handle undisposed |
 | `IgnoreLogForTestResult`: `test` still fails on it | ticket | Only for an entry in `TestScenarios.log` or naming the mod |
@@ -338,6 +337,7 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 
 | Claim | Source | Finding |
 |---|---|---|
+| Blocked over 5 s makes a hang report | T:44 | 5 s read live, `BacktraceHelper`'s 15000 never reaches the native client (`crash-dumps.md`, finding 8) |
 | `menu.saves` lookup at `MenuUISystem.cs:797` | R:1145 | Holds |
 | `CameraController.cs:248` declares it | R:1146 (since corrected) | The line holds, the effect does not |
 | `Load` from the eval holds the main thread; kill | T:26, R:1145 | Observed no answer, no progress; mechanism not shown, `stop` untried |
@@ -402,5 +402,5 @@ Slugs checked on disk under `plugins/cs2-modding/skills/`.
 - **A Debug-build gate in the framework.** No `isDebugBuild` read in `Colossal.TestFramework` or `TestsDebugUI` gates a run.
 - **`disabled` or `IgnoreLogForTestResult` in use.** No game scenario, no template, no corpus mod sets either.
 - **A city save on close.** No path from `WantsToQuit` writes the city; the only save touched is one already running.
-- **A crash-free way to keep a report alive.** Crashpad's prune rule is not in the decompile, which holds only the client; only the tool's copy keeps one.
+- **A crash-free way to keep a report alive.** The prune is the shipped handler's and the decompile holds only the client; the tool's copy, or a copy by hand, keeps one.
 - **Conflicts.** None needs a ruling: `docs/research/conflicts.md` holds nothing on restarting or logs, and every disagreement above has a first-party winner. Nothing was appended.

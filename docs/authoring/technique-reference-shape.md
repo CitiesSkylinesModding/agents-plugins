@@ -36,7 +36,7 @@ The timer wrapping the load reports from a `finally`, so a mod that threw produc
 Source: `src/Game/Game.Modding/ModManager.cs`.
 ```
 
-The anchor is whatever first-party artifact the claim is checkable against: a decompile path, an install artifact, the frontend bundle, the official toolchain's shipped files, or Harmony's own source — the one nameable library.
+The anchor is whatever first-party artifact the claim is checkable against: a decompile path, an install artifact, the frontend bundle, the official toolchain's shipped files, Harmony's own source, or crashpad's for the handler the game ships — the two nameable sources.
 Where the decompile's half is an `extern` — engine semantics native code owns — the anchor adds the engine's own documentation at a version-pinned URL beside the decompile path that shows the delegation, the pin matching the version the game ships — the engine's for engine manuals, the package's for package docs.
 A parenthetical on the `Source:` line may state what each artifact proves, and nothing else — model content a reader acts on belongs in the body.
 **The anchor is per trap even where a run of traps shares one artifact**, so a section resting on a single file repeats that file's path under each of its traps; that repetition is deliberate, because the mechanical pass below opens anchors one at a time and a trap that borrows its neighbour's is a trap with nothing to open.

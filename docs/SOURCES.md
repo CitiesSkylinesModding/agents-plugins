@@ -10,7 +10,7 @@ The decompiled C# and the installed game are both the game itself, and the insta
 Where a topic's subject matter ships as data or as JavaScript, the install outranks the decompile on anything it can answer. Where it ships as C#, the decompile is ground truth and nothing moves.
 The official toolchain is first-party too, and authoritative for its own half — how a mod is built, post-processed and published, and what a UI mod may import. It does not outrank the game on anything about the game, and the game does not outrank it on anything about the build.
 So among first-party sources the tie-break is which one **owns** the subject, not which sits higher on a list.
-Two sources are first-party for something that is not the game: the Harmony library for patch semantics, and Unity's own documentation for the engine. Both answer questions the decompile cannot — the decompiled C# shows what the engine's code contains and not what the runtime does with it — and neither outranks the decompile on anything the decompile can answer.
+Some sources are first-party for something that is not the game: the Harmony library for patch semantics, Unity's own documentation for the engine, and crashpad's source for the report database and its pruning among them. They answer questions the decompile cannot — the decompiled C# shows what the engine's code contains and not what the runtime does with it — and none outranks the decompile on anything the decompile can answer.
 
 Below them the order is flat and absolute. The wiki ships as authoritative only where nothing first-party covers the subject, and is a lead generator everywhere else. The mod corpus never settles anything about the game: it is evidence of what mod authors do, which is a different fact.
 
@@ -186,7 +186,7 @@ Each logger writes its own `<Name>.log`, and `Player.log` sits at the root besid
 Two properties decide whether a log can answer your question at all, and both are the shipped `diagnostics` reference's to explain: which severities reach which file, and that a file is truncated at each session's first message rather than appended, so only `Player-prev.log` survives a relaunch.
 `FallbackSettings.coc` at the same root governs what these files contain — it holds the persisted settings for every logger, so it is read with them rather than separately.
 
-`.cache/backtrace/crashpad/` under the same root holds the crash reporter's dumps, and `TestScenarios.log` under `Logs/` the game's test framework runs.
+`.cache/backtrace/crashpad/` under the same root holds the crash reporter's dumps and `metadata`, a decodable record of each report's creation, upload attempt and state that `.cs2-dev/previous-run/crashpad/reports` does not copy, and `TestScenarios.log` under `Logs/` the game's test framework runs.
 A dump carries the process's environment block, so read its names only, and no value goes into a repo.
 
 ## 15. The Unity package sources on the machine
@@ -211,6 +211,23 @@ It also saves a network round trip on the declared version, which [dating a ship
 **Authoritative for whether a given `[BurstCompile]` method was actually compiled**, which nothing else here can answer: the attribute in the decompile is a request rather than a record, and Burst silently declines a method it cannot see closed at build time. The library embeds fragments of what it compiled — string constants lifted from the compiled bodies, and absolute source paths from the build machine — so a byte-grep for a literal you can see in a method's decompiled body settles it.
 **What it embeds is partial, so a hit settles a question and a miss only narrows one.** It holds 43 distinct `.cs` paths for a game with hundreds of Burst jobs. Grep it with a job you know is compiled as the control.
 Its embedded package directory names look like a statement of which package version each assembly was built from, and that reading was ruled out — a vendored directory records where source sat, not what was in it. `research/conflicts.md` carries the ruled entry, against entry 13's version range.
+
+## 17. The native libraries the install ships
+
+`Cities2_Data/Plugins/x86_64/` as a whole, plus `MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll`, under `%CSII_INSTALLATIONPATH%` — the crash handler, the UI and JavaScript libraries and the Mono runtime, which entry 16 passes over.
+
+**Authoritative for what the running native code does**, read with `dump_syms` and `objdump`: `crashpad_handler.dll` outranks crashpad's source (entry 18) where the two could differ, since the install states no crashpad version.
+
+## 18. Crashpad's source
+
+`backtrace-labs/crashpad`, branch `backtrace`, beside `chromium/crashpad` — a component the game ships, read as Harmony is.
+
+**Authoritative for the report database and its pruning**, which the decompile cannot answer: `src/Backtrace.Unity/` is only the client.
+
+## 19. Unity's symbol server
+
+`https://symbolserver.unity3d.com/`, first-party for the player's and Mono's PDBs, reached by the name and id a dump states.
+`research/crash-dumps.md` carries the fetch, and why `minidump-stackwalk --symbols-url` cannot use it.
 
 ---
 
