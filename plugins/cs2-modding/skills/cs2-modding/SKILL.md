@@ -111,7 +111,7 @@ Two load-bearing layers have no view, because a view only draws what is spatial:
 
 - [Custom tools](references/technique/custom-tools/custom-tools.md) — building a tool that claims the cursor, previews what it would do, and commits on click; also the door to the map editor's toolbar.
 - [The developer menu](references/technique/debug-menu/debug-menu.md) — what the menu already gives you, and how a mod puts its own material into it.
-- [Diagnostics](references/technique/diagnostics/diagnostics.md) — why a mod is not working: which file to open first, and what each line proves.
+- [Diagnostics](references/technique/diagnostics/diagnostics.md) — why a mod is not working: which file to open first, what each line proves, and how to read a crash dump.
 - [ECS in this game](references/technique/ecs-in-this-game/ecs-in-this-game.md) — writing ECS code the way this codebase does, and where its practice diverges from stock Entities.
 - [The game cycle](references/technique/game-cycle/game-cycle.md) — restarting the game after a build and driving it, and the game's own test framework.
 - [Localization](references/technique/localization/localization.md) — the dictionary source a mod registers, the keys it writes, and the ways those strings ship.

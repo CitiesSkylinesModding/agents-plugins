@@ -327,7 +327,7 @@ async function settleIgnores(
 
 /**
  * The newest crash report this run wrote that no hint told of yet.
- * Crashpad also writes one for a hang, and at boot on some machines, so it proves no death.
+ * Crashpad also writes one for a hang, a slow boot included, so it proves no death.
  */
 async function readNewReport(
   userDataPath: string,

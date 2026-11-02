@@ -50,7 +50,7 @@ Source: `src/Game/Game.Modding/ModManager.cs`, `src/Game/Game/GameSystemBase.cs`
 Every _failure_ line steps 2 to 6 produce is `Warn` or above, so each of them reaches `Player.log` as well: the load error at `Error`, the shipped-game-assembly warning at `Warn`, the lifecycle throw at `Error`, and the per-frame update throw at `Critical`.
 Step 1's lines and step 2's `Loaded … in <n>ms` are `Info` and stay out of it — see the ladder below.
 Where the symptom is memory growth rather than silence, this order has nothing to offer: no log line records it at all, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the one instrument that does.
-A process that died with no managed exception is the other symptom this order cannot take: it assumes a live process still writing lines, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the native failures that end a run without one.
+A process that died with no managed exception is the other symptom this order cannot take: it assumes a live process still writing lines, so [reading a crash dump](reading-a-crash-dump.md) reads the death's record, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the native failures that end a run without one.
 Copy the logs before going there — the log-directory section below states the deadline.
 
 (VOLATILE: the loader and lifecycle message strings quoted above — the mod manager, `GameSystemBase`'s hook wrappers, and `UpdateSystem.Update`.)
@@ -78,6 +78,8 @@ A `Logs/<Name>.log` is **truncated at the session's first message**, not appende
 Copy `Player.log` and the whole `Logs/` directory before the game is started again: until then the dying session's own files are all still on disk.
 Afterwards `Player.log` survives as `Player-prev.log`, and a `Logs/<Name>.log` survives only until its own logger writes again — so the file of a mod disabled after the crash still holds its last lines.
 Source: `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs` (the truncation and the absence of rotation; the `Player-prev.log` rename is the engine's own).
+
+**A native crash can leave nothing in `Player.log`, and its one record is then a minidump the next long run can delete**: [reading a crash dump](reading-a-crash-dump.md) says where it sits and how to read it, and a new crash report alone proves no crash, since a live game writes them too.
 
 **A `<Name>.log` is created by the first message that reaches its logger, not at startup**, so an absent file is a fact about the logger rather than about the crash — the severity ladder below names what puts a mod in that state.
 Source: `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs` (the lazy open, from the write path alone).
@@ -329,7 +331,7 @@ This reference stops at whether a debugger can attach at all; getting a Burst-co
 [`navigating-the-decompile`](../navigating-the-decompile/navigating-the-decompile.md) is where a reader goes once a log line has handed them a type name or a message string, which is what the quoted strings here are for.
 [`city-state-and-progression`](../../mechanics/city-state-and-progression/city-state-and-progression.md) owns the notification system from the other side: the simulation's own failure-state icons, rather than a mod reporting one.
 [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what a log line costs and every lever that makes one cheap, where this reference owns where a line goes and how to change that.
-It also owns the two symptoms the order above cannot take: memory growth, and a process death with no managed exception.
+It also owns the two symptoms the order above cannot take: memory growth, and the native failures behind a process death with no managed exception.
 
 Every question in the order that a log cannot answer is a live-state question — whether a system is registered, whether it is enabled, whether a query matches anything, whether a patch took.
 Those are answered against a running game through the sibling Unity plugin, on an install already debug-patched, and it is never a requirement.

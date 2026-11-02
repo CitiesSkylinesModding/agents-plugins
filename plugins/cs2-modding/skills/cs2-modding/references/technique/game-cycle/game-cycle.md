@@ -27,7 +27,7 @@ A session sharing the game with a person says what it is about to do before call
 
 **Launch through `restart`, never from a shell.**
 A Steam started from the agent's shell inherits that environment, tokens included, and the game inherits Steam's.
-A logged error then uploads every environment variable, and in captured runs on Linux every boot wrote a hang dump holding the environment block, most of them uploaded.
+A logged error then uploads every environment variable, and in captured runs on Linux most boots wrote a hang dump holding the environment block, most of them uploaded.
 `restart` detaches the launch from the agent's environment on Linux; on Windows it goes through `cmd /c start`, so have Steam running first. (UNVERIFIED: whether a Steam that launch starts carries the agent's tokens — the environment names in a boot dump, with Steam closed beforehand, would settle it.)
 Source: `src/Backtrace.Unity/Backtrace.Unity.Model.JsonData/Annotations.cs` (the copy), `src/Colossal.Logging/Colossal.Logging/CustomLogHandler.cs` (the upload on a logged error).
 
@@ -59,7 +59,8 @@ Source: `src/Game/Game/AutoSaveSystem.cs`.
 **`restart` and `test` keep one generation, the ended run, in `<user data>/.cs2-dev/previous-run/`, so a second call overwrites it.**
 The keep is unconditional: a `restart` right after a boot that died replaces a useful run with a useless one.
 Copy the folder aside, or read it, before the next call whenever it holds something the session still needs.
-Crashpad prunes its reports on its own, within minutes in a captured run, and only the next `restart` or `test` makes the copy, so a report pruned before that is gone.
+Crashpad prunes its reports on its own about 10 minutes into a run, and only the next `restart` or `test` makes the copy, so a report pruned before that is gone.
+(VOLATILE: the prune's timing — `crashpad_handler.dll`.)
 
 ## The build check
 
@@ -78,7 +79,7 @@ Read [`test-framework.md`](test-framework.md) before writing a scenario or readi
 
 ## What this reference hands to others
 
-[`diagnostics`](../diagnostics/diagnostics.md) owns every read of a run, the kept one included, and which line proves what: a success-shaped line read without it proves nothing.
+[`diagnostics`](../diagnostics/diagnostics.md) owns every read of a run, the kept one and its crash dumps included, and which line proves what: a success-shaped line read without it proves nothing.
 [`debug-menu`](../debug-menu/debug-menu.md) owns the flags `restart`'s `gameOptions` take.
 [`save-serialization`](../save-serialization/save-serialization.md) owns whether a later build reads what a test build saved.
 [`cs2-modding-ui`](../../../../cs2-modding-ui/SKILL.md): a UI-only change can deploy with the game open; that skill says when.
