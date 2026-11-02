@@ -194,10 +194,10 @@ raw = true
 run = 'bun build src/server.ts --target=node --format=esm --banner "#!/usr/bin/env node" --outfile dist/server.mjs'
 
 [tasks."build:cs2-dev"]
-description = "Rebuild the shipped cs2-dev server bundle (plugins/cs2-modding/mcp/dist/server.mjs), commit the result."
+description = "Rebuild the shipped cs2-dev bundle (plugins/cs2-modding/mcp/dist/{server,monitor}.mjs), commit the result."
 dir = "{{config_root}}/plugins/cs2-modding/mcp"
 raw = true
-run = 'bun build src/server.ts --target=node --format=esm --outfile dist/server.mjs'
+run = "bun build src/server.ts src/monitor.ts --target=node --format=esm --outdir dist --entry-naming '[name].mjs'"
 
 [tasks."build:unity:pack"]
 description = "Pack the unity-devtools MCP server as the UnityDevtools.Mcp dotnet-tool nupkg into mcp/dist/ (gitignored; the release workflow publishes it)."

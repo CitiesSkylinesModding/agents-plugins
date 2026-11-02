@@ -1,2 +1,7 @@
 # Enforce LF in the working tree on every platform.
 * text=auto eol=lf
+
+# Fixture logs keep the game's own line endings: tests read them by byte offset.
+plugins/cs2-modding/mcp/tests/fixtures/exceptions/** -text
+plugins/cs2-modding/mcp/tests/fixtures/storm/** -text
+plugins/cs2-modding/mcp/tests/fixtures/survey/** -text

@@ -21,7 +21,7 @@ pre-commit:
             run: mise build:gameface && git add plugins/coherent-gameface/mcp/dist/server.mjs
           - name: build-cs2-dev
             glob: "plugins/cs2-modding/mcp/src/*.ts"
-            run: mise build:cs2-dev && git add plugins/cs2-modding/mcp/dist/server.mjs
+            run: mise build:cs2-dev && git add plugins/cs2-modding/mcp/dist/server.mjs plugins/cs2-modding/mcp/dist/monitor.mjs
   commands:
     dotnet-test:
       # The unity-devtools server ships as a NuGet dotnet tool (no committed artifact); staged C#

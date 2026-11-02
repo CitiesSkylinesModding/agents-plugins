@@ -1,5 +1,6 @@
-# NOTE: plugins/coherent-gameface/mcp/dist/server.mjs and plugins/cs2-modding/mcp/dist/server.mjs are
-# intentionally committed so the plugins work with zero install. Do NOT add those dist/ here.
+# NOTE: plugins/coherent-gameface/mcp/dist/server.mjs, plugins/cs2-modding/mcp/dist/server.mjs and
+# plugins/cs2-modding/mcp/dist/monitor.mjs are intentionally committed so the plugins work with zero
+# install. Do NOT add those dist/ here.
 
 # One at the root and one in each mcp workspace.
 node_modules
