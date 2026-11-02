@@ -5,7 +5,7 @@ symptoms:
   - 'a test named for a behavior passes with that behavior deleted'
   - 'a review round keeps finding holes in the guard the previous round added'
 tags: [testing, mutation-testing, review, regression-guard]
-updated: 2026-10-30
+updated: 2026-11-02
 ---
 
 # A regression guard that passes without its behavior
@@ -38,6 +38,11 @@ ended a call and raced a second one against it. A later fix added an abort check
 so the ended call stopped before the code under test and nothing was left behind to race: green,
 with the guard gone. Aborting right after the call lands in the same place. The abort has to land
 past that check, here through a spy on the check itself.
+
+**Taking a mutant as proof of the input.** A test named for a build with no PDB fed a block its
+helper made up, with frames no such build writes. It failed on a mutant of the rule, and stayed
+green on a mutant dropping every real block of that build. A mutant shows a test depends on the
+code, never that its input exists, so take the input from a capture.
 
 **Reasoning about it.** Every one of these looked correct on reading, and each was written by the
 same author who had just diagnosed the defect and held it clearly in mind.
