@@ -1,6 +1,6 @@
 ---
 name: cs2-modding
-description: 'How Cities: Skylines II is built and how a mod changes it. Use when writing or debugging CS2 mod code, when deciding how to change something the game simulates, when locating the systems, components or prefab data behind a game mechanic, or when a mod runs at the wrong moment, breaks another mod, or does not survive a save.'
+description: 'How Cities: Skylines II is built and how a mod changes it. Use when writing or debugging CS2 mod code, when deciding how to change something the game simulates, when locating the systems, components or prefab data behind a game mechanic, when restarting the game after a build or running in-game tests, or when a mod runs at the wrong moment, breaks another mod, or does not survive a save.'
 ---
 
 # Modding Cities: Skylines II
@@ -113,6 +113,7 @@ Two load-bearing layers have no view, because a view only draws what is spatial:
 - [The developer menu](references/technique/debug-menu/debug-menu.md) — what the menu already gives you, and how a mod puts its own material into it.
 - [Diagnostics](references/technique/diagnostics/diagnostics.md) — why a mod is not working: which file to open first, and what each line proves.
 - [ECS in this game](references/technique/ecs-in-this-game/ecs-in-this-game.md) — writing ECS code the way this codebase does, and where its practice diverges from stock Entities.
+- [The game cycle](references/technique/game-cycle/game-cycle.md) — restarting the game after a build and driving it, and the game's own test framework.
 - [Localization](references/technique/localization/localization.md) — the dictionary source a mod registers, the keys it writes, and the ways those strings ship.
 - [Mod compatibility](references/technique/mod-compatibility/mod-compatibility.md) — surviving, detecting and cooperating with the other mods loaded beside yours.
 - [Mod lifecycle, loading and system ordering](references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) — getting code running at the right moment: the mod contract, the update phases, and where a system lands among them.

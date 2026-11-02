@@ -141,7 +141,7 @@ Where the answer is something, count the complement instead: a count that keeps 
 
 **A passage that draws a different finding every round needs a diagnosis, not another rewrite.**
 The rule above governs one claim wrong the same way twice; here each round names a new defect, so the recurrence is the finding — task a pass with asking why it keeps coming back rather than with fixing what the last one returned.
-Two passages that had survived five rewrites each settled on the first structural cause named that way, and neither cause had appeared in any individual finding.
+Two passages that had survived five rewrites each settled on the first structural cause named that way, and neither cause had appeared in any individual finding; a third passage's was prescribing what its file does not own and no run settled, stable only at its smallest.
 
 ## Reference families
 
