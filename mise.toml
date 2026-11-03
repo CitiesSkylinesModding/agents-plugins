@@ -17,6 +17,10 @@ description = "Tail and pretty-print the latest Claude Code MCP log for the game
 raw = true
 run = "bun scripts/tail-mcp-logs.ts"
 
+[tasks."dev:sync-install"]
+description = "Mirror this working tree over the installed copies of the plugins (Claude Code and Codex CLI), so unreleased edits are dogfooded from other projects. Takes plugin names, defaulting to every installed one."
+run = "bun scripts/sync-install.ts"
+
 [tasks."dev:deps-upgrade"]
 description = "Upgrades mise-en-place, proposes upgrades for tools managed by mise, and proposes upgrades for package.json dependencies."
 interactive = true
