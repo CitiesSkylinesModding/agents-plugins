@@ -56,7 +56,7 @@ A dump's mtime equals its `creation_time` to the second in all four. Decoding me
 
 **No fixed lifetime exists, and none ships.**
 
-Verdict: "Crashpad prunes them within the hour" (`gfd-game-cycle/SKILL.md:44`) and "within minutes" are wrong as statements of how long a report lasts. The maintainer reports (2026-11-02, first-hand on this install) that crash reports are sometimes days old or more. The folder agrees: `7a787f3c` is dated Oct 29 and `a7062766` Oct 31, on Nov 2. What wins is the mechanism below, settled by the prune run. Same verdict on the overrun's write-up, "that is also why dumps vanish within the hour": uploading removes nothing (below).
+Verdict: "Crashpad prunes them within the hour" (`gfd-game-cycle/SKILL.md:44` at the template's `0c66590`) and "within minutes" are wrong as statements of how long a report lasts. The maintainer reports (2026-11-02, first-hand on this install) that crash reports are sometimes days old or more. The folder agrees: `7a787f3c` is dated Oct 29 and `a7062766` Oct 31, on Nov 2. What wins is the mechanism below, settled by the prune run. Same verdict on the overrun's write-up, "that is also why dumps vanish within the hour": uploading removes nothing (below).
 
 **What prunes.** The crashpad handler, on a timer of its own, in a run. Nothing else touches `reports/`.
 

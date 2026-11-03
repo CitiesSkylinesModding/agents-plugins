@@ -1374,3 +1374,11 @@ Hit on 2026-11-03 (session `bd9d090f-c93c-439b-8abe-772f2fadddb5`): after a cras
 A `cs2-dev` tool that lists the saves and maps `restart` accepts.
 Build it when sessions keep listing `Saves/` from the shell before a `restart`, or keep hitting `No save named`.
 Try the smaller fix first: that error naming the saves it did find answers the second case with no new tool.
+
+### `restart` names a mod's folder only through its Burst line
+
+**Priority:** low · **Cost:** cheap
+
+`restart` with `mod` names where the mod loaded from only through `Loaded additional Burst code <path>` (`describeModLoad`, `plugins/cs2-modding/mcp/src/tools.ts`), so for a mod with no Burst code its result cannot tell the local `Mods/<Mod>/` from a `.cache/Mods/pdx_mods/` copy.
+`Modding.log`'s `Registered UI Module … [assetdb://user/Mods/<Mod>/<Mod>.mjs]` line names the folder for any mod with a UI, the line to read beside the Burst one.
+Hit on 2026-11-03 (session `994514f5-49e9-40e9-a829-1522b6a7d659`): the mod template's setup skill had to send the agent to `Modding.log` itself to confirm a local load, since a template mod without its sample slice ships no Burst code.

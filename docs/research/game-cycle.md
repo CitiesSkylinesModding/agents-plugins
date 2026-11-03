@@ -2,7 +2,7 @@
 
 **Baseline.** Game version 1.6.2f1, Unity 2022.3.71f1, decompile at HEAD `43da1009` ("Decompile with ilspycmd 11.0.0.9375"), read 2026-11-02 at `~/Documents/Dev/cs2-decompile`.
 UI bundle citations are to `src-ui/source.js`, 140,104 lines.
-Mod corpus at `~/Documents/Dev/cs2-mods`; the template at `~/Documents/Dev/cs2-greenfield-mod-template`, HEAD `0c66590`.
+Mod corpus at `~/Documents/Dev/cs2-mods`; the template at `~/Documents/Dev/cs2-greenfield-mod-template`, HEAD `0c66590`, where every template cite below is read: its `gfd-game-cycle` skill is gone since.
 `cs2-dev` read as shipped at `ebc1ebe`, paths below relative to the repo root.
 Live evidence comes from tickets 01 to 05 of the feature that built the server, one Linux machine, Proton Experimental `experimental-11.0-20261014`; each run is cited as a run with what it showed, as those tickets' notes are working material and do not survive the feature.
 Two runs were made for this file on 2026-11-02, `camera` and `build-open`, on the debug-patched game on Linux; the runs still wanted are listed under "Runs that would settle what is open".
@@ -190,7 +190,7 @@ Crash reports are in `.cache/backtrace/crashpad/reports` (`plugins/cs2-modding/m
 - `Loaded additional Burst code <path>` (`ExecutableAsset.cs:256`), whose path is the loaded asset's own. On this machine: `.../Cities Skylines II/Mods/<name>/<name>_win_x86_64...` for a local mod, `.../.cache/Mods/pdx_mods/<id>_<version>/...` for a subscribed one. **Only a mod with a Burst library writes it** (`:243-245`).
 - `Loaded <assembly>, Version=..., in <n>ms`, with no path.
 
-`restart` with `mod` reports `Mod X: Burst code loaded from <path>` or `No Burst code logged for X.`, and any `Error initializing mod X` line (`describeModLoad`, `tools.ts:446`).
+`restart` with `mod` reports `Mod X: Burst code loaded from <path>` or `No Burst code logged for X.`, then the `Loaded` line as `Mod X: Modding.log logs its load, in <n>ms, and no error.`, `Mod X: initialization failed after <n>ms:` over any `Error initializing mod X` line, or `Mod X: Modding.log logs no load of it since the launch.` (`describeModLoad`, `tools.ts:446`).
 Rots: the Burst line, `Colossal.IO.AssetDatabase.ExecutableAsset`; already marked in `tools.ts:443`.
 
 **An absent error is no proof.**
