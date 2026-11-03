@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.2...cs2-modding-v1.3.0) (2026-11-03)
+
+
+### Features
+
+* **cs2-modding:** let an agent restart, stop and await the game through an MCP server ([d96b46a](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d96b46aaab2318c87b8d06d300b06c5ff05f1335))
+* **cs2-modding:** let an agent run a mod's in-game scenarios and learn how they went ([45863ba](https://github.com/CitiesSkylinesModding/agents-plugins/commit/45863ba7088fe85c97823b70a1286a0e4213cb58))
+* **cs2-modding:** ship the cs2-dev server to every install, on both harnesses ([3e001ec](https://github.com/CitiesSkylinesModding/agents-plugins/commit/3e001eceb825ea50ea5d3c5090817823d3983d81))
+* **cs2-modding:** teach an agent to read a crash dump and tell a crash from a hang snapshot ([17b13a8](https://github.com/CitiesSkylinesModding/agents-plugins/commit/17b13a8aa4928bbc9c7ec12d739e2d3fbb28e918))
+* **cs2-modding:** teach the cycle around the game and its in-game test framework ([c2954dd](https://github.com/CitiesSkylinesModding/agents-plugins/commit/c2954dd4ae82c627d0973cabfd46e2a9594acd19))
+* **cs2-modding:** tell the agent about the game's errors as they happen ([ef93871](https://github.com/CitiesSkylinesModding/agents-plugins/commit/ef93871baa72aac485205ded4dcf13e53b097ea9))
+
+
+### Bug Fixes
+
+* **cs2-modding:** launch through Explorer on Windows so Steam stops inheriting the agent's environment ([a9977fb](https://github.com/CitiesSkylinesModding/agents-plugins/commit/a9977fb3a3e6be96da624f910a7f814b5545551e))
+* **cs2-modding:** say that wait_load reports the old load from a city ([7121ad6](https://github.com/CitiesSkylinesModding/agents-plugins/commit/7121ad66a435b2bad6d1f618525516b69f561a05))
+
 ## [1.2.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.1...cs2-modding-v1.2.2) (2026-10-29)
 
 
