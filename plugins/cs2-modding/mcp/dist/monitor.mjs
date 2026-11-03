@@ -94,6 +94,9 @@ function createGameHost(userDataPath) {
 function isMissing(error) {
   return error instanceof Error && "code" in error && error.code == "ENOENT";
 }
+function isBusy(error) {
+  return error instanceof Error && "code" in error && error.code == "EBUSY";
+}
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -186,7 +189,7 @@ function windowsGameHost() {
       return { game: parseTasklist(output), reapers: [] };
     },
     async launch() {
-      await runChecked("cmd", ["/c", "start", STEAM_URL]);
+      await run("explorer.exe", [STEAM_URL]);
     },
     async askToEnd() {
       try {
@@ -213,6 +216,7 @@ function run(file, args, options = {}) {
   const timeoutMilliseconds = options.timeoutMilliseconds ?? COMMAND_TIMEOUT_MILLISECONDS;
   return new Promise((resolve, reject) => {
     const child = spawn(file, args, {
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
       ...options.env ? { env: options.env } : {}
     });

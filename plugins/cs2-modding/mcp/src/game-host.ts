@@ -50,7 +50,8 @@ export interface GameHost {
   readonly findPids: () => Promise<GamePids>;
 
   /**
-   * Starts a launch through Steam, returning once Steam took the request.
+   * Starts a launch through Steam, returning once the request was handed off.
+   * The launch wait judges whether the game starts.
    */
   readonly launch: () => Promise<void>;
 
@@ -80,6 +81,13 @@ export function createGameHost(userDataPath: string): GameHost {
  */
 export function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code == 'ENOENT';
+}
+
+/**
+ * Whether a file operation failed on a file another process holds, a sharing violation on Windows.
+ */
+export function isBusy(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code == 'EBUSY';
 }
 
 export function errorMessage(error: unknown): string {
@@ -231,7 +239,11 @@ function windowsGameHost(): GameHost {
       return { game: parseTasklist(output), reapers: [] };
     },
     async launch(): Promise<void> {
-      await runChecked('cmd', ['/c', 'start', STEAM_URL]);
+      // Through the desktop's running Explorer and never from this process: a Steam started here
+      // inherits the agent's environment, tokens included, as on Linux.
+      // Explorer given an argument hands it to the running shell and exits 1 even when that worked,
+      // so only a start that failed is an error, and the launch wait judges the rest.
+      await run('explorer.exe', [STEAM_URL]);
     },
     async askToEnd(): Promise<string | undefined> {
       try {
@@ -293,6 +305,7 @@ export function run(
 
   return new Promise((resolve, reject) => {
     const child = spawn(file, args, {
+      windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       ...(options.env ? { env: options.env } : {})
     });

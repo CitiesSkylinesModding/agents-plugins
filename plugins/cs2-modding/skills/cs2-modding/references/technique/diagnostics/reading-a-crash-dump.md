@@ -9,8 +9,6 @@ Reading a dump needs none, since what follows rests on the dumps and their tools
 Where a crashed run's minidump sits, how to read one with no symbols, and whether it records a crash at all.
 It starts where [the log order](diagnostics.md) ends, for a run that stopped with no managed exception to read.
 
-(UNVERIFIED: all of this on real Windows — the folder and the prune, that a boot stall writes a snapshot, the module table, Thread 0 as the main thread, `minidump-stackwalk` running there, and WinDbg or Visual Studio opening these dumps; every dump read came from Proton, and a boot and a crash on Windows read with these commands settle each.)
-
 ## Read `Player.log` first
 
 **For a Burst job that threw, `Player.log` holds the cause, and the dump adds only the thread.**
@@ -41,12 +39,13 @@ It misses `metadata`, so it cannot say whether a report uploaded.
 It misses the date, since a copied file, a log as much as a report, is dated by the copy; `Process uptime` inside the dump and that run's logs still place it.
 It misses a report of an earlier run, gone from the copy by the second `restart` while the original may still stand in `reports/`.
 It misses a report pruned during the run, so an empty copy says only that none was left at the stop.
+On Windows it misses a report another process held open while it copied.
 Source: `mcp/src/evidence.ts`.
 
 ## Reading one with no symbols
 
-`cargo install minidump-stackwalk` gets the tool, and it opens no connection unless given `--symbols-url`.
-On Windows, WinDbg and Visual Studio are the native alternatives, and the commands here want a POSIX shell and `jq`: WSL or Git Bash.
+rust-minidump's prebuilt releases carry the tool, and `cargo install minidump-stackwalk` builds it where a Rust toolchain exists; it opens no connection unless given `--symbols-url`.
+On Windows, WinDbg and Visual Studio are the native alternatives, and the commands here want a POSIX shell and `jq`: WSL or Git Bash. (UNVERIFIED: Visual Studio opening these dumps — a Visual Studio install there settles it.)
 
 ```sh
 minidump-stackwalk --no-color --brief "$dump"
@@ -79,7 +78,8 @@ Read the module, since the offset alone tells nothing.
 | no module, a bare address | Mono JIT code, so managed code |
 | `lib_burst_generated.dll` | the game's Burst code |
 | `<Mod>_win_x86_64.dll` | a mod's Burst code |
-| `d3d11.dll`, `dxgi.dll` | graphics; under Proton these are DXVK, on `dxvk-*` and `UnityGfxDeviceWorker` threads with `winevulkan.dll` |
+| `d3d11.dll`, `dxgi.dll` | graphics; under Proton these are DXVK, on `dxvk-*` and `UnityGfxDeviceWorker` threads with `winevulkan.dll`, and on Windows the vendor's driver sits below them, `nvwgf2umx.dll` for NVIDIA |
+| `KERNELBASE.dll` | Windows raising an exception: at frame 0 of a crash, the frame below names the module that raised it |
 | `ntdll.dll` | a thread at rest; on the main thread, a wait; never the crashing thread in a captured run |
 
 (VOLATILE: these module names — `Cities2_Data/Plugins/x86_64/` and `MonoBleedingEdge/EmbedRuntime/`.)

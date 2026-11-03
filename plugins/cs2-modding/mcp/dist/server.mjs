@@ -30380,6 +30380,9 @@ function createGameHost(userDataPath) {
 function isMissing(error51) {
   return error51 instanceof Error && "code" in error51 && error51.code == "ENOENT";
 }
+function isBusy(error51) {
+  return error51 instanceof Error && "code" in error51 && error51.code == "EBUSY";
+}
 function errorMessage(error51) {
   return error51 instanceof Error ? error51.message : String(error51);
 }
@@ -30472,7 +30475,7 @@ function windowsGameHost() {
       return { game: parseTasklist(output), reapers: [] };
     },
     async launch() {
-      await runChecked("cmd", ["/c", "start", STEAM_URL]);
+      await run("explorer.exe", [STEAM_URL]);
     },
     async askToEnd() {
       try {
@@ -30499,6 +30502,7 @@ function run(file2, args, options = {}) {
   const timeoutMilliseconds = options.timeoutMilliseconds ?? COMMAND_TIMEOUT_MILLISECONDS;
   return new Promise((resolve, reject) => {
     const child = spawn(file2, args, {
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
       ...options.env ? { env: options.env } : {}
     });
@@ -32071,7 +32075,7 @@ async function copyCrashReports(userDataPath, nextPath) {
         await copyFile(source, path11.join(copiedPath, report));
       }
     } catch (error51) {
-      if (!isMissing(error51)) {
+      if (!isMissing(error51) && !isBusy(error51)) {
         throw error51;
       }
     }
@@ -32507,7 +32511,6 @@ async function main() {
         ${LOAD_SECONDS + LOADING_SCREEN_SECONDS} s for a load.
         Fails at once on a game that dies, and on a load that falls back to the main menu.
         A timeout leaves the game running and says so.
-        Unverified on Windows.
       `,
     inputSchema: {
       save: exports_external.string().optional().describe(`Name of a save to load, as in the game's list`),
@@ -32535,7 +32538,6 @@ async function main() {
         The result says whether it closed cleanly or was forced.
         Only a close past boot saves settings.
         A game held by a debugger takes the whole wait, then is forced.
-        Unverified on Windows.
       `
   }, (extra) => stop(contextOf(extra)));
   server.registerTool("wait_load", {
@@ -32546,7 +32548,6 @@ async function main() {
         its trigger; from a city it reports the load already done until the new one is logged.
         Fails on a stopped game, on a game that dies, and on a load that falls back to the main
         menu; a timeout of ${LOAD_SECONDS + LOADING_SCREEN_SECONDS} s leaves the game running.
-        Unverified on Windows.
       `,
     annotations: { readOnlyHint: true }
   }, (extra) => waitLoad(contextOf(extra)));
@@ -32567,7 +32568,6 @@ async function main() {
         Blocks up to ${TEST_CEILING_SECONDS} s in all, of which ${SCENARIO_RUN_SECONDS} s from the
         launch for the run, ${BOOT_SECONDS} s for the scenarios to start, and ${STALL_SECONDS} s for
         a scenario to log nothing.
-        Unverified on Windows.
       `,
     inputSchema: {
       mod: exports_external.string().min(1).describe(`Assembly name of the mod: later hints count the errors naming it too`),
@@ -32590,7 +32590,6 @@ async function main() {
         PIDs, its version, the debug-patch signals its logs show, and the active ignore patterns.
         On a stopped game it reads the last run's logs and says so.
         Blocks up to ${READ_CEILING_SECONDS} s.
-        Unverified on Windows.
       `,
     annotations: { readOnlyHint: true }
   }, (extra) => status(contextOf(extra)));
@@ -32608,7 +32607,6 @@ async function main() {
         Cited lines hold until a launch rewrites the file, or a restart or test replaces the
         previous run's copy.
         Blocks up to ${READ_CEILING_SECONDS} s.
-        Unverified on Windows.
       `,
     inputSchema: {
       file: exports_external.string().optional().describe(`One log, ex. HallOfFame, or Player.log with what Logs/ also holds`),
@@ -32630,7 +32628,6 @@ async function main() {
         verdict and no restart report.
         A pattern that takes too long is dropped, and the hint says so.
         Returns the active patterns with their approximate hit counts.
-        Unverified on Windows.
       `,
     inputSchema: {
       pattern: exports_external.string().min(1).describe(`Regular expression, ex. HTTP: Error sending request`),

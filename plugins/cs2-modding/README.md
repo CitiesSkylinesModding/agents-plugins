@@ -67,8 +67,6 @@ cs2-modding skill in a session.
 > in a city you're playing is lost. On Codex the plugin approves its own tools. On Claude Code your
 > permission settings still apply.
 
-The tools are proven on Linux and unverified on Windows.
-
 ## How it stays honest
 
 - **Every claim was checked against the game itself** (the decompiled code, the installed game's

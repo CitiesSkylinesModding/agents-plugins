@@ -13,9 +13,9 @@ The technique holds without one, but every game symbol named below is checkable 
 3. `restart` with `mod` set, and a `save` or `newCity` to reach a city.
 4. Read what the result says of the mod's load, under "The build check" below.
 
-**A build beside a running game leaves the old code running, with nothing saying so.**
-In a captured run on Linux the build exited 0, replaced the deployed files and the game stayed up on the old code, so only the restart loads a build.
-On Windows the stop comes first for the Burst library the game holds. (UNVERIFIED: whether a build there fails on that library or replaces it as on Linux — a Windows build beside a running game would settle it.)
+**Only the restart loads a build, and on Windows a build beside a running game breaks a deployed mod with a Burst library.**
+In a captured run on Linux the build exited 0, replaced the deployed files and the game stayed up on the old code, with nothing saying so.
+In a captured run on Windows the build failed with `MSB3231`, unable to remove the deploy folder for the `<mod>_win_x86_64.dll` the game holds, after deleting the mod's other files from it, so the folder held no managed DLL until a build after the stop.
 
 **A clean quit runs `OnDispose` and, past boot, saves settings, the mods' included; a forced end does neither, and no close saves the city.**
 A close finishes a save in flight and otherwise loses unsaved play exactly as a kill does. (VOLATILE: the steps of `TerminateGame` — `Game.SceneFlow.GameManager`.)
@@ -28,7 +28,8 @@ A session sharing the game with a person says what it is about to do before call
 **Launch through `restart`, never from a shell.**
 A Steam started from the agent's shell inherits that environment, tokens included, and the game inherits Steam's.
 A logged error then uploads every environment variable, and in captured runs on Linux most boots wrote a hang dump holding the environment block, most of them uploaded.
-`restart` detaches the launch from the agent's environment on Linux; on Windows it goes through `cmd /c start`, so have Steam running first. (UNVERIFIED: whether a Steam that launch starts carries the agent's tokens — the environment names in a boot dump, with Steam closed beforehand, would settle it.)
+`restart` detaches the launch from the agent's environment, through the user's service manager on Linux and the desktop's Explorer on Windows.
+In a captured run on Windows, a Steam that `cmd /c start` started from the tool held the tool's environment, and one Explorer started held none of it.
 Source: `src/Backtrace.Unity/Backtrace.Unity.Model.JsonData/Annotations.cs` (the copy), `src/Colossal.Logging/Colossal.Logging/CustomLogHandler.cs` (the upload on a logged error).
 
 **Where `stop` was forced because its close never left, quit from the eval, and only there.**

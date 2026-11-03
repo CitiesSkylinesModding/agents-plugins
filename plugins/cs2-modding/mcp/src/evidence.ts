@@ -3,7 +3,7 @@
 import { access, copyFile, cp, mkdir, mkdtemp, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { toolFolderPath } from './cursor';
-import { isMissing } from './game-host';
+import { isBusy, isMissing } from './game-host';
 import { crashReportsPath } from './hint';
 import { readRunStart } from './scanner';
 
@@ -99,8 +99,9 @@ async function copyCrashReports(userDataPath: string, nextPath: string): Promise
         await copyFile(source, path.join(copiedPath, report));
       }
     } catch (error) {
-      // Crashpad prunes its reports on its own, so one listed a moment ago may be gone.
-      if (!isMissing(error)) {
+      // Crashpad prunes its reports on its own, so one listed a moment ago may be gone, and on
+      // Windows a report another process holds open fails its copy, which loses only that one.
+      if (!isMissing(error) && !isBusy(error)) {
         throw error;
       }
     }
