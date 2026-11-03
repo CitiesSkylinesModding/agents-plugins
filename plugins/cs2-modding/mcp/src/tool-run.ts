@@ -1,6 +1,7 @@
 // What keeps a call from wedging: whatever happens inside a tool, the call ends, and what it
 // abandoned stops touching the game.
 
+import assert from 'node:assert/strict';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { requireUserData, type ToolContext } from './cycle';
 import { errorMessage, type GameHost } from './game-host';
@@ -143,11 +144,21 @@ export async function runTool(
     return tool(guarded);
   }
 
-  function endCall(result: CallToolResult): Promise<CallToolResult> {
-    const content = [...carried.map(line => toTextBlock(line)), ...result.content];
-    const told = { ...result, content };
+  // One block, a line per part: a client may run separate blocks together with nothing between.
+  async function endCall(result: CallToolResult): Promise<CallToolResult> {
+    const hint = hasGivenUp ? undefined : await readHint(context);
 
-    return hasGivenUp ? Promise.resolve(told) : withHint(context, told);
+    const lines = [
+      ...carried,
+      ...result.content.map(block => {
+        assert(block.type == 'text');
+
+        return block.text;
+      }),
+      ...(hint == undefined ? [] : [hint])
+    ];
+
+    return { ...result, content: [toTextBlock(lines.join('\n'))] };
   }
 
   try {
@@ -192,17 +203,6 @@ function guardHost(host: GameHost, ended: AbortSignal): GameHost {
     forceToEnd: guard(host.forceToEnd),
     sleep: guard(host.sleep)
   };
-}
-
-/**
- * Adds the hint to a result.
- */
-async function withHint(context: ToolContext, result: CallToolResult): Promise<CallToolResult> {
-  const hint = await readHint(context);
-
-  return hint == undefined
-    ? result
-    : { ...result, content: [...result.content, toTextBlock(hint)] };
 }
 
 async function cleanUp(run: ToolRun): Promise<void> {

@@ -564,6 +564,71 @@ describe('restart', () => {
       expect(text).toContain(`No Burst code`);
     });
 
+    test(`reports its load, and no other mod's, claiming no clean init`, async () => {
+      bootsToMenu();
+      logsMods();
+
+      const { onLaunch } = game;
+
+      game.onLaunch = attempt => {
+        onLaunch(attempt);
+        game.after(10, async () => {
+          await game.log(
+            'Modding',
+            `Loaded MyModTools, Version=1.0.0.0, PublicKeyToken=null in 5ms`
+          );
+          await game.log(
+            'Modding',
+            `Loaded MyMod, Version=2026.0.0.0, PublicKeyToken=null in 66.7ms`
+          );
+        });
+      };
+
+      const text = resultText(await restart(context, { mod: 'MyMod' }));
+
+      expect(text).toContain(`Mod MyMod: Modding.log logs its load, in 66.7ms, and no error.`);
+      expect(text).not.toContain(`initialized`);
+      expect(text).not.toContain(`5ms`);
+    });
+
+    test(`reads its load under the stack trace the logger may write`, async () => {
+      bootsToMenu();
+
+      const stack = `\n  at Game.Modding.ModManager.InitializeMods ()`;
+
+      const { onLaunch } = game;
+
+      game.onLaunch = attempt => {
+        onLaunch(attempt);
+        game.after(10, async () => {
+          await game.log(
+            'Modding',
+            `${burst} C:/users/steamuser/Mods/MyMod/MyMod_win_x86_64.dll${stack}`
+          );
+          await game.log(
+            'Modding',
+            `Loaded MyMod, Version=1.0.0.0, PublicKeyToken=null in 66.7ms${stack}`
+          );
+        });
+      };
+
+      const text = resultText(await restart(context, { mod: 'MyMod' }));
+
+      expect(text).toContain(
+        `Mod MyMod: Burst code loaded from C:/users/steamuser/Mods/MyMod/MyMod_win_x86_64.dll\n`
+      );
+      expect(text).toContain(`Mod MyMod: Modding.log logs its load, in 66.7ms, and no error.`);
+    });
+
+    test(`says when the log holds no load of it`, async () => {
+      bootsToMenu();
+      logsMods();
+
+      const text = resultText(await restart(context, { mod: 'Absent' }));
+
+      expect(text).toContain(`Mod Absent: Modding.log logs no load of it since the launch.`);
+    });
+
     test(`reports its load error, the stack left to the logs`, async () => {
       bootsToMenu();
 
@@ -584,6 +649,25 @@ describe('restart', () => {
       expect(text).toContain(modError('MyMod'));
       expect(text).not.toContain('OnLoad');
       expect(text).not.toContain(`mod Other`);
+    });
+
+    test(`calls a load that threw a failure, as the game logs its time either way`, async () => {
+      bootsToMenu();
+
+      const { onLaunch } = game;
+
+      game.onLaunch = attempt => {
+        onLaunch(attempt);
+        game.after(10, async () => {
+          await game.log('Modding', `Loaded MyMod, Version=1.0.0.0, PublicKeyToken=null in 60.1ms`);
+          await game.log('Modding', modError('MyMod'), 'ERROR');
+        });
+      };
+
+      const text = resultText(await restart(context, { mod: 'MyMod' }));
+
+      expect(text).toContain(`Mod MyMod: initialization failed after 60.1ms:`);
+      expect(text).not.toContain(`with no error`);
     });
 
     test(`does not report the last run's error`, async () => {

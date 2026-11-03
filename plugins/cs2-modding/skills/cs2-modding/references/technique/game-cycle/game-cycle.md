@@ -70,7 +70,7 @@ A Burst path under `pdx_mods` in `restart`'s or `test`'s result means the subscr
 
 **An absent error is no proof of a clean load.**
 `No Burst code logged` reads the same for a mod with no Burst library at all.
-A mod never found, or disabled in the playset, reaches no init path and so logs no error: the sign is no `Loaded <assembly full name> in <n>ms` line in `Modding.log`. (UNVERIFIED: the silence of a disabled mod — a run with the mod disabled would settle it.)
+A mod never found, or disabled in the playset, reaches no init path and so logs no error: the sign is no `Loaded <assembly full name> in <n>ms` line in `Modding.log`, whose absence `restart` and `test` report. (UNVERIFIED: the silence of a disabled mod — a run with the mod disabled would settle it.)
 Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs`, `src/Game/Game.Modding/ModManager.cs`.
 
 ## In-game scenarios

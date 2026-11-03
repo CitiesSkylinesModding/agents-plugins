@@ -834,7 +834,7 @@ function kindKey(logger, { level, text }) {
 `);
 }
 function maskNumbers(text) {
-  return text.replace(numberPattern, "#");
+  return text.replaceAll(numberPattern, "#");
 }
 function createModCheck(mod) {
   if (mod == undefined) {
@@ -859,6 +859,7 @@ function ignoreMissing(error) {
 
 // src/hint.ts
 var hints = createQueue();
+var OTHER_FILES_NAMED = 2;
 function crashReportsPath(userDataPath) {
   return path6.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
 }
@@ -982,7 +983,21 @@ function describeErrors(scan, mod) {
   const naming = mod == undefined ? "" : `, ${sum(shown, (kind) => kind.modCount)} naming ${mod}`;
   const suffix = ignored > 0 ? ` (${ignored} ignored)` : "";
   const kindCount = `${shown.length} kind${shown.length == 1 ? "" : "s"}`;
-  return [`Errors: ${count} new, ${kindCount}${naming}${suffix}. See logs.`];
+  return [
+    `Errors: ${count} new, ${kindCount}${naming}${describeOthers(shown)}${suffix}. See logs.`
+  ];
+}
+function describeOthers(kinds) {
+  const byFile = new Map;
+  for (const { file, count, modCount } of kinds) {
+    if (count > modCount) {
+      byFile.set(file, (byFile.get(file) ?? 0) + count - modCount);
+    }
+  }
+  const files = [...byFile].toSorted(([, a], [, b]) => b - a);
+  const named = files.slice(0, OTHER_FILES_NAMED).map(([file, count]) => `${count} in ${file}`);
+  const rest = sum(files.slice(OTHER_FILES_NAMED), ([, count]) => count);
+  return named.length ? `, ${named.join(", ")}${rest > 0 ? ` and ${rest} elsewhere` : ""}` : "";
 }
 async function settleIgnores(context, scan, named) {
   const added = new Map;

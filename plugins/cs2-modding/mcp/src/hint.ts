@@ -13,7 +13,7 @@ import {
   updateIgnores
 } from './ignores';
 import { createQueue } from './queue';
-import { type LogScan, readRunStart, SCAN_WINDOW_BYTES, scanLogs } from './scanner';
+import { type Kind, type LogScan, readRunStart, SCAN_WINDOW_BYTES, scanLogs } from './scanner';
 
 /**
  * What a hint needs: past the `signal`'s abort nobody will read it, so it announces nothing.
@@ -23,6 +23,11 @@ export interface HintContext extends FileContext {
 }
 
 const hints = createQueue();
+
+/**
+ * How many files a hint names for the errors not naming the mod.
+ */
+const OTHER_FILES_NAMED = 2;
 
 /**
  * What one scan of the logs found, with what it read to scan them.
@@ -288,7 +293,29 @@ function describeErrors(scan: LogScan, mod: string | undefined): readonly string
 
   const kindCount = `${shown.length} kind${shown.length == 1 ? '' : 's'}`;
 
-  return [`Errors: ${count} new, ${kindCount}${naming}${suffix}. See logs.`];
+  return [
+    `Errors: ${count} new, ${kindCount}${naming}${describeOthers(shown)}${suffix}. See logs.`
+  ];
+}
+
+/**
+ * Where the errors not naming the mod are, so a hint tells another mod's noise from the mod's own:
+ * by the file `logs` heads them with, most first.
+ */
+function describeOthers(kinds: readonly Kind[]): string {
+  const byFile = new Map<string, number>();
+
+  for (const { file, count, modCount } of kinds) {
+    if (count > modCount) {
+      byFile.set(file, (byFile.get(file) ?? 0) + count - modCount);
+    }
+  }
+
+  const files = [...byFile].toSorted(([, a], [, b]) => b - a);
+  const named = files.slice(0, OTHER_FILES_NAMED).map(([file, count]) => `${count} in ${file}`);
+  const rest = sum(files.slice(OTHER_FILES_NAMED), ([, count]) => count);
+
+  return named.length ? `, ${named.join(', ')}${rest > 0 ? ` and ${rest} elsewhere` : ''}` : '';
 }
 
 /**

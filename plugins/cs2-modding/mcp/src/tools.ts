@@ -441,7 +441,7 @@ function readStartGuid(
 /**
  * What `Logs/Modding.log` shows of a mod's load since the launch.
  * (VOLATILE: the Burst line -- `Colossal.IO.AssetDatabase.ExecutableAsset`.)
- * (VOLATILE: the error line -- `Game.Modding.ModManager`.)
+ * (VOLATILE: the load and error lines -- `Game.Modding.ModManager`.)
  */
 async function describeModLoad(
   userDataPath: string,
@@ -460,21 +460,42 @@ async function describeModLoad(
   const burstPrefix = `Loaded additional Burst code `;
   const burstFile = `${mod}_win_x86_64.dll`;
 
-  const burst = entries.find(
-    ({ message }) => message.startsWith(burstPrefix) && path.posix.basename(message) == burstFile
+  // A logger set to `logStackTrace` writes a stack under every entry, `Info` included
+  // (`UnityLogger.Internal_WriteStream`, read in the decompile), so only the first line counts.
+  const lines = entries.map(({ message }) => message.split('\n')[0] ?? '');
+
+  const burst = lines.find(
+    line => line.startsWith(burstPrefix) && path.posix.basename(line) == burstFile
   );
 
-  const errors = entries
-    .map(({ message }) => message.split('\n')[0] ?? '')
-    // `ModManager` logs the assembly's full name in both slots, so the name goes on after a comma.
-    .filter(line => line.startsWith(`Error initializing mod ${mod}, `));
+  // `ModManager` logs the assembly's full name, in both slots of its error line, so the name goes
+  // on after a comma. It logs the time from a `using` block, so a load that threw logs it too.
+  const loadTime = lines
+    .filter(line => line.startsWith(`Loaded ${mod}, `))
+    .map(line => / in (?<time>[\d.]+)ms$/u.exec(line)?.groups?.time)
+    .find(time => time != undefined);
+
+  const errors = lines.filter(line => line.startsWith(`Error initializing mod ${mod}, `));
 
   return [
     burst
-      ? `Mod ${mod}: Burst code loaded from ${burst.message.slice(burstPrefix.length)}`
+      ? `Mod ${mod}: Burst code loaded from ${burst.slice(burstPrefix.length)}`
       : `No Burst code logged for ${mod}.`,
+    describeLoadTime(mod, loadTime, errors.length > 0),
     ...errors.map(line => `Mod ${mod}: ${line}`)
   ];
+}
+
+function describeLoadTime(mod: string, time: string | undefined, hasFailed: boolean): string {
+  if (time == undefined) {
+    return `Mod ${mod}: Modding.log logs no load of it since the launch.`;
+  }
+
+  // `ModInfo.Load` returns with no throw on a missed dependency or a lost duplicate, read in the
+  // decompile: the same line and no error, so it claims no clean init.
+  return hasFailed
+    ? `Mod ${mod}: initialization failed after ${time}ms:`
+    : `Mod ${mod}: Modding.log logs its load, in ${time}ms, and no error.`;
 }
 
 /**

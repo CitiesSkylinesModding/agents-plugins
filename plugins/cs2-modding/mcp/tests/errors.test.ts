@@ -58,12 +58,22 @@ async function runningGame(): Promise<void> {
 }
 
 /**
- * The hint a result carries, undefined with none.
+ * How a hint opens, whatever it tells first.
+ */
+const HINT_OPENINGS = [
+  `The game went away`,
+  `A new crash report`,
+  `Errors: `,
+  `Dropped ignore pattern`
+];
+
+/**
+ * The hint a result carries, its last line, undefined with none.
  */
 function hintOf(result: CallToolResult): string | undefined {
-  const [, hint] = result.content;
+  const last = resultText(result).split('\n').at(-1) ?? '';
 
-  return hint?.type == 'text' ? hint.text : undefined;
+  return HINT_OPENINGS.some(opening => last.startsWith(opening)) ? last : undefined;
 }
 
 async function offsetsOf(): Promise<Offsets> {
@@ -144,11 +154,16 @@ describe(`the hint`, () => {
     expect(await statusHint()).toBeUndefined();
   });
 
-  test(`ends a result, in a block of its own`, async () => {
+  test(`ends a result, on a line of its own`, async () => {
     await runningGame();
     await settledError(`It failed.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    const result = await status(context);
+
+    expect(result.content).toHaveLength(1);
+    expect(resultText(result)).toMatch(
+      /\S\nErrors: 1 new, 1 kind, 1 in Logs\/MyMod\.log\. See logs\.$/u
+    );
   });
 
   test(`reaches a failed call too`, async () => {
@@ -176,7 +191,7 @@ describe(`the hint`, () => {
     const results = await Promise.all([status(context), logs(context, {})]);
 
     expect(results.flatMap(result => hintOf(result) ?? [])).toEqual([
-      `Errors: 1 new, 1 kind. See logs.`
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`
     ]);
   });
 
@@ -187,7 +202,26 @@ describe(`the hint`, () => {
     await game.log('OtherMod', 'Failed\n  at MyMod.Patch.Run () [0x00000] in <0>:0', 'ERROR');
     await settledError(`Not mine.`, 'OtherMod');
 
-    expect(await statusHint()).toBe(`Errors: 3 new, 3 kinds, 2 naming MyMod. See logs.`);
+    expect(await statusHint()).toBe(
+      `Errors: 3 new, 3 kinds, 2 naming MyMod, 1 in Logs/OtherMod.log. See logs.`
+    );
+  });
+
+  test(`names where the others are, most first, two at most`, async () => {
+    await runningGame();
+    await updateCursor(context, cursor => ({ ...cursor, mod: 'MyMod' }));
+    await game.log('First', `One.`, 'ERROR');
+    await game.log('First', `Two.`, 'ERROR');
+    await game.log('Second', `One.`, 'ERROR');
+    await game.log('Second', `Two.`, 'ERROR');
+    await game.log('Second', `Three.`, 'ERROR');
+    await game.log('Third', `One.`, 'ERROR');
+    await settledError(`One.`, 'Fourth');
+
+    expect(await statusHint()).toBe(
+      `Errors: 7 new, 7 kinds, 0 naming MyMod, 3 in Logs/Second.log, 2 in Logs/First.log ` +
+        `and 2 elsewhere. See logs.`
+    );
   });
 
   test(`counts an error once across Logs/ and Player.log`, async () => {
@@ -196,7 +230,7 @@ describe(`the hint`, () => {
     await game.append(game.playerLogPath, '[MyMod] [ERROR]  It failed. System.Exception: why\n\n');
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`counts an exception from a build with no PDB`, async () => {
@@ -217,7 +251,7 @@ describe(`the hint`, () => {
     );
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
   });
 
   test(`tells never-thrown exceptions apart by the call site under Unity's logging`, async () => {
@@ -228,7 +262,7 @@ describe(`the hint`, () => {
     );
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds, 2 in Player.log. See logs.`);
   });
 
   test(`keeps an engine method on top of a thrown exception's stack in its kind`, async () => {
@@ -240,7 +274,7 @@ describe(`the hint`, () => {
     );
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds, 2 in Player.log. See logs.`);
   });
 
   test(`counts an exception Unity logged, which only Player.log holds, for the mod`, async () => {
@@ -265,7 +299,7 @@ describe(`the hint`, () => {
     await game.append(game.logPath('MyMod'), '  at MyMod.Run () [0x00000] in <0>:0\n');
     await game.log('MyMod', `The next line.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
     expect(await logsText({ errorsOnly: true })).toContain('at MyMod.Run ()');
     expect(await statusHint()).toBeUndefined();
   });
@@ -278,7 +312,7 @@ describe(`the hint`, () => {
 
     await game.append(game.playerLogPath, 'OR]  It failed.\n\n');
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
   });
 
   test(`counts the line a stopped game's log ends on, with no line break after it`, async () => {
@@ -317,7 +351,7 @@ describe(`the hint`, () => {
 
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`lets a Player.log entry stand alone past the hold, with no logger file`, async () => {
@@ -327,7 +361,7 @@ describe(`the hint`, () => {
 
     const start = game.seconds();
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
     expect(game.seconds() - start).toBeGreaterThanOrEqual(2);
   });
 
@@ -359,7 +393,7 @@ describe(`the hint`, () => {
     await writeFile(game.logPath('OldMod'), '');
     await settledError(`It failed.`, 'OldMod');
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/OldMod.log. See logs.`);
   });
 
   test(`reads again a file rewritten under its offset, and announces it once`, async () => {
@@ -369,7 +403,7 @@ describe(`the hint`, () => {
     await writeFile(game.logPath('MyMod'), '');
     await settledError(`Second.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
     expect(await statusHint()).toBeUndefined();
   });
 
@@ -379,7 +413,7 @@ describe(`the hint`, () => {
     await game.append(game.playerLogPath, '[MyMod] [ERROR]  It failed.\n\n');
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
   });
 
   test(`starts over on a Player.log rewritten at launch`, async () => {
@@ -401,7 +435,7 @@ describe(`the hint`, () => {
     await game.append(game.playerLogPath, '[NoFile] [ERROR]  Again.\n\n');
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
   });
 
   test(`reports the game going away with no cs2-dev stop, once`, async () => {
@@ -496,7 +530,7 @@ describe(`the hint`, () => {
     expect(resultText(result)).toContain(
       `The game went away with no cs2-dev stop. ` +
         `A new crash report appeared, which may be a hang snapshot. ` +
-        `Errors: 1 new, 1 kind. See logs.`
+        `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`
     );
     expect(resultText(result)).toContain(`previous: true`);
   });
@@ -516,9 +550,9 @@ describe(`the hint`, () => {
       game.after(5, () => game.log('SceneFlow', 'MainMenu reached'));
     };
 
-    expect(resultText(await restart(context, {}))).toBe(
-      `The run this restart ends: Errors: 1 new, 1 kind. See logs. ` +
-        `logs reads it with previous: true.`
+    expect(resultText(await restart(context, {}))).toStartWith(
+      `The run this restart ends: Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs. ` +
+        `logs reads it with previous: true.\n`
     );
   });
 
@@ -574,7 +608,7 @@ describe(`the hint`, () => {
     await game.append(game.playerLogPath, `[${'x'.repeat(300)}] [ERROR]  It failed.\n\n`);
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
 
     const result = await logs(context, {});
 
@@ -587,7 +621,7 @@ describe(`the hint`, () => {
     await game.append(game.playerLogPath, '[../outside] [ERROR]  It failed.\n\n');
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Player.log. See logs.`);
   });
 
   test(`skips an entry stamped before the run and reads on`, async () => {
@@ -595,7 +629,7 @@ describe(`the hint`, () => {
     await writeFile(game.logPath('MyMod'), '[2020-01-01 10:00:00,000] [ERROR]  Stamped earlier.\n');
     await settledError(`It failed.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
 
     const offsets = await offsetsOf();
 
@@ -622,7 +656,7 @@ describe(`the hint`, () => {
     await game.append(game.logPath('MyMod'), filler.repeat(count));
     await settledError(`After the window.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
 
     const { 'Logs/MyMod.log': reached = 0 } = await offsetsOf();
     const bytes = await readFile(game.logPath('MyMod'));
@@ -630,7 +664,7 @@ describe(`the hint`, () => {
     expect(reached).toBeLessThanOrEqual(SCAN_WINDOW_BYTES);
     expect(String.fromCodePoint(bytes.at(reached - 1) ?? 0)).toBe('\n');
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
     expect(await statusHint()).toBeUndefined();
   });
 
@@ -652,8 +686,7 @@ describe(`a storm`, () => {
 
     const hint = await statusHint();
 
-    expect(hint?.split('\n')).toHaveLength(1);
-    expect(hint).toMatch(/^The game went away with no cs2-dev stop\. Errors: \d+ new, 23 kinds\./u);
+    expect(hint).toMatch(/^The game went away with no cs2-dev stop\. Errors: \d+ new, 23 kinds,/u);
   });
 
   test(`merges numbers that vary, hexadecimal ones included`, async () => {
@@ -661,7 +694,7 @@ describe(`a storm`, () => {
     await game.log('MyMod', 'Storm: frame 1209 of Entity(1209:1) at 0x000004B9', 'ERROR');
     await settledError('Storm: frame 1210 of Entity(1210:1) at 0x000004BA');
 
-    expect(await statusHint()).toBe(`Errors: 2 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 2 new, 1 kind, 2 in Logs/MyMod.log. See logs.`);
   });
 
   test(`merges numbers of any width past the first line's cut`, async () => {
@@ -669,7 +702,7 @@ describe(`a storm`, () => {
     await game.log('MyMod', `Request 99 failed ${'x'.repeat(300)}`, 'ERROR');
     await settledError(`Request 100 failed ${'x'.repeat(300)}`);
 
-    expect(await statusHint()).toBe(`Errors: 2 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 2 new, 1 kind, 2 in Logs/MyMod.log. See logs.`);
   });
 
   test(`merges lines that imitate a stamped log entry`, async () => {
@@ -681,7 +714,7 @@ describe(`a storm`, () => {
 
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 3 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 3 new, 1 kind, 3 in Player.log. See logs.`);
   });
 
   test(`tells apart errors that share a first line, by their top frame`, async () => {
@@ -692,7 +725,7 @@ describe(`a storm`, () => {
     );
     await game.sleep(QUIET_MILLISECONDS);
 
-    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 2 new, 2 kinds, 2 in Player.log. See logs.`);
   });
 
   test(`costs logs one entry per kind within its cap, with a footer`, async () => {
@@ -1098,7 +1131,9 @@ describe('ignore_error', () => {
     await game.log('MyMod', `HTTP failed.`, 'ERROR');
     await settledError(`Something else.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind (1 ignored). See logs.`);
+    expect(await statusHint()).toBe(
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log (1 ignored). See logs.`
+    );
   });
 
   test(`reads an entry no further than its input cap`, async () => {
@@ -1106,7 +1141,7 @@ describe('ignore_error', () => {
     await ignore('needle');
     await settledError(`${'x'.repeat(IGNORE_INPUT_CHARACTERS)} needle`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`reads an entry as far as logs prints it`, async () => {
@@ -1181,7 +1216,9 @@ describe('ignore_error', () => {
     await game.log('MyMod', `HTTP failed.`, 'ERROR');
     await settledError(`Something else.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind (1 ignored). See logs.`);
+    expect(await statusHint()).toBe(
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log (1 ignored). See logs.`
+    );
     expect(resultText(await ignore('Other'))).toContain('Other (0 hits)');
   });
 
@@ -1344,7 +1381,7 @@ describe(`the ceilings`, () => {
     // The abandoned scan's file reads run on real time, whatever the game's clock says.
     await Bun.sleep(100);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`keep a hint that never settles from holding up the next`, async () => {
@@ -1361,7 +1398,7 @@ describe(`the ceilings`, () => {
 
     game.stuckOn = undefined;
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`leave a cancelled call's errors for the next result`, async () => {
@@ -1383,7 +1420,7 @@ describe(`the ceilings`, () => {
     // The cancelled scan's file reads run on real time, whatever the game's clock says.
     await Bun.sleep(100);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`spare a hint cancelled in the queue its scan`, async () => {
@@ -1531,7 +1568,7 @@ describe(`the monitor`, () => {
     await runningGame();
     await settledError(`It failed.`);
 
-    expect(await monitorFor(3)).toEqual([`Errors: 1 new, 1 kind. See logs.`]);
+    expect(await monitorFor(3)).toEqual([`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`]);
     expect(await statusHint()).toBeUndefined();
   });
 
@@ -1546,7 +1583,7 @@ describe(`the monitor`, () => {
     await monitorFor(3);
     await settledError(`A storm.`);
 
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind. See logs.`);
+    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`);
   });
 
   test(`spends no gap on what a result already announced`, async () => {
@@ -1556,7 +1593,7 @@ describe(`the monitor`, () => {
 
     game.after(6, () => game.log('MyMod', `Not announced yet.`, 'ERROR'));
 
-    expect(await monitorFor(10)).toEqual([`Errors: 1 new, 1 kind. See logs.`]);
+    expect(await monitorFor(10)).toEqual([`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`]);
   });
 
   test(`reports the game going away at once`, async () => {
@@ -1618,7 +1655,9 @@ describe(`the monitor`, () => {
 
     expect(await offsetsOf()).toEqual(announced);
     expect(await readIgnores(game.userDataPath)).toEqual([{ source: 'HTTP', hits: 0 }]);
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind (1 ignored). See logs.`);
+    expect(await statusHint()).toBe(
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log (1 ignored). See logs.`
+    );
   });
 
   test(`holds its gap through a scan of ignored entries alone`, async () => {
@@ -1629,7 +1668,7 @@ describe(`the monitor`, () => {
     game.after(6, () => game.log('MyMod', `Held by the gap.`, 'ERROR'));
     game.after(12, () => game.log('MyMod', `HTTP failed.`, 'ERROR'));
 
-    expect(await monitorFor(10)).toEqual([`Errors: 1 new, 1 kind. See logs.`]);
+    expect(await monitorFor(10)).toEqual([`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`]);
   });
 
   test(`names a dropped pattern at once, moving past what it read`, async () => {
@@ -1677,7 +1716,9 @@ describe(`the monitor`, () => {
     await monitorFor(10);
 
     expect(scans).toHaveBeenCalledTimes(11);
-    expect(await statusHint()).toBe(`Errors: 1 new, 1 kind (3 ignored). See logs.`);
+    expect(await statusHint()).toBe(
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log (3 ignored). See logs.`
+    );
   });
 
   test(`settles ignored entries again once a line told what it held`, async () => {
@@ -1714,7 +1755,7 @@ describe(`the monitor`, () => {
       await game.log('MyMod', `Filler ${'x'.repeat(200)}`);
     });
 
-    expect(await monitorFor(6)).toEqual([`Errors: 1 new, 1 kind. See logs.`]);
+    expect(await monitorFor(6)).toEqual([`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`]);
     expect(await readIgnores(game.userDataPath)).toEqual([{ source: 'HTTP', hits: 1 }]);
   });
 
@@ -1732,8 +1773,8 @@ describe(`the monitor`, () => {
     });
 
     expect(await monitorFor(20)).toEqual([
-      `Errors: 1 new, 1 kind. See logs.`,
-      `Errors: 1 new, 1 kind. See logs.`
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`,
+      `Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`
     ]);
   });
 
@@ -1750,7 +1791,7 @@ describe(`the monitor`, () => {
 
     await game.sleep(SCAN_CEILING_SECONDS * 1000);
 
-    expect(await watching).toEqual([`Errors: 1 new, 1 kind. See logs.`]);
+    expect(await watching).toEqual([`Errors: 1 new, 1 kind, 1 in Logs/MyMod.log. See logs.`]);
   });
 });
 

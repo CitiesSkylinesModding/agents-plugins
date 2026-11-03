@@ -488,7 +488,7 @@ function kindKey(logger: string, { level, text }: GameLogEntry): string {
 }
 
 function maskNumbers(text: string): string {
-  return text.replace(numberPattern, '#');
+  return text.replaceAll(numberPattern, '#');
 }
 
 /**

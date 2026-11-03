@@ -283,7 +283,9 @@ describe('test, on errors outside the scenarios', () => {
     const result = await testMod(context, { mod: 'MyMod' });
 
     expect(result.isError).toBeUndefined();
-    expect(allText(result)).toContain(`Errors: 1 new, 1 kind, 0 naming MyMod.`);
+    expect(allText(result)).toContain(
+      `Errors: 1 new, 1 kind, 0 naming MyMod, 1 in Logs/Other.log.`
+    );
   });
 
   test(`judges a scenario's own error once, on its lines`, async () => {
@@ -314,11 +316,12 @@ describe('test, on errors outside the scenarios', () => {
     expect(text.match(/at MyMod\.Systems\.Foo\.Tick/gu)).toHaveLength(1);
     expect(text).toContain(`1 other errors name no MyMod: logs reads them.`);
     expect(text).not.toContain(`Errors: `);
-    expect(result.content).toHaveLength(1);
 
     await game.log('SceneFlow', `Later.`, 'ERROR');
 
-    expect(allText(await status(context))).toContain(`Errors: 1 new, 1 kind, 0 naming MyMod.`);
+    expect(allText(await status(context))).toContain(
+      `Errors: 1 new, 1 kind, 0 naming MyMod, 1 in Logs/SceneFlow.log.`
+    );
   });
 
   test(`counts an error the game wrote just as the run finished, with the game kept open`, async () => {

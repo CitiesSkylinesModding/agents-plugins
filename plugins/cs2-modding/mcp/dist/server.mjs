@@ -31113,7 +31113,7 @@ function kindKey(logger, { level, text }) {
 `);
 }
 function maskNumbers(text) {
-  return text.replace(numberPattern, "#");
+  return text.replaceAll(numberPattern, "#");
 }
 function createModCheck(mod) {
   if (mod == undefined) {
@@ -31516,6 +31516,7 @@ import path9 from "node:path";
 import { readdir as readdir2, stat as stat4 } from "node:fs/promises";
 import path8 from "node:path";
 var hints = createQueue();
+var OTHER_FILES_NAMED = 2;
 function crashReportsPath(userDataPath) {
   return path8.join(userDataPath, ".cache", "backtrace", "crashpad", "reports");
 }
@@ -31639,7 +31640,21 @@ function describeErrors(scan, mod) {
   const naming = mod == undefined ? "" : `, ${sum(shown, (kind) => kind.modCount)} naming ${mod}`;
   const suffix = ignored > 0 ? ` (${ignored} ignored)` : "";
   const kindCount = `${shown.length} kind${shown.length == 1 ? "" : "s"}`;
-  return [`Errors: ${count} new, ${kindCount}${naming}${suffix}. See logs.`];
+  return [
+    `Errors: ${count} new, ${kindCount}${naming}${describeOthers(shown)}${suffix}. See logs.`
+  ];
+}
+function describeOthers(kinds) {
+  const byFile = new Map;
+  for (const { file: file2, count, modCount } of kinds) {
+    if (count > modCount) {
+      byFile.set(file2, (byFile.get(file2) ?? 0) + count - modCount);
+    }
+  }
+  const files = [...byFile].toSorted(([, a], [, b]) => b - a);
+  const named = files.slice(0, OTHER_FILES_NAMED).map(([file2, count]) => `${count} in ${file2}`);
+  const rest = sum(files.slice(OTHER_FILES_NAMED), ([, count]) => count);
+  return named.length ? `, ${named.join(", ")}${rest > 0 ? ` and ${rest} elsewhere` : ""}` : "";
 }
 async function settleIgnores(context, scan, named) {
   const added = new Map;
@@ -32083,6 +32098,7 @@ async function copyCrashReports(userDataPath, nextPath) {
 }
 
 // src/tool-run.ts
+import assert2 from "node:assert/strict";
 var HINT_CEILING_SECONDS = 10;
 async function readHint(context) {
   try {
@@ -32142,10 +32158,18 @@ async function runTool(context, run2, tool) {
     await requireUserData(context.userDataPath);
     return tool(guarded);
   }
-  function endCall(result) {
-    const content = [...carried.map((line) => toTextBlock(line)), ...result.content];
-    const told = { ...result, content };
-    return hasGivenUp ? Promise.resolve(told) : withHint(context, told);
+  async function endCall(result) {
+    const hint = hasGivenUp ? undefined : await readHint(context);
+    const lines = [
+      ...carried,
+      ...result.content.map((block) => {
+        assert2(block.type == "text");
+        return block.text;
+      }),
+      ...hint == undefined ? [] : [hint]
+    ];
+    return { ...result, content: [toTextBlock(lines.join(`
+`))] };
   }
   try {
     return await endCall(textResult(await Promise.race([runGuarded(), giveUp])));
@@ -32179,10 +32203,6 @@ function guardHost(host, ended) {
     forceToEnd: guard(host.forceToEnd),
     sleep: guard(host.sleep)
   };
-}
-async function withHint(context, result) {
-  const hint = await readHint(context);
-  return hint == undefined ? result : { ...result, content: [...result.content, toTextBlock(hint)] };
 }
 async function cleanUp(run2) {
   try {
@@ -32418,13 +32438,22 @@ async function describeModLoad(userDataPath, mod, launchTime) {
   }
   const burstPrefix = `Loaded additional Burst code `;
   const burstFile = `${mod}_win_x86_64.dll`;
-  const burst = entries.find(({ message }) => message.startsWith(burstPrefix) && path12.posix.basename(message) == burstFile);
-  const errors3 = entries.map(({ message }) => message.split(`
-`)[0] ?? "").filter((line) => line.startsWith(`Error initializing mod ${mod}, `));
+  const lines = entries.map(({ message }) => message.split(`
+`)[0] ?? "");
+  const burst = lines.find((line) => line.startsWith(burstPrefix) && path12.posix.basename(line) == burstFile);
+  const loadTime = lines.filter((line) => line.startsWith(`Loaded ${mod}, `)).map((line) => / in (?<time>[\d.]+)ms$/u.exec(line)?.groups?.time).find((time3) => time3 != null);
+  const errors3 = lines.filter((line) => line.startsWith(`Error initializing mod ${mod}, `));
   return [
-    burst ? `Mod ${mod}: Burst code loaded from ${burst.message.slice(burstPrefix.length)}` : `No Burst code logged for ${mod}.`,
+    burst ? `Mod ${mod}: Burst code loaded from ${burst.slice(burstPrefix.length)}` : `No Burst code logged for ${mod}.`,
+    describeLoadTime(mod, loadTime, errors3.length > 0),
     ...errors3.map((line) => `Mod ${mod}: ${line}`)
   ];
+}
+function describeLoadTime(mod, time3, hasFailed) {
+  if (time3 == undefined) {
+    return `Mod ${mod}: Modding.log logs no load of it since the launch.`;
+  }
+  return hasFailed ? `Mod ${mod}: initialization failed after ${time3}ms:` : `Mod ${mod}: Modding.log logs its load, in ${time3}ms, and no error.`;
 }
 async function requireLogFile(basePath, name, hasFile) {
   const files = await listLogFiles(basePath);
