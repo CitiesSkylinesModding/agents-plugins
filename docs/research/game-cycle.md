@@ -22,10 +22,10 @@ The topic is the run half of the dev loop: what surrounds the `cs2-dev` tools, a
 
 ### What each tool's description already says
 
-From `plugins/cs2-modding/mcp/src/server.ts:111-317`, so the reference points rather than repeats.
+From `plugins/cs2-modding/mcp/src/server.ts:111-310`, so the reference points rather than repeats.
 
-- **`restart`.** Stops the game if it runs, keeps the ended run's logs and crash reports, launches through Steam, returns at the main menu or once the save or new city loaded and its loading screen went. The stop is `stop`'s: up to 60 s, then forced; only a close past boot saves settings; a debugger-held game takes the whole wait. Its blocking ceilings are stated. Fails at once on a game that dies and on a load falling back to the main menu; a timeout leaves the game running and says so. "Unverified on Windows." Unknown `gameOptions` are ignored by the game silently and whitespace is refused; `save` and `newCity` are required for load-type options; `mod` is the assembly name.
-- **`stop`.** Asks once, waits up to 60 s, forces. Says clean or forced. "Only a close past boot saves settings." "A game held by a debugger takes the whole wait, then is forced." (`server.ts:155-165`.)
+- **`restart`.** Stops the game if it runs, keeps the ended run's logs and crash reports, launches through Steam, returns at the main menu or once the save or new city loaded and its loading screen went. The stop is `stop`'s: up to 60 s, then forced; only a close past boot saves settings; a debugger-held game takes the whole wait. Its blocking ceilings are stated. Fails at once on a game that dies and on a load falling back to the main menu; a timeout leaves the game running and says so. Unknown `gameOptions` are ignored by the game silently and whitespace is refused; `save` and `newCity` are required for load-type options; `mod` is the assembly name.
+- **`stop`.** Asks once, waits up to 60 s, forces. Says clean or forced. "Only a close past boot saves settings." "A game held by a debugger takes the whole wait, then is forced." (`server.ts:154-166`.)
 - **`wait_load`.** A load may not be logged yet right after its trigger; fails on a stopped game, on a death, on a fallback; a timeout leaves the game running.
 - **`test`.** Passes when the game reports success, a test finished, and nothing logged an error; the game alone calls a preparation that threw a success; any error naming the mod in any log but `TestScenarios.log` fails, Unity-logged and ignored ones included; a run with no scenario fails, which is a Release build's ending; stops unless `keepOpen`.
 - **`status`, `logs`, `ignore_error`.** State, reading, and silencing. `logs` with `previous: true` reads the kept run.
@@ -48,7 +48,7 @@ The PDB is read through `LongFile.OpenRead(text).ReadAllBytes()` with no dispose
 The Burst library is what is held in place for a local mod: `BurstRuntime.LoadAdditionalLibrary(text3)` is called on the deployed path (`:246-255`), and a subscribed mod's library is first copied to a temp folder (`:247-254`), a copy that reads as the game avoiding that lock on a shared cache file (inferred, no comment states it).
 Verdict: the order stands, the reason narrows to "the Burst library and possibly the PDB". The claim is the template's, the source is the load path, and the load path wins.
 **Run `build-open`, Linux, 2026-11-02.** With the game in a new city and a template mod with a Burst library loaded, `dotnet build -c Debug --no-incremental` exited 0 with no warning, and every deployed file changed: the managed DLL and the Burst library both took new hashes and mtimes. `/proc/<pid>/maps` then showed the Burst library as `(deleted)`, so the toolchain replaced the file rather than overwriting it, the game kept running on the old mapping, and it stayed up. **So on Linux a build beside a running game succeeds and the game goes on running the old code, with nothing saying so.** The stop before a build is not needed there; the restart after it is.
-Unconfirmed: Windows, where the same replace meets a library the game holds open. Settled by ticket 10.
+On Windows the same build fails: the deploy's `RemoveDir` meets the library the game holds open (section 8).
 
 **What a clean quit saves.** `Application.wantsToQuit` is hooked to `WantsToQuit` (`GameManager.cs:536`, `:745-758`), which runs `TerminateGame` (`:769-844`):
 
@@ -70,13 +70,13 @@ Measured in ticket 01: a close through `wine taskkill` 13.4 to 15.0 s on a loade
 Rots: `TerminateGame`'s steps and its two log lines, `Game.SceneFlow.GameManager`.
 
 **The agent's full control.** An agent at work owns the game.
-No tool asks first, no tool takes a PID, and none takes a force flag: `stop`, `restart` and `test` find the game by process name (`pgrep -x Cities2.exe`, `plugins/cs2-modding/mcp/src/game-host.ts:13`, `:160`; `tasklist` on Windows, `:229`) and act on whatever that finds, a game the user launched by hand and a city with unsaved play included.
+No tool asks first, no tool takes a PID, and none takes a force flag: `stop`, `restart` and `test` find the game by process name (`pgrep -x Cities2.exe`, `plugins/cs2-modding/mcp/src/game-host.ts:13`, `:168`; `tasklist` on Windows, `:237`) and act on whatever that finds, a game the user launched by hand and a city with unsaved play included.
 `stop` decides the force itself after the bound (`cycle.ts:181-214`). The one exclusivity is between calls: one `restart`, `stop` or `test` at a time, others failing at once naming it (`plugins/cs2-modding/mcp/src/tool-run.ts`), while read-only tools and `wait_load` run freely.
 Consequence: asking is the agent's own judgement, not the tool's. A session sharing the game with a person states what it is about to do, since the tool will not.
 
 **Why a launch never comes from a shell.** Two reasons, and only the first is the template's.
 
-1. A Steam started from the agent's shell inherits that shell's environment, and the game inherits Steam's. The tool launches through `systemd-run --user --collect --quiet steam steam://rungameid/949230` (`game-host.ts:138`), which detaches the launch from the caller's environment, and its comment states why.
+1. A Steam started from the agent's shell inherits that shell's environment, and the game inherits Steam's. The tool launches through `systemd-run --user --collect --quiet steam steam://rungameid/949230` (`game-host.ts:146`), which detaches the launch from the caller's environment, and its comment states why.
 2. A launch from a shell gets none of what `restart` does: `--noSplash`, the options file, the wait for `Cities2.exe`, its retries, deleting `runOnce.txt` on failure (`cycle.ts:252`), and the evidence kept beforehand.
 
 **How the environment reaches Colossal Order, the mechanism.** Two carriers, and neither needs a crash.
@@ -88,7 +88,7 @@ Consequence: asking is the agent's own judgement, not the tool's. A session shar
 The trigger is `AnrWatchdogTimeout`: the game sets 15000 (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`) after the native client copied the library's default of 5000 (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:19`), which a live read confirmed (`crash-dumps.md`, finding 8).
 Verdict: the template's "blocked over 5 s" (`gfd-game-cycle/SKILL.md:44`) holds. The sleep is 5 s, and the watchdog compares two samples a sleep apart (`NativeClient.cs:125-142`, `:154`), so the exact blocked time at which it fires is between one and two sleeps.
 
-Unconfirmed: that a token was actually seen in an upload. It settles nothing that matters here, since the dump held the block and the report said uploaded. That a running Steam's forwarded URL carries no caller environment is reasoned from Steam forwarding the URL to its own process, not observed; the Linux launch does not depend on it. The Windows launch does (section 8).
+Unconfirmed: that a token was actually seen in an upload. It settles nothing that matters here, since the dump held the block and the report said uploaded. That a running Steam's forwarded URL carries no caller environment is reasoned from Steam forwarding the URL to its own process, not observed; the Linux launch does not depend on it.
 Rots: the watchdog value, `Backtrace.Unity.Model.BacktraceConfiguration` and `_nativeClient.AnrWatchdogTimeout` on a running game; the annotation key, `Backtrace.Unity.Model.JsonData.Annotations`.
 
 ### 2. Arrival: how a long call reaches the agent
@@ -104,7 +104,7 @@ An earlier probe with a plain sleep: 330 s against `tool_timeout_sec` 400, defau
 
 - A long call on Codex against the shipped `tool_timeout_sec` of 2460 (`plugins/cs2-modding/.codex-plugin/mcp.json`). The value was only read back from `codex mcp get`.
 - Whether `test`'s progress notifications every 60 s (`HEARTBEAT_SECONDS`, `plugins/cs2-modding/mcp/src/scenario-run.ts:29-34`) reset Claude Code's 30-minute stdio silence abort. The code comment asserts the abort; the reset is unverified, and the ceiling of 1800 s sits at that limit.
-- Windows on either harness.
+- Windows on either harness: ticket 10 drove the server with a bare MCP client (section 8).
 
 **Errors between calls.** On Claude Code the monitor (`plugins/cs2-modding/monitors/monitors.json`) delivers while the agent drives other tools: in ticket 04, a notification 4 s after an error during a `game_eval` loop, three during a 7.5-minute storm, and the next `status` did not repeat it. Codex has no monitor, and every result's hint carries the same news (`plugins/cs2-modding/AGENTS.md`, "The `cs2-dev` server"). Status lagged about 3 s after a launch.
 
@@ -284,17 +284,28 @@ The monitor starts on this skill's invocation (`monitors/monitors.json`, `when: 
 
 ### 8. The Windows half
 
-All of it is unexercised on Windows; the tools say so themselves ("Unverified on Windows"). Each claim, with what settles it (ticket 10).
+**Run `windows`, ticket 10, 2026-11-03.** The `windows-vm` skill's `windows-gpu` VM, the laptop's own Windows 11 25H2 install in French, on its RTX 4070, game 1.6.2f1 with the debug patch. The shipped bundle ran under Node 22.23 inside the signed-in desktop session, served over TCP and driven from Linux by an MCP client over SSH; no harness was in the loop. The desktop session matters: run from the SSH session, `taskkill` without `/F` answers that the process can only be ended by force.
 
-- **`taskkill /IM Cities2.exe` without `/F` closes the game.** `game-host.ts:236-245`, whose comment reads "Without /F, taskkill asks the window to close, which the game takes as a quit". Unconfirmed that it reaches Unity's window as a close and runs `TerminateGame`; on Linux the Proton route passes (13.4 to 15.0 s). Its exit code is taken as success, and on Proton it returned 0 on a stuck and a SIGSTOPped game, so success there means the message left, nothing more. Settled by a Windows `stop` on a loaded city reporting clean.
-- **`taskkill /F` is the force** (`:246-248`). Same run, on a frozen game.
-- **The launch.** `cmd /c start steam://rungameid/949230` (`:233-235`). It inherits the agent's environment when Steam is not already running, which is the very path the Linux launch exists to avoid. Open, and ticket 10's to settle: whether a Steam started this way carries the agent's tokens, by listing the environment block's names in a boot dump with Steam closed beforehand.
-- **Reapers** are empty on Windows (`:231`), so "Steam still cleaning up" never shows.
-- **Paths.** User data default `<home>/AppData/LocalLow/Colossal Order/Cities Skylines II` (`plugins/cs2-modding/mcp/src/config.ts`), local mods `CSII_LOCALMODSPATH` or `<user data>/Mods`. Read against the Windows capture in `docs/research/diagnostics.md`'s baseline, which agrees for the logs. Unconfirmed through the tool.
-- **`tasklist /FI ... /FO CSV /NH`** parsing (`game-host.ts:228-229`). Localised "no tasks" text on a non-English Windows is the case to check, since the output is parsed.
+- **`taskkill /IM Cities2.exe` without `/F` is a clean quit.** `stop` closed the game in 11 s from the main menu and in 15 s from a loaded save, both reported clean, both with `GameManager destroyed` in `SceneFlow.log` and `Game terminated successfully` in `Player.log`, and the settings files (`*.coc`) rewritten at the close.
+- **`taskkill /F` is the force** (`game-host.ts:258-260`). On a game whose threads were all suspended with `NtSuspendProcess`, `stop` waited the bound and reported it forced after 63 s.
+- **The launch carried the agent's environment, and goes through Explorer now.** The server ran with a canary variable. With Steam closed, `cmd /c start steam://rungameid/949230` started a Steam whose environment block held it, read from the process's PEB. `launch` now runs `explorer.exe steam://rungameid/949230` (`game-host.ts:241-247`), which hands the URL to the desktop's running Explorer: with Steam closed again, neither Steam nor the game held the canary. Explorer exits 1 after a successful hand-off, so the exit code is not read. Windows boot dumps hold the game's environment block too (`USERNAME=` in each of three read), so the leak reached uploads there as on Linux.
+- **A crash report held open failed the restart.** With the newest report opened with no sharing, the committed bundle failed `restart` at the evidence copy with `EBUSY: resource busy or locked, copyfile`, before any launch; the copy now skips a report another process holds, as it skips a pruned one (`evidence.ts:101-107`), and the same hold let the fixed bundle launch.
+- **`restart`** reached the main menu in 337 s and loaded `Colossal City` in 226 s through `--startGame`, the guid read from the `.cok`, each reporting the mod's Burst path. A launch with `Cities2.exe` renamed failed after 3 launches and 185 s with the Steam hint, and `runOnce.txt` was gone after it; Steam showed `Missing game executable` once per launch.
+- **`test`** passed the template's two scenarios in 341 s with `keepOpen`, and reported the previous run, which the Linux OOM killer had ended with the VM, as gone with no `cs2-dev` stop.
+- **`status`, `logs`, `wait_load`, `ignore_error`** read the stopped game, the main menu and a city, `previous: true` included; `wait_load` failed at once on the stopped game.
+- **Paths.** The defaults held: user data under `<home>/AppData/LocalLow/Colossal Order/Cities Skylines II`, reports under `.cache/backtrace/crashpad/reports/` there, local mods in its `Mods`.
+- **`tasklist` on a French Windows.** PIDs parsed, and the localised no-match text read as a stopped game.
+- **Reapers** are empty on Windows (`game-host.ts:239`), so "Steam still cleaning up" never shows.
+- **`build-open` on Windows.** With the game at the main menu and the template mod loaded, `dotnet build -c Debug --no-incremental`, its UI step skipped, failed with `MSB3231: Unable to remove directory ... Access to the path 'Greenfield_win_x86_64.dll' is denied` at `Mod.targets(111)`, the `RemoveDir` of `DeployWIP`. It had deleted every other deployed file first, so the folder held the Burst library alone. Overwriting that library by hand failed the same way.
+- **Boot dumps.** Three read on Linux with `minidump-stackwalk`: `Simulated Exception`, frame 0 in `BacktraceCrashpadWindows.dll`, Thread 0 unnamed and equal to `thread.main`, the module table as on Proton with native `d3d11.dll` and `dxgi.dll` and NVIDIA's `nvwgf2umx.dll` in place of DXVK. Every boot wrote at least one, four in the boot onto the save.
+- **The prune.** About 11 minutes into a run, crashpad cut the folder from 16 reports to the newest 3.
+- **A crash.** `UnityEngine.Diagnostics.Utils.ForceCrash(ForcedCrashCategory.AccessViolation)`, called through the `unity` plugin's eval, wrote a report. `minidump-stackwalk`, run on Windows from its prebuilt release, read `EXCEPTION_ACCESS_VIOLATION` with Thread 0 `(crashed)`, and WinDbg's `cdb` opened it. The next `restart` kept it in `previous-run` with the run's other reports. An access violation on a thread injected from outside wrote no report anywhere.
+- **Held reports.** Polled each second for 15 s after the injected death, after the crash and after a clean `stop`, no report was ever held without sharing, so the copy's EBUSY skip guards against holders other than crashpad.
+- **The logs' mtime.** Over 3 minutes of boot, Node's `stat` saw the logs grow 28 times, the mtime moving with each, so the quiet window reads a current time.
+- **Stack shape.** The Windows `Player.log` writes an error's stack as `0x… (Mono JIT Code)` frames, and the scanner kept the error one entry.
+- **A console per command.** A server started with no console gave the child of each `run()` a visible console window; `windowsHide` on the spawn (`game-host.ts:308`) leaves it none.
 
-**What `wine-testing` can settle cheaply.** Bun's Windows build under a prefix runs `windowsGameHost` for real against a dummy `Cities2.exe`: argument shapes, exit-code handling, the CSV parse, a `taskkill` without `/F` closing a process with a window. It settles this code's handling of those outputs. It does not settle Windows, as Wine's `tasklist`, `taskkill` and `cmd` are Wine's own, and it cannot run the game. Its parse-and-exit-code half is worth doing before ticket 10.
-**What settles the rest.** The `windows-vm` skill boots the real Windows install in a VM, `windows-gpu` for a game, which takes the laptop's GPU from Linux for that boot. That is ticket 10's cheapest honest route.
+Unconfirmed on Windows: Visual Studio opening the dumps; how a call arrives on either harness, as none was in the loop.
 
 ### The eval quit fallback
 
@@ -342,7 +353,7 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 | `CameraController.cs:248` declares it | R:1146 (since corrected) | The line holds, the effect does not |
 | `Load` from the eval holds the main thread; kill | T:26, R:1145 | Observed no answer, no progress; mechanism not shown, `stop` untried |
 | Launch waits for `Cities2.exe` | R | Holds (`cycle.ts:252`) |
-| `taskkill`, then `/F` | R:1141 | Holds as design, unverified on Windows |
+| `taskkill`, then `/F` | R:1141 | Holds, on Windows too (section 8) |
 | Stuck 6 min, 10 min boot, 30 min run | TT:23-24 | Hold: 360, 600, 1800 s |
 | One `[TestPrepare]`, throws on two | R, TT:53 | Holds, and the throw surfaces as Success |
 | `OnPrepare` throw reports success | TT:41 | Holds |
@@ -359,7 +370,6 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 
 Each is a run on the user's game; the slug is what the text above cites. `camera` and `build-open` on Linux were run and are settled in place.
 
-- **`build-open` on Windows:** ticket 10; Linux is settled, section 1.
 - **`saves-list`:** subscribe to `menu.saves` from boot, log when it fills against `MainMenu reached`, across a few launches; trigger `menu.loadGame` before and after. Settles the time and its spread.
 - **`eval-load`:** repeat `GameManager.instance.Load` from the eval on a throwaway save, then `stop`, and let it sit past 60 s. Settles whether the game recovers and whether `stop` closes it clean. Read the main thread's stack during the wait for the mechanism.
 - **`wait-gap`:** the gap between `menu.loadGame` and its first logged line. Bounds what `wait_load` must tolerate.
@@ -369,7 +379,7 @@ Each is a run on the user's game; the slug is what the text above cites. `camera
 - **`quit-no-detach`:** the eval quit with the session left attached and running. Settles whether `detach` matters past a suspended game.
 - **`codex-long`:** a Codex call past 300 s, a boot on a slow load, against `tool_timeout_sec` 2460.
 - **`heartbeat`:** a `test` past 30 minutes on Claude Code. Settles whether progress resets the stdio abort.
-- **Ticket 10's Windows run:** everything in section 8, and arrival on Windows.
+- **Windows past ticket 10:** a call through Claude Code or Codex on Windows, for arrival (section 8).
 
 Not asked for in any of these: a run of `stop` on a fresh stuck game. The stuck game seen twice in ticket 01 (launch 2, and a stop forced at 61 s) has no known cause, and it would take reproducing it first.
 

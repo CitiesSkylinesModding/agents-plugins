@@ -27,7 +27,7 @@ No dump on this machine is a Mono crash, a graphics or driver crash, or a crash 
 
 **The folder.** `<crashpad>/reports/<uuid>.dmp`. On this machine `<user data>` is `<Steam library>/steamapps/compatdata/949230/pfx/drive_c/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II`. The path is what `plugins/cs2-modding/mcp/src/hint.ts:56-58` builds, and the database is the `crashpad` child of the client's database path (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:145-155`). The parent path itself comes from the configuration asset, so C# does not state it.
 
-Unconfirmed: that Windows uses `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\.cache\backtrace\crashpad\reports\`. The prefix runs the Windows build and the same database code, so it is expected; a listing of that folder on Windows, ticket 10's run, settles it.
+On Windows the folder is `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\.cache\backtrace\crashpad\reports\`, listed in ticket 10's run (`game-cycle.md`, section 8).
 
 **The name.** `<uuid>.dmp`, where the UUID is the crashpad report id: the first `metadata` record's bytes decode to `7a787f3c-42f6-4cbf-b551-4149e8a4f523`, the file name. The dump's date is in its mtime; the name carries none.
 
@@ -95,7 +95,7 @@ Verdict: the Backtrace client's database settings do not govern crashpad's folde
 
 ### 3. What the `cs2-dev` evidence copy keeps
 
-`keepPreviousRun` copies `Logs/`, `Player.log` and `crashpad/reports` holding the reports with mtime at or after the run's start, told from the logs (`plugins/cs2-modding/mcp/src/evidence.ts:23-53`, `:79-106`), after the stop and before the launch, one generation.
+`keepPreviousRun` copies `Logs/`, `Player.log` and `crashpad/reports` holding the reports with mtime at or after the run's start, told from the logs (`plugins/cs2-modding/mcp/src/evidence.ts:23-53`, `:79-107`), after the stop and before the launch, one generation.
 
 What it misses:
 
@@ -392,14 +392,15 @@ Unconfirmed: crashes outside crashpad's reach. A fault on Wine's Unix side, in a
 
 ### 10. Windows
 
-Unconfirmed, all of it, and ticket 10's run settles each:
+Ticket 10's run on real Windows settled what this section held open (`game-cycle.md`, section 8):
 
-- The folder (finding 1) and the prune rule on real Windows, where the handler is a Windows process.
-- That a boot stall writes a snapshot there at all. Every snapshot here comes from Proton, where boot may be slower.
-- The module picture: `d3d11.dll` and `dxgi.dll` are Microsoft's there, no `dxvk-*` thread exists, the vendor's driver appears as a module, `wine_*` threads do not.
-- That Thread 0 is the main thread and the crash reason test carries over. The dump format and crashpad's exception code are the same code; the check is `thread.main` against thread 0 in a Windows dump.
-- That `minidump-stackwalk` runs on Windows. The crate is Rust and `cargo install` is its route (`README.md:14-17`), with no Windows-specific claim in its README that was read; nobody ran it there.
-- That WinDbg or Visual Studio opens these dumps usefully. Both read minidumps in general; nobody ran them here. Worth naming as the native alternative with that limit.
+- The folder (finding 1) holds there, and the prune fired about 11 minutes into a run, keeping the newest reports.
+- A boot stall writes a snapshot there: every boot wrote at least one.
+- The module picture: native `d3d11.dll` and `dxgi.dll`, with NVIDIA's `nvwgf2umx.dll` in place of DXVK; none of the crash dump's 155 threads is named `dxvk-*` or `wine_*`.
+- Thread 0 is the main thread: in snapshots it equals `thread.main`, and a crash `UnityEngine.Diagnostics.Utils.ForceCrash` raised on the main thread read `EXCEPTION_ACCESS_VIOLATION` with Thread 0 `(crashed)`, the thread its `thread.main` annotation names.
+- `minidump-stackwalk` runs there, from the project's prebuilt Windows release. WinDbg's `cdb` opens these dumps, names the threads, and walked that crash as `KERNELBASE!RaiseException` under `UnityPlayer!Utils_CUSTOM_ForceCrash`, then a bare JIT address.
+
+Unconfirmed: Visual Studio opening these dumps; a fault the game does not raise itself, such as a dereference in native code. An access violation on a thread injected into the game from outside wrote no report, no Unity crash folder and no WER dump, which says nothing of the game's own threads.
 
 ### 11. The Backtrace pieces, and what rots
 
