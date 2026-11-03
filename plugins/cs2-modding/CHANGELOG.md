@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.3.0...cs2-modding-v1.3.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **cs2-modding:** report a mod's load as Modding.log logs it, and point the hint at the right log ([0da4be6](https://github.com/CitiesSkylinesModding/agents-plugins/commit/0da4be68510ea50849be2ebf52ee818d2d3655bf))
+
 ## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.2.2...cs2-modding-v1.3.0) (2026-11-03)
 
 
