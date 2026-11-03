@@ -999,6 +999,13 @@ An agent driving a game on another machine or on Wayland has no other way to sen
 `unity-driving` does not say that destroying a managed system and creating it again through `eval` (to rerun its `OnCreate`) leaves the game's `UpdateSystem` holding the destroyed instance: the log then takes `[CRITICAL] System update error during UIUpdate->MenuTourUISystem: InvalidOperationException: system state is not initialized or has already been destroyed` every frame until the game restarts.
 The rule to add beside the managed-systems passage: rerun a system's creation path by relaunching the game, never by recreating the system in place. Hit in Hall of Fame on 2026-10-29 (session `e6cda669-8347-4811-a7a8-465d1e6f75b8`), where it threw 622 times before a clean quit.
 
+### Attaching to a game on another machine
+
+**Priority:** low · **Cost:** unsure
+
+`attach` takes a port and connects to this machine, so a game in a VM or on another host is reached only through a tunnel: `ssh -f -N -L <port>:127.0.0.1:<port>` to the game's machine, then `attach` on that port.
+A host parameter would remove the tunnel. Hit on 2026-11-03 (session `bd9d090f-c93c-439b-8abe-772f2fadddb5`), attaching to a game in a Windows VM.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
@@ -1358,6 +1365,7 @@ Found reviewing the server, by reading the catch; no live failed load has been s
 A `cs2-dev` tool that lists a run's crashpad reports and gives each one's verdict, in place of the steps `reading-a-crash-dump.md` teaches.
 Build it when a session answering `A new crash report appeared` or `The game went away with no cs2-dev stop` read another run's report, took a `Simulated Exception` for a crash, or stopped because `minidump-stackwalk` was missing.
 That last case decides the shape: the server would have to bundle a minidump parser, since it cannot install the tool.
+Hit on 2026-11-03 (session `bd9d090f-c93c-439b-8abe-772f2fadddb5`): after a crash forced on Windows, a report beside the hint's `which may be a hang snapshot` was read as a boot snapshot until `minidump-stackwalk` showed `EXCEPTION_ACCESS_VIOLATION`.
 
 ### A `saves` tool
 
