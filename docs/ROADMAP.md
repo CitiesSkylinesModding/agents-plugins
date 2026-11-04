@@ -373,6 +373,17 @@ override so a test could drive the refusal, and `detachWait` now derives from it
 reaches `Break`'s `Abort()` without waiting out `wedgeAfter` for real. A progress stamp is
 straightforward to drive from a test in a way an age is not.
 
+### An `attach(port)` endpoint that a drop silently replaces
+
+**Priority:** medium · **Cost:** moderate
+
+Once the agent pins an endpoint with `attach`, a drop hands the next call back to the beacon, and
+the reply does not say so: with the pinned game gone and another one advertising, every later call,
+writes included, lands on the other game. The pin should hold, failing until the agent attaches
+again, or the reply should name the endpoint change. Hit on 2026-11-04 (session
+`ac38ed25-c564-4400-b38d-4985a1d6f20f`): `attach(56000)` was refused because the release debuggee
+on it had exited, and the next calls reached a different game through its beacon.
+
 ### Finding a Unity Editor
 
 **Priority:** medium · **Cost:** unsure
@@ -730,18 +741,17 @@ the `has no managed frames` error. `SingleThreaded` holds every other thread, at
 of deadlocking an invoke that waits on one of them; which callers can take that is what the cost
 turns on.
 
-### `debug_pause_state` under a held suspend finds no managed frames
+### A held suspend shows the main thread no managed frame
 
-**Priority:** medium · **Cost:** moderate · **Hits:** 2 games as of 2026-10-26
+**Priority:** low · **Cost:** moderate · **Hits:** 3 games as of 2026-11-04
 
-A plain `suspend` flags the main thread wherever it is, and between callbacks that is engine code
-with no managed frame on the stack. `debug_pause_state` reads the frames at once and fails with
-`has no managed frames`, while an `eval` issued in the same state answers within milliseconds,
-since `Invoker.Retrying` waits for the thread to park at a managed safe point. At a release game's
-menu five consecutive held suspends found no frames, and two on the reference target did, before
-one succeeded. Waiting for the park the way invokes do, under the same bound, would make the pause
-state answer on the first call; what that wait costs against a thread that never re-enters managed
-code (a game that stopped advancing frames) is what the cost turns on.
+A plain `suspend` usually catches the main thread in engine code between managed callbacks, and
+Mono's agent keeps reporting no managed frame for it even once it parks for an invoke: it parks
+before the callback runs, and an invoke restores that same context. `debug_pause_state` reports
+the empty stack and `debug_evaluate` fails, so a method breakpoint is the dependable route to
+frames. An opt-in "run the main thread to its next managed entry" would give a hold frames, at the
+price of moving the game, so it can never be what a hold does by default; what that run-to costs
+(a step or method-entry request against a thread outside managed code) is what the cost turns on.
 
 ### The frame-write journal's blind spots
 

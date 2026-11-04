@@ -96,6 +96,9 @@ end of an error packet and throws inside a task nobody observes. `Thread_GetFram
 that shape, and `ThreadMirror.FetchFrames` latches `fetching` and resets `fetchingEvent` BEFORE the
 send while clearing them only after the parse — so the throw strands both, and `GetFrames` then
 waits on `WaitAny (DisconnectedEvent, fetchingEvent)` with no timeout.
+One sure way to get that error reply is a `ThreadMirror` whose thread exited once the OS reuses its
+id: the agent's `thread_startup` drops the stale thread's data (Mono as shipped in Unity 6000.4),
+and the frame query answers `ERR_UNLOADED`.
 
 That matters here because `ObjectMirror.EndInvokeMethodInternalWithResult` calls
 `r.Thread.GetFrames ()` after EVERY successful invoke, to refresh the frame cache. So an error reply
