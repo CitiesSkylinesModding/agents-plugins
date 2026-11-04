@@ -28,8 +28,8 @@ public static class Program {
     // Each iteration ticks (so armed breakpoints hit within milliseconds), periodically
     // throws-and-catches (so exception breaks have something to catch), honours a stall a test
     // asked for (so the main thread can be put out of reach of invokes on demand), visits the
-    // Pointers and Frames shapes (so breakpoint tests have frames to read and write through), and
-    // runs a static constructor once a test asks for it.
+    // Pointers and Frames shapes (so breakpoint tests have frames to read and write through), runs
+    // a static constructor once a test asks for it, and feeds the pool worker Rest describes.
     var n = 0;
 
     while (true) {
@@ -39,6 +39,7 @@ public static class Program {
       Pointers.Visit(99);
       Frames.Visit();
       Starter.Visit();
+      ThreadPool.QueueUserWorkItem(Program.Rest);
 
       n++;
 
@@ -51,4 +52,12 @@ public static class Program {
   // Blocked in one native wait for good, like a worker idling on a queue: a thread that re-enters
   // managed code now and then parks for an invoke eventually, and would hide a wrong pick.
   private static void Idle() => new ManualResetEvent(false).WaitOne();
+
+  // Queued every tick, so a thread-pool worker stays alive and idles in the pool's native loop
+  // between items, with no managed frame on its stack: the shape of a game's main thread that a
+  // hold catches between engine callbacks.
+  // A short-lived thread would not do: once its id is reused, reading its frames hangs the suite
+  // (docs/solutions/a-wedged-session-that-swallowed-its-own-escape-hatch.md).
+  private static void Rest(object? _) {
+  }
 }

@@ -432,8 +432,25 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
   /// <summary>
   /// Formats a suspend-hold view (no pump event): same frame reporting, against the given thread
   /// (the session passes the main thread).
+  /// A hold often catches that thread in engine code between managed callbacks, where it has no
+  /// managed frame and keeps none even once it parks, so its empty stack is the answer rather than
+  /// an error, and the other threads stay listable.
   /// </summary>
   public PauseDetails DescribeSuspended(ThreadMirror thread, int frameIndex, bool allThreads) {
+    if (frameIndex is 0 && thread.GetFrames().Length is 0) {
+      return new PauseDetails {
+        Reason = "suspend-hold",
+        ThreadName = this.NameOf(thread),
+        ThreadId = thread.Id,
+        Frames = [],
+        Parameters = [],
+        Locals = [],
+        LocalsNote = "no managed frame: the thread sits inside engine or native code; resume, " +
+          "break on a method it runs and debug_wait to stop it in managed code",
+        Threads = allThreads ? this.ReadAllThreads() : null
+      };
+    }
+
     return this.BuildDetails(
       thread,
       frameIndex,
@@ -932,7 +949,8 @@ public sealed class DebugController(VirtualMachine vm, Invoker invoker, TypeCata
     if (frames.Length is 0) {
       throw new InvalidOperationException(
         $"thread {this.NameOf(thread)} has no managed frames: it sits inside engine or native " +
-        "code, or has exited, so resume and retry, or break on a method it runs and debug_wait"
+        "code, or has exited, so resume and retry, or break on a method it runs and " +
+        "debug_wait; eval evaluates frameless"
       );
     }
 

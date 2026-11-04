@@ -161,7 +161,10 @@ public sealed class PauseDetails {
 
   public IReadOnlyList<VariableView> Locals { get; init; }
 
-  /// <summary>Why locals are missing (typically no debug info), null when they listed.</summary>
+  /// <summary>
+  /// Why locals are missing (no debug info, or no managed frame to list them for), null when they
+  /// listed.
+  /// </summary>
   public string LocalsNote { get; init; }
 
   /// <summary>Every thread's identity and names-only stack; null unless requested.</summary>

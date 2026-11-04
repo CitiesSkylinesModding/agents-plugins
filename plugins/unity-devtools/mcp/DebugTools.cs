@@ -184,7 +184,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     Inspect the current pause: the paused thread's call stack (capped) plus fully formatted locals,
     parameters, and `this` for one frame.
     Works for any pause: a breakpoint/step/exception hit uses the event thread, a plain held suspend
-    (suspend tool) uses the main thread.
+    (suspend tool) uses the main thread, whose stack is empty when the hold caught it in engine
+    code.
     Burst-compiled job code shows no managed frames.
     """
   )]
@@ -218,8 +219,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
     Evaluate a C# statement sequence in a paused frame: the eval grammar plus the frame's locals,
     parameters, and `this` as roots, readable AND assignable (`this` itself only in a struct
     method, as in C#).
-    Requires an active pause (breakpoint/step/exception hit, or a held suspend, which evaluates
-    on the main thread); errors otherwise: use eval for frameless evaluation.
+    Requires a paused managed frame: a breakpoint/step/exception hit, or a held suspend that caught
+    the main thread in managed code; errors otherwise: use eval for frameless evaluation.
     Frame slots are direct reads/writes; method and property calls run on the game's main thread
     like eval (ECS thread-safety), even when the paused frame belongs to a worker thread.
     Shares the `_` last-result slot with eval.
@@ -241,8 +242,8 @@ public sealed class DebugTools(UnitySession session, EvalState state) {
               (session.HeldSuspendCount > 0
                 ? ctx.Invoker.MainThread
                 : throw new McpException(
-                  "not paused; debug_evaluate needs a pause (breakpoint hit or held suspend): " +
-                  "use eval for frameless evaluation"
+                  "not paused; debug_evaluate needs a pause (breakpoint hit, or a held suspend " +
+                  "that caught the main thread in managed code): use eval for frameless evaluation"
                 ));
 
             var ecs = new Lazy<Ecs>(() => ctx.Ecs(world));
@@ -553,7 +554,9 @@ public sealed record RemoveBreakpointResult {
 public sealed record DebugStatusResult {
   public required bool Attached { [UsedImplicitly] get; init; }
 
-  /// <summary>Suspensions held via the suspend tool (frame tools work under a hold too).</summary>
+  /// <summary>
+  /// Suspensions held via the suspend tool (debug_pause_state answers under a hold too).
+  /// </summary>
   public required int HeldSuspends { [UsedImplicitly] get; init; }
 
   public required bool PumpRunning { [UsedImplicitly] get; init; }

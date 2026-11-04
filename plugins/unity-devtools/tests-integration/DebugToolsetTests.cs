@@ -57,6 +57,26 @@ public sealed class DebugToolsetTests(MonoDebuggeeFixture fx) {
   }
 
   [SkippableFact]
+  public void AHoldOnAThreadWithNoManagedFrameReportsAnEmptyStack() {
+    var debug = fx.Debug;
+
+    var details = fx.WithInvoker(inv => {
+        // The fixture keeps a thread-pool worker idling in the pool's native loop, where it has no
+        // managed frame, as a game's main thread has between engine callbacks.
+        var idle = inv.Vm.GetThreads()
+          .First(t => t.Name == "Thread Pool Worker" && t.GetFrames().Length is 0);
+
+        return debug.DescribeSuspended(idle, 0, true);
+      }
+    );
+
+    Assert.Equal("suspend-hold", details.Reason);
+    Assert.Empty(details.Frames);
+    Assert.Contains("break on a method", details.LocalsNote);
+    Assert.NotEmpty(details.Threads);
+  }
+
+  [SkippableFact]
   public void FrameEvaluationReadsAndWritesTheParameter() {
     try {
       this.BreakIn("TestFixture.Ticker", "Tick");

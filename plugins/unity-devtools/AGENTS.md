@@ -14,7 +14,7 @@ The tool schemas are the reference for behavior; they are in context whenever th
 
 Two semantics span the whole toolset and no single schema owns them:
 
-- "Paused" means ANY VM suspension, so the frame tools (`debug_pause_state`, `debug_evaluate`, `debug_step`) work under a plain `suspend` hold — main thread — as well as under an event pause, which uses the event thread.
+- "Paused" means ANY VM suspension: `debug_pause_state` answers under a plain `suspend` hold — main thread, whose stack is empty when the hold caught it in engine code — as under an event pause, which uses the event thread; `debug_evaluate` needs a managed frame, which a hold has only when it caught managed code; `debug_step` needs an event pause.
 - Every INVOKE runs on the main thread, event-thread frames included, preserving the ECS thread-safety invariant. Frame slot reads and writes are thread-agnostic wire operations and do not.
 
 ## Session model
