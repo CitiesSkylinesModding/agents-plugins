@@ -1392,3 +1392,22 @@ Try the smaller fix first: that error naming the saves it did find answers the s
 `restart` with `mod` names where the mod loaded from only through `Loaded additional Burst code <path>` (`describeModLoad`, `plugins/cs2-modding/mcp/src/tools.ts`), so for a mod with no Burst code its result cannot tell the local `Mods/<Mod>/` from a `.cache/Mods/pdx_mods/` copy.
 `Modding.log`'s `Registered UI Module … [assetdb://user/Mods/<Mod>/<Mod>.mjs]` line names the folder for any mod with a UI, the line to read beside the Burst one.
 Hit on 2026-11-03 (session `994514f5-49e9-40e9-a829-1522b6a7d659`): the mod template's setup skill had to send the agent to `Modding.log` itself to confirm a local load, since a template mod without its sample slice ships no Burst code.
+
+### How the game shapes an edge's curve
+
+**Priority:** medium · **Cost:** cheap
+
+The `roads-and-traffic` reference gives the `Curve { m_Bezier, m_Length }` data model but nothing on
+how the game places a bezier's handles, so a mod that refits a road (moving a node, reshaping its
+neighbours) invents its own rule. Two facts would cover it, in a paragraph of that reference: in
+plan, `NetUtils.FitCurve(startPos, startTangent, endTangent, endPos)` fits the curve to the end
+tangents (`src/Game/Game.Net/NetUtils.cs:102`); in height, `NetToolSystem.LinearizeElevation` sets
+`b.y` and `c.y` at a third and two thirds of the end-to-end change, by curve parameter, whatever the
+plan shape (`src/Game/Game.Tools/NetToolSystem.cs:4743`), and every curve the net tool draws
+(simple, complex, continuous, parallel) goes through it; Replace instead refits the plan with
+`FitCurve` and keeps the old `b.y` and `c.y` (`src/Game/Game.Tools/NetToolSystem.cs:3392-3399`). A
+refit that shares the rise by plan position instead pulls a road that curves in plan off the game's
+height profile.
+Hit on 2026-11-04 (session `030e656a-6e9b-4907-992a-1680d06ee970`): fixing Move It's neighbour
+reshape, the first rule shared the rise by plan projection, and only a review against the decompile
+found the game's thirds.
