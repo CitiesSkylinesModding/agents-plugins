@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.4.0...unity-devtools-mcp-v1.4.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **unity-devtools:** answer a held suspend on a frameless main thread with an empty stack ([3b0d084](https://github.com/CitiesSkylinesModding/agents-plugins/commit/3b0d084babc2d9c0615a645c7fc5eb18dc69a1b9))
+
 ## [1.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.3.0...unity-devtools-mcp-v1.4.0) (2026-10-26)
 
 
