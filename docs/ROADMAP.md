@@ -1385,6 +1385,21 @@ A `cs2-dev` tool that lists the saves and maps `restart` accepts.
 Build it when sessions keep listing `Saves/` from the shell before a `restart`, or keep hitting `No save named`.
 Try the smaller fix first: that error naming the saves it did find answers the second case with no new tool.
 
+### Changing the playset from a tool
+
+**Priority:** medium · **Cost:** unsure
+
+A `cs2-dev` tool, or a skill teaching a recipe, that switches the active playset and enables, disables, subscribes or unsubscribes a mod in it, with or without a running game.
+The same tool could search the Paradox Mods API for mods, so a session finds a mod's id, author and versions without the in-game screen or the website.
+Without it, a session drives the in-game Paradox Mods screen by hand, or hands the step to the user; that screen renders in its own view, out of the `game_*` tools' reach, so only computer use clicks through it.
+The game reaches the playset through the PDX SDK: `ModManager` disables a failed mod with `EnableModInActivePlayset(platformID, enable: false)` (`src/Game/Game.Modding/ModManager.cs:331`), and a change in a running game reaches `OnEntryIsInActivePlaysetChanged`, which re-runs `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1529-1643`).
+That second path is how a session loads a mod late on purpose, the only way to reproduce a bug that needs a playset sync, so the tool would also make that repro deterministic.
+`.cache/Mods/playset_config.json` is not the seam: hand-editing it fights the playset sync, as "Running the game without mods" notes.
+Hit on 2026-11-05 (session `47ef7feb-8a68-4b88-8947-3f03f487d22d`): reproducing a ToggleMarkers bug that shows only when Paradox mods load after boot took a subscription the user made by hand, then a disable and re-enable through the in-game screen, since boots kept logging `Preload Mods at boot` rather than `Defer Mods load`.
+A recipe that forces the late load with no tool: move one subscribed mod's folder out of `.cache/Mods/pdx_mods/` (out of the user data path too, or the user database loads it as a local mod) before the launch.
+Online, `onLoggedIn` assigns the mods database task only after `SyncMods`, and `Initialize` waits on it after a fixed `Task.Delay(2000)` in `RegisterPdxSdk` (`src/Game/Game.SceneFlow/GameManager.cs`), so a sync that has to download the folder again outlasts the wait and the boot logs `Defer Mods load`; offline, `onNoLogin` registers at once and the boot preloads.
+Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): reproducing Extra Assets Importer's losses on a late playset load, a 175 MB subscription moved aside gave `Defer Mods load` on each of three boots, against two preloads and two late loads by chance before it; local edits of `activePlaysetId` and of `isEnabled` in `playset_config.json` held across those online boots.
+
 ### `restart` names a mod's folder only through its Burst line
 
 **Priority:** low · **Cost:** cheap
@@ -1392,6 +1407,16 @@ Try the smaller fix first: that error naming the saves it did find answers the s
 `restart` with `mod` names where the mod loaded from only through `Loaded additional Burst code <path>` (`describeModLoad`, `plugins/cs2-modding/mcp/src/tools.ts`), so for a mod with no Burst code its result cannot tell the local `Mods/<Mod>/` from a `.cache/Mods/pdx_mods/` copy.
 `Modding.log`'s `Registered UI Module … [assetdb://user/Mods/<Mod>/<Mod>.mjs]` line names the folder for any mod with a UI, the line to read beside the Burst one.
 Hit on 2026-11-03 (session `994514f5-49e9-40e9-a829-1522b6a7d659`): the mod template's setup skill had to send the agent to `Modding.log` itself to confirm a local load, since a template mod without its sample slice ships no Burst code.
+
+### `restart` reports a mod loaded when its `OnLoad` never ran
+
+**Priority:** medium · **Cost:** unsure
+
+`InitializeMods` logs `Loaded <mod> in <n>ms` around `ModInfo.Load` whatever the outcome, and `Load` sets `MissedDependenciesError` and returns without throwing when a reference is unresolved (`src/Game/Game.Modding/ModManager.cs`), so a mod that never ran logs a load and no error.
+Its Burst line is no proof either: a dependent mod's load pulls the assembly in as a reference and logs `Loaded additional Burst code` for it.
+`restart` reads both lines and answers `Modding.log logs its load … and no error` with the Burst path.
+Candidate signals: the mod's own log not rewritten by this run, or a load time under a few milliseconds with no Burst line in the same initialize pass; the game's own record is the `ModsLoadingFailed` notification, which reaches no log.
+Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): a local Extra Assets Importer whose dependency ExtraLib was a late-loaded subscription got `Loaded … in 2.5ms, and no error` and a Burst path, while `ExtraAssetsImporter.log` still held the previous run's lines.
 
 ### How the game shapes an edge's curve
 
@@ -1411,3 +1436,12 @@ height profile.
 Hit on 2026-11-04 (session `030e656a-6e9b-4907-992a-1680d06ee970`): fixing Move It's neighbour
 reshape, the first rule shared the rise by plan projection, and only a review against the decompile
 found the game's thirds.
+
+### A forced `stop` truncates the settings files the game is writing
+
+**Priority:** high · **Cost:** cheap
+
+On a clean quit the game writes every settings file (`AssetDatabase.global.SaveAllSettings()`), and with a heavy playset that quit outlasts `stop`'s 60 s, so the kill lands mid-write and leaves files cut short at a 1024-byte boundary.
+The game then fails to parse each one (`COCParserUnexpectedEndException` in `FileSystem.log`) and falls back to defaults: the user's own settings are lost, `Settings.coc` included.
+The fix is a snapshot of the user data's `*.coc` files (and `ModsSettings/`) before the close request and their restore after a forced end, said in the result; a longer wait alone only moves the threshold.
+Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): one of three forced stops of a 329-mod playset truncated `Settings.coc`, `FallbackSettings.coc` and four mod settings files, two of them to 0 bytes, with no backup of the game's own.
