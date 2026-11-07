@@ -1,5 +1,6 @@
 ---
 date: 2026-07-29
+updated: 2026-11-07
 area: plugins/unity-devtools/sdb
 symptoms:
   - 'PlatformNotSupportedException on delegate BeginInvoke under modern .NET'
@@ -54,7 +55,7 @@ the internal `StackFrame_SetThis` directly. After a vendor update, rerun
 `AGenericStructsThisReadsAndWritesLikeAnyOther` with the client's `SetThis` swapped back in: if it
 passes, the bypass is no longer needed.
 
-Which accessors cost the wire is not evident from their neighbours, and two of them read as free
+Which accessors cost the wire is not evident from their neighbours, and some of them read as free
 while charging per call:
 
 - `TypeMirror.GetTypeObject()` re-issues `Type_GetObject` every single time, where the surrounding
@@ -65,6 +66,10 @@ while charging per call:
   falling back to the number -- which is what every flags combination does. The whole member table
   instead reads in ONE `GetValues` over the static fields, `const` literals included: they have no
   storage, and the agent answers them anyway.
+- `MethodMirror.IsStatic`, like any read of `Attributes`, fetches `Method_GetInfo` once per method,
+  a third command beside the `Method_GetName` and `Method_GetParamInfo` that `Name`, `GetParameters`
+  and `ReturnType` already pay. `FieldInfoMirror.IsStatic` is free: `Type_GetFields` hands every
+  field's attributes to the mirror.
 
 One accessor reads the other way round, free where it looks expensive: **reading a mirror's own type
 costs no round trip.** `ObjectMirror.Type` looks like it might, since its getter falls back to
