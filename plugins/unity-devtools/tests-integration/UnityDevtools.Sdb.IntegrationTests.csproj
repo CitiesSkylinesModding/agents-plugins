@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../sdb/UnityDevtools.Sdb.csproj" />
+    <ProjectReference Include="../mcp/UnityDevtools.Mcp.csproj" />
     <!--
       Build-only dependency on the net472 debuggee exe (no assembly reference across the TFM gap);
       tests locate the built exe by relative path from their own output directory.

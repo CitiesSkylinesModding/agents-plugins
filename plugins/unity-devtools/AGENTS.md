@@ -37,7 +37,7 @@ The .NET projects plus the vendored SDB client, grouped by `agents-plugins.slnx`
 - `tests/`: offline parser/AST and operator-semantics suite.
 - `tests-integration/`: the evaluator and debug toolset against a real net472 debuggee under Mono, skipped where Mono is absent — traps in [`docs/solutions/mono-fixture-traps.md`](../../docs/solutions/mono-fixture-traps.md). `mise test` runs both suites, as do CI and the pre-commit.
   A test touching the PlayerConnection beacon joins `BeaconGroupCollection`, whose docblock says why.
-- `mcp/` (`UnityDevtools.Mcp`): the stdio MCP server on the official `ModelContextProtocol` C# SDK — generic-host builder, attribute-based tool classes taking the shared `UnitySession` via DI, `ToolGuard` wrapping bodies in `McpException` so messages reach the client verbatim. All logs go to stderr so they never corrupt the stdio stream.
+- `mcp/` (`UnityDevtools.Mcp`): the stdio MCP server on the official `ModelContextProtocol` C# SDK — generic-host builder, attribute-based tool classes taking the shared `UnitySession` via DI, `ToolGuard` wrapping bodies in `McpException` so messages reach the client verbatim. All logs go to stderr so they never corrupt the stdio stream. Both test projects reference it with its internals visible, so a tool's own shaping is tested where it lives.
 - `vendor/mono-debugger-soft/`: the SDB client sources from Unity's mono fork, committed verbatim rather than submoduled. Its `VENDOR.md` states the pin, why the copy, and the rules around updating it (`mise vendor:unity:update`); never hand-edit a file there.
 
 ## The eval contract

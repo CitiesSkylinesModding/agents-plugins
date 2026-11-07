@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../sdb/UnityDevtools.Sdb.csproj" />
+    <ProjectReference Include="../mcp/UnityDevtools.Mcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

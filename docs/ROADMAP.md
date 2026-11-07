@@ -809,13 +809,6 @@ the type written alone; walking the base chain there makes the expression work a
 the write falls back to an `eval` get-modify-set. Worth doing only if the whole
 `Unity.Mathematics` vector family comes in one change.
 
-### A tool exception with an empty message
-
-**Priority:** low · **Cost:** trivial · **Hits:** 1 as of 2026-09-29
-
-`ToolGuard` forwards `ex.Message` as is, so an exception carrying none surfaced as `An error occurred
-invoking 'ecs_get_buffer'.` with nothing to act on. Fall back to the exception's type name.
-
 ### `advance` drops its `after` snippet's failure
 
 **Priority:** low · **Cost:** cheap
