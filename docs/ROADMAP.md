@@ -1000,6 +1000,15 @@ The rule to add beside the managed-systems passage: rerun a system's creation pa
 `attach` takes a port and connects to this machine, so a game in a VM or on another host is reached only through a tunnel: `ssh -f -N -L <port>:127.0.0.1:<port>` to the game's machine, then `attach` on that port.
 A host parameter would remove the tunnel. Hit on 2026-11-03 (session `bd9d090f-c93c-439b-8abe-772f2fadddb5`), attaching to a game in a Windows VM.
 
+### A blocking `.Result` in `eval` deadlocks a task that needs the main thread
+
+**Priority:** medium · **Cost:** trivial
+
+An `eval` on the main thread that reads `.Result` or calls `.Wait()` on a task whose completion needs that thread blocks the very thread the task waits on, and the game freezes for good.
+In Cities: Skylines II, the PDX SDK's playset calls (`EnableModInActivePlayset`) are such tasks.
+Add the rule to `unity-driving`: start the task in one `eval`, poll its `IsCompleted` in later ones, and read `Result` once it holds true.
+Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), re-enabling mods in a playset.
+
 ## cs2-modding
 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
@@ -1449,3 +1458,12 @@ The monitor's `A new crash report appeared, which may be a hang snapshot` fires 
 The event cannot tell a stall the game came out of from one it died in, so each costs the session a look at the logs.
 The monitor already reads the logs: check them again a little after the report, and say in the event whether the game kept logging or went silent.
 Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): the event fired on every deferred boot of the session, the game recovered each time, and the boots' main-thread busy spells ran up to 117 s.
+
+### An exception in a coroutine's first segment never reaches `StartCoroutine`'s caller
+
+**Priority:** low · **Cost:** trivial
+
+`StartCoroutine` runs a coroutine up to its first `yield` before it returns, and the engine logs an exception thrown in that part and stops the coroutine: a `try`/`catch` around `StartCoroutine` never sees it.
+A mod that starts a coroutine inside a `try` to catch its start-up failure gets a silent stop, the error only in `Player.log`.
+The fact to add, beside the `MainThreadDispatcher` table in `mod-lifecycle-and-ordering.md`: catch inside the coroutine, and have it report a failure to whatever waits on it.
+Seen on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), reviewing ExtraAssetsImporter's import pass: `Player.log` held a coroutine's first-segment exception while the `catch` around its start stayed silent.
