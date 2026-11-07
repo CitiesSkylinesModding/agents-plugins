@@ -1429,3 +1429,23 @@ On a clean quit the game writes every settings file (`AssetDatabase.global.SaveA
 The game then fails to parse each one (`COCParserUnexpectedEndException` in `FileSystem.log`) and falls back to defaults: the user's own settings are lost, `Settings.coc` included.
 The fix is a snapshot of the user data's `*.coc` files (and `ModsSettings/`) before the close request and their restore after a forced end, said in the result; a longer wait alone only moves the threshold.
 Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): one of three forced stops of a 329-mod playset truncated `Settings.coc`, `FallbackSettings.coc` and four mod settings files, two of them to 0 bytes, with no backup of the game's own.
+A playset change still running when the close request lands makes the quit wait on its mod load too.
+Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): a `stop` sent 20 s after a mod was enabled in the running game waited on that load, and the session took the wait for a stall; waiting first for `FileSystem.log`'s `Mod '<name>' enabled in <n>s` line avoids it.
+
+### `restart`'s boot wait ends on age while the boot still moves
+
+**Priority:** medium · **Cost:** cheap
+
+`restart` gives a boot `BOOT_SECONDS` (`plugins/cs2-modding/mcp/src/cycle.ts`) to log `MainMenu reached`, and a boot still moving past it fails as if it stalled.
+A deferred online boot adds the subscribed mods during the menu's own load, and a mod that holds the first load until they arrive pushes the menu past ten minutes on a heavy playset.
+End the wait on progress instead: fail once `SceneFlow.log` and `Player.log` stop growing for a span, and keep a high ceiling only against a log that grows forever, as "Wedge detection on wire progress rather than on age" argues on the unity side.
+Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): a deferred boot on the development player, with ModLoadingFixes holding the first load for 622 s, reached the menu 11.6 min after launch; `restart` had returned `No main menu after 600 s` while the logs still grew.
+
+### A hang snapshot's event says nothing of recovery
+
+**Priority:** low · **Cost:** cheap
+
+The monitor's `A new crash report appeared, which may be a hang snapshot` fires on each watchdog snapshot, and a deferred boot takes some whenever the main thread stays busy adding late mods.
+The event cannot tell a stall the game came out of from one it died in, so each costs the session a look at the logs.
+The monitor already reads the logs: check them again a little after the report, and say in the event whether the game kept logging or went silent.
+Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): the event fired on every deferred boot of the session, the game recovered each time, and the boots' main-thread busy spells ran up to 117 s.
