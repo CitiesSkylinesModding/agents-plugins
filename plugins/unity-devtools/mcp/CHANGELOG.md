@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.4.1...unity-devtools-mcp-v1.4.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* **unity-devtools:** list static fields in find_types and mark every static member ([5f1765c](https://github.com/CitiesSkylinesModding/agents-plugins/commit/5f1765ca7903bec7a34552cc96060c8fc8564163))
+* **unity-devtools:** name the exception type when a tool fails with an empty message ([8ee6167](https://github.com/CitiesSkylinesModding/agents-plugins/commit/8ee61671e206d3310c6082ba50f38bb51c768a04))
+
 ## [1.4.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.4.0...unity-devtools-mcp-v1.4.1) (2026-11-04)
 
 
