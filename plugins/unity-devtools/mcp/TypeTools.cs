@@ -157,7 +157,7 @@ public sealed class TypeTools(UnitySession session) {
     };
   }
 
-  private static TypeDescription Describe(
+  internal static TypeDescription Describe(
     TypeMirror? type,
     string fullName,
     string assembly,
@@ -181,30 +181,43 @@ public sealed class TypeTools(UnitySession session) {
 
       Fields = members
         ? type.GetFields()
-          .Where(f => !f.IsStatic)
-          .Select(f => $"{f.Name}: {f.FieldType.FullName}")
+          .Select(static f =>
+            $"{TypeTools.StaticPrefix(f.IsStatic)}{f.Name}: {f.FieldType.FullName}"
+          )
           .ToArray()
         : null,
 
+      // The mirror exposes no staticness on a property, so this reads it off whichever accessor the
+      // property has, public or not.
       Properties = members
-        ? type.GetProperties().Select(p => $"{p.Name}: {p.PropertyType.FullName}").ToArray()
+        ? type.GetProperties()
+          .Select(static p => {
+              var accessor = p.GetGetMethod(nonPublic: true) ?? p.GetSetMethod(nonPublic: true);
+
+              return
+                $"{TypeTools.StaticPrefix(accessor.IsStatic)}{p.Name}: {p.PropertyType.FullName}";
+            }
+          )
+          .ToArray()
         : null,
 
       Methods = members
         ? type.GetMethods()
-          .Select(m => {
+          .Select(static m => {
               var pars = string.Join(
                 ", ",
                 m.GetParameters().Select(x => $"{x.ParameterType.Name} {x.Name}")
               );
 
-              return $"{m.ReturnType.Name} {m.Name}({pars})";
+              return $"{TypeTools.StaticPrefix(m.IsStatic)}{m.ReturnType.Name} {m.Name}({pars})";
             }
           )
           .ToArray()
         : null
     };
   }
+
+  private static string StaticPrefix(bool isStatic) => isStatic ? "static " : "";
 }
 
 /// <summary>Result of the <c>find_types</c> tool.</summary>

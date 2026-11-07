@@ -38,6 +38,7 @@ Every type parameter wants a fully qualified name (`MyGame.Movement.Speed`, not 
 Start broad and narrow on `count`: only the first search pays the harvest, which is the longest single freeze these tools cause, so iterating on a pattern afterwards costs only your reading.
 The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools).
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
+`members` lists statics too, prefixed `static`: look there for a singleton rather than guessing its name.
 
 ## Entities and ECS
 

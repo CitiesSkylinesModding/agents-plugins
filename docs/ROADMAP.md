@@ -494,15 +494,6 @@ two calls and some 600 characters to list one query. A verb reporting a named sy
 All/Any/None resolved to type names would collapse roughly six round trips per query to one, and the
 same read recurs whenever a claim is about what a vanilla system sees.
 
-### `find_types` reports no statics
-
-**Priority:** medium · **Cost:** trivial
-
-With `members: true` the tool lists instance fields and properties and omits static ones, so
-`Game.Version` came back with empty `fields` and `properties` and the sweep had to guess
-`Game.Version.current` rather than discover it. Statics are exactly where a game keeps its
-singletons and version surfaces, which makes them the members an orienting agent most needs.
-
 ### `find_types` cannot search by what a type implements
 
 **Priority:** low · **Cost:** cheap
