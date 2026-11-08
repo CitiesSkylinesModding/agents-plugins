@@ -1475,3 +1475,22 @@ Seen on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), reviewing E
 The `cs2-dev-errors` monitor starts only on `on-skill-invoke:cs2-modding:cs2-modding`, and an agent resuming from a context summary rarely loads the skill again, so it drives the game with no monitor and learns of a new error, a dead game or a crash report only from the next `cs2-dev` result's hint.
 Two ways to weigh: start the monitor on the first `cs2-dev` tool call too, if Claude Code's monitor triggers allow it; or have every `cs2-dev` result's hint say that no monitor runs and that loading the skill starts one.
 Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): after a summary the session ran two game boots without a monitor until the user asked for it, and loading the skill started it.
+
+### A throw from `OnDispose` after a failed `OnLoad` stops the mods after it
+
+**Priority:** medium · **Cost:** trivial
+
+`mod-lifecycle-and-ordering.md` says a mod whose `OnLoad` threw still gets `OnDispose` "and the failure is logged" (`:393`), and calls the null guards in `OnDispose` load-bearing (`:528`), but not what a throw there costs.
+`InitializeMods` calls `Dispose` inside its catch with no `try` of its own (`src/Game/Game.Modding/ModManager.cs:456`), so a throw from that `OnDispose` escapes: the `Error initializing mod` line never comes, no mod after it loads, and no UI module registers.
+The fact to add, under "`OnDispose` hygiene": an `OnDispose` that runs after a failed `OnLoad` must not throw, since only the quit wraps each dispose in a `try` (`:508-523`).
+Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: with its `OnLoad` made to throw before its settings loaded, its `OnDispose` threw a `NullReferenceException`, and 7 mods loaded and no UI module registered, against 151 mods and 45 UI modules once guarded.
+
+### One null value drops a whole `MemorySource`
+
+**Priority:** medium · **Cost:** trivial
+
+`localization.md` says one bad entry drops every entry after it, the survivors being those enumerated before it (`:112`); `MemorySource` loses them all.
+Its `ReadEntries` parses every entry in a first pass and only then returns the dictionary (`src/Colossal.Localization/Colossal.Localization/MemorySource.cs:14-29`), so a null value throws there, an `ArgumentNullException` from `Regex.Matches`, before any entry is read.
+The source stays registered, so it fails again each time the locale is read.
+The fact to add, under "How entries reach the dictionary": a `MemorySource` holding one null value adds nothing, so a mod batching many assets' strings into one source keeps nulls out of it.
+Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a pack with no name put a null into the batch of every pack's default names, a name added before the null was lost, and `Localization.log` logged the failure three more times at quit.
