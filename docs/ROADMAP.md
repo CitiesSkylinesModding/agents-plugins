@@ -1467,3 +1467,11 @@ Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): the event fi
 A mod that starts a coroutine inside a `try` to catch its start-up failure gets a silent stop, the error only in `Player.log`.
 The fact to add, beside the `MainThreadDispatcher` table in `mod-lifecycle-and-ordering.md`: catch inside the coroutine, and have it report a failure to whatever waits on it.
 Seen on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), reviewing ExtraAssetsImporter's import pass: `Player.log` held a coroutine's first-segment exception while the `catch` around its start stayed silent.
+
+### The error monitor is gone after a context summary
+
+**Priority:** medium · **Cost:** unsure
+
+The `cs2-dev-errors` monitor starts only on `on-skill-invoke:cs2-modding:cs2-modding`, and an agent resuming from a context summary rarely loads the skill again, so it drives the game with no monitor and learns of a new error, a dead game or a crash report only from the next `cs2-dev` result's hint.
+Two ways to weigh: start the monitor on the first `cs2-dev` tool call too, if Claude Code's monitor triggers allow it; or have every `cs2-dev` result's hint say that no monitor runs and that loading the skill starts one.
+Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): after a summary the session ran two game boots without a monitor until the user asked for it, and loading the skill started it.
