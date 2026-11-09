@@ -1467,12 +1467,16 @@ Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): a deferred b
 
 ### A hang snapshot's event says nothing of recovery
 
-**Priority:** low · **Cost:** cheap
+**Priority:** medium · **Cost:** cheap
 
 The monitor's `A new crash report appeared, which may be a hang snapshot` fires on each watchdog snapshot, and a deferred boot takes some whenever the main thread stays busy adding late mods.
 The event cannot tell a stall the game came out of from one it died in, so each costs the session a look at the logs.
 The monitor already reads the logs: check them again a little after the report, and say in the event whether the game kept logging or went silent.
 Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): the event fired on every deferred boot of the session, the game recovered each time, and the boots' main-thread busy spells ran up to 117 s.
+Hit on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): one snapshot 72 s into a boot and one during a save load, the game recovering from both; each weighs about 130 MB in `.cache/backtrace/crashpad/reports`.
+Wanted too: hang snapshots off during development, or opt-in.
+The watchdog is Backtrace's ANR thread (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Windows/NativeClient.cs:114-157`): it starts only when `BacktraceConfiguration.HandleANR` is set, true by default, and snapshots when the main thread's update time stays still across one `AnrWatchdogTimeout`, which the game raises to 15 s (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`).
+`PauseAnrThread(true)` and `Disable()` (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Base/NativeClientBase.cs:75-86`), reached through `BacktraceClient.Instance.NativeClient`, stop it on a running game, so `restart` could take an option that calls one through the `unity` eval on a debug-patched game. (UNVERIFIED: whether an eval reaches the game before a boot's first busy spell.)
 
 ### An exception in a coroutine's first segment never reaches `StartCoroutine`'s caller
 
@@ -1485,11 +1489,12 @@ Seen on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), reviewing E
 
 ### The error monitor is gone after a context summary
 
-**Priority:** medium · **Cost:** unsure
+**Priority:** high · **Cost:** unsure
 
 The `cs2-dev-errors` monitor starts only on `on-skill-invoke:cs2-modding:cs2-modding`, and an agent resuming from a context summary rarely loads the skill again, so it drives the game with no monitor and learns of a new error, a dead game or a crash report only from the next `cs2-dev` result's hint.
 Two ways to weigh: start the monitor on the first `cs2-dev` tool call too, if Claude Code's monitor triggers allow it; or have every `cs2-dev` result's hint say that no monitor runs and that loading the skill starts one.
 Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): after a summary the session ran two game boots without a monitor until the user asked for it, and loading the skill started it.
+Wanted: the monitor in every session that drives the game, however the agent got there; meanwhile a user-level instruction to load the skill again after each summary covers it, for a user who wrote one (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`, 2026-11-09).
 
 ### A throw from `OnDispose` after a failed `OnLoad` stops the mods after it
 
@@ -1509,3 +1514,12 @@ Its `ReadEntries` parses every entry in a first pass and only then returns the d
 The source stays registered, so it fails again each time the locale is read.
 The fact to add, under "How entries reach the dictionary": a `MemorySource` holding one null value adds nothing, so a mod batching many assets' strings into one source keeps nulls out of it.
 Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a pack with no name put a null into the batch of every pack's default names, a name added before the null was lost, and `Localization.log` logged the failure three more times at quit.
+
+### One settings name in two `.coc` files breaks the settings save at quit
+
+**Priority:** medium · **Cost:** trivial
+
+`settings-and-input.md` says a `.coc` file holds one named block per settings class and that the `ModsSettings/<Mod>/<Mod>` folder is a convention (`:228-234`), but not what follows when two files hold the same name.
+The quit's settings save then fails with "An item with the same key has already been added", then a sharing violation on the `.coc`, and the game appends a second block to the file `FileLocation` names.
+The fact to add: a settings name lives in one file, so a mod that moves its `FileLocation` deletes the file it left. (UNVERIFIED: the move case; a mod update that moves its `FileLocation` would settle it.)
+Seen on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a bench script wrote the mod's settings to `ModsSettings/ExtraAssetsImporter/ExtraAssetsImporter.coc` beside the root `ExtraAssetsImporter.coc` that its `[FileLocation("ExtraAssetsImporter")]` names, and the quit of each of four runs logged the error.
