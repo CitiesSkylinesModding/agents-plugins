@@ -1265,6 +1265,21 @@ Checked on Hall of Fame (mod 90641) on 2026-10-23, through the public `https://a
 The facts to add to `publishing.md`, with the practice they lead to: quantize the screenshots (pngquant left 1920×1080 previews indistinguishable at a third of their lossless size) and keep the thumbnail lossless.
 The worked instance is the `images:optimize` task in `~/Documents/Dev/HallOfFame/mise.toml`.
 
+### Listing the Paradox Mods catalogue without a login
+
+**Priority:** low · **Cost:** cheap
+
+No reference says how to list or rank the catalogue, which picking a mod to study or to integrate with needs; the documented `GET /mods` answers 400 without a `modId`, and `/mods/search` answers 403.
+The website's own search answers anonymously, checked on 2026-11-09:
+
+- `POST https://api.paradox-interactive.com/mods?metadata=yes` with `{"gameNames":["cities_skylines_2"],"tags":["Code Mod"],"sortBy":"popularity","orderBy":"desc","page":0,"pageSize":100}` returns `{totalCount, mods}`; `popularity` orders by `installedCount`, pages count from 0, and `pageSize` is capped at 100 without an error.
+- A mod can publish no version of its own: `userModVersion` is null in the search row and absent from the `?modId=` detail, leaving `modVersion`, the revision number Paradox counts uploads with.
+- The `?modId=` detail answers 400 for an unknown id, and `os=Windows` also serves mods published for `Any`.
+- The rate limit runs about 120 requests per 10 s in a burst and 60 per minute sustained.
+
+The worked instance is `scripts/bridges.ts` in `~/Documents/Dev/cs2-doit`, a working client of both calls, in daily use.
+The facts belong beside the detail call the entry above reads, in a Paradox Mods API passage of `cs2-mod-project`.
+
 ### A settings reset that calls `SetDefaults` leaves key bindings alone
 
 **Priority:** medium · **Cost:** cheap
