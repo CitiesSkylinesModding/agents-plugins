@@ -1565,3 +1565,18 @@ Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAss
 The quit's settings save then fails with "An item with the same key has already been added", then a sharing violation on the `.coc`, and the game appends a second block to the file `FileLocation` names.
 The fact to add: a settings name lives in one file, so a mod that moves its `FileLocation` deletes the file it left. (UNVERIFIED: the move case; a mod update that moves its `FileLocation` would settle it.)
 Seen on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a bench script wrote the mod's settings to `ModsSettings/ExtraAssetsImporter/ExtraAssetsImporter.coc` beside the root `ExtraAssetsImporter.coc` that its `[FileLocation("ExtraAssetsImporter")]` names, and the quit of each of four runs logged the error.
+
+### Predictable names for the UI bundle copy's minified identifiers
+
+**Priority:** medium · **Cost:** moderate
+
+`cs2-modding-setup` makes the readable UI bundle copy with one prettier pass, so the copy keeps the minifier's names, and each game build re-minifies them all.
+At 1.6.4f1 the copy's diff ran to 14968 added and 14934 removed lines, and 272 changed lines remained once every identifier of one to three characters was replaced by one placeholder on both sides, so nearly the whole diff is renaming.
+That renaming is why `cs2-game-update` has its bundle cluster verify every cite by opening the line rather than matching text, and why `mise research:cite-audit` cannot re-point a bundle cite by text identity.
+
+- Rename every minified binding before prettier runs, since longer names move prettier's line wraps: a scope-aware AST pass (a parser dependency, to be approved) names each binding from something the next build keeps, such as its kind and its position within its own scope, or the `Q.add` registration path and export name for a module's exports.
+  A change then renames only within the scope it touched.
+- The cost hinge is module scope, where most of those names live and position is the only anchor: an insertion there renames everything after it in that scope, unless the name is derived from the binding's content instead.
+- Landing it changes `cs2-modding-setup`'s step 5 for every user, retires the bundle cluster's open-the-line rule in `cs2-game-update`, and re-points every bundle cite in `docs/research/` and the shipped `cs2-modding-ui` references once, since every line moves.
+
+Measured on 2026-11-10 during the 1.6.4f1 refresh (decompile commit `7179d263` against `43da1009`).
