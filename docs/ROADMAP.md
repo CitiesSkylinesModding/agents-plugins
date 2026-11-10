@@ -719,7 +719,10 @@ its 60 s limit, and the session is dropped. Reproduced in the fixture by harvest
 `TypeCatalog` over an assembly whose `GetTypes` throws. Every invoke goes out with
 `InvokeOptions.None`, so a throwing `eval` should hang the same way, and a mistyped type name in a
 debug tool now reaches it through the catalog's first harvest. Suppressing breakpoints for the
-plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, untested.
+plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, untested. A plain
+breakpoint does the same in the field: an `eval` of `world.CreateSystemManaged(...)` hit one armed
+on a constructor it ran, and the session dropped after 60 s (Do It, 2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`).
+Until the fix lands, `unity-driving` should warn against arming a breakpoint on code an `eval` runs.
 
 ### An invoke releases a thread paused at a breakpoint
 
@@ -834,8 +837,12 @@ method-entry breakpoint on a BCL call, conditioned on its argument (`System.IO.D
 `sourceDirName.EndsWith(".new")`), pauses the game just before the call; changing the outside world
 under the pause (moving the folder away, corrupting a zip), then resuming, fails the call as a
 player's machine would. That builds a red case for an I/O failure path with no test seam, which a
-fix to another author's mod cannot add: Asset Icon Library's unpack fixes were tested this way. A
-paragraph in the skill's breakpoint section would carry it.
+fix to another author's mod cannot add: Asset Icon Library's unpack fixes were tested this way. The
+pause can change the call's own inputs too: a Do It red case for a failed `OnCreate` broke at
+`Game.Modding.ModManager+ModInfo.OnLoad` during boot, by which the mod's assembly is loaded and its
+types can take a breakpoint, armed one on the mod's constructor, and nulled its argument with
+`debug_evaluate` (2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`). A paragraph in the skill's breakpoint
+section would carry it.
 
 ### Injected in-game helper (exploratory, opt-in)
 
@@ -1014,6 +1021,41 @@ Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), re-enabling 
 Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
 decompiled game, the wiki and a corpus of open-source mods, and the `cs2-dev` MCP server over the
 game's lifecycle.
+
+### `Time` in a system body wakes the Entities generator
+
+**Priority:** medium · **Cost:** cheap
+
+A Do It UI system under a file-scoped namespace kept compiling until its `OnUpdate` read
+`UnityEngine.Time.unscaledTime`, with no `SystemAPI` call or schedule site: the generator then
+emitted `ActionsUISystem__System_*.g.cs` into the global namespace, and the build failed with
+`CS0311` at `UpdateAt<T>` and `GetExistingSystemManaged<T>` rather than on `OnCreateForCompiler`.
+Establish which generator module matches `Time`, then amend the three passages on the trap,
+`cs2-mod-project/SKILL.md`, `references/build-pipeline.md` and `ecs-in-this-game.md`, with that
+trigger and this symptom.
+
+### A system that catches its own `OnCreate` failure keeps updating
+
+**Priority:** medium · **Cost:** trivial
+
+"When a lifecycle hook throws" in `mod-lifecycle-and-ordering.md` covers an uncaught `OnCreate`
+throw and an `OnUpdate` throw, not the pattern between them: an `OnCreate` that catches and logs its
+own failure leaves the system enabled and half-built, and its `OnUpdate` throws on the missing
+fields, which `UpdateSystem` logs as Critical on every update. A Do It UI system took 21 of those
+errors before the main menu (2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`). The section's table of
+failure surfaces should gain that row: set `Enabled = false` in such a catch.
+
+### `ProxyBinding` equality ignores the key
+
+**Priority:** medium · **Cost:** trivial
+
+`ProxyBinding`'s `Equals`, `==`, `!=` and `GetHashCode` all go through `Comparer.defaultComparer`,
+whose options are `MapName`, `ActionName`, `Name` and `Device` (`ProxyBinding.cs:29-39`, `:812-845`
+at 1.6.2f1): a binding compares equal to itself after a rebind, whatever its new path and
+modifiers, so a `==`, a `Distinct` or a dictionary keyed on a binding misses the change.
+`settings-and-input.md` documents
+`PathEquals` but not this; a line there should name `PathEquals` or `ConflictsWith` as the
+comparison for the key itself.
 
 ### A check for the cites research files make into each other
 
