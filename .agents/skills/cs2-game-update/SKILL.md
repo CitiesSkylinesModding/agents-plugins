@@ -7,7 +7,7 @@ description: 'Sweeps this repo''s Cities: Skylines II prose after a game update.
 
 The game moved and the prose did not. This skill diffs the two decompile commits, re-derives every claim the diff reaches, and ends with every `Verified against game version` line on the new version, each one earned.
 
-It works from the decompile as it stands: `cs2-modding-setup` owns the decompile, its per-version commits, its tool pin and the readable UI bundle copy, and its refresh branch runs first. Where `~/.cs2-modding/setup.md` records a game version newer than the decompile's HEAD, say so and stop there.
+It works from the decompile as it stands: `cs2-modding-setup` owns the decompile, its per-version commits, its tool pin and the readable UI bundle copy, and its refresh branch runs first. Where the installed game is newer than the decompile's HEAD, say so and stop there. Read the installed version off the install itself, since `~/.cs2-modding/setup.md` holds only what that skill last saw and a Steam update leaves it behind: `strings -n6 "<Game install>/Cities2_Data/Managed/Game.dll" | grep -E '\) \[[0-9]+\.[0-9]+\]'` prints its `VersionInternal` string with no launch.
 
 Where the decompile diff touches `src/cohtml.Net/Properties/AssemblyInfo.cs`, the embedded engine moved: say so, and name `gameface-update` as the sweep for the coherent-gameface plugin. The `docs/research/` lines recording the Cohtml version a live read observed stay this sweep's own.
 
