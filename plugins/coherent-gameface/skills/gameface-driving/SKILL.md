@@ -9,7 +9,7 @@ This skill records the procedure for the `game_*` tools: the facts the tool sche
 Facts that may be game-specific are labeled; the reference target is Cities: Skylines II (CS2).
 For what the engine itself supports (layout, events, missing platform APIs), load the `gameface` skill; this one stays operational.
 
-Verified against Cohtml 2.2.1.3.
+Verified against Cohtml 2.2.11.3.
 A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## Session start and triage

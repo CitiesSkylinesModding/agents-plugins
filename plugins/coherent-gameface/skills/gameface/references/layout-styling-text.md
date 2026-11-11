@@ -42,16 +42,16 @@ Notable property limits (the current tables have the full lists):
 - `flex-basis: content` is unsupported, and `flex-basis: auto` next to a sibling with a percentage basis may resolve as `content`: give siblings all-percentage bases, or avoid mixing `%` with `auto`.
 - `font-size` units are limited to `px`/`em`/`rem`/`vw`/`vh`; `white-space` supports only `normal`/`nowrap`/`pre`/`pre-wrap`; `word-break`, `word-wrap`, `writing-mode`, `direction`, and `tab-size` are unsupported; `max-width`/`max-height` reject `none`; `visibility: collapse` is unsupported; named colors are a limited palette (prefer hex or rgb).
 - The `skew(x, y)` two-argument form is unsupported (`skewX`/`skewY` work); `transform-origin` has no z-offset; `mask-image` takes a single PNG with alpha; `clip-path` takes basic shapes only.
-- Wholly unsupported families: `list-style-*`, multi-column `column-*`, table layout properties, CSS counters and `quotes`, `outline`, `will-change`, `scroll-behavior`, `touch-action`, `resize`, `zoom`.
+- Wholly unsupported families: `list-style-*`, multi-column `column-*`, table layout properties, CSS counters and `quotes`, `outline`, `will-change`, `scroll-behavior`, `touch-action`, `resize`, `zoom` (`scroll-behavior` arrives in 3.2.1).
 - `object-fit` does not exist: for cover-fit images use a `<div>` with `background-size: cover`.
   Flex `gap` and its `row-gap`/`column-gap` longhands lay out since 2.2, with early support in 2.0 behind the `--use-compatibility-yoga` developer option; before that, space children with margins.
   Percentage `width`/`height` on inline images are unsupported: size the container instead.
 
-(VOLATILE: the version gates in the list above, `space-evenly` and flex `gap` among them, and whether the margin workaround is still needed — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
+(VOLATILE: the version gates in the list above, `space-evenly` and flex `gap` among them, and whether the margin workaround is still needed — the feature changelog at `changelog/feature/` and the LTS changelog at `changelog/lts/`, against the `gameface` skill's baseline line.)
 
 Layout-bug workarounds, undocumented and observed on the reference target at Cohtml 1.64.0.7.
-The `width`/`height` animation still reproduces at 2.2.1.3; the rest went unmeasured there, so try each before believing it on a 2.2 engine.
-(VOLATILE: whether each still reproduces — the layout fixes in the feature changelog at `changelog/feature/`, and a reproduction on the running target measured a frame after it is built, as the next section describes.)
+The `width`/`height` animation still reproduces at 2.2.11.3; the rest went unmeasured there, so try each before believing it on a 2.2 engine.
+(VOLATILE: whether each still reproduces — the layout fixes in the feature changelog at `changelog/feature/` and the LTS changelog at `changelog/lts/`, and a reproduction on the running target measured a frame after it is built, as the next section describes.)
 
 - Animating `width`/`height` from 0 to `auto` fails: transition `max-width`/`max-height` instead.
 - An image refusing to stretch to its flex container's height: set an explicit `height` on the container.
@@ -80,9 +80,9 @@ Layout is deferred and runs once per frame (`content_development/immediatelayout
 - Bug: nested `@media` blocks must sit at the END of the stylesheet, or later plain rules (like `@keyframes`) fail to override rules inside them.
 - `<link media="...">` gates rulesets only; `@font-face` and `@keyframes` inside always apply.
   Changing the `media` attribute from JS after creation has no effect.
-- Custom media features (1.51+): the game defines flags via `View::SetCustomMediaFeature`, CSS queries them as `@media (myFeature: myValue)`; numeric comparisons since 3.0.2.
+- Custom media features (1.51+): the game defines flags via `View::SetCustomMediaFeature`, CSS queries them as `@media (myFeature: myValue)`; numeric comparisons since 3.0.2, and on the 2.2 line since 2.2.7, without 3.1.1's fix to dynamic range matching, which no 2.2 release carries.
   Toggling one triggers a full style recalculation.
-  (VOLATILE: whether numeric comparisons in custom media features have reached the target — the feature changelog at `changelog/feature/`, against the `gameface` skill's baseline line.)
+  (VOLATILE: whether 3.1.1's dynamic range matching fix for custom media queries has reached the 2.2 line — the LTS changelog at `changelog/lts/`, against the `gameface` skill's baseline line.)
 
 ## Scaling the UI (`content_development/scalableui/`)
 

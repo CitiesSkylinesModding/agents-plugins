@@ -54,7 +54,7 @@ Two rules when using them:
 - Tab order: `HTMLElement.tabIndex` (the property) does not exist; test with `el.hasAttribute('tabindex')`, and sequential Tab focus needs the tabindex polyfill.
 
 Beyond polyfills, Coherent's open-source GameUIComponents library ships restylable game widgets (dropdown, slider, modal, grid, scrollable container, ...) plus an interaction manager (keyboard/gamepad spatial navigation, drag and drop).
-Shadow DOM (1.61+) covers `customElements.define`, `<template>`, `attachShadow`, slots and `:host` (simple selectors); `::slotted` arrives with it and `::part` in 1.67, but from the JS query APIs both are answered wrongly rather than rejected — select a slotted or exposed node by its own class or attribute ([scripting-data-binding.md](scripting-data-binding.md) has what each returns).
+Shadow DOM (1.61+) covers `customElements.define`, `<template>`, `attachShadow`, slots and `:host` (simple selectors; complex ones from 3.2.1); `::slotted` arrives with it and `::part` in 1.67, but from the JS query APIs both are answered wrongly rather than rejected — select a slotted or exposed node by its own class or attribute ([scripting-data-binding.md](scripting-data-binding.md) has what each returns).
 
 ## Linters and type checking
 

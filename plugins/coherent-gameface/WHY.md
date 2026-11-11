@@ -64,7 +64,7 @@ driving, with nothing installed but Node.
 ### Work against the engine a shipped game actually runs
 
 A game's Cohtml moves only when the game itself updates, so it trails the SDK by months or years,
-then jumps. Cities: Skylines II, our reference target, runs 2.2.1.3 as of game version 1.6.2f1,
+then jumps. Cities: Skylines II, our reference target, runs 2.2.11.3 as of game version 1.6.4f1,
 while the current Gameface docs describe a 3.x release. Their tooling and their documentation
 corpus are built for 3.x, and say so.
 

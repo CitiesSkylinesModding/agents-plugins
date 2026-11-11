@@ -12,7 +12,7 @@ Gameface implements a deliberate subset of HTML5/CSS3 chosen for game-UI perform
 (The older Coherent UI product was Chromium-based; search results about it do not describe Gameface.)
 This skill is written against docs v3.0.3.1, with Cities: Skylines II (CS2) as the reference target and worked example throughout.
 
-Verified against Cohtml 2.2.1.3.
+Verified against Cohtml 2.2.11.3.
 A `VOLATILE:` marker labels a claim the engine version moves, naming what moves and where to re-check it: the claim held on the reference target at the version above.
 
 ## The map and the territory
@@ -55,7 +55,7 @@ Layout and styling:
   `:not()`, `::placeholder`, and `:nth-of-type()` are unsupported; `::before`/`::after` exist since 1.19.
   (VOLATILE: whether a stylesheet still drops each of the three — one sheet per construct against the running target, each holding a known-kept control rule beside the construct's, compared by rule count.)
 - `user-select` defaults to `none`; text selection is opt-in.
-- CSS variables work, except inside `@keyframes` and as `var()` fallback values.
+- CSS variables work, except inside `@keyframes` and, before 3.2.1, as `var()` fallback values.
   `calc()` cannot mix `%` with other units.
   `currentcolor` does not exist.
   Variables inside color functions are the root cause of most Tailwind utility failures.
@@ -110,7 +110,7 @@ Key pages (paths under the base):
 | Supported-features hub | `content_development/supported_features_tables/` |
 | HTML / CSS properties / CSS selectors / JS events / canvas / SVG tables | `content_development/supported_features_tables/` + `htmlelements/`, `cssproperties/`, `cssselectors/`, `jsevents/`, `canvassupport/`, `svgsupport/` |
 | Feature changelog (all versions, one page) | `changelog/feature/` |
-| LTS changelog (post-branch fixes) | `changelog/lts/` |
+| LTS changelog (post-branch fixes and backports) | `changelog/lts/` |
 | Content development (guides, tooling) | `content_development/` |
 | UI scripting (engine API, data binding) | `integration/ui_scripting/` |
 

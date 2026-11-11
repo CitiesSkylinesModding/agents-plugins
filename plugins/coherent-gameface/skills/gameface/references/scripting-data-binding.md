@@ -75,7 +75,7 @@ Structural pitfalls:
 - Elements whose `data-bind-if`/`data-bind-for` was added from JS after creation join the update cycle only when attached to the DOM, and such elements can become unselectable from JS afterwards (documented known issue).
   For heavily dynamic structure, drive the DOM with a framework and bind leaf values only.
 - `data-bind-for` over collections of primitives is unsupported; wrap items in objects.
-- Identical `{{expressions}}` evaluate once per synchronization (deduplicated).
+- Since 3.0.2 (2.2.7 on the 2.2 line), identical `{{expressions}}`, the model getters a complex expression calls, and an expression with side effects each evaluate once per synchronization.
 - Binding over shadow-DOM-containing subtrees needs `attachShadow({clonable: true})`, present since 2.2 and so on the reference target.
 
 ## Developing without the game (mock data)

@@ -3,9 +3,9 @@
 The docs describe the latest Gameface only; a game's embedded Cohtml moves only when the game updates, so it sits behind them.
 Gate every feature claim through this file, then probe the running game when one is connected.
 
-<!-- timeline-ceiling: 3.1.2 -->
+<!-- timeline-ceiling: 3.2.1 -->
 
-The timeline below is immutable history, current through **Gameface 3.1.2 (August 2026)**.
+The timeline below is immutable history, current through **Gameface 3.2.1 (October 2026)** and the 3.1.4.5 patch (November 2026), and on the 2.2 LTS line through 2.2.12.3 (November 2026).
 For claims about anything newer, fetch the live changelog (procedure below).
 Repo-side, `mise skills:check-changelog` diffs this ceiling against the live changelog.
 
@@ -44,7 +44,8 @@ Repo-side, `mise skills:check-changelog` diffs this ceiling against the live cha
 5. A feature absent from the entire changelog almost certainly does not exist; confirm in the support tables.
 6. JS language features are gated by V8, not the changelog (see the V8 section below).
 
-LTS branches (`changelog/lts/`) are fixes-only continuations after a new major ships (1.69.2-1.69.8, 2.2.4-2.2.8); both changelog pages share the history below the branch point.
+LTS branches (`changelog/lts/`) continue a line after a new major ships (1.69.2-1.69.8, 2.2.4 onward), mostly fixes with some backported features; both changelog pages share the history below the branch point.
+A game on an LTS branch searches the LTS page too: a backport lands there under a lower version than its feature-page heading, and that lower version is the one step 3 compares.
 Per-release notes exist as separate pages only for >= 1.42 (`releases/release_<VERSION>/`).
 
 ## Milestones timeline
@@ -91,7 +92,7 @@ Dates are release dates.
 - **1.39.0** (Apr 2023): `animationiteration`/`animationcancel`/`transitionrun`/ `transitioncancel`.
 - **1.40.0** (May 2023): base64 data-URI images.
 
-### 1.42 to 2.2 (Jun 2023 to Jan 2026), the reference target's range
+### 1.42 to 2.2.11 (Jun 2023 to Oct 2026), the reference target's range
 
 (VOLATILE: this range's upper bound, and the baseline note under its last release — the `gameface` skill's baseline line.)
 
@@ -121,15 +122,32 @@ Dates are release dates.
 - **2.0.0** (Oct 2025): flex `gap` behind the `--use-compatibility-yoga` flag, int64-to-BigInt binding modes, `setInterval` default delay 0, large `el.style` standardization pass.
 - **2.2.0** (Dec 2025): **`aspect-ratio` CSS property**, new flex algorithm with real `gap`, `@starting-style` and discrete-property transitions (`display` animates), `vertical-align: baseline`, whitespace nodes join the DOM (BREAKING for `childNodes` counts), `<img>` keeps its natural aspect ratio by default (layout-changing), `color(srgb ...)` replaces `coh-scrgb`, Svelte 5 support.
 - **2.2.1** (Jan 2026): `data-bind-class-toggle` applies when the class is already on the element.
+- **2.2.2** (Feb 2026): flex wrapping fixed for `flex-direction: row` with `flex-wrap: wrap`; a warning for event triggers with no JS or C++ handler.
+- **2.2.3** (Apr 2026): data-binding and `data-bind-value` performance, binding arrays of map elements to JS fixed.
+
+From 2.2.4 the 2.2 line continues on the LTS page (`changelog/lts/`) while the feature page moves to 3.0.
+An LTS row gates a 2.2-line game only; a 3.x game takes the same change from the 3.x row that carries it.
+
+- **2.2.4** (May 2026, LTS): flex `gap` no longer leaves extra trailing space, `text-stroke` width applies when styled dynamically.
+- **2.2.5** (May 2026, LTS): long complex selectors with a descendant combinator match reliably.
+- **2.2.7** (Jun 2026, LTS), backported from 3.0.2: numeric comparisons in custom media features, repeated expressions, model getters and side-effecting expressions evaluated once per synchronization, single-flex-child height and `:after` layout fixes.
+- **2.2.9** (Aug 2026, LTS): the `border` shorthand without a width parses.
+- **2.2.11** (Oct 2026, LTS): an appended `<link>`'s `load`/`error` events no longer fire in the same JS call stack (backported from 3.1.3).
   **The reference target's baseline release; the `gameface` skill's baseline line states the exact version it ships.**
 
-### After 2.2 (absent from the reference target)
+### Above the reference target (absent from it unless a row names its 2.2-line backport)
 
-(VOLATILE: where the target's version now falls in this list — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
+(VOLATILE: where the target's version now falls in this list — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/` and the LTS changelog at `changelog/lts/`.)
 
+- **2.2.12** (Oct 2026, LTS): crash fixes; slotted Shadow DOM content survives an ancestor's `display: none` round trip.
+- **2.2.12.3** (Nov 2026, LTS): V8 security fixes (CVE-2022-4147, `Map` hardening).
 - **3.0.0** (Apr 2026): **`box-sizing: content-box`** (before 3.0 everything is effectively border-box), auto margins in flex, web-standard flex mode, dynamic SDF text, compatibility-flags system.
-- **3.0.2** (Jun 2026): numeric comparisons in custom media features.
+- **3.0.2** (Jun 2026): numeric comparisons in custom media features, data-binding expressions and model getters evaluated once per synchronization (both on the 2.2 line from 2.2.7).
 - **3.1.1** (Jul 2026): `space-evenly` for `justify-content` and `align-content`, full `pointer-events` support, `elementFromPoint`/`elementsFromPoint` also return SVG nodes, shape-based hit testing for SVG, linear rendering pipeline deprecated (gamma with sRGB is now the default, so a game still authored for linear needs migrating).
+- **3.1.3** (Sep 2026): an appended `<link>`'s `load`/`error` events no longer fire in the same JS call stack (on the 2.2 line from 2.2.11); unsupported-CSS logs carry file locations in Debug and Development builds.
+- **3.1.4** (Oct 2026): `load` event order between the document and `<link>` elements fixed.
+- **3.2.1** (Oct 2026): `var()` fallback values, `color-mix()` in sRGB, `round()`/`min()`/`max()`/`clamp()`, `hsl()`/`hsla()` colors, the CSS `contain` property (already parses at 2.2.11.3, its effect unverified), smooth scrolling (`element.scrollTo`, `scroll-behavior`), `filter` on SVG elements, `coh-layer` persistent layers, `:host` inside complex selectors, optional extra arguments to `setTimeout`/`setInterval`, `em` inside `calc()` resolving against the element's own font size, a 2px user-agent `border-width` on `<textarea>`, `<input>` and `<button>`.
+- **3.1.4.5** (Nov 2026): V8 security fixes (CVE-2022-4147, `Map` hardening); the changelog records no V8 bump.
 
 ## Never existed (as of the ceiling above)
 
@@ -140,7 +158,7 @@ Present since before 1.0 and safe at any version: `MutationObserver`, `XMLHttpRe
 
 ## V8 (the JS language ceiling)
 
-V8 9.4 since Cohtml 1.26 (Apr 2022); the changelog records no later bump through 3.1.2.
+V8 9.4 since Cohtml 1.26 (Apr 2022); the changelog records no later bump through 3.2.1.
 V8 9.4 is roughly ES2021: optional chaining, nullish coalescing, `WeakRef`, `Promise.any`, logical assignment, `String.replaceAll`, and `Array.at` all work.
 Newer than 9.4 and therefore missing: `Array.findLast`, `structuredClone`, `Object.groupBy`, `Array.fromAsync`.
 Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
@@ -157,10 +175,13 @@ Console platforms historically ran other VMs; V8 runs everywhere since 1.44.
 - **2.0.0**: `el.style` standardization (computed `animation-delay` becomes `0s`, `steps(1)` form, non-standard `percent` property removed, `style.prop = null` clears).
 - **2.2.0**: whitespace nodes join the DOM (`childNodes` indices shift), BODY scroll redirects to HTML per standard, `<img>` natural aspect ratio by default, `coh-scrgb` replaced by `color(srgb ...)`.
 - **3.0.0**: compatibility-flags system introduced (per-game legacy toggles, removed at the next major); several deprecated font and view APIs removed.
+- **3.0.2** (2.2.7 on the 2.2 line): complex data-binding expressions with side effects, and the model getters they call, run once per synchronization, where code could rely on one run per use.
+- **3.1.3** (2.2.11 on the 2.2 line): an appended `<link>`'s `load` and `error` events fire asynchronously, where code could rely on them firing during `appendChild`.
+- **3.2.1**: `em` inside `calc()` resolves against the element's own font size outside `font-size`; `<textarea>`, `<input>` and `<button>` get a 2px user-agent `border-width`.
 
 ## Worked example: the reference target
 
 The reference target embeds the version the `gameface` skill's baseline line states (confirm with `game_status`).
-Everything at or below that version applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50), inline `<script type="module">` bodies (1.65), WebP and `::part`/`exportparts` (1.67), flex `gap` (2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), and whitespace nodes in `childNodes` (2.2).
-Absent, so design around them: `box-sizing: content-box` (3.0), flex auto margins (3.0), numeric comparisons in custom media features (3.0.2), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
-(VOLATILE: which features sit in the present list and which in the absent one — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/`.)
+Everything at or below that version applies: Shadow DOM (1.61), `addEventListener` options (1.63), CSS Typed OM (1.51), `ResizeObserver` (1.47), `<template>` (1.43), proper `position: fixed` (1.56), CDP screenshots (1.50), inline `<script type="module">` bodies (1.65), WebP and `::part`/`exportparts` (1.67), flex `gap` (2.2), the `aspect-ratio` property (2.2), `@starting-style` and discrete transitions (2.2), whitespace nodes in `childNodes` (2.2), numeric comparisons in custom media features (2.2.7), and asynchronous `load`/`error` events on an appended `<link>` (2.2.11).
+Absent, so design around them: `box-sizing: content-box` (3.0), flex auto margins (3.0), and `space-evenly` for `justify-content`/`align-content` (3.1.1).
+(VOLATILE: which features sit in the present list and which in the absent one — the `gameface` skill's baseline line, against the feature changelog at `changelog/feature/` and the LTS changelog at `changelog/lts/`.)

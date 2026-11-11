@@ -47,7 +47,7 @@ const SELECTOR_TAIL = /\) in \w+!/gu;
  * Membership is answering CORRECTLY, not merely answering: `:host` earns its place by matching a
  * shadow host and nothing else, while everything in ANSWERED_NOT_REJECTED is answered and stays
  * out.
- * Verified live against Cohtml 2.2.1.3.
+ * Verified live against Cohtml 2.2.11.3.
  * Stylesheet selector support is a different, wider fact family and must not be read off this set.
  */
 export const SUPPORTED_PSEUDOS: ReadonlySet<string> = new Set([
@@ -74,7 +74,7 @@ export const SUPPORTED_PSEUDOS: ReadonlySet<string> = new Set([
  * They are tracked because a rejection can never be their doing, so the diagnosis must not offer
  * one as the suspect; a caller reaching for any of them needs the skills' warning, not this
  * message.
- * Verified live against Cohtml 2.2.1.3.
+ * Verified live against Cohtml 2.2.11.3.
  */
 const ANSWERED_NOT_REJECTED: ReadonlySet<string> = new Set(['::slotted', '::part', '::selection']);
 

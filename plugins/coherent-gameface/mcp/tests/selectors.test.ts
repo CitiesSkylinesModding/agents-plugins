@@ -7,7 +7,7 @@ import {
 } from '../src/selectors';
 
 /**
- * The engine's rejection, verbatim from Cohtml 2.2.1.3.
+ * The engine's rejection, verbatim from Cohtml 2.2.11.3.
  */
 function rejection(selector: string): string {
   return `SyntaxError: Invalid CSS selector (${selector}) in QuerySelector!`;
