@@ -54,10 +54,10 @@ repair, not a re-point.
 
 ## Prevention
 
-Before editing any line, read the block it sits in. A record announces itself: a dated bold lead
-(`**Ruled**`, `**Established.**`, `**Verdict**`, `**Retracted**`, `**Corrected**`, `**Withdrawn**`,
-`**Sources.**`), a `## Dead ends` heading, quote marks around another file's sentence, a fenced log
-or JSON capture, or a session stamp naming a date, a city, a playset or a mode.
+Before editing any line, read the block it sits in, then judge the sentence: would the edit make a
+past session appear to have ruled, said, measured or seen what it did not? Where unclear, it is a
+record. The shapes of each, record and claim, are listed once, in the sweep skill
+(`.agents/skills/cs2-game-update/SKILL.md`).
 
 `git diff -U25` is the cheap check: it shows the enclosing block for every changed line, and every
 one of the eight was visible in it.
