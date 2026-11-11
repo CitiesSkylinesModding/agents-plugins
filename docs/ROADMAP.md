@@ -66,15 +66,15 @@ the rest of the debugger surface refuses to do on the agent's behalf.
 Two questions stand open about the CDP surface, both of them cases where Coherent Labs' server,
 built for 3.1.2+, assumes the opposite of what this plugin measured or never exercised at all.
 
-Input is settled on our side. A raw CDP session at Cohtml 2.2.1.3 re-ran what 1.64 had shown:
-`Input.dispatchMouseEvent`, `Input.dispatchKeyEvent` and `Input.insertText` each answer with an
-empty result and no error, and no DOM handler fires (the probe catalogue's CDP entry holds the
-session and its controls). That is why every input tool here
-dispatches bubbling DOM events instead, and why `game_hover` warns that the CSS `:hover` state
-stays unset. What stays open is their side: their input path rests on `Input.dispatchMouseEvent`,
-`Input.dispatchTouchEvent` and `Input.insertText` — the touch one probed at neither version here —
-and their hover is commented as triggering `:hover`, so either CDP input works on a 3.x Player and
-our claim needs a host qualifier rather than only the two versions it now carries, or their
+Input is settled on our side. A raw CDP session at Cohtml 2.2.11.3 re-ran what 1.64 and 2.2.1.3 had
+shown, `Input.dispatchMouseEvent`, `Input.dispatchKeyEvent` and `Input.insertText` answering with an
+empty result and no error while no DOM handler fires, and `Input.dispatchTouchEvent`, probed there
+first, does the same (the probe catalogue's CDP entry holds the session and its controls). That is
+why every input tool here dispatches bubbling DOM events instead, and why `game_hover` warns that
+the CSS `:hover` state stays unset. What stays open is their side: their input path rests on
+`Input.dispatchMouseEvent`, `Input.dispatchTouchEvent` and `Input.insertText`, all inert at 2.2.11.3
+here, and their hover is commented as triggering `:hover`, so either CDP input works on a 3.x Player
+and our claim needs a host qualifier rather than only the versions it now carries, or their
 interaction tools do not work.
 
 The DOM domain is the second. They report `DOM.resolveNode` returning an empty object,
@@ -256,36 +256,36 @@ documented route.
 
 **Priority:** medium · **Cost:** trivial
 
-At Cohtml 2.2.1.3 in Cities: Skylines II, a flex item in a `flex-wrap: wrap` row came out narrower
-than its content by its `margin-right` minus its `margin-top` and `margin-bottom`: an item with
-`margin: 4rem 24rem 4rem 0` was 16px short, and its text overflowed the box. Nothing shows until the
-box paints, so it read as a misplaced hover background, and three padding tweaks went nowhere before
-measurement found it. The margins were what mattered: `margin-right: 0` made the item 8px too wide,
-40 made it 32 short, all margins 0 made it exact, while the font size, `flex-shrink: 0` and wrapping
-the text in its own element changed nothing. Spacing the items with padding, or with flex `gap`, which
-lays out since 2.2, sizes them right. This belongs in `layout-styling-text.md` beside the margin and
-`gap` notes, verified on one more row shape (no wrap, a column), since the probe covered only a
-wrapping row of inline-content items. Found in Hall of Fame's Creator Dashboard detail caption,
-session `449ee1b0-8f4e-4e34-a306-6263c9118606`.
+At Cohtml 2.2.1.3 in Cities: Skylines II, and still at 2.2.11.3 (re-measured 2026-11-11, past the 2.2.2,
+2.2.4 and 2.2.7 flex fixes), a flex item in a `flex-wrap: wrap` row came out narrower than its content by
+its `margin-right` minus its `margin-top` and `margin-bottom`: an item with `margin: 4rem 24rem 4rem 0`
+was 16px short, and its text overflowed the box. Nothing shows until the box paints, so it read as a
+misplaced hover background, and three padding tweaks went nowhere before measurement found it. The
+margins were what mattered: `margin-right: 0` made the item 8px too wide, 40 made it 32 short, all
+margins 0 made it exact, while the font size, `flex-shrink: 0` and wrapping the text in its own element
+changed nothing. Spacing the items with padding, or with flex `gap`, which lays out since 2.2, sizes them
+right. This belongs in `layout-styling-text.md` beside the margin and `gap` notes, verified on one more
+row shape (no wrap, a column), since the probe covered only a wrapping row of inline-content items. Found
+in Hall of Fame's Creator Dashboard detail caption, session `449ee1b0-8f4e-4e34-a306-6263c9118606`.
 
 ### A type name's first shape bounds later writes
 
 **Priority:** medium · **Cost:** trivial
 
-`scripting-data-binding.md` says two payloads under one type name must carry the same present
-properties, and that an omitted property breaks the cached binding. At Cohtml 2.2.1.3 in Cities:
-Skylines II only one direction fails. Move It 0.5.16 writes `FOEntryState` with and without a
-`Checkbox` object in every update of one value binding, the larger shape first, about 40 times a
-second: over 2,000 updates, each object reached `engine.on` with its own keys and values, and the
-game ran on. A type name first written without `Checkbox` and then with it (`FOPopoutEntryState`,
-injected from the `unity` eval) delivered the extra property under a garbage numeric key, a different
-one per write (`"731839520"`, `"731840096"`), in place of `Checkbox`: the engine reads past the cached
-shape. Hall of Fame's state writer did the same, `{status}` and then `{status, screenshots, stats}`,
-and that crashed the game with an access violation at address 0 in `v8.dll`. The passage should state
-the asymmetry: a later object may omit properties the name's first write carried, a property beyond
-them reads out of bounds, as garbage keys or a native crash, and the first write is whichever a
-payload's order reaches first, so keeping the varying presence in the type name stays the safe rule.
-Session `12ee6d3f-9851-4277-a276-db808e87c85d`.
+`scripting-data-binding.md` says two payloads under one type name must carry the same present properties, and
+that an omitted property breaks the cached binding. At Cohtml 2.2.1.3 in Cities: Skylines II only one direction
+fails. Move It 0.5.16 writes `FOEntryState` with and without a `Checkbox` object in every update of one value
+binding, the larger shape first, about 40 times a second: each of over 2,000 updates reached `engine.on` intact.
+A type name first written without `Checkbox` and then with it (`FOPopoutEntryState`, injected from the `unity`
+eval) delivered the extra property under a garbage numeric key, a different one per write (`"731839520"`,
+`"731840096"`), in place of `Checkbox`: the engine reads past the cached shape. Hall of Fame's state writer did
+the same, `{status}` and then `{status, screenshots, stats}`, and that crashed the game with an access violation
+at address 0 in `v8.dll`. At 2.2.11.3 (re-measured 2026-11-11, raw `JsonWriter` events from the `unity` eval)
+the larger shape first still reads right, and a single write adding a property to a name first written smaller
+hung the game until it exited, twice. The passage should state the asymmetry: a later object may omit properties
+the name's first write carried, a property beyond them reads out of bounds, as garbage keys or a native crash,
+and the first write is whichever a payload's order reaches first, so keeping the varying presence in the type
+name stays the safe rule. Session `12ee6d3f-9851-4277-a276-db808e87c85d`.
 
 ## unity-devtools
 
@@ -1264,7 +1264,7 @@ Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-f
 - Per-call allocations: set `GarbageCollector.GCMode` to `Disabled` and run several passes reading `GC.GetTotalMemory(false)`, the last agreeing passes giving the figure (`AllocBench` in `.scratch/tools/Item3Bench.cs`).
   A single pass after `GC.Collect` undercounts small objects, which refill the freed slots (a ~120 B/call `int[]` read 0), and `GC.GetAllocatedBytesForCurrentThread` returns 0 in the game's Mono.
 - A frame-time recording (rAF in the Gameface page) takes no other call into the game while it runs: each `unity` or gameface eval stalls the game and shows as a long frame.
-- A UI mod's load cost: during boot the UI view advances about once per second until the main menu, so each async step of the mod loader takes a tick and in-page timings read seconds; `frontend-and-injection.md`'s loader section does not say so. Hall of Fame timed `UIManager.Update` through Harmony, compared deployed-file variants interleaved, and attributed JS through the CDP `Profiler` domain, which works on Cohtml 2.2.1.3 (`docs/solutions/measuring-the-ui-bundles-load-cost.md` in `toverux/HallOfFame`).
+- A UI mod's load cost: during boot the UI view advances about once per second until the main menu, so each async step of the mod loader takes a tick and in-page timings read seconds; `frontend-and-injection.md`'s loader section does not say so. Hall of Fame timed `UIManager.Update` through Harmony, compared deployed-file variants interleaved, and attributed JS through the CDP `Profiler` domain, which works on Cohtml 2.2.1.3 and still on 2.2.11.3 (`docs/solutions/measuring-the-ui-bundles-load-cost.md` in `toverux/HallOfFame`).
 
 Shape, not settled: a `measuring.md` sibling in `performance-and-memory/`, with the two eval traps also a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
 The figures come from one Linux machine under Proton; verify each in game before it ships.

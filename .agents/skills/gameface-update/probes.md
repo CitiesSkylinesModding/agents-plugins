@@ -2,7 +2,7 @@
 
 One entry per stable claim the coherent-gameface plugin rests on a probe: what to send, the tool it goes to, the answer expected, and the claim it settles.
 
-**Expected answers are as of Cohtml 2.2.1.3, read off a run of every entry at that version.**
+**Expected answers are as of Cohtml 2.2.11.3, read off a run of every entry at that version.**
 
 A matching answer settles the claim only where a different answer was reachable: before reading one as confirmation, say what the entry would have returned on an engine without the feature, and rewrite any snippet whose two regimes answer alike. A snippet that reports a shape rather than the property in question — node types where identity is the claim, a presence check where behaviour is — passes on both sides and settles neither.
 
@@ -12,8 +12,8 @@ Paths below are relative to `plugins/coherent-gameface/`.
 
 | Send | Tool | Expected | Settles |
 | --- | --- | --- | --- |
-| — | `game_status` | `Browser` carries `Cohtml/2.2.1.3` | the baseline lines; `skills/gameface/references/version-gating.md` "Detect the game's version" |
-| `navigator.userAgent` | `game_eval` | `"Cohtml/2.2.1.3 (Windows; Native) cohtml/2.2.1.3 (Coherent Labs)"`, which `/cohtml\/([\d.]+)/i` parses to the version | the `navigator.userAgent` shape, same section |
+| — | `game_status` | `Browser` carries `Cohtml/2.2.11.3` | the baseline lines; `skills/gameface/references/version-gating.md` "Detect the game's version" |
+| `navigator.userAgent` | `game_eval` | `"Cohtml/2.2.11.3 (Windows; Native) cohtml/2.2.11.3 (Coherent Labs)"`, which `/cohtml\/([\d.]+)/i` parses to the version | the `navigator.userAgent` shape, same section |
 
 ## Selectors
 
@@ -146,8 +146,8 @@ One sheet per construct, each holding a control rule plus the construct's rule, 
 
 The one entry no `game_*` tool can run: it needs a raw WebSocket to `ws://localhost:9444/devtools/page/0`, since the point is what the CDP `Input` domain does when nothing wraps it.
 
-Install a full-viewport overlay through `Runtime.evaluate` on that socket, recording every `mousedown`/`mouseup`/`click`/`keydown`/`input` it sees, then send `Input.dispatchMouseEvent` (`mouseMoved`, `mousePressed`, `mouseReleased`), `Input.dispatchKeyEvent` (`keyDown`, `keyUp`) and `Input.insertText` at the overlay's centre, and read the record back.
+Install a full-viewport overlay through `Runtime.evaluate` on that socket, recording every `mousedown`/`mouseup`/`click`/`keydown`/`input` it sees, then send `Input.dispatchMouseEvent` (`mouseMoved`, `mousePressed`, `mouseReleased`), `Input.dispatchKeyEvent` (`keyDown`, `keyUp`), `Input.insertText` and `Input.dispatchTouchEvent` (`touchStart`, `touchEnd`) at the overlay's centre, with `touchstart`/`touchend` among the recorded types, and read the record back.
 
-Expected: every command answers with an empty result and no error, and the record stays EMPTY. Two controls make that mean something — a `Runtime.evaluate` over the same socket must succeed (the session is live), and a DOM-dispatched sequence on the overlay must land in the record (the listeners work). Without both, an empty record is just a broken probe.
+Expected: every command answers with an empty result and no error, and the record stays EMPTY. Two controls make that mean something — a `Runtime.evaluate` over the same socket must succeed (the session is live), and a DOM-dispatched sequence on the overlay, a `TouchEvent` among it, must land in the record (the listeners work). Without both, an empty record is just a broken probe.
 
-Settles the CDP-input finding, which is stated on six carriers: `mcp/src/tools.ts` (`clickFn`'s docblock and `gameClick`'s), `mcp/src/server.ts` (the `game_click` tool description), `mcp/README.md`, `plugins/coherent-gameface/README.md`, `WHY.md` and `docs/ROADMAP.md` "The CDP surface across engine versions". `Input.dispatchTouchEvent` is on Coherent Labs' own input path and has never been probed here; adding it to the send list is what closes the open half of that entry.
+Settles the CDP-input finding, which is stated on six carriers: `mcp/src/tools.ts` (`clickFn`'s docblock and `gameClick`'s), `mcp/src/server.ts` (the `game_click` tool description), `mcp/README.md`, `plugins/coherent-gameface/README.md`, `WHY.md` and `docs/ROADMAP.md` "The CDP surface across engine versions".
