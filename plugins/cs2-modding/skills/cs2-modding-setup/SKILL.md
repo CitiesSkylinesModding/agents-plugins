@@ -14,10 +14,9 @@ A game update, a stale decompile, or "does this still match my game" is the refr
 An unavailable debug menu or UI debugging port is step 3 alone — the developer launch options — with nothing else run.
 A UI bundle copy to create is step 5's readable-copy extra alone; one that exists but is stale is the refresh branch.
 
-Verified against game version 1.6.4f1.
 Where a command differs by platform, it is given for Windows (PowerShell) and for Linux (bash), where the game runs under Proton.
-A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's steps and references on anything they own — or at the very least grep them before acting on a remembered path, version or flag, because every value here is recorded or readable from the machine and the remembered one is the one that has drifted.**
+A trap you meet here that this skill misses goes through the `cs2-modding` skill's trap reports.
 
 ## The record
 
@@ -43,12 +42,10 @@ Debug patch: applied
 Launch options: set
 Mod corpus root: (none)
 UI bundle copy: (none)
-UI bundle lines: (none)
+Trap reports: on
 ```
 
-`UI bundle copy` is a reformatted copy of the game's own `Cities2_Data/Content/Game/UI/index.js`, which ships minified to a single line and cannot be read around or cited as it stands; step 5 makes one.
-`UI bundle lines` is that copy's line count.
-Anything citing the copy cites line numbers, so the count is how a later reader tells whether their copy and the citations still agree — a differing count means they do not, whatever produced it.
+`UI bundle copy` is a reformatted copy of the game's own `Cities2_Data/Content/Game/UI/index.js`, which ships minified to a single line and cannot be read around as it stands; step 5 makes one.
 
 ## First-time setup
 
@@ -70,7 +67,7 @@ strings -el "$CSII_INSTALLATIONPATH/Cities2.exe" | grep -A1 '^ProductVersion$'
 ```
 
 Take it from the executable and nowhere else.
-The toolchain exports a `CSII_UNITYVERSION` too, but that is the editor version it installed for compiling mods, which drifts from the game's own — and debug patching against the drifted one breaks the game at launch.
+The toolchain exports a `CSII_UNITYVERSION` too, but that is the editor version it installed for compiling mods, which drifts from the game's own — and debug patching against the drifted one breaks the game at launch. [symbol: none]
 
 The game version is the `Game version:` line that every launch writes to `Player.log`, at the root of the user data path:
 
@@ -154,7 +151,8 @@ Done when the user confirms the flags are on their launch command; record it, si
 
 ### 4. Record it
 
-Write the record described above, then tell the user its path and what it is for.
+Write the record described above, keeping a `Trap reports: off` it already holds, then tell the user its path and what it is for.
+Say once what `Trap reports` does: when an agent meets a game trap these skills miss, its closing message describes it and offers to post an issue, and `Trap reports: off` in the record silences that.
 
 ### 5. Offer the optional extras
 
@@ -164,8 +162,8 @@ The other three are independent of it and of each other, so offer them and let t
 - Patching the game so a debugger can attach: [debug-patching.md](references/debug-patching.md).
 - Cloning community mod source to read: [mod-catalog.md](references/mod-catalog.md).
 - Making the game's UI bundle readable, worth offering to anyone working on a mod's interface.
-  `Cities2_Data/Content/Game/UI/index.js` under the install ships minified to a single line, so reading around a match or citing one needs a reformatted copy.
-  Copy it somewhere of the user's choosing, reformat that copy with prettier at its defaults, and fill both record keys with the path and the resulting line count.
+  `Cities2_Data/Content/Game/UI/index.js` under the install ships minified to a single line, so reading around a match needs a reformatted copy.
+  Copy it somewhere of the user's choosing, reformat that copy with prettier at its defaults, and record its path as `UI bundle copy`.
   Inside the decompile root, commit it, so each later version diffs against it the way the decompile does.
   `index.css` beside it ships the same single-line way; a session working on the game's UI reformats a copy of it next to the script's.
 
@@ -183,8 +181,8 @@ A moved game version stales three things, each guarded by its own key in the rec
   A root that is not a git repository yet takes step 2's setup before that deletion, installing the version `ilspycmd --version` reports, and commits the tree it already holds under the recorded game version.
   Its first version commit still rewrites every project file, since the old per-assembly runs pointed each one into the install.
 - `Debug patch` reads applied → re-apply [debug-patching.md](references/debug-patching.md), which carries why an update undoes it and what changes when the Unity version moved too.
-- `UI bundle copy` is set → remake it from the updated `index.js` as in step 5, and write the new `UI bundle lines` count.
-  The frontend is rebuilt every patch, so a stale copy is worse than none: its module paths and line numbers all still look plausible.
+- `UI bundle copy` is set → remake it from the updated `index.js` as in step 5.
+  The frontend is rebuilt every patch, so a stale copy is worse than none: its module paths all still look plausible.
 
 With `Decompile root` set, commit its tree last, with the new game version as the message, so a UI bundle copy kept inside it lands in the same commit.
 

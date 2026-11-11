@@ -51,7 +51,7 @@ Errors about generated job or system code come from those generators and belong 
 They ship as source in that same cache, under `Unity.Entities/SourceGenerators/Source~/` in the Entities package, so what one does with a construct is readable rather than inferable.
 
 `Mod.props` pins C# 9, and a `<LangVersion>` in a property group after the two imports raises it as far as the installed .NET SDK's compiler reaches.
-What the raise costs is the runtime types `net48` never shipped — `IsExternalInit` for `init` and records, `System.Index` for list patterns, `CompilerFeatureRequiredAttribute` for user-defined compound assignment — each a compile error naming the type it wants, closed by the PolySharp package the parent skill names, or by declaring the type yourself.
+What the raise costs is the runtime types `net48` never shipped — `IsExternalInit` for `init` and records, `System.Index` for list patterns, `CompilerFeatureRequiredAttribute` for user-defined compound assignment — each a compile error naming the type it wants, closed by the PolySharp package, or by declaring the type yourself.
 A hand-declared one is bound by full name and by shape, not by the name alone: it goes in the type's own namespace and carries the members the compiler calls, which the next error names when they are missing.
 `IsExternalInit` is an empty static class in `System.Runtime.CompilerServices`; `CompilerFeatureRequiredAttribute` sits beside it, derives from `Attribute` and takes a `string`, since one that does not derive is rejected as not an attribute class; `System.Index` carries a `(int value, bool fromEnd = false)` constructor, an implicit conversion from `int`, and `GetOffset(int)`.
 `internal` is accessible enough for all three.
