@@ -1,7 +1,5 @@
 # Patching the game for debugging on Linux
 
-Verified against game version 1.6.4f1.
-
 The game runs under Proton, so the patch is [debug-patching.md](debug-patching.md)'s own three edits applied to the Windows game, and everything there holds except where the development library comes from.
 The commands below use the shell variables and the `wine` and `winpath` helpers defined at the top of the setup in [linux-toolchain.md](../../cs2-mod-project/references/linux-toolchain.md); define them first, and keep the game closed.
 
@@ -45,4 +43,4 @@ grep -q '^player-connection-debug=1' "$GAME/Cities2_Data/boot.config" ||
 
 Verify as [debug-patching.md](debug-patching.md) says; `Player.log` sits at the root of `$USERDATA`.
 The game's player-connection broadcast reaches the Linux host, and a native client of the Mono soft debugger attaches to the port it advertises, which is how the sibling `unity-devtools` plugin connects.
-Rider's Attach to Unity Process speaks the same protocol (UNVERIFIED: Rider on Linux attaching to the game under Proton — nobody has tried it).
+Rider's Attach to Unity Process speaks the same protocol, though nobody has tried it on Linux against the game under Proton.

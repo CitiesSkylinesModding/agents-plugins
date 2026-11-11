@@ -1,7 +1,5 @@
 # The toolchain on Linux
 
-Verified against game version 1.6.4f1.
-
 The game has no Linux build and runs under Proton, and its Options → Modding page cannot install the toolchain there: that installer downloads Windows programs and stores its settings as Windows user environment variables.
 This file sets the same toolchain up by hand.
 The wiki's [Modding Toolchain on Linux](https://cs2.paradoxwikis.com/Modding_Toolchain_on_Linux) page carries the same procedure written for a person; hand it to a user who would rather run the steps themselves.
@@ -67,7 +65,7 @@ sed "s/, 'EnvironmentVariableTarget.User'//g" "$TOOLING/Mod.props" > "$TOOLPATH/
 
 ### 2. Windows .NET runtime
 
-The post-processor and the publisher are .NET 6 programs (VOLATILE: the runtime they target — each one's `.runtimeconfig.json` in `$TOOLING`).
+The post-processor and the publisher are .NET 6 programs; each one's `.runtimeconfig.json` in `$TOOLING` names the runtime it targets.
 The Windows x64 zip of that runtime unpacks straight into the prefix, and their launchers find it there with no installer:
 
 ```bash
@@ -222,7 +220,7 @@ Swap the reference back after assembly resolution, a no-op on Windows:
 </Target>
 ```
 
-(UNVERIFIED: that the swap holds on SDK 8, whose conflict step also runs before assembly resolution — a build there would settle it.)
+Whether the swap holds on SDK 8, whose conflict step also runs before assembly resolution, is untested.
 
 **The mod template.** Install it natively from the game's copy, after which `dotnet new csiimod` works as on Windows:
 

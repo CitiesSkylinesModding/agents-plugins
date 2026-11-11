@@ -2,16 +2,16 @@
 
 # 📚 cs2-modding
 
-**Teach your agent how Cities: Skylines II is built and how a mod changes it —
-verified against the game itself, not against the wiki.**
+**Teach your agent the traps of Cities: Skylines II modding, and a loop that checks its work in the
+running game.**
 
-Four skills and their references, plus the `cs2-dev` MCP server, which restarts the game, waits on
-it, reports its errors, and runs a mod's in-game scenarios.
+Four skills, plus the `cs2-dev` MCP server, which restarts the game, waits on it, reports its
+errors, and runs a mod's in-game scenarios.
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#requirements)
 [![license](https://img.shields.io/badge/license-MIT-blue)](../../LICENSE)
 
-[The skills](#the-skills) · [The server](#the-server) · [How it stays honest](#how-it-stays-honest) ·
+[The skills](#the-skills) · [The server](#the-server) · [How it stays current](#how-it-stays-current) ·
 [What it leaves out](#what-it-deliberately-leaves-out) · [Install](#install)
 
 </div>
@@ -21,14 +21,14 @@ it, reports its errors, and runs a mod's in-game scenarios.
 An agent asked to write a Cities: Skylines II mod has no reliable ground to stand on. The wiki's
 most load-bearing modding page is verified against a game several versions old. The decompiled game
 is tens of thousands of files with no map. The community's hard-won techniques sit undocumented
-across a dozen repositories. Nothing anywhere connects "here is how the game works" to "therefore,
-to change X, modify Y".
+across a dozen repositories.
 
-This plugin is that bridge. It teaches the game's real architecture: system ordering is imperative
-here, and the standard ECS ordering attributes do nothing. It teaches the modding techniques that
-actually work: patching is a last resort in this game, and the references teach what to do instead.
-And it teaches the game mechanics behind what a mod wants to change: which components carry the
-state, and which system writes them.
+Your agent can read the decompiled game itself once it knows where to look, so this plugin doesn't
+retell it. It gives the agent a working loop instead: find how the game already does the thing,
+change it by the least invasive means (a patch comes last), build and restart through the server,
+and check the result in the running game. And it lists the traps, the game facts an agent with the
+decompile open still gets wrong. The standard ECS ordering attributes are one: they compile here and
+do nothing.
 
 ## The skills
 
@@ -36,8 +36,8 @@ Your agent picks these up from their descriptions, so you don't have to name the
 
 | Skill | What it covers |
 | --- | --- |
-| **cs2-modding** | The knowledge trunk: the game's architecture, the mod lifecycle, and two families of references — technique (ECS, tools, prefabs, saves, patching, diagnostics, …) and mechanics (citizens, economy, traffic, services, …). |
-| **cs2-modding-ui** | The UI discipline: the C#-to-JavaScript binding layer, the game's React frontend and how a mod injects into it, and the UI build. |
+| **cs2-modding** | The working loop, which source answers what, the build-and-restart cycle, and the traps of loading, scheduling, entities, game data and diagnosing. |
+| **cs2-modding-ui** | The game's React frontend and the C#-to-JavaScript binding layer: where each answer lives, the UI traps, and the UI build and dev loop. |
 | **cs2-modding-setup** | Provisioning: decompiling your own installed game, the developer launch options, patching the game so a debugger can attach, a curated catalog of mods worth reading, and a readable copy of the game's UI bundle. |
 | **cs2-mod-project** | The official toolchain: creating a project, the build pipeline and its failure modes, testing locally, and publishing. |
 
@@ -67,20 +67,16 @@ cs2-modding skill in a session.
 > in a city you're playing is lost. On Codex the plugin approves its own tools. On Claude Code your
 > permission settings still apply.
 
-## How it stays honest
+## How it stays current
 
-- **Every claim was checked against the game itself** (the decompiled code, the installed game's
-  own files, or the running game) or ships marked as unconfirmed. Where sources disagree, the game
-  wins and the prose says so.
-- **Every reference states the game version it was verified against**, so its age is never a guess.
-- **Claims that move between game versions are marked** (`VOLATILE:`), naming where to re-check
-  them; claims the pipeline couldn't confirm are marked too (`UNVERIFIED:`). Unmarked prose is
-  architecture and holds.
-- **Balance numbers don't ship.** A hardcoded value would rot with the next patch and can be
-  overwritten by another mod at load, so the references name the component and field that hold each
-  number — your agent reads what your game actually says.
-- **References point at the code rather than restating it**, so what you act on is checkable at its
-  source.
+- **It only states what your agent would get wrong.** Your agent reads everything else in the
+  decompile of your own installed game, so a game update can't leave the plugin describing code
+  that's gone.
+- **Each trap names the game type behind it.** After a game update, a script lists the traps whose
+  code changed, and only those get re-read.
+- **New traps come from use.** When your agent falls into one the skills miss, it tells you once
+  your task is done and offers to open an issue for it. The issue holds nothing from your project and goes up
+  only if you say yes. You can also turn these reports off.
 
 ## What it deliberately leaves out
 
@@ -88,7 +84,7 @@ cs2-modding skill in a session.
   DCC-tool discipline an agent can't drive. The scope is code mods; loading assets *from code* is
   covered.
 - **Mod scaffolding.** No scaffolds, no templates, no helper classes: the official toolchain
-  generates projects, and the references teach mechanisms your agent writes itself.
+  generates projects, and the skills teach mechanisms your agent writes itself.
 - **Playing with mods.** Consuming or troubleshooting other people's mods as a player is out of
   scope; the plugin is for writing them.
 
@@ -104,7 +100,7 @@ cs2-modding skill in a session.
 - The setup skill walks you through decompiling your own installed game — nothing copyrighted is
   distributed; the decompile is yours, from the game you own.
 - Optional but a great fit: the sibling **[unity-devtools](../unity-devtools/README.md)** plugin
-  lets the agent verify claims against your running game, and
+  lets your agent check its work in your running game, and
   **[coherent-gameface](../coherent-gameface/README.md)** drives the game's UI live.
 
 ## Install

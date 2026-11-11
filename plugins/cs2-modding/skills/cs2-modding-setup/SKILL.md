@@ -122,7 +122,7 @@ git commit -m "<game version>"
 Passing every assembly to one run adds a solution over them, whose projects reference one another rather than paths into the install.
 `--allow-roll-forward` keeps the pinned version running once the .NET runtime it targets is gone.
 
-Moving to a newer ilspycmd is a commit of its own: `dotnet tool update ilspycmd`, re-decompile the game version already committed, and commit that before the next update, so the tool's changes and the game's never share one.
+Moving to a newer ilspycmd is a commit of its own: `dotnet tool update ilspycmd`, re-decompile the game version already committed, and commit that as `Re-decompile with ilspycmd <version>` before the next update, so the tool's changes and the game's never share one.
 
 The game's own code is `Game.dll` and the `Colossal.*` assemblies; the rest is Unity, .NET and third-party code, worth having for reference and cheap to include in the same pass.
 

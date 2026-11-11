@@ -1,7 +1,5 @@
 # Community mod source worth reading
 
-Verified against game version 1.6.4f1.
-
 Open-source mods are the only place several modding techniques are written down at all, and reading one is usually faster than deriving the technique from the decompile.
 This catalog answers two questions: which repository demonstrates the thing the user is about to build, and what a local corpus should contain if they want one.
 
@@ -212,7 +210,7 @@ Source: [ruzbeh0/Time2Work](https://github.com/ruzbeh0/Time2Work)
 **Demonstrates:** Substitution at the largest scale here: roughly a dozen vanilla simulation systems disabled and replaced.
 Reimplementing the game's time model, deriving ticks per day from the vanilla constant scaled by a factor, which is where to look for how the simulation's time units actually work.
 The corpus's only override of a system's update offset, copied from the vanilla system it forks along with the interval.
-Read the `cs2-modding` skill's [`mod-lifecycle-and-ordering`](../../cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md) reference before copying the pattern, because the offset does not transfer.
+Read how the game itself uses the offset before copying the pattern, because it does not transfer.
 Burst-compiled per-citizen work with a per-citizen deterministic random stream.
 A serializable component for per-citizen state whose deserializer wraps its reads in a catch that cannot fire on the size mismatch it is written for.
 A system save section whose read is gated on one of the game's own save-format tags while its write is unconditional, which is the coupling hazard rather than a pattern to copy.
@@ -378,7 +376,7 @@ A documented update-order dependency graph kept in a comment above the system re
 Reading a chain of game-owned link components for display, and the limit that comes with it: some of its tests are disabled because the game's buffer types cannot be JIT-compiled outside the running game.
 The corpus's only registration of an entirely new game panel type: two registry `extend` calls that mutate the panel-type enum and the type-to-component map the game's own panel renderer keys on, paired with a C# panel class whose emitted type name is the key.
 A transpiler that repairs the developer menu's tool enumeration for every mod in the session, not just its own, and stands down when the patched loop's opcodes show another mod already fixed it.
-(UNVERIFIED: the transpiler's own source — it lives in the submodule a plain clone leaves empty, and its shape is read from the repository's change record.)
+The transpiler's own source lives in a submodule a plain clone leaves empty; its shape here is read from the repository's change record.
 An editor-toolbar entry carrying nothing but an id and an icon served from its own UI, appended from an editor-mode preload hook behind a one-shot latch — with neither a panel nor a tool set, which the base class's activity test then reports active whenever no editor panel is open, since it compares the active panel against the entry's own null one.
 
 ### Hall of Fame

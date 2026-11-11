@@ -1,7 +1,5 @@
 # What a mod build does
 
-Verified against game version 1.6.4f1.
-
 `Mod.props` and `Mod.targets`, which every mod csproj imports from `%CSII_TOOLPATH%`, own everything below.
 They are shared by every mod project on the machine, so a project changes the build through the hooks at the bottom of this file rather than by editing them.
 
@@ -102,5 +100,3 @@ Publishing runs its own path checks and then the publisher, over the folder this
 - Redefine a target with the same name to replace it outright.
 - Add a target with `BeforeTargets` or `AfterTargets` to insert work — `AfterTargets="DeployWIP"` is the documented place to copy extra files into the deploy folder, and where a UI build or any other extra artifact belongs.
 - Add a target after `ModPostProcessorConfig` or `ModPublisherConfig` to rewrite the arguments those stages pass, starting from the defaults they built.
-
-(VOLATILE: the target names above — `Mod.targets` in `%CSII_TOOLPATH%`, which the toolchain owns rather than the game.)

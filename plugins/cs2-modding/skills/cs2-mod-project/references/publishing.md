@@ -1,7 +1,5 @@
 # Publishing a mod
 
-Verified against game version 1.6.4f1.
-
 Three modes, one per publish profile in `Properties/PublishProfiles/`, run with the IDE's publish command.
 
 | Profile | Does | Builds | Requires |
@@ -35,7 +33,7 @@ Enforced for every mode: `DisplayName`, `ShortDescription`, `LongDescription`, `
 A `Thumbnail` naming a file that does not exist is no error: the publisher uploads a default image of its own in its place, and that is what a project fresh from the template publishes.
 Enforced by the two modes that touch an existing mod: `ModId` and `ChangeLog`.
 Repeatable and optional: `Screenshot`, `Tag`, `ExternalLink`, `Dependency`, `RequiredDLC` and `AiTag`, with `ExternalLink` repeating once per `Type`. `ForumLink` and `Disclosure` are optional but single — a second one, like a second `ExternalLink` of the same `Type`, silently replaces the first.
-(VOLATILE: the accepted `ExternalLink` types and `RequiredDLC` names — both grow with the game, and the template's own comments carry the current sets.)
+The template's own comments carry the accepted `ExternalLink` types and `RequiredDLC` names.
 
 `AiTag` names one of the platform's AI-disclosure tags, by its tag name or its display name in any case; an unknown one stops the publish before anything uploads, with an error listing the tags it accepts, or saying none are available.
 `Disclosure` holds at most 1,000 characters.

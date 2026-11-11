@@ -31,5 +31,5 @@ It is optional; everything here works without it.
 
 ## Building and iterating
 
-[The UI build and the dev loop](references/ui-build-and-devloop/ui-build-and-devloop.md) covers what the build produces and where it lands, the externals that keep the game's modules out of the bundle, refreshing type declarations after a game update, and iterating against a running game.
+[The UI build and the dev loop](references/ui-build-and-devloop.md) covers what the build produces and where it lands, the externals that keep the game's modules out of the bundle, refreshing type declarations after a game update, and iterating against a running game.
 Creating the UI project and hooking its build into the mod's `dotnet build` is `cs2-mod-project`'s.
