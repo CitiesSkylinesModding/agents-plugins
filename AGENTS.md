@@ -26,7 +26,7 @@ New plugins get a sibling directory and an entry in both marketplace files.
 
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
 - `.mcp.json` (root): LOCAL DEV ONLY, wiring the MCP servers for sessions in this repo (gameface and `cs2-dev` from their committed bundles, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
-- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules, plus the marker spelling and the baseline lines of the gameface skills), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `research-cite-audit.ts` (`mise research:cite-audit`, the `cs2-game-update` sweep's cite step, reads a local decompile so not in CI).
+- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules, plus the marker spelling and the baseline lines of the gameface skills), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `research-cite-audit.ts` (`mise research:cite-audit`, the `cs2-game-update` sweep's cite step, reads a local decompile so not in CI); `trap-check/` (`mise skills:trap-check`, the symbol markers' check, reads a local decompile so not in CI).
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint ignores `.agents/hooks` and oxfmt all of `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
 - `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` is the `cs2-modding` version sweep: the `VOLATILE:` markers and the baseline lines are its checklist, and it edits `docs/research/` and `docs/SOURCES.md`, which is why it cannot ship. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it. `scan-mcp-failures` mines this machine's transcripts for failed gameface, unity and `cs2-dev` calls, and feeds the **Hits** of `docs/ROADMAP.md` entries. `terra-nil-debuggee` launches a release Mono game from this machine's Steam library as a second debuggee for the unity server, the shape of a BepInEx-community report.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
@@ -38,7 +38,7 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Commands
 
 - `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
-- `mise test`: the .NET test suite. `mise test:gameface` and `mise test:cs2-dev` are the TypeScript MCP servers' and `mise bench:test` the benchmark core's, the three TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
+- `mise test`: the .NET test suite. `mise test:gameface` and `mise test:cs2-dev` are the TypeScript MCP servers', `mise test:trap-check` the trap check core's, and `mise bench:test` the benchmark core's, the four TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
 - `mise build:gameface`, `mise build:cs2-dev`: rebuild a shipped bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).
@@ -64,7 +64,7 @@ Never hand-edit a version: each unit's number lives in a private `package.json` 
 - Keep a commit inside one release unit: each unit's changelog is written from the commits touching it, so a `feat` spanning a plugin and the root files root tooling under that plugin's release notes.
 - `feat` bumps minor, `fix` patch; a `!` or `BREAKING CHANGE:` commit bumps major once a unit has reached 1.0.0, and only minor while it is below. Any other version comes from a deliberate `Release-As:` footer.
 - An mcp release publishes itself from `release-please.yml` through trusted publishing, the gameface one to npm and the unity one to NuGet. There is no local publish path: a failed or missed publish is retried by running the workflow by hand with the release tag.
-- CI runs `mise check:agents` + both bundle builds with `git diff --exit-code` (catching a stale committed bundle) + `mise test:gameface` + `mise test:cs2-dev`, then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the bundle of each server with staged sources, and runs `dotnet test` on staged C# changes.
+- CI runs `mise check:agents` + both bundle builds with `git diff --exit-code` (catching a stale committed bundle) + `mise test:gameface` + `mise test:cs2-dev` + `mise test:trap-check`, then builds the .NET solution and runs the tests. The pre-commit rebuilds and stages the bundle of each server with staged sources, and runs `dotnet test` on staged C# changes.
 
 ## Boundaries
 

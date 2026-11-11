@@ -134,6 +134,11 @@ description = "Run the cs2-dev MCP server's unit tests. Hermetic: no game, a tem
 raw = true
 run = "bun test plugins/cs2-modding/mcp"
 
+[tasks."test:trap-check"]
+description = "Run the trap check's unit tests (scripts/trap-check/core.ts, the check's pure core)."
+raw = true
+run = "bun test scripts/trap-check"
+
 [tasks."bench:test"]
 description = "Run the skill-efficacy benchmark's unit tests (bench/core.ts, the tool's pure core)."
 raw = true
@@ -166,6 +171,12 @@ run = "bun bench/run.ts --promote"
 description = "Diff the gameface skill's baked version timeline against the live Gameface changelog."
 # Network-dependent, so deliberately not part of `mise check` / CI, run manually now and then.
 run = "bun scripts/check-skill-changelog.ts"
+
+[tasks."skills:trap-check"]
+description = "Name each cs2-modding trap and server marker whose decompile file changed or vanished since the baseline commit; pass the decompile root."
+# Reads a local decompile checkout, so it cannot run in CI; --base and --target override the
+# baseline file and HEAD.
+run = "bun scripts/trap-check/run.ts"
 
 [tasks."research:cite-audit"]
 description = "Check the docs' line cites into the decompile by text identity across a game update (the cs2-game-update sweep's cite step)."

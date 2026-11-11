@@ -22,6 +22,7 @@ jobs:
       - run: git diff --exit-code
       - run: mise test:gameface
       - run: mise test:cs2-dev
+      - run: mise test:trap-check
       - run: dotnet build agents-plugins.slnx
       # The evaluator integration tests launch a headless Mono debuggee; mono-devel (not
       # mono-runtime, which lacks the net4x facade assemblies) puts mono on PATH, and the tests
