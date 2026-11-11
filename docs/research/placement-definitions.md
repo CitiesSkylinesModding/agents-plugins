@@ -1,6 +1,6 @@
 # Placement definitions
 
-**Baseline.** Decompiled game 1.6.2f1; mod corpus read 2026-08-02 at the commits the 20-repository checkout carried; wiki fetched live 2026-08-02 (the bot challenge did not fire, and the wiki turned out to hold nothing on this topic — see `## Dead ends`).
+**Baseline.** Decompiled game 1.6.4f1; mod corpus read 2026-08-02 at the commits the 20-repository checkout carried; wiki fetched live 2026-08-02 (the bot challenge did not fire, and the wiki turned out to hold nothing on this topic — see `## Dead ends`).
 
 ## Findings
 
@@ -9,7 +9,7 @@
 The whole seam is one component. `CreationDefinition : IComponentData, IQueryTypeParameter` carries seven fields and nothing else (`src/Game/Game.Tools/CreationDefinition.cs:5-19`): `Entity m_Prefab` (`:7`), `Entity m_SubPrefab` (`:9`), `Entity m_Original` (`:11`), `Entity m_Owner` (`:13`), `Entity m_Attached` (`:15`), `CreationFlags m_Flags` (`:17`), `int m_RandomSeed` (`:19`).
 It is a **request**, not a result: an entity carrying it describes something the game should create, delete, move or select, and a later system does the work.
 
-`prefabs-and-assets.md:428` already establishes the fact a definition author gets wrong first, and it holds at 1.6.2f1: `m_Prefab` and `m_SubPrefab` are prefab **entities**, not `PrefabBase` objects, and the archetype the resulting instance gets is `ObjectData.m_Archetype` on that prefab entity.
+`prefabs-and-assets.md:467` already establishes the fact a definition author gets wrong first, and it holds at 1.6.4f1: `m_Prefab` and `m_SubPrefab` are prefab **entities**, not `PrefabBase` objects, and the archetype the resulting instance gets is `ObjectData.m_Archetype` on that prefab entity.
 
 **The minimal definition is three components and no archetype.** Every producer in the game builds it the same way, through a command buffer: `CreateEntity()`, then `AddComponent(CreationDefinition)`, `AddComponent(<kind component>)` and `AddComponent(default(Updated))`.
 The canonical site is `ObjectToolBaseSystem.CreateDefinitionsJob.UpdateObject` — `Entity e = m_CommandBuffer.CreateEntity()` at `src/Game/Game.Tools/ObjectToolBaseSystem.cs:1108` and the three adds at `:1285-1287`.

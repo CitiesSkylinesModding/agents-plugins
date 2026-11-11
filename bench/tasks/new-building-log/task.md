@@ -36,7 +36,7 @@ I'm making a Cities: Skylines II mod that keeps a construction log for my city. 
 - Falls in: the field counting placed buildings is initialised once and never reset, or is reset only in `OnCreate`, `OnStartRunning` or `OnWorldReady`.
 - Avoids: the count is reset in an override of `OnGamePreload`, `OnGameLoaded` or `OnGameLoadingComplete`, or by a system the mod registers into the `Deserialize` phase, including through a `PreDeserialize<T>` wrapper.
 - Reference: cs2-modding/references/technique/mod-lifecycle-and-ordering/mod-lifecycle-and-ordering.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:1033
+- Source: src/Game/Game.SceneFlow/GameManager.cs:1037
 
 ### The system's `OnCreate` calls `base.OnCreate()`
 

@@ -1,11 +1,11 @@
 # Diagnostics: finding out why a mod is not working
 
-**Baseline.** Decompiled game version 1.6.2f1.
-The installed game was read on 2026-08-05 at `C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II`, reporting `Game version: 1.6.0f1 (419.d6c6) [6216.19404]` and `Unity version: 2022.3.71f1`. The game-update sweep re-read it at 1.6.2f1 where a claim below says so.
-The user data path read on the same date is `C:\Users\Morgan\AppData\LocalLow\Colossal Order\Cities Skylines II`; its logs are from a session that started 2026-08-05 09:38 on a **debug-patched** install running `--developerMode --uiDeveloperMode`.
+**Baseline.** Decompiled game version 1.6.4f1.
+The installed game, its logs and its user data were read 2026-11-11 from a Linux install under Proton (`S:\steamapps\common\Cities Skylines II`), reporting `Game version: 1.6.4f1 (1097.158a) [6360.18886]` and `Unity version: 2022.3.71f1`.
+The user data path is the Proton prefix's `C:\users\steamuser\AppData\LocalLow\Colossal Order\Cities Skylines II`; its logs are from a session that started 2026-11-11 01:20 on a **debug-patched** install, a new Archipelago city running, with five mods loaded (three local).
 Mod corpus (22 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`) read 2026-08-05.
 Wiki fetched live 2026-08-05 — the bot challenge did not fire, so `Logging` and `Debugging` are cited from the live pages rather than through `survey-wiki-inventory.md`'s snapshot.
-UI bundle citations are to the shipped bundle reformatted with prettier at its defaults, at `DecompiledCitiesSkylines2/src-ui/source.js`, coming to 140,104 lines — confirmed on this machine, and the count is what tells a later reader whether their own copy still agrees with these line numbers.
+UI bundle citations are to the shipped bundle reformatted with prettier at its defaults, at `DecompiledCitiesSkylines2/src-ui/source.js`, coming to 140,138 lines — confirmed on this machine, and the count is what tells a later reader whether their own copy still agrees with these line numbers.
 
 ---
 
@@ -23,12 +23,12 @@ Both are recorded at the findings below, and the second is the more consequentia
 
 `LogManager.kDefaultLogPath` is `Application.persistentDataPath + "/Logs"` (`src/Colossal.Logging/Colossal.Logging/LogManager.cs:45`), which resolves on Windows to `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Logs`.
 The static constructor also writes the resolved path to stdout as `Logs at {0}` (`:46`), and that line reaches `Player.log` — so the directory never has to be guessed.
-Confirmed on the install: `Player.log` line 33 reads `Logs at C:/Users/Morgan/AppData/LocalLow/Colossal Order/Cities Skylines II/Logs`.
+Confirmed on the install: `Player.log` line 39 reads `Logs at C:/users/steamuser/AppData/LocalLow/Colossal Order/Cities Skylines II/Logs`.
 
 Every logger except `Default` gets its own file, named after the logger: `logPath = kDefaultLogPath + "/" + name + ".log"` (`UnityLogger.cs:297-306`, the `name != "Default"` guard at `:300`).
 So the `Default` logger has no `logPath`, `isValid` is false (`:177-187`), `Open()` throws `LogInvalidException` (`:362`) — and `CustomLogHandler` short-circuits it anyway, sending anything logged through `LogManager.Default` straight to Unity's own handler (`CustomLogHandler.cs:134-137`).
 
-The files a diagnosis actually opens, all read from the install on 2026-08-05:
+The files a diagnosis actually opens, all read from the install on 2026-11-11:
 
 | File | What it is | Why it is opened |
 | --- | --- | --- |
@@ -39,8 +39,8 @@ The files a diagnosis actually opens, all read from the install on 2026-08-05:
 | `Player-prev.log` | the previous session's `Player.log` | what a process that died last run printed before dying |
 | `FallbackSettings.coc` | user data root, plain text | persisted per-logger settings (below) |
 
-`Logs/` on this install held 22 files, including `Cs2TestMod.Mod.log`, `HallOfFame.log`, `FindIt.log` and `Plop the Growables.log`.
-Files are never deleted, so the directory accumulates a file per logger that has ever run rather than a file per logger in the current session — four of the 22 had timestamps from earlier sessions.
+`Logs/` on this install held 117 files, including `HallOfFame.log`, `FindIt.log` and `Plop the Growables.log`.
+Files are never deleted, so the directory accumulates a file per logger that has ever run rather than a file per logger in the current session — 102 of the 117 had timestamps from earlier sessions.
 That is what makes a mod's logger name visible on disk before the game is started, which is the cheapest way to learn what a shipped mod calls its log.
 
 Rots: the log file names, which are the logger names the game happens to use — `SceneFlow` (`src/Colossal.Core/Colossal.Entities/COSystemBase.cs:9`), `Modding` (`src/Game/Game.Modding/ModManager.cs:179`), `FileSystem` and `Default` (`LogManager.cs:11-13`), `UI`, `InputManager`, `Platforms`, `PdxSdk`, `Radio`, `TestScenarios`, `Automation`, `Discord`.
@@ -61,28 +61,28 @@ Rots: the `Level` member names and their severity constants — `src/Colossal.Lo
 
 ### The global level override, and the typo that silences everything
 
-`--logsEffectiveness=<LEVEL>` is registered in `GameManager.ParseOptions` and calls `LogManager.SetDefaultEffectiveness(Level.GetLevel(option))` (`src/Game/Game.SceneFlow/GameManager.cs:360-363`).
+`--logsEffectiveness=<LEVEL>` is registered in `GameManager.ParseOptions` and calls `LogManager.SetDefaultEffectiveness(Level.GetLevel(option))` (`src/Game/Game.SceneFlow/GameManager.cs:364-367`).
 `SetDefaultEffectiveness` writes `defaultEffectiveness` **and loops over every already-created logger**, so it applies retroactively as well as to loggers created later (`LogManager.cs:50-57`).
-The flag is parsed after the boot default is set to `Info` (`GameManager.cs:543`) and after the `SceneFlow` logger exists (`:544`), which is why the retroactive loop is needed.
+The flag is parsed after the boot default is set to `Info` (`GameManager.cs:547`) and after the `SceneFlow` logger exists (`:548`), which is why the retroactive loop is needed.
 
 **Three traps ride with it, all provable from the same code.**
 
 1. **`Level.GetLevel(string)` falls back to `Disabled` for anything it does not recognise** (`Level.cs:92-109`, the `_ => Disabled` at `:107`). It upper-cases first (`:94`), so `--logsEffectiveness=debug` works — but `--logsEffectiveness=DEBUGG`, `=verbose ` with a trailing space, or any other typo turns **every log in the game off**, with no error and no warning. A run that produced empty log files is a run whose command line should be checked first.
-2. **A mod that sets its own level in `OnLoad` overrides the flag for its own logger.** Mod loading runs at `GameManager.cs:624`, long after `ParseOptions` at `:546`, and eight of twenty-two corpus repositories set their own level there (below). So `--logsEffectiveness=DEBUG` is not a way to get a shipped mod's debug lines.
+2. **A mod that sets its own level in `OnLoad` overrides the flag for its own logger.** Mod loading runs at `GameManager.cs:628`, long after `ParseOptions` at `:550`, and eight of twenty-two corpus repositories set their own level there (below). So `--logsEffectiveness=DEBUG` is not a way to get a shipped mod's debug lines.
 3. The flag is spelled with `=`, so `--logsEffectiveness DEBUG` as two arguments is not the same thing. `Mono.Options` handles both forms for a `name=` option, but the wiki writes only the joined one (https://cs2.paradoxwikis.com/Logging).
 
 Unconfirmed: whether the separated form works. `Mono.Options`' `OptionSet` is in the decompile (`src/Colossal.Core/Mono.Options/OptionSet.cs`) and would settle it by reading `Parse`; this pass did not read that method for the value-separation rule, having read it only for the prefix rule quoted in `conflicts.md`'s launch-flag entry.
 
 ### `--duplicateLogToDefault` is parsed and never read
 
-`GameManager.Configuration` declares `duplicateLogToDefault` (`GameManager.cs:93`) and `ParseOptions` sets it (`:364-367`).
+`GameManager.Configuration` declares `duplicateLogToDefault` (`GameManager.cs:93`) and `ParseOptions` sets it (`:368-371`).
 A grep of all of `src/` for the identifier returns exactly those two sites and nothing else — no consumer anywhere.
-The mechanism it names does **not** exist in the copy-both form the name promises. `ILog.redirectToDefault` makes even `Info`-level lines go to Unity's handler (`CustomLogHandler.cs:76-87`) — and then `if (log.redirectToDefault && !LogManager.stdOutActive) { return; }` at `:88-90` returns **before** either `Internal_WriteStream` call (`:96`, `:100`), so the logger's own `<Name>.log` gets nothing. `stdOutActive` is false unless `--captureStdout` was passed (`GameManager.cs:2045-2046`). So it is a redirect, not a duplicate.
+The mechanism it names does **not** exist in the copy-both form the name promises. `ILog.redirectToDefault` makes even `Info`-level lines go to Unity's handler (`CustomLogHandler.cs:76-87`) — and then `if (log.redirectToDefault && !LogManager.stdOutActive) { return; }` at `:88-90` returns **before** either `Internal_WriteStream` call (`:96`, `:100`), so the logger's own `<Name>.log` gets nothing. `stdOutActive` is false unless `--captureStdout` was passed (`GameManager.cs:2088-2089`). So it is a redirect, not a duplicate.
 The citation range in the first draft of this finding was `:76-87`, ending exactly one line before the guard that overturns it — `docs/solutions/decompile-read-stopped-at-the-confirming-line.md`.
 `ILog.SetRedirectToDefault` sets it (`src/Colossal.Logging/Colossal.Logging/ILog.cs:101-105`) and nothing in the game calls that setter.
 Unconfirmed: whether the flag can be set from `FallbackSettings.coc` without touching the mod. It is public and settable and appears in `UnityLogger.Copy()` (`:249-260`), which is the shape `AssetDatabase.LoadSettings` deserializes into (`AssetDatabase.cs:613`), so the route is plausible — but no install carries the key and nothing was run to confirm it takes.
 
-So the flag is dead at 1.6.2f1. Worth stating because its name promises exactly the thing a reader wants ("put my mod's lines in `Player.log` too") and it does not deliver it.
+So the flag is dead at 1.6.4f1. Worth stating because its name promises exactly the thing a reader wants ("put my mod's lines in `Player.log` too") and it does not deliver it.
 
 Rots: that this flag is inert — re-grep `duplicateLogToDefault` over `src/`.
 
@@ -94,9 +94,9 @@ Rots: that this flag is inert — re-grep `duplicateLogToDefault` over `src/`.
 
 - **The logger's own `<Name>.log` always.** `log.Internal_WriteStream(...)` at `:96` or `:100`.
 - **Unity's own handler, and therefore `Player.log`, only when `logType != LogType.Log`** (`:77`). `ConvertLevel` maps `Verbose`..below-`Warn` to `LogType.Log`, `Warn`..below-`Error` to `Warning`, and `Error`..below-`Disabled` to `Error` (`UnityLogger.cs:410-425`). **So `Warn` and above land in `Player.log` as well, and `Info` and below do not.**
-- **stdout, only when the game was started with `--captureStdout=console|capture|redirect`** (`GameManager.cs:433-436`, `:2037-2052`), which sets `LogManager.stdOutActive` and `colorOutputEnabled` (`:2045-2046`) and is what `GetStdStream` consults (`CustomLogHandler.cs:56-72`).
+- **stdout, only when the game was started with `--captureStdout=console|capture|redirect`** (`GameManager.cs:437-440`, `:2080-2095`), which sets `LogManager.stdOutActive` and `colorOutputEnabled` (`:2088-2089`) and is what `GetStdStream` consults (`CustomLogHandler.cs:56-72`).
 
-The `Player.log` half is confirmed empirically on the install: `Player.log` carries `[UI] [WARN]  …` and `[SceneFlow] [WARN]  …` lines and no `[INFO]` lines from any logger.
+The `Player.log` half is confirmed empirically on the install: `Player.log` carries `[UI] [WARN]  …` and `[UI] [ERROR]  …` lines and no `[INFO]` lines from any logger.
 The prefix is the logger name, written by `PostProcessFormat` as `"[{0}] {1}"` (`:85`).
 
 **This is the single most useful fact in the whole file for a first pass.** A mod that logs a problem at `Warn` or `Error` has already put it in `Player.log`, so one file answers "did anything go wrong anywhere" across the game and every mod at once.
@@ -126,7 +126,7 @@ Three consequences, each load-bearing:
 - **A `null` log passes the gate**, which is what makes `UnityEngine.Debug.LogError` unsilenceable (next finding).
 
 What the player then gets: an error from any thread is queued on `m_Ingress` (`ErrorDialogManager.cs:61`) and processed in `ErrorDialogManager.Update()` (`:464-476`), called from `AppBindings.Update` (`AppBindings.cs:297`), so the dialog and the pause arrive on the next UI update. There `EnqueueOrUpdate` calls `HandlePause()` (`ErrorDialogManager.cs:605`), which caches `SimulationSystem.selectedSpeed` and sets it to `0` (`:270-281`); the speed is restored only when the queue empties (`:283-293`).
-The dialog itself is bound as `app.currentError` (`:110`) and rendered by `game-ui/common/panel/dialog/error-dialog.tsx` — the error icon, the title or the fallback `Common.ERROR_DIALOG_TITLE`, a repeat-count badge when `count > 1`, the message, a scrollable details pane with a copy button, and one button per action (`DecompiledCitiesSkylines2/src-ui/source.js:68815-68947`, the binding read at `:68964`).
+The dialog itself is bound as `app.currentError` (`:110`) and rendered by `game-ui/common/panel/dialog/error-dialog.tsx` — the error icon, the title or the fallback `Common.ERROR_DIALOG_TITLE`, a repeat-count badge when `count > 1`, the message, a scrollable details pane with a copy button, and one button per action (`DecompiledCitiesSkylines2/src-ui/source.js:68838-68970`, the binding read at `:68987`).
 Default actions are `Continue | Quit`, and in a loaded game or the editor `SaveAndQuit` is added (`ErrorDialog.cs:294`, `ErrorDialogManager.cs:420-443`).
 
 Repeats are merged rather than stacked. A `Fingerprint` of `(exception type, message, details, identifier)` keys a `FingerprintState` (`:113-122`, `:588-641`), a burst detector over 1-second bins across a 6-second horizon marks a fingerprint as spam (`:67-79`, `:515-586`), and once it is, a `Mute` action appears whose cooldown comes from `SharedSettings.instance.userInterface.errorMuteCooldownSeconds` (`:501-513`, `:295-336`).
@@ -137,7 +137,7 @@ The log call is `COSystemBase.baseLog.Error(exception, ...)` in all five wrapper
 
 Verdict: **the flag is written elsewhere, and a grep for the setter method misses it.** `SetShowsErrorsInUI` has no call on this logger, but plain property assignment does the same job at `src/Game/Game/UpdateSystem.cs:193` and `:241` (the editor suppression, below), at `src/Game/Game.Prefabs/PrefabInitializeSystem.cs:131`/`:181`/`:205`, at `src/Game/Game.Prefabs/PrefabSystem.cs:813`, and from the developer menu at `src/Game/Game.Debug/LogsDebugUI.cs:48`.
 None of these touch the five hook wrappers, so the claim about them stands — but it stands on the assignment sweep rather than on the setter grep, which is `docs/solutions/empty-grep-read-as-proof-of-absence.md` exactly.
-`ErrorDialogManager` is constructed at `GameManager.cs:587`, before `CreateWorld()` at `:598` and long before mods load at `:624`, and nothing in `src/Game/` ever sets its `enabled` to false.
+`ErrorDialogManager` is constructed at `GameManager.cs:591`, before `CreateWorld()` at `:602` and long before mods load at `:628`, and nothing in `src/Game/` ever sets its `enabled` to false.
 So a hook that throws pops a modal error dialog carrying the system's type name and the stack trace, and pauses the simulation.
 
 Verdict: the dialog appears, corroborated against the running game. The static chain above derives it, and the maintainer confirmed on 2026-08-05 that it is a behaviour they have seen in play — the running game being the source `docs/SOURCES.md` makes authoritative for what the game actually does. So the claim ships flat in both `diagnostics` and `mod-lifecycle-and-ordering` with no evidence marker.
@@ -184,7 +184,7 @@ The convention is still worth following for the reason the wiki does not give: a
 `UnityLogger.ReadSettings` calls it for every non-`Default` logger (`UnityLogger.cs:297-306`), and `ReadSettings` runs both from `LogManager.AddLogger` — that is, from the first `GetLogger(name)` — and from `LogManager.RefreshSettings()`, which `SetSettingsProvider` triggers for every existing logger (`LogManager.cs:78`, `:88-100`).
 `LoadSettings` deserializes a JSON fragment into the live logger object (`AssetDatabase.cs:613`), and with no `FileLocationAttribute` on `UnityLogger` the asset lands in `FallbackSettings.coc` (`:644`).
 
-The install confirms all of it. `FallbackSettings.coc` at the user data root is plain text, 122 blocks of the form:
+The install confirms all of it. `FallbackSettings.coc` at the user data root is plain text, 72 blocks of the form:
 
 ```
 FindIt Logger
@@ -193,12 +193,12 @@ FindIt Logger
 }
 ```
 
-with `HallOfFame Logger` carrying `{"effectivenessLevel": "ALL"}` and `IBLIV Logger` carrying `{"showsStackTraceAboveLevels": "ERROR"}`.
+with `HallOfFame Logger` carrying `{"effectivenessLevel": "ALL"}`.
 
 Two things follow.
 
 - **A logger's settings are durable across launches, and are what the developer menu's Logs tab writes into.** That tab exposes `effectivenessLevel`, `showsErrorsInUI` (`src/Game/Game.Debug/LogsDebugUI.cs:44`), `logStackTrace`, `showsStackTraceAboveLevels` (`:74`) and — only under `--qaDeveloperMode` — `disableBacktrace` (the gate at `:60`), for every logger the game has (`:23`).
-- **Mod code still wins at runtime.** `AssetDatabase.CacheAssets(priorityAssets: true)` is awaited at `GameManager.cs:594`, before mods load at `:624`, so the file is applied to a mod's logger at `GetLogger` time and the chained `.SetShowsErrorsInUI(...)` / `effectivenessLevel = ...` that follows overrides it. The file governs the window between the two, and governs entirely for a mod that sets nothing.
+- **Mod code still wins at runtime.** `AssetDatabase.CacheAssets(priorityAssets: true)` is awaited at `GameManager.cs:598`, before mods load at `:628`, so the file is applied to a mod's logger at `GetLogger` time and the chained `.SetShowsErrorsInUI(...)` / `effectivenessLevel = ...` that follows overrides it. The file governs the window between the two, and governs entirely for a mod that sets nothing.
 
 This file is where to look when a mod's log level is not what its source says, and it is not on `docs/SOURCES.md` (see the source-list finding below).
 
@@ -238,10 +238,10 @@ That is not decoration. `ModInfo.Load` builds the mod instance with `FormatterSe
 So the mod's default is "the player sees this", and quietness is the explicit case.
 
 The same repository reaches the dialog a second way, through reflection, and does not need to. `HallOfFame/HallOfFame/Reflection/ErrorDialogManagerAccessor.cs:18-23` reads the private `AppBindings.m_ErrorDialogManager` field to call `ShowError` (used at `Systems/CommonUISystem.cs:249`, `Systems/SlideshowUISystem.cs:303`, `Systems/Capture/CaptureUISystem.cs:109`, `Reflection/ParadoxConnection.cs:15`).
-At 1.6.2f1 `AppBindings.ShowErrorDialog(ErrorDialog)` is public and forwards to exactly that call (`src/Game/Game.UI/AppBindings.cs:370-373`).
+At 1.6.4f1 `AppBindings.ShowErrorDialog(ErrorDialog)` is public and forwards to exactly that call (`src/Game/Game.UI/AppBindings.cs:370-373`).
 The reflection is therefore redundant at this version, and the reference should teach the public wrapper.
 
-Unconfirmed: whether `ShowErrorDialog` existed when that mod was written. The decompile only shows 1.6.2f1, and nothing in this pipeline reaches an older build.
+Unconfirmed: whether `ShowErrorDialog` existed when that mod was written. The decompile only shows 1.6.4f1, and nothing in this pipeline reaches an older build.
 
 ### `ErrorDialog`, built by hand
 
@@ -253,20 +253,20 @@ Rots: the `ActionBits` values and the `ErrorDialog` field names — `src/Game/Ga
 
 ### The boot transcript is the diagnosis's first page
 
-`SceneFlow.log`'s opening is a fixed sequence, all of it first-party and all of it useful before any mod-specific question is asked. Read from the install on 2026-08-05:
+`SceneFlow.log`'s opening is a fixed sequence, all of it first-party and all of it useful before any mod-specific question is asked. Read from the install on 2026-11-11:
 
-- **`Command line: …`**, one argument per line, written by `GameManager` at `GameManager.cs:452` through `MaskArguments`. On this install it reads `--developerMode` and `--uiDeveloperMode`, which is how a question like "is developer mode actually on" is answered without asking the user.
-- **`GameManager created! (…ms)`** (`:530`), then `Creating ECS world`.
-- **The version block**, `log.Info(GetVersionsInfo())` (`:606`, body at `:2098-2121`): `Date`, `Game version: 1.6.0f1 (419.d6c6) [6216.19404] Windows Steamworks`, **`Game configuration: Development (Mono)`**, `COre version`, `Localization version`, `UI version`, `Unity version: 2022.3.71f1`, `Cohtml version: 1.64.0.7`, `ATL Version`, the platform's own versions, then one line per installed DLC and radio pack.
-- **The system info block** (`:607`) and **the configuration dump** (`:608`).
+- **`Command line: …`**, one argument per line, written by `GameManager` at `GameManager.cs:456` through `MaskArguments`. In the 2026-11-11 launch it reads `--developerMode`, `--qaDeveloperMode`, `--uiDeveloperMode`, `--noSplash` and a masked `startGame=…`, which is how a question like "is developer mode actually on" is answered without asking the user.
+- **`GameManager created! (…ms)`** (`:534`), then `Creating ECS world`.
+- **The version block**, `log.Info(GetVersionsInfo())` (`:610`, body at `:2141-2164`): `Date`, `Game version: 1.6.4f1 (1097.158a) [6360.18886] Windows Steamworks`, **`Game configuration: Development (Mono)`**, `COre version`, `Localization version`, `UI version`, `Unity version: 2022.3.71f1`, `Cohtml version: 2.2.11.3` (read 2026-11-11 at 1.6.4f1), `ATL Version`, the platform's own versions, then one line per installed DLC and radio pack.
+- **The system info block** (`:611`) and **the configuration dump** (`:612`).
 
-`Game configuration` is `UnityEngine.Debug.isDebugBuild ? "Development" : "Release"` (`:2105`) — the debug-patch signal, in a text log, at a known line. See the debug-patch finding below.
+`Game configuration` is `UnityEngine.Debug.isDebugBuild ? "Development" : "Release"` (`:2148`) — the debug-patch signal, in a text log, at a known line. See the debug-patch finding below.
 
 `Modding.log` opens with its own sequence, fixed but for item 3's position, (`ModManager.cs` and `GameManager.cs`), confirmed against the install's copy except where item 3 says otherwise:
 
-1. `Modding runtime: Builtin` — `s_ModdingRuntime`, written by `ListHarmonyPatches` (`GameManager.cs:2173`). The alternative value names a BepInEx assembly and its version (`DetectModdingRuntimeName`, `:2270-2295`).
-2. If code modding is off: `Modding is disabled`, and nothing else ever (`ModManager.cs:247-250`). `ModManager` is constructed with `configuration.disableCodeModding` (`GameManager.cs:611`), which `--disableCodeModding` sets and `--disableModding` sets as a side effect (`:396-404`).
-3. `======= Active Playset =======` and `======= Enabled Mods =======`, one indented line per mod as `\t - <displayName> v<userModVersion> (<id>)` (`ModManager.cs:367-398`). `LogActivePlaysetAndMods` is `async` and `Initialize` calls it without `await` (`:260`), and the block is one `log.Info` after both `await psi.GetActivePlaysetAsync()` and `await psi.GetModsInActivePlaysetAsync()` return, so its position against the lines below is not fixed. In the install's own 1.6.2f1 `Modding.log` it lands after `Modding runtime: Builtin` and before `Mods registered in`.
+1. `Modding runtime: Builtin` — `s_ModdingRuntime`, written by `ListHarmonyPatches` (`GameManager.cs:2216`). The alternative value names a BepInEx assembly and its version (`DetectModdingRuntimeName`, `:2313-2338`).
+2. If code modding is off: `Modding is disabled`, and nothing else ever (`ModManager.cs:247-250`). `ModManager` is constructed with `configuration.disableCodeModding` (`GameManager.cs:615`), which `--disableCodeModding` sets and `--disableModding` sets as a side effect (`:400-408`).
+3. `======= Active Playset =======` and `======= Enabled Mods =======`, one indented line per mod as `\t - <displayName> v<userModVersion> (<id>)` (`ModManager.cs:367-398`). `LogActivePlaysetAndMods` is `async` and `Initialize` calls it without `await` (`:260`), and the block is one `log.Info` after both `await psi.GetActivePlaysetAsync()` and `await psi.GetModsInActivePlaysetAsync()` return, so its position against the lines below is not fixed. In a 1.6.4f1 `Modding.log` read 2026-11-11, with a five-mod playset, it lands after `Modding runtime: Builtin` and before `Mods registered in`.
 4. `Mods registered in {0}ms` (`:404`).
 5. Per mod, in load order: optionally `Loaded additional Burst code <path>` (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs:256`), then `Loaded <assembly full name> in {0}ms` (`ModManager.cs:448`).
 6. `Mods initialized in {0}ms` (`:438`).
@@ -279,7 +279,7 @@ Corrected 2026-08-05 in the diagnostics pass's review, after the shipped referen
 
 **Both slots of that error line carry the assembly identity**, not the display name: the call is `log.ErrorFormat(exception, "Error initializing mod {0} ({1})", modInfo2.name, modInfo2.assemblyFullName)` (`:456`), and `ModInfo.name => asset.fullName` resolves to the Cecil full name (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs:159`).
 
-**A trap the install makes visible.** The `======= Enabled Mods =======` block lists only mods in the Paradox playset. The install's block names ten mods; `Modding.log` then reports `Loaded Cs2TestMod, Version=1.0.0.0…` and `Loaded HallOfFame, Version=2026.2.4.0…`, neither of which is in that block — both are local mods under `%CSII_LOCALMODSPATH%`.
+**A trap the install makes visible.** The `======= Enabled Mods =======` block lists only mods in the Paradox playset. The install's block names two mods; `Modding.log` then reports `Loaded DoIt, …`, `Loaded ProceduralMaps, …` and `Loaded HallOfFame, Version=2026.6.1.0…`, none of which is in that block — all three are local mods under `%CSII_LOCALMODSPATH%`.
 So **a mod's absence from the playset block says nothing about whether it loaded**, and a diagnosis that stops there on a locally-built mod stops at the wrong line.
 
 Rots: every one of these message strings, and the `Modding` / `SceneFlow` logger names.
@@ -293,7 +293,7 @@ Rots: every one of these message strings, and the `Modding` / `SceneFlow` logger
 | `Unknown` | never assigned; the initial value | The loader **never tried**. `Load` returns immediately when `state != Unknown` or `!asset.isRequired` (`:96-99`). |
 | `Loaded` | `:125` | `OnLoad` ran on every `IMod` implementation in the assembly and returned. |
 | `Disposed` | `:173` | `OnDispose` has run — at shutdown (`:498-524`) or because `OnLoad` threw (`:456`). |
-| `IsNotModWarning` | `:102`, unreachable | Verdict: **never assigned at 1.6.2f1.** `Load` returns at `!asset.isRequired` (`:96-99`), and `isRequired` is `isMod ? true : isReference` (`ExecutableAsset.cs:161-172`) — the identical condition to the `!isMod && !isReference` guard at `ModManager.cs:100` that would set this state. An assembly with no top-level `IMod` that a required mod references is `isReference`, so it passes both guards and ends at `Loaded`. |
+| `IsNotModWarning` | `:102`, unreachable | Verdict: **never assigned at 1.6.4f1.** `Load` returns at `!asset.isRequired` (`:96-99`), and `isRequired` is `isMod ? true : isReference` (`ExecutableAsset.cs:161-172`) — the identical condition to the `!isMod && !isReference` guard at `ModManager.cs:100` that would set this state. An assembly with no top-level `IMod` that a required mod references is `isReference`, so it passes both guards and ends at `Loaded`. |
 | `IsNotUniqueWarning` | `:107` | Another asset with the same assembly **name** won the duplicate resolution. `GetUniqueVersionAsset` orders by `isLoaded` desc, then `isLocal` desc, then `version` desc, then id (`ExecutableAsset.cs:181-191`). **A local build beats a subscribed copy of the same name** — which is the reason a locally-deployed mod overrides the store copy, and the reason a stale local copy silently shadows an updated one. |
 | `MissedDependenciesError` | `ModManager.cs:112` | At least one assembly reference resolved to null (`canBeLoaded`, `ExecutableAsset.cs:175`). `loadError` is the newline-joined list of unresolved reference names (`ModManager.cs:113-115`) and is shown in the dialog. |
 | `LoadAssemblyError` | `ModManager.cs:129` | `Assembly.Load` over the mod's own bytes threw (`ExecutableAsset.cs:270-274`). Bad IL, a target framework the runtime rejects, a truncated file. |
@@ -444,40 +444,40 @@ Rots: the `AppBindings` method names and the callback index convention — `src/
 
 ### The game ships a Harmony patch census that can never see a mod's patches
 
-`ListHarmonyPatches` reflects over whichever loaded assembly has "Harmony" in its name, finds `HarmonyLib.Harmony.GetAllPatchedMethods`, and logs `Patched Method: {declaringType}.{name}` per method followed by every prefix, postfix, transpiler and finalizer (`src/Game/Game.SceneFlow/GameManager.cs:2170-2222`, with `PrintPatchDetails` and `PrintIndividualPatches` immediately below it).
+`ListHarmonyPatches` reflects over whichever loaded assembly has "Harmony" in its name, finds `HarmonyLib.Harmony.GetAllPatchedMethods`, and logs `Patched Method: {declaringType}.{name}` per method followed by every prefix, postfix, transpiler and finalizer (`src/Game/Game.SceneFlow/GameManager.cs:2213-2266`, with `PrintPatchDetails` and `PrintIndividualPatches` immediately below it).
 
-**It is called at `GameManager.cs:590`, and mods load at `:624`.**
-Under the built-in modding runtime no mod assembly — and therefore no copy of `0Harmony.dll` — is in the AppDomain when it runs, so `assembly == null` and the method returns after its first line (`:2177-2180`).
-Confirmed on the install: `Modding.log`'s first line is `Modding runtime: Builtin` and the file contains no `Harmony found.` and no `Patched Method:` line, despite loading ten mods.
+**It is called at `GameManager.cs:594`, and mods load at `:628`.**
+Under the built-in modding runtime no mod assembly — and therefore no copy of `0Harmony.dll` — is in the AppDomain when it runs, so `assembly == null` and the method returns after its first line (`:2220-2223`).
+Confirmed on the install: `Modding.log`'s first line is `Modding runtime: Builtin` and the file contains no `Harmony found.` and no `Patched Method:` line, despite loading five mods.
 
-The census exists for the BepInEx case, where the loader is in the process before `GameManager` runs — which is what `DetectModdingRuntimeName` distinguishes by scanning loaded assemblies for the name `BepInEx`, then for the substring, then for a type in a `BepInEx*` namespace (`:2270-2295`).
+The census exists for the BepInEx case, where the loader is in the process before `GameManager` runs — which is what `DetectModdingRuntimeName` distinguishes by scanning loaded assemblies for the name `BepInEx`, then for the substring, then for a type in a `BepInEx*` namespace (`:2313-2338`).
 
 So: **an empty patch census in `Modding.log` proves nothing about what is patched.** An agent that wants the list calls `Harmony.GetAllPatchedMethods()` itself from its own code, after mods have loaded.
 
-`UpdateModdingBacktraceAttributes()` runs immediately after mod initialisation (`:625`) and again on a playset change (`:1499`), so the crash-report attributes do carry the mod set even though the patch census does not.
+`UpdateModdingBacktraceAttributes()` runs immediately after mod initialisation (`:629`) and again on a playset change (`:1542`), so the crash-report attributes do carry the mod set even though the patch census does not.
 
 ### Verifying the debug patch before attaching anything
 
 The setup skill's shipped procedure (`plugins/cs2-modding/skills/cs2-modding-setup/references/debug-patching.md:33-38`) offers two signals: the "Development Build" watermark in the bottom-right corner, and `Player.log`'s `Player connection` line carrying `[Debug] 1`.
 Both hold. The install carries three stronger ones, and the strongest splits the two halves of the patch apart.
 
-**Read from the patched install on 2026-08-05:**
+**Read from the patched install on 2026-11-11:**
 
-- `Logs/SceneFlow.log` carries **`Game configuration: Development (Mono)`** in the version block. The source is `UnityEngine.Debug.isDebugBuild` (`GameManager.cs:2105`), which is a property of the player binary — so this line reports whether **step 2**, the `UnityPlayer.dll` swap, took. On an unpatched install it reads `Release (Mono)`.
-- `Player.log` line 4 reads **`Starting managed debugger on port 56639`**, and line 5 `Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=0.0.0.0:56639`. This is the mono debugger agent coming up, which is what **step 3**, `player-connection-debug=1` in `boot.config`, turns on — and it names the port, which is dynamic per launch rather than fixed.
+- `Logs/SceneFlow.log` carries **`Game configuration: Development (Mono)`** in the version block. The source is `UnityEngine.Debug.isDebugBuild` (`GameManager.cs:2148`), which is a property of the player binary — so this line reports whether **step 2**, the `UnityPlayer.dll` swap, took. On an unpatched install it reads `Release (Mono)`.
+- `Player.log` line 4 reads **`Starting managed debugger on port 56248`**, and line 5 `Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=0.0.0.0:56248`. This is the mono debugger agent coming up, which is what **step 3**, `player-connection-debug=1` in `boot.config`, turns on — and it names the port, which is dynamic per launch rather than fixed.
 - `Player.log` line 9 is the `Player connection … [Debug] 1` line the shipped reference already names.
 
 Two purely static checks, with the game closed:
 
-- `Cities2_Data\boot.config` on the install ends with a blank line and then `player-connection-debug=1`. Step 3, checkable with a text editor.
-- The install root holds `UnityPlayer_Win64_player_development_mono_x64.pdb` beside `UnityPlayer.dll`. The name identifies the variation folder it was copied from, so its presence is evidence step 2 was done from the right directory. Nothing requires the pdb to be copied, so its **absence** proves nothing.
+- `Cities2_Data\boot.config` on the install ends with `player-connection-debug=1`. Step 3, checkable with a text editor.
+- The install root may hold `UnityPlayer_Win64_player_development_mono_x64.pdb` beside `UnityPlayer.dll` (this one does not). The name identifies the variation folder it was copied from, so its presence is evidence step 2 was done from the right directory. Nothing requires the pdb to be copied, so its **absence** proves nothing.
 
-A mod can also read `UnityEngine.Debug.isDebugBuild` at runtime — the game does, at `GameManager.cs:2105` and `src/Game/Game.Prefabs/UIObject.cs:57`/`:70` and `src/Game/Game.Settings/About.cs:29`.
+A mod can also read `UnityEngine.Debug.isDebugBuild` at runtime — the game does, at `GameManager.cs:2148` and `src/Game/Game.Prefabs/UIObject.cs:57`/`:70` and `src/Game/Game.Settings/About.cs:29`.
 
 Unconfirmed: that the two signals really are independent, i.e. that a retail `UnityPlayer.dll` with `player-connection-debug=1` set produces the debugger line without the `Development` configuration, or vice versa. Only the both-applied case was observed. What settles it: revert one step at a time on this install and re-read the two lines. This matters because the split is what would let the reference say **which** step failed rather than that something did.
 
 **Symbols.** `ExecutableAsset.LoadAssemblyImpl` loads `Path.ChangeExtension(path, "pdb")` beside the mod's dll when it exists, passing both byte arrays to `Assembly.Load` (`ExecutableAsset.cs:232-241`).
-The toolchain deploys it without being asked: `DeployWIP` copies `$(OutDir)\**\*.*` into `$(LocalModsPath)\$(TargetName)` (`%CSII_TOOLPATH%/Mod.targets:106-112`), and the install's `Mods/HallOfFame/` and `Mods/Cs2TestMod/` each hold a `.pdb` beside the `.dll`.
+The toolchain deploys it without being asked: `DeployWIP` copies `$(OutDir)\**\*.*` into `$(LocalModsPath)\$(TargetName)` (`%CSII_TOOLPATH%/Mod.targets:106-112`), and the install's `Mods/HallOfFame/` and `Mods/DoIt/` each hold a `.pdb` beside the `.dll`.
 So a locally deployed mod gets file and line numbers in every logged stack trace, through `StackTraceHelper.ExtractStackTrace(skipFrames, fNeedFileInfo: true)` (`src/Colossal.Logging/Colossal.Logging.Diagnostics/StackTraceHelper.cs:41-46`).
 
 **Ruled (2026-08-04, the performance-and-memory pass; conflicts.md).** The Burst-gate ruling stays in `performance-and-memory`, and this reference stops at the attach precondition.
@@ -490,7 +490,7 @@ It was to touch `diagnostics` only if this reference also stated how to get a mo
 `CustomLogHandler.LogFormat` ends the `ILog` branch with: if `!log.disableBacktrace && level > Level.Warn`, send a Backtrace report — the exception with the message as an extra attribute, or the message alone — **passing `log.logPath` as an attachment** (`CustomLogHandler.cs:142-152`).
 `BacktraceHelper.SendReport` no-ops when `BacktraceClient.Instance` is null (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:47-62`).
 
-The client is present on this install. `GameManager` calls `BacktraceHelper.SetDefaultAttributes(...)` at `GameManager.cs:534`, which logs `BacktraceClient instance is null` through `Debug.LogWarning` when it is missing (`BacktraceHelper.cs:16`) — and neither `Player.log` nor any file under `Logs/` contains that string for the 2026-08-05 session.
+The client is present on this install. `GameManager` calls `BacktraceHelper.SetDefaultAttributes(...)` at `GameManager.cs:538`, which logs `BacktraceClient instance is null` through `Debug.LogWarning` when it is missing (`BacktraceHelper.cs:16`) — and neither `Player.log` nor any file under `Logs/` contains that string for the 2026-11-11 session.
 
 So a mod that logs at `Error` or above uploads its own log file to Colossal's crash service, unless it sets `disableBacktrace` (or `SetBacktraceEnabled(false)`, `src/Colossal.Logging/Colossal.Logging/ILog.cs:107-111`).
 One corpus mod touches it, and in the direction that keeps reporting on: `CS2-Platter/Platter/PlatterMod.cs:112` calls `SetBacktraceEnabled(true)` under `#if IS_DEBUG`, which writes the default value back. Nobody turns it off.
@@ -499,7 +499,7 @@ The developer menu exposes the toggle only under `--qaDeveloperMode` (`LogsDebug
 
 ### An unobserved faulted Task pops the error dialog
 
-`GameManager.TryCatchUnhandledExceptions` subscribes two process-wide handlers, both logging at `Critical` to the `SceneFlow` logger (`GameManager.cs:2059-2071`):
+`GameManager.TryCatchUnhandledExceptions` subscribes two process-wide handlers, both logging at `Critical` to the `SceneFlow` logger (`GameManager.cs:2102-2114`):
 
 - `TaskScheduler.UnobservedTaskException` → `log.Critical(e.Exception, "Unobserved exception triggered")`, after calling `e.SetObserved()`.
 - `AppDomain.CurrentDomain.UnhandledException` → `log.Critical(exception, "Unhandled domain exception triggered")`.
@@ -507,7 +507,7 @@ The developer menu exposes the toggle only under `--qaDeveloperMode` (`LogsDebug
 `Critical` is above `Error` on a logger whose `showsErrorsInUI` is true, so both produce the modal dialog.
 The first is the one that bites a mod: a `Task` a mod started and never awaited, whose exception surfaces whenever the finalizer runs — so the dialog appears at an arbitrary later moment, with a stack trace pointing at code that stopped running long ago.
 
-Rots: the two message strings — `src/Game/Game.SceneFlow/GameManager.cs:2059-2071`.
+Rots: the two message strings — `src/Game/Game.SceneFlow/GameManager.cs:2102-2114`.
 
 ### The wiki's six logging tips, checked one by one
 

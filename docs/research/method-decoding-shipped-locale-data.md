@@ -1,6 +1,6 @@
 # Method: decoding the game's shipped locale data
 
-**Baseline.** Decompiled game 1.6.2f1; the recipe was first run against an installed game at `1.6.0f1 (419.d6c6) [6216.19404]` on 2026-08-03, and re-run against `1.6.2f1 (767.21d1) [6300.26419]` on 2026-09-18 — every count and byte figure below is from that second run.
+**Baseline.** Decompiled game 1.6.4f1; the recipe was first run against an installed game at `1.6.0f1 (419.d6c6) [6216.19404]` on 2026-08-03, re-run against `1.6.2f1 (767.21d1) [6300.26419]` on 2026-09-18, and again against `1.6.4f1 (1097.158a) [6360.18886]` on 2026-11-10 — every count and byte figure below is from that third run.
 
 **This is a method file, not a topic file.** It carries no topic from the approved reference structure and no authoring agent is pointed at it. It exists because `localization.md`'s namespace table rests on this decode, and a table whose derivation lives only in a gitignored scratch folder is a table the next pass has to rediscover. The maintainer ruled the recipe out of the shipped reference and onto the roadmap as a script (the localization pass, 2026-08-03; `docs/ROADMAP.md`, "Extracting the shipped localization dictionaries").
 
@@ -18,7 +18,7 @@ The decode replaces all three for anything it can answer, and it answers from th
 Twelve locales are packed into `Cities2_Data/Content/Game/Locale.cok`: `de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`, `ja-JP`, `ko-KR`, `pl-PL`, `pt-BR`, `ru-RU`, `zh-HANS`, `zh-HANT`.
 Each content pack directory under `Cities2_Data/Content/` that ships one carries a `Locale.cok` of its own with the same twelve locale files, holding that pack's strings under keys absent from the base `en-US`; which packs are present varies by install, and the radio-pack directories carry none.
 
-`en-US` is the hard-coded fallback locale (`src/Game/Game.SceneFlow/GameManager.cs:2371-2376`), so its key set is the one that defines what exists, and any count meant to describe the game is an `en-US` count — scoped to the base game's package, since each present pack adds its own keys.
+`en-US` is the hard-coded fallback locale (`src/Game/Game.SceneFlow/GameManager.cs:2414-2419`), so its key set is the one that defines what exists, and any count meant to describe the game is an `en-US` count — scoped to the base game's package, since each present pack adds its own keys.
 
 ## Step 1 — the package is a plain zip
 
@@ -48,18 +48,18 @@ A `BinaryReader` over the extracted bytes, reading those fields in order, is the
 
 ## Step 3 — two traps
 
-**Trailing bytes on every base file.** All twelve base `.loc` files carry bytes past the end of their structure, from 651 in `ru-RU.loc` to 4,109 in `zh-HANT.loc`.
+**Trailing bytes.** A base `.loc` file can carry bytes past the end of its structure: at 1.6.4f1 `zh-HANT.loc` carries 72, and the other eleven none.
 `LocalizationCompiler.WriteLocale` opens its output `FileMode.OpenOrCreate, FileAccess.Write` and never truncates (`LocalizationCompiler.cs:208`), so a build emitting a shorter file over a longer previous one leaves the old tail in place.
-Nothing reads it — both counts in the format are explicit, so `LocaleAsset.Load` stops at the declared end — but a parser treating end-of-file as end-of-data trips on every one of them, and any tool writing a `.loc` through the compiler inherits the same defect.
+Nothing reads it — both counts in the format are explicit, so `LocaleAsset.Load` stops at the declared end — but a parser treating end-of-file as end-of-data trips on such a file, and any tool writing a `.loc` through the compiler inherits the same defect.
 
 **The installed version is not in the files you would reach for.** `Cities2_Data/app.info` holds only the publisher and product name, and `Cities2_Data/boot.config` only a Unity build GUID and graphics flags.
-The game itself answers: `GameManager` logs `Version.current.fullVersion` at startup and writes the same string into a `version` file in its persistent data folder (`src/Game/Game.SceneFlow/GameManager.cs:2310`, `:2351`, the string composed at `src/Colossal.Core/Colossal/Version.cs:105-109`).
+The game itself answers: `GameManager` logs `Version.current.fullVersion` at startup and writes the same string into a `version` file in its persistent data folder (`src/Game/Game.SceneFlow/GameManager.cs:2353`, `:2394`, the string composed at `src/Colossal.Core/Colossal/Version.cs:105-109`).
 Reading that is what lets a decode claim a version at all, and a decode that cannot state its version is worth little more than the unversioned bundle it replaces.
 
 ## What the decode is good for
 
 Group and id counts, the exact group set, the identifier-shape distribution, and the indexed-variant table — none of which any other source carries at a known version.
-Running the four identifier regexes from `LocalizationValidation.cs:22-25` over the decoded keys classifies every one of the base package's 22,163 `en-US` entries with nothing left over, which is how the one-dot key grammar was confirmed against 22,163 worked examples rather than against the compiler's intent.
+Running the four identifier regexes from `LocalizationValidation.cs:22-25` over the decoded keys classifies every one of the base package's 22,221 `en-US` entries with nothing left over, which is how the one-dot key grammar was confirmed against 22,221 worked examples rather than against the compiler's intent.
 
 What it does **not** carry is the per-id `Single`/`Hashed`/`Indexed`/`HashedIndexed` typing and the argument names.
 Those exist only in the generated TypeScript dictionary, so they stay bundle-sourced and have to be re-derived from the key text.

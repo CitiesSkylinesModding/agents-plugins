@@ -15,14 +15,14 @@ I'm making a Cities: Skylines II mod. I want a panel of my own in the game UI, c
 - Falls in: the registrar's registry calls (`extend`, `append`, `override`, `add`) stand bare in the exported function with no `try`/`catch` around them.
 - Avoids: the registrar wraps its registry calls in a `try`/`catch` and logs the caught value.
 - Reference: cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md
-- Source: src-ui/source.js:140009
+- Source: src-ui/source.js:140043
 
 ### The game's icons are addressed on a host that serves them
 
 - Falls in: an icon of the game's is referenced as a `coui://` URL on the `gameui` host, in any casing, such as `coui://GameUI/Media/Game/Icons/Electricity.svg`.
 - Avoids: the icon is referenced by the bare path the game's own components use, such as `Media/Game/Icons/Electricity.svg`, or by an absolute `assetdb://gameui/Media/...` URL.
 - Reference: cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:1767
+- Source: src/Game/Game.SceneFlow/GameManager.cs:1810
 
 ### Sizes are written in rem
 
@@ -36,7 +36,7 @@ I'm making a Cities: Skylines II mod. I want a panel of my own in the game UI, c
 - Falls in: the headline's `font-size` is a literal length, such as `40px` or `40rem`.
 - Avoids: the headline's `font-size` is one of the game's `--fontSizeXXS` … `--fontSizeXXXL` tokens, or a `calc()` multiplying a `rem` value by `var(--fontScale)`.
 - Reference: cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md
-- Source: src-ui/source.js:47351
+- Source: src-ui/source.js:47370
 
 ## Roots
 

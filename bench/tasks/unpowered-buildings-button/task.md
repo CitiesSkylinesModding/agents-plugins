@@ -15,14 +15,14 @@ I'm making a Cities: Skylines II mod. I want a new button in the column of round
 - Falls in: the registrar calls `append` with the module path `game-ui/game/components/right-menu/right-menu.tsx` and the export name `RightMenu` (or another export whose component renders a fixed list rather than its `children`), in the module-path form `append(modulePath, exportName, component)`.
 - Avoids: the registrar calls `append("GameBottomRight", component)` in the anchor form, or `extend`s `RightMenu` with a wrapper that renders the original component beside the mod's button.
 - Reference: cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md
-- Source: src-ui/source.js:129783
+- Source: src-ui/source.js:129809
 
 ### The registrar guards its own body
 
 - Falls in: the registrar's registry calls (`append`, `extend`, `override`, `add`) stand bare in the function body with no `try`/`catch` around them.
 - Avoids: the registrar wraps its registry calls in a `try`/`catch` and logs the caught value.
 - Reference: cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md
-- Source: src-ui/source.js:140009
+- Source: src-ui/source.js:140043
 
 ### Sizes are written in rem
 

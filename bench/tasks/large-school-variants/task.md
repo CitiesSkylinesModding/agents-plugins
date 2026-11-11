@@ -15,7 +15,7 @@ I'm making a Cities: Skylines II mod. I want it to add a large version of every 
 - Falls in: the sweep that finds the vanilla schools (the prefab query or the `TryGetPrefab` calls) runs from inside `IMod.OnLoad`, directly or through a method `OnLoad` calls.
 - Avoids: the sweep runs from a hook that fires later: a system's `OnGamePreload` or `OnGameLoadingComplete` override, a subscription to `GameManager.instance.onGameLoadingComplete`, a system registered into `SystemUpdatePhase.PrefabUpdate`, or an `IPreDeserialize` hook.
 - Reference: cs2-modding/references/technique/prefabs-and-assets/prefabs-and-assets.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:624
+- Source: src/Game/Game.SceneFlow/GameManager.cs:628
 
 ### A typed prefab lookup is null-tested rather than trusted on its return value
 

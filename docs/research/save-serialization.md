@@ -1,7 +1,7 @@
 # Save serialization: making mod data survive a save
 
-**Baseline.** Decompiled game version 1.6.2f1, read at the checkout `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2`. Mod corpus (22 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`) read 2026-08-04. Wiki not fetched: it has no page on this subject (see `## Dead ends`).
-A fourth source appears in three findings: **the running game**, a 1.6.0f1 development build driven over the Mono soft debugger on 2026-08-04, with a city loaded that was written by an older build. Its results are cited as `live 1.6.0f1` and carry no path; where the game-update sweep re-read one against a 1.6.2f1 build, the reading is stamped `Live 1.6.2f1` instead.
+**Baseline.** Decompiled game version 1.6.4f1, read at the checkout `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2`. Mod corpus (22 repositories under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods\`) read 2026-08-04. Wiki not fetched: it has no page on this subject (see `## Dead ends`).
+A fourth source appears in four findings: **the running game**, cited with no path. The serializer counts, `Version.current` and the `Has` call shape were read live 2026-11-11 over the Mono soft debugger on a 1.6.4f1 development build, in a running new Archipelago city in NormalMode with five mods loaded, and are stamped so; the older-save and mod-component findings keep only their shape.
 
 ## Findings
 
@@ -118,7 +118,7 @@ Two consequences a mod author needs:
 
 **A mod's types only reach the library because the mod manager forces a rebuild.** `ModManager.AfterLoadAssembly` calls `TypeManager.InitializeAdditionalTypes(assembly)` and then `SerializerSystem.SetDirty()` (`src/Game/Game.Modding/ModManager.cs:148-151`), and `SerializerSystem.OnUpdate` rebuilds both libraries whenever they are dirty, re-deriving the query as it goes (`SerializerSystem.cs:76-92`). No mod code is involved.
 
-Live 1.6.0f1, with no mods loaded: 745 component serializers and 72 system serializers in the library.
+Read live 2026-11-11 at 1.6.4f1, running new Archipelago city, NormalMode, with five mods loaded: 750 component serializers and 72 system serializers in the library.
 
 ### Whole-system state: `IDefaultSerializable` on a system
 
@@ -209,25 +209,25 @@ Note the asymmetry: a **system** section is deserialized on the main thread insi
 `src/Game/Game/Version.cs` is 826 lines of nothing but named build stamps: **273 `[VersionConstant]` fields**, from `MS9_0` at 0.9.0a1 through `garbageFeeReset` at 1.5.7f1, ending with `current` (`Version.cs:825`).
 Each is a `Colossal.Version`, and comparison is a single packed `long` ordered major, minor, build, release type, incremental, build date, build time (`src/Colossal.Core/Colossal/Version.cs:315-318/383-401`, layout at `:46`), so `>=` is a chronological test. On the wire a version is 13 bytes (`:403-411`).
 
-Live 1.6.2f1 reports `current` as `1.6.2f1 (767.21d1) [6300.26419]`.
+Read live 2026-11-11 at 1.6.4f1, `current.fullVersion` is `1.6.4f1 (1097.158a) [6360.18886]`.
 
 **Beside the version constants there is a second, coarser mechanism the game actually prefers for migrations: format tags.**
-`Game.FormatTags` is a flat enum of 42 members in 1.6.2f1 (`src/Game/Game/FormatTags.cs`, count confirmed live), each naming a format change: `ShortLaneOptimization`, `HomelessAndWorkerFix`, `CargoPortCleanup`, `HouseholdPetLimit`, `TripPriority` and so on.
+`Game.FormatTags` is a flat enum of 43 members in 1.6.4f1 (`src/Game/Game/FormatTags.cs`), each naming a format change: `ShortLaneOptimization`, `HomelessAndWorkerFix`, `CargoPortCleanup`, `HouseholdPetLimit`, `TripPriority` and so on.
 On save, **every name in the writing build's enum is written as a string** (`EntitySerializer.cs:662-671`).
 On load, each name is looked up in the loading build's enum and the matching bit set in `context.format` (`EntityDeserializer.cs:265-285`).
 
 That gives the two directions their shapes:
 
-- **Older save, newer game** — the new build's tags are simply absent from the save, so `context.format.Has(tag)` is false and the migration systems gated on it run. Confirmed live: the loaded city was written by `1.3.3f1 (1166.85c0) [5841.24389]`, is loading under 1.6.2f1 with `purpose = LoadGame`, and `context.format.Has<FormatTags>(FormatTags.TripPriority)` is `false`.
+- **Older save, newer game** — the new build's tags are simply absent from the save, so `context.format.Has(tag)` is false and the migration systems gated on it run. Confirmed live on a city written by a build older than `TripPriority`, loading with `purpose = LoadGame`: `context.format.Has<FormatTags>(FormatTags.TripPriority)` is `false`.
 - **Newer save, older game** — the save carries a tag name the old build's enum does not have. The loader logs `"Unknown format tag: {0}"`, sets `m_UnsupportedFormat`, stops requesting buffers, and `Deserialize` returns false (`EntityDeserializer.cs:274-284/202`). `SerializerSystem` then rewrites the context purpose `LoadGame → NewGame` and `LoadMap → NewMap` with a fresh `Version.current` context (`SerializerSystem.cs:133-147`). **A save from a newer build does not error out; it comes up as a new game.** That is what a save-format break looks like from inside.
 
-`context.format.Has` is generic over the tag enum — `Has<FormatTags>(FormatTags.X)` — and a non-generic call does not compile or bind (confirmed live: `ContextFormat.Has/1 not found`).
+`context.format.Has` is generic over the tag enum, `Has<TFormatTags>(TFormatTags tag) where TFormatTags : struct, Enum` (`src/Colossal.Core/Colossal.Serialization.Entities/ContextFormat.cs:31`), so `Has(FormatTags.X)` infers the type argument; read live 2026-11-11 at 1.6.4f1, `Has<FormatTags>(FormatTags.TripPriority)` and `Has(FormatTags.TripPriority)` both return `true` on the new city's context.
 
 **A mod cannot add a format tag.** `SerializerSystem` closes the generic over `Game.FormatTags` at both call sites (`SerializerSystem.cs:102/117`), so the tag table is the game's alone. A mod's equivalent is its own version int: on a component for that component's layout, or on a system section for a migration after the load, since a section is read only after every component block (the per-element finding above).
 
 One mod reads the game's tag table from inside a **system's** save section: `Time2Work/NightShift/Systems/Time2WorkDeathCheckSystem.cs:169-176` branches its own `Deserialize` on `reader.context.format.Has<FormatTags>(FormatTags.EasyModeDeathRateFix)`. That is legitimate — the tag says something true about the save — but it couples the mod's format to a vanilla one.
 
-Rots: the 273 constant names, the 42 tag names, and the count of both. Re-read `src/Game/Game/Version.cs` and `src/Game/Game/FormatTags.cs`.
+Rots: the 273 constant names, the 43 tag names, and the count of both. Re-read `src/Game/Game/Version.cs` and `src/Game/Game/FormatTags.cs`.
 
 ### The two phases, and what actually occupies them
 
@@ -247,14 +247,14 @@ Vanilla registers nothing `UpdateAfter`.
 Counted as `UpdateBefore<PreDeserialize<` and `UpdateAfter<PostDeserialize<` occurrences in `SystemOrder.cs`; outside their own declaration files, the two wrappers are named nowhere else in `src/Game`.
 
 **`ClearSystem` is why loading a second save in one session works, and it is a trap for mods.**
-The world is created once at boot and destroyed only at shutdown (`src/Game/Game.SceneFlow/GameManager.cs:598/765`), so every load runs against the world the previous city left behind. `ClearSystem.OnUpdate` is a single `EntityManager.DestroyEntity(m_ClearQuery)` (`src/Game/Game.Serialization/ClearSystem.cs:57-60`) over a query whose `Any` list is **twenty fixed vanilla types and nothing else** (`:23-53`) — it does not gain the mod types the save query gains.
+The world is created once at boot and destroyed only at shutdown (`src/Game/Game.SceneFlow/GameManager.cs:602/769`), so every load runs against the world the previous city left behind. `ClearSystem.OnUpdate` is a single `EntityManager.DestroyEntity(m_ClearQuery)` (`src/Game/Game.Serialization/ClearSystem.cs:57-60`) over a query whose `Any` list is **twenty fixed vanilla types and nothing else** (`:23-53`) — it does not gain the mod types the save query gains.
 So an entity carrying only mod components and no vanilla anchor is written to the save, is not destroyed before the next load, and is created again from the save: it accumulates across loads within one session.
 `RoadBuilder` hits exactly this shape and mitigates it, deleting its own marker entities the frame after they are written (below).
 
-Verdict, settled live on 2026-08-04 with `PlopTheGrowables` loaded (the pass that opened this question had no mod declaring a serializable component, which is why it could not close it):
-the component serializer library went from 745 entries to 748, one per component the mod declares, with no registration of any kind;
-an entity created carrying only `PlopTheGrowables.LevelLocked` (plus Unity's automatic `Simulate`) was matched by `SerializerSystem.m_Query` (26 query types) and **not** matched by `ClearSystem.m_ClearQuery` (21 query types at 1.6.0f1; 1.6.2f1 adds `MeshColorPalette` to the `Any` list, `ClearSystem.cs:46`);
-and that entity survived a load of an unrelated city — written by `1.2.3f1`, 168,267 entities against the previous city's 384,844 — with its index, version and both components intact.
+Verdict, settled live with a mod declaring serializable components loaded (the pass that opened this question had no such mod, which is why it could not close it):
+the component serializer library gained one entry per component the mod declares, with no registration of any kind;
+an entity created carrying only one of the mod's components (plus Unity's automatic `Simulate`) was matched by `SerializerSystem.m_Query` and **not** matched by `ClearSystem.m_ClearQuery`;
+and that entity survived a load of an unrelated city with its index, version and both components intact.
 The asymmetry and the survival are therefore observed rather than derived; the recreation-from-save half follows from the save query matching.
 
 ### The twelve migration systems the game ships, and the shape they share
@@ -301,7 +301,7 @@ A migration that has to read that derived state therefore cannot sit in the phas
 The split that makes this work is worth teaching as a unit, because it is three parts:
 
 1. The system is `IDefaultSerializable`, so it gets a save section wherever it is registered. `Deserialize` reads one int into `_version`; `SetDefaults` sets `_version = 0` for saves that predate the mod (`Traffic/Code/Systems/Serialization/TrafficDataMigrationSystem.cs:406-421`).
-   **`SetDefaults` also runs on a new game**, since `GameManager.Load` permits an invalid descriptor for `Purpose.NewGame` and still runs the phase (`GameManager.cs:1056/1108`), leaving every serializer unmarked so `DeserializeSystems` calls `SetDefaults` on all of them (`EntityDeserializer.cs:608-611`). So version zero means _a save predating the mod_ only once `context.purpose` has been checked, and a migration without that check repairs a freshly generated map. Established at the review gate of 2026-08-04.
+   **`SetDefaults` also runs on a new game**, since `GameManager.Load` permits an invalid descriptor for `Purpose.NewGame` and still runs the phase (`GameManager.cs:1060/1122`), leaving every serializer unmarked so `DeserializeSystems` calls `SetDefaults` on all of them (`EntityDeserializer.cs:608-611`). So version zero means _a save predating the mod_ only once `context.purpose` has been checked, and a migration without that check repairs a freshly generated map. Established at the review gate of 2026-08-04.
 2. `OnGameLoaded(Context)` sets a `_loaded` flag (`TrafficDataMigrationSystem.cs:400-404`). **`GameSystemBase.OnCreate` subscribes the system to that callback** — `Delegate.Combine` onto `LoadGameSystem.onOnSaveGameLoaded` (`src/Game/Game/GameSystemBase.cs:21-25`), inside `if (base.World == World.DefaultGameObjectInjectionWorld)` and reached only when `base.OnCreate()` runs, so a subclass overriding `OnCreate` without chaining never subscribes and its migration silently never fires (`GameLoaded` is private, `OnGameLoaded` an empty virtual at `:119-121`), which fires after the entire Deserialize phase has run (`LoadGameSystem.cs:53-55`). No phase registration is needed to observe a load, and the callback carries the `Context`, so the version and the format tags are in hand.
 3. `OnUpdate` runs on the mod's chosen phase, sees `_loaded`, branches on `_version` against the named constants, runs the repair jobs and clears the flag (`:41-60`).
 
@@ -349,16 +349,16 @@ Rots: `[FormerlySerializedAs]`'s namespace (`Colossal.Serialization.Entities`, d
 
 ### Out-of-band files: what the game keeps beside the entity stream, and what tells a load it needs them
 
-A saved city is **not one file**. `GameManager.Save` builds a transient asset database, fills it, and packages the whole of it as one `PackageAsset` under `Saves/<user path>` (`src/Game/Game.SceneFlow/GameManager.cs:950-1012`, path from `src/Game/Game.Assets/SaveGameMetadata.cs:14`). Inside it:
+A saved city is **not one file**. `GameManager.Save` builds a transient asset database, fills it, and packages the whole of it as one `PackageAsset` under `Saves/<user path>` (`src/Game/Game.SceneFlow/GameManager.cs:954-1016`, path from `src/Game/Game.Assets/SaveGameMetadata.cs:14`). Inside it:
 
-- **The entity stream**, a `SaveGameData` asset — extensions `.SaveGameData` and `.cds` (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/SaveGameData.cs:5-7`), written to `saveGameData.GetWriteStream()` (`GameManager.cs:965`).
+- **The entity stream**, a `SaveGameData` asset — extensions `.SaveGameData` and `.cds` (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/SaveGameData.cs:5-7`), written to `saveGameData.GetWriteStream()` (`GameManager.cs:969`).
 - **A metadata record**, `.SaveGameMetadata`, holding a JSON `SaveInfo`: city name, population, money, XP, simulation date, game mode, options, `mapName`, `preview`, and three lists that matter here — `contentPrerequisites`, `modsEnabled`, `prefabReferences` (`src/Game/Game.Assets/SaveInfo.cs:11-69/71-115`).
-- **A preview texture**, captured and compressed into the same package (`GameManager.cs:967-974`).
+- **A preview texture**, captured and compressed into the same package (`GameManager.cs:971-978`).
 - **Prefab assets cloned into the package.** `PrefabSystem.SavePrefabAssets` copies the current climate prefab, the water render settings and the terrain render settings into the save database, and calls `context.RemapEntityGuid(prefabEntity, asset.id)` for each (`PrefabSystem.cs:378-437`, `SavePrefab` at `:363-376`). The remap is then read back when the prefab id list is written, so the stored `PrefabID` carries the packaged asset's guid instead of the runtime one (`PrefabSystem.cs:839-841`, `Context.RemapEntityGuid`/`TryGetRemapEntityGuid` at `Context.cs:38-54`). **That is the game's own mechanism for shipping an asset inside a save and having the load find it.**
 
 What tells a load which out-of-band things it needs:
 
-- **`contentPrerequisites`** — the DLC and content packs. Filled from `SaveGameSystem.referencedContent`, mapped to prefab names (`GameManager.cs:934-942`), and checked before load by `ArePrerequisitesMet` (`GameManager.cs:1846-1865`).
+- **`contentPrerequisites`** — the DLC and content packs. Filled from `SaveGameSystem.referencedContent`, mapped to prefab names (`GameManager.cs:939-947`), and checked before load by `ArePrerequisitesMet` (`GameManager.cs:1889-1908`).
 - **`modsEnabled`** — from `CityConfigurationSystem.usedMods`, a `HashSet<string>` that is **loaded from the save and then unioned with the currently enabled mods** (`src/Game/Game.City/CityConfigurationSystem.cs:147/255-262/412-421`), written into the entity stream behind `Version.saveGameUsedMods` and into the metadata JSON (`:326-337`, `src/Game/Game.UI.Menu/MenuUISystem.cs:881`). So it is cumulative: every mod the city has _ever_ been saved with, not the set it currently needs.
 - **`prefabReferences`** — the packaged prefab assets, kept so a later save knows which ones it already carried (`WasPreviouslySaved`, `PrefabSystem.cs:399-424`).
 
@@ -461,7 +461,7 @@ One correction to `docs/SOURCES.md`, and it is small.
 
 Entry 1, the decompiled game, says the decompile is ground truth for "systems, components, prefabs, the modding API, serialization, the binding layer's C# half" — which held throughout. Nothing to amend there.
 
-Entry 8, the running game, is understated for this topic in a way worth fixing. It lists "live component values, real ECS query results, actual execution order, whether a patch took". It settled three things here that are none of those: the live build's version string, the counts inside a reflection-built registry that exists only at runtime (745 component and 72 system serializers), and **the deserialization context of the currently loaded city** — the version that wrote it and which format tags it carries. Suggested amendment to entry 8's second line:
+Entry 8, the running game, is understated for this topic in a way worth fixing. It lists "live component values, real ECS query results, actual execution order, whether a patch took". It settled three things here that are none of those: the live build's version string, the counts inside a reflection-built registry that exists only at runtime (the component and system serializer libraries), and **the deserialization context of the currently loaded city** — the version that wrote it and which format tags it carries. Suggested amendment to entry 8's second line:
 
 > Settles what no static read can: live component values, real ECS query results, actual execution order, whether a patch took, the contents of any registry the game builds by reflection at startup, and the load-time context of the city currently open — including the build that wrote its save.
 

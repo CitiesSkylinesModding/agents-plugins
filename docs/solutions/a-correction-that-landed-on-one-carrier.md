@@ -21,7 +21,7 @@ Four of the seven rounds were mostly this, and the certifying pass still found m
 
 ## What didn't work
 
-Sweeping by subject rather than by the retired phrasing, which the root `CLAUDE.md` already requires.
+Sweeping by subject rather than by the retired phrasing, which the root `AGENTS.md` already requires.
 It is necessary and it was being done. It still missed carriers, because a subject sweep greps prose and these carriers are not prose.
 
 ## Root cause

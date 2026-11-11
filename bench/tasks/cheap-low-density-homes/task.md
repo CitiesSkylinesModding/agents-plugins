@@ -15,7 +15,7 @@ I'm making a Cities: Skylines II mod. I want living in low-density residential b
 - Falls in: a zone counts as low-density residential by its prefab name (`name.Contains("Low")`, `StartsWith("ResidentialLow")`, a list of zone names) or by a density field read off `ZonePrefab`, `ZoneData` or `ZonePropertiesData`, which no component carries.
 - Avoids: the test calls `PropertyUtils.GetZoneDensity(zoneData, zonePropertiesData)` and compares the result with `ZoneDensity.Low` under `ZoneData.m_AreaType == AreaType.Residential`, or evaluates the same two inputs itself: `AreaType.Residential` with `ZonePropertiesData.m_ScaleResidentials` false.
 - Reference: cs2-modding/references/mechanics/zoning-buildings-and-land-value/zoning-buildings-and-land-value.md
-- Source: src/Game/Game.Buildings/PropertyUtils.cs:693
+- Source: src/Game/Game.Buildings/PropertyUtils.cs:706
 
 ### The upkeep is changed on the building prefab's `ConsumptionData.m_Upkeep`, where the simulation reads it
 

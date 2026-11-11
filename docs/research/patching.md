@@ -1,8 +1,8 @@
 # Patching
 
-**Baseline.** Decompiled game 1.6.2f1, read 2026-08-04.
+**Baseline.** Decompiled game 1.6.4f1, read 2026-08-04.
 Mod corpus read 2026-08-04 at the commits the checkout carried; the checkout holds **22 repositories**, not the twenty earlier passes measured against, and the twelve-repository seed survey's `Cities2-TrafficLightsEnhancement` is no longer among them (the count and the roster are re-derived below).
-Installed game read at 1.6.0f1, its cites carried onto 1.6.2f1 by the game-update sweep — `Cities2_Data/Managed/` under `%CSII_INSTALLATIONPATH%`, the toolchain cache at `%CSII_TOOLPATH%`, and, under `%CSII_USERDATAPATH%`, both the log directory (`Logs/`) and the Paradox mods cache (`.cache/Mods/pdx_mods/`).
+Installed game read at 1.6.0f1, its cites carried onto each later version by the game-update sweeps — `Cities2_Data/Managed/` under `%CSII_INSTALLATIONPATH%`, the toolchain cache at `%CSII_TOOLPATH%`, and, under `%CSII_USERDATAPATH%`, both the log directory (`Logs/`) and the Paradox mods cache (`.cache/Mods/pdx_mods/`).
 Wiki fetched live 2026-08-04; the bot challenge did not fire, so no snapshot substitution was needed.
 
 **One source had to be transformed before it could be read at all.** Harmony ships as a compiled assembly inside mods and nowhere else, so its own behaviour was read from a decompile of it: `ilspycmd` over `0Harmony.dll`, assembly identity `0Harmony, Version=2.2.2.0, Culture=neutral, PublicKeyToken=null`, taken from a copy in the user's Paradox mods cache and emitting a single file of **65,669 lines**.
@@ -54,20 +54,20 @@ Rots: every count in this finding — the repository roster, the per-repo target
 
 ### The game knows about Harmony, and its own patch inventory never prints
 
-`GameManager.ListHarmonyPatches()` exists and is thorough: it finds the first loaded assembly whose name contains "Harmony", resolves `HarmonyLib.Harmony`, calls the static `GetAllPatchedMethods()` and `GetPatchInfo(...)`, and logs every patched method followed by its prefixes, postfixes, transpilers and finalizers by declaring type and name (`src/Game/Game.SceneFlow/GameManager.cs:2170-2221`, `PrintPatchDetails` at `:2225-2242`, `PrintIndividualPatches` at `:2244-2263`).
+`GameManager.ListHarmonyPatches()` exists and is thorough: it finds the first loaded assembly whose name contains "Harmony", resolves `HarmonyLib.Harmony`, calls the static `GetAllPatchedMethods()` and `GetPatchInfo(...)`, and logs every patched method followed by its prefixes, postfixes, transpilers and finalizers by declaring type and name (`src/Game/Game.SceneFlow/GameManager.cs:2213-2266`, `PrintPatchDetails` at `:2268-2285`, `PrintIndividualPatches` at `:2287-2306`).
 It logs to the `Modding` logger, which is the same one `ModManager` writes to (`src/Game/Game.Modding/ModManager.cs:179`).
 
 **It runs before any mod is loaded, so it always finds nothing.**
-The call sits at `GameManager.cs:590`, inside `Initialize()`. `m_ModManager` is not even constructed until `:611`, and `InitializeModManager()` — which is what eventually reaches `IMod.OnLoad` and therefore `PatchAll` — is at `:624`.
+The call sits at `GameManager.cs:594`, inside `Initialize()`. `m_ModManager` is not even constructed until `:615`, and `InitializeModManager()` — which is what eventually reaches `IMod.OnLoad` and therefore `PatchAll` — is at `:628`.
 The three statements are in one straight-line `async` body with no branch between them.
 
 **Confirmed against the running game (source 8) and its log.**
-`%CSII_USERDATAPATH%/Logs/Modding.log` opens on `Modding runtime: Builtin`, which is `ListHarmonyPatches`' own first `InfoFormat` (`GameManager.cs:2173`), and then contains no `Harmony found.` line and zero `Patched Method:` lines across a session that loaded nine mods.
+`%CSII_USERDATAPATH%/Logs/Modding.log` opens on `Modding runtime: Builtin`, which is `ListHarmonyPatches`' own first `InfoFormat` (`GameManager.cs:2216`), and then contains no `Harmony found.` line and zero `Patched Method:` lines across a session that loaded nine mods.
 None of those nine happens to patch, and `find_types` against the live process returns no `HarmonyLib.Harmony`, so this run does not discriminate on its own; the call-order read does.
 
 The consequence for a mod author is practical: **there is no game-provided way to see what is patched.** The one mod in the corpus that wanted the answer built it itself, logging `harmony.GetPatchedMethods()` immediately after `PatchAll` (`ExtraDetailingTools/EDT.cs:113-118`).
 
-Rots: the position of `ListHarmonyPatches()` relative to `InitializeModManager()` — re-check `src/Game/Game.SceneFlow/GameManager.cs:590/624`.
+Rots: the position of `ListHarmonyPatches()` relative to `InitializeModManager()` — re-check `src/Game/Game.SceneFlow/GameManager.cs:594/628`.
 
 ### Exactly one Harmony is loaded per process, and which one is not the one you compiled against
 
@@ -86,7 +86,7 @@ So three things follow, and all three are load-bearing.
 `isLoaded` is `assembly != null` (`ExecutableAsset.cs:151`), and the only path setting `assembly` before `LoadAssemblyImpl` is `GetModAssets`, which matches an already-loaded `AppDomain` assembly by file location (`:314-334`, the match at `:321`).
 A mod-shipped assembly is loaded from a byte array (`:236`/`:241`) and so has an empty `Location`, leaving that match nothing to hit.
 So at first initialization the order reduces to local, then highest version, then asset id — deterministic and decided by the installed set, not by mod initialization order.
-`isLoaded` bites only on a mid-session re-initialization (`ModManager.cs:245`, `GameManager.cs:1643`), where a copy already in the process outranks a local one and a higher-versioned one alike; `mod-compatibility.md` carries the full derivation at its first finding.
+`isLoaded` bites only on a mid-session re-initialization (`ModManager.cs:245`, `GameManager.cs:1686`), where a copy already in the process outranks a local one and a higher-versioned one alike; `mod-compatibility.md` carries the full derivation at its first finding.
 
 **The versions in the wild are not all the same.** Across the user's Paradox cache, the 51 shipped `0Harmony.dll` copies carry three identities: `2.2.2.0` (48), `2.3.3.0` (2), `2.4.2.0` (1).
 All three are `PublicKeyToken=null`, so nothing is strong-named and version binding is not enforced; a mod compiled against 2.2.2 will silently run against whichever copy won.
@@ -156,7 +156,7 @@ The outlier that belongs here rather than anywhere else is **neutralising a syst
 `PrefabSystem.UpdatePrefabs` and `AssetImportPipeline.GetTextureReferenceCount` at `CS2-WriteEverywhere/BelzontWE/Overrides/PrefabSystemOverrides.cs:20-21`.
 And the two job-scheduling cases, which the Burst finding below treats on their own: `ObjectToolSystem.SnapControlPoint` (`ToolSystemPatch.cs:100-101`) and `PathfindSetupSystem.FindTargets` (`Time2Work/NightShift/Patches/PathfindSetupSystem_LeisureEventBiasPatch.cs:43-54`).
 
-**Every one of these targets was checked against the decompile and exists at 1.6.2f1**, with the signature the patch claims, including every one whose `Type[]` array turns out to be load-bearing.
+**Every one of these targets was checked against the decompile and exists at 1.6.4f1**, with the signature the patch claims, including every one whose `Type[]` array turns out to be load-bearing.
 Five commented-out `[HarmonyPatch]` blocks were excluded from the count: four at `ExtraDetailingTools/MOD/Patches/NetToolSystem.cs:17/30/150/185` and one at `Time2Work/NightShift/Patches/Time2WorkPatches.cs:44`.
 
 Rots: all 55 target names and their signatures. A patch target is a claim about vanilla code and is re-checkable one grep at a time against `src/Game/`.
@@ -218,10 +218,10 @@ Rots: every overload set named here. Re-check by grepping the named type for the
 ### A Burst-compiled job is not what you patch; the managed method that schedules it is
 
 **The decompile shows the mechanism directly for a Burst-compiled _method_.**
-`ClimatePrefab.SimplexNoise(float, float)` carries `[BurstCompile]`, and its entire body is `return SimplexNoise_000094ED_0024BurstDirectCall.Invoke(x, y);` (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs:1105-1109`).
+`ClimatePrefab.SimplexNoise(float, float)` carries `[BurstCompile]`, and its entire body is `return SimplexNoise_00009525_0024BurstDirectCall.Invoke(x, y);` (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs:1105-1109`).
 That generated `Invoke` checks `BurstCompiler.IsEnabled`, fetches a native function pointer through `BurstCompiler.GetILPPMethodFunctionPointer2`, and calls it as `delegate* unmanaged[Cdecl]<float, float, float>`; only if Burst is off does it fall through to `SimplexNoise_$BurstManaged`, which holds the real body (`:543-553`, the pointer machinery at `:505-541`).
 So a prefix or postfix on `SimplexNoise` still runs — it is an ordinary managed method — but it wraps a two-line trampoline. **You can read and rewrite the arguments and the result; you cannot change the logic**, because the logic is in the native image and in `SimplexNoise_$BurstManaged`, which the native path never calls.
-Five methods in `Game.dll` use this form, registered at `src/Game/-BurstDirectCallInitializer.cs:8-16`.
+Six methods in `Game.dll` use this form, registered at `src/Game/-BurstDirectCallInitializer.cs:8-17`.
 
 **For a Burst-compiled _job_ the substitution point is not readable in C# at all.**
 A job's entry is `JobChunkExtensions.JobChunkProducer<T>.Execute`, registered once through `JobsUtility.CreateJobReflectionData(typeof(JobChunkWrapper<T>), typeof(T), new ExecuteJobFunction(Execute))` (`src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs:38-43`), and `ScheduleInternal` passes that pointer straight to `JobsUtility.Schedule`/`ScheduleParallelFor` (`:166-194`).
@@ -262,16 +262,16 @@ That is the only way to write one patch body that serves several tool types, sin
 **Removal.** `UnpatchAll(harmonyID)` walks every patched method and removes only patches whose owner matches (`0Harmony.decompiled.cs:5197-5220`).
 Every patching corpus mod calls it from `IMod.OnDispose`.
 **`OnDispose` runs in exactly two situations**, and neither is the one authors seem to expect.
-It runs at process shutdown, from `ModManager.Dispose()` called by `GameManager` on destroy (`GameManager.cs:802`, `ModManager.cs:498-525`), where the AppDomain is going away regardless.
+It runs at process shutdown, from `ModManager.Dispose()` called by `GameManager` on destroy (`GameManager.cs:806`, `ModManager.cs:498-525`), where the AppDomain is going away regardless.
 And it runs per-mod when that mod's own load throws: `InitializeMods` catches, calls `modInfo.Dispose()`, and logs (`ModManager.cs:453-458`) — which is the case where unpatching genuinely buys something, because a mod that patched and then failed halfway through `OnLoad` would otherwise leave live patches behind a mod that is not there.
-It does **not** run when a code mod is disabled mid-session: that path calls `RequireRestart()` and leaves the mod loaded (`GameManager.cs:1582-1588`), and re-initialisation skips any mod already in a non-`Unknown` state (`ModManager.cs:96-99`), so a mod is never unloaded and re-patched inside one run.
+It does **not** run when a code mod is disabled mid-session: that path calls `RequireRestart()` and leaves the mod loaded (`GameManager.cs:1626-1631`), and re-initialisation skips any mod already in a non-`Unknown` state (`ModManager.cs:96-99`), so a mod is never unloaded and re-patched inside one run.
 
 **One published mod's unpatch is a no-op, and it is instructive rather than incidental.**
 `LineTool-CS2/Code/Patches/Patcher.cs:73` calls `harmonyInstance.UnpatchAll("_harmonyID")` — the literal string, not the field, which is `_harmonyID` and holds the real id.
 Since `UnpatchAll` filters on owner, nothing is removed. The same file gets it right ten lines later (`:105`).
 The path is only reachable from the stale-singleton guard at `:32-36`, so the bug has never had a consequence; it is worth recording because it is the exact shape of mistake an unpatch call invites, and nothing at runtime reports it.
 
-Rots: the `OnDispose` trigger set — re-check `src/Game/Game.SceneFlow/GameManager.cs:802/1582-1588` and `src/Game/Game.Modding/ModManager.cs:96-99/453-458`.
+Rots: the `OnDispose` trigger set — re-check `src/Game/Game.SceneFlow/GameManager.cs:806/1626-1631` and `src/Game/Game.Modding/ModManager.cs:96-99/454-458`.
 
 ### The composition discipline, and what recording that you set the flag actually buys
 
@@ -291,7 +291,7 @@ If the game already had markers on — because the player enabled marker visibil
 Recording the flag is what makes the patch idempotent with respect to everyone else: it either owns the widening and owns the filtering, or it owns neither.
 It also survives a vanilla change: if a future build sets `RaycastFlags.Markers` itself for that tool, the patch degrades to a no-op instead of breaking the tool.
 
-The `[ThreadStatic]` itself is belt-and-braces rather than a requirement at 1.6.2f1. Both ends run on the main thread: `InitializeRaycast` is called by `ToolRaycastSystem.OnUpdate` on the active tool (`src/Game/Game.Tools/ToolRaycastSystem.cs:90-130`) and `GetRaycastResult` from the tool's own managed update. What the pairing does need is that the set and the read happen in the same frame on the same call chain, which they do.
+The `[ThreadStatic]` itself is belt-and-braces rather than a requirement at 1.6.4f1. Both ends run on the main thread: `InitializeRaycast` is called by `ToolRaycastSystem.OnUpdate` on the active tool (`src/Game/Game.Tools/ToolRaycastSystem.cs:90-130`) and `GetRaycastResult` from the tool's own managed update. What the pairing does need is that the set and the read happen in the same frame on the same call chain, which they do.
 
 **A second composition property falls out of the Harmony emitter and is worth stating beside it.** Two mods patch `ToolBaseSystem.GetRaycastResult` — `BetterBulldozer` with a prefix that can return `false`, `CS2-Platter` with a postfix. Because postfixes are unguarded (`0Harmony.decompiled.cs:3483-3521`), Platter's filter runs even on frames where BetterBulldozer suppressed the original, and its own `weAddedMarkersFlag` guard is what makes that harmless. Neither mod knows about the other.
 
@@ -390,9 +390,9 @@ Suggested amendment to that bullet, keeping the exclusion and bounding it: _Comp
 
 **This file was named in neither of ticket 38's lists** — not in its tiers, not in its out-of-scope list — and was swept under the ticket's own rule that a file scoped out which turns out to assert engine behaviour is a finding. The verdict on the widening is that it should have been tier 1: the Burst-and-jobs section and the `EntityQuery` rewrite recipe are engine mechanism end to end. Harmony semantics are `SOURCES.md` entry 12's and were left alone throughout.
 
-Unity docs fetched live 2026-08-26 at the version-pinned URLs entry 13 fixes, Burst at `@1.8`; decompile read the same day at 1.6.0f1, its cites re-pointed onto 1.6.2f1 by the game-update sweep; Unity package sources (entry 15) read at `com.unity.burst@1.8.23` and `com.unity.entities@1.3.10`. No live game was used, and the mod corpus was not opened.
+Unity docs fetched live 2026-08-26 at the version-pinned URLs entry 13 fixes, Burst at `@1.8`; decompile read the same day at 1.6.0f1, its cites and figures carried onto each later version by the game-update sweeps; Unity package sources (entry 15) read at `com.unity.burst@1.8.23` and `com.unity.entities@1.3.10`. No live game was used, and the mod corpus was not opened.
 
-- **The Burst trampoline has two fall-through conditions, and the shipped sentence named one with an "only".** The generated `Invoke` is carried verbatim as a comment in the post-processor source (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:770-777`) and emitted intact in this build: `if (BurstCompiler.IsEnabled) { var funcPtr = GetFunctionPointer(); if (funcPtr != null) return funcPtr(...); } return OriginalMethod(...);` — see `src/Game/Game.Rendering/WaterRenderSystem.cs:117-128`, the managed body reachable at `:685`. **The null-pointer branch is a second, independent route into the managed body**, and [Burst's build page](https://docs.unity3d.com/Packages/com.unity.burst@1.8/manual/building-projects.html) supplies why a pointer can be null in a shipped build: the runtime loads the generated library on first invocation, and an invalid or unsupported target builds without Burst rather than failing. The word carried weight because it is what tells a patcher their logic change can never take effect. Reach, reported: every `[BurstCompile]` static method in `src/Game` did get a trampoline — five registered in `src/Game/-BurstDirectCallInitializer.cs`, ten blocks total counting their `_0024BurstManaged` twins — so the generalisation holds over a population of five.
+- **The Burst trampoline has two fall-through conditions, and the shipped sentence named one with an "only".** The generated `Invoke` is carried verbatim as a comment in the post-processor source (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:770-777`) and emitted intact in this build: `if (BurstCompiler.IsEnabled) { var funcPtr = GetFunctionPointer(); if (funcPtr != null) return funcPtr(...); } return OriginalMethod(...);` — see `src/Game/Game.Rendering/WaterRenderSystem.cs:118-130`, the managed body reachable at `:685`. **The null-pointer branch is a second, independent route into the managed body**, and [Burst's build page](https://docs.unity3d.com/Packages/com.unity.burst@1.8/manual/building-projects.html) supplies why a pointer can be null in a shipped build: the runtime loads the generated library on first invocation, and an invalid or unsupported target builds without Burst rather than failing. The word carried weight because it is what tells a patcher their logic change can never take effect. Reach, reported: every `[BurstCompile]` static method in `src/Game` did get a trampoline — six registered in `src/Game/-BurstDirectCallInitializer.cs`, twelve blocks total counting their `_0024BurstManaged` twins — so the generalisation holds over a population of six.
 - **"A patch on that `Execute` never runs while Burst is enabled" is exactly true, and the reader could not tell which jobs it covers.** The `extern` half is confirmed: `JobChunkExtensions.EarlyJobInit<T>()` registers through `JobsUtility.CreateJobReflectionData` (`src/Unity.Entities/Unity.Entities/JobChunkExtensions.cs:38-44/96-99`), which is `[MethodImpl(InternalCall)] private static extern` (`src/UnityEngine.CoreModule/Unity.Jobs.LowLevel.Unsafe/JobsUtility.cs:154`), and the game's registration table is `src/Game/__JobReflectionRegistrationOutput__17016606566994089001.cs`. The sentence already carries its own precondition, and the decompile shows that precondition is a real flippable switch rather than a hedge (`src/Unity.Burst/Unity.Burst/BurstCompilerOptions.cs:681-707`, `:264-287`) — which `performance-and-memory` owns and states correctly, so nothing was restated. What shipped is a bridge plus a check: **not every job struct in `src/Game` carries `[BurstCompile]`**, the exceptions being mostly `Game.Debug` gizmo jobs but including three in ordinary territory (`src/Game/Game.Tools/DefaultToolSystem.cs:378`, `src/Game/Game.Simulation/CityServiceBudgetSystem.cs:28`, `src/Game/Game.UI.InGame/WealthInfoviewUISystem.cs:34`). **The discovery pass's two counts did not ship.** A reader acts on *check the attribute*, and a roster swept across an assembly is a search result rather than a declared set; the shape shipped and the figures stayed here.
 - **`SystemBase.Dependency` has a public route, so the reflection the bullet singled out "above all" is avoidable.** The protected property owns no storage — it is `get => CheckedState()->Dependency; set => …` (`src/Unity.Entities/Unity.Entities/SystemBase.cs:13-22`) — over a `SystemState.Dependency` that is public (`src/Unity.Entities/Unity.Entities/SystemState.cs:192`), reachable through a public `SystemHandle` (`src/Unity.Entities/Unity.Entities/ComponentSystemBase.cs:59-67`), a public `World.Unmanaged` (`src/Unity.Entities/Unity.Entities/World.cs:82`) and a public `ResolveSystemStateRef` (`src/Unity.Entities/Unity.Entities/WorldUnmanaged.cs:176-178`). The general rule survives and only its worked example moved. **Where the docs are wrong about the precondition, and it did not ship:** [the `ResolveSystemStateRef` page](https://docs.unity3d.com/Packages/com.unity.entities@1.3/api/Unity.Entities.WorldUnmanaged.ResolveSystemStateRef.html) documents an `InvalidOperationException` for an invalid handle, but `ResolveSystemStateChecked` (`src/Unity.Entities/Unity.Entities/WorldUnmanagedImpl.cs:627-640`) throws only on a wrong-world handle or an out-of-bounds id and returns **null** for a destroyed system, which `ResolveSystemStateRef` dereferences unchecked — the same file's `:707-710` carries the null check this path omits. Inside a patch on that system's own method the system is live by construction, which is the only case the shipped bullet is about, so the clause said "valid for as long as the system is alive" and claimed nothing more.
 

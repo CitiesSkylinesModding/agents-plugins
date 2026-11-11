@@ -17,7 +17,7 @@ Two problems. With the mod enabled the game has a small but regular stutter whil
 - Falls in: the `Allocator.Persistent` container is allocated in a load hook (`OnGameLoadingComplete`, `OnGamePreload` or `OnGameLoaded`) and only `OnDestroy` disposes it, so every city load allocates a new one over the previous.
 - Avoids: the container is allocated once in `OnCreate` and emptied with `Clear()` from a load hook (or, at the least, the previous instance is disposed before a new one is allocated), with its `Dispose()` in `OnDestroy`.
 - Reference: cs2-modding/references/technique/performance-and-memory/performance-and-memory.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:1033
+- Source: src/Game/Game.SceneFlow/GameManager.cs:1037
 
 ### The burning buildings are gathered asynchronously
 

@@ -36,7 +36,7 @@ I'm making a Cities: Skylines II mod for players who don't want to wait on trees
 - Falls in: the system records into a stock Unity command-buffer system, `EndSimulationEntityCommandBufferSystem` or any other `*EntityCommandBufferSystem` from `Unity.Entities`, reached through `GetOrCreateSystemManaged` or its `Singleton`.
 - Avoids: the command buffer comes from one of the game's barriers, `EndFrameBarrier` or a `ModificationBarrier*`, resolved in `OnCreate` and held in a field of that concrete type; or the structural changes go through `EntityManager` directly, or through a buffer the system constructs and plays back itself.
 - Reference: cs2-modding/references/technique/ecs-in-this-game/ecs-in-this-game.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:2383
+- Source: src/Game/Game.SceneFlow/GameManager.cs:2426
 
 ## Roots
 

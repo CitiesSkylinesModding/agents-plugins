@@ -43,7 +43,7 @@ I'm making a Cities: Skylines II mod that bulldozes abandoned buildings the mome
 - Falls in: the presence answer or the resolved type is stored once (a `static bool`, a `bool?`, a field set in `OnLoad` or in the deferred callback) and nothing subscribes to `ParadoxModsDataSource.onAfterActivePlaysetOrModStatusChanged`.
 - Avoids: the code subscribes to `onAfterActivePlaysetOrModStatusChanged` on `AssetDatabase<ParadoxMods>.instance.dataSource` cast to `ParadoxModsDataSource`, and in that handler clears the cached answer and re-runs the probe and whatever it gated, or never caches and re-runs the probe on each ask.
 - Reference: cs2-modding/references/technique/mod-compatibility/mod-compatibility.md
-- Source: src/Game/Game.SceneFlow/GameManager.cs:1643
+- Source: src/Game/Game.SceneFlow/GameManager.cs:1686
 
 ## Roots
 

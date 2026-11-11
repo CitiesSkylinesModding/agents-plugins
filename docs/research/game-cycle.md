@@ -1,7 +1,7 @@
 # The game cycle: restarting the game, driving it, and its test framework
 
-**Baseline.** Game version 1.6.2f1, Unity 2022.3.71f1, decompile at HEAD `43da1009` ("Decompile with ilspycmd 11.0.0.9375"), read 2026-11-02 at `~/Documents/Dev/cs2-decompile`.
-UI bundle citations are to `src-ui/source.js`, 140,104 lines.
+**Baseline.** Game version 1.6.4f1, Unity 2022.3.71f1, decompile at HEAD `7179d263` ("1.6.4f1"), read 2026-11-02 and re-derived 2026-11-10 at `~/Documents/Dev/cs2-decompile`.
+UI bundle citations are to `src-ui/source.js`, 140,138 lines.
 Mod corpus at `~/Documents/Dev/cs2-mods`; the template at `~/Documents/Dev/cs2-greenfield-mod-template`, HEAD `0c66590`, where every template cite below is read: its `gfd-game-cycle` skill is gone since.
 `cs2-dev` read as shipped at `ebc1ebe`, paths below relative to the repo root.
 Live evidence comes from tickets 01 to 05 of the feature that built the server, one Linux machine, Proton Experimental `experimental-11.0-20261014`; each run is cited as a run with what it showed, as those tickets' notes are working material and do not survive the feature.
@@ -38,7 +38,7 @@ From `plugins/cs2-modding/mcp/src/server.ts:111-310`, so the reference points ra
 
 1. `stop`, when a C# build is next. A restart stops the game itself, so a change that does not rebuild the mod's assembly goes straight to `restart`.
 2. Build.
-3. `restart`, with `mod` set, a `save` or `newCity` to reach a city. A load goes through `--startGame`, which starts as soon as the game booted (`src/Game/Game.SceneFlow/GameManager.cs:645-647`, `:1241-1264`), so it races nothing in the menu (`plugins/cs2-modding/mcp/src/tools.ts:420-423`). `gameOptions` go into `runOnce.txt`, which the game reads and deletes (`GameManager.cs:443-447`) and splits on spaces into a set (`:328-339`), so duplicates collapse and order is lost.
+3. `restart`, with `mod` set, a `save` or `newCity` to reach a city. A load goes through `--startGame`, which starts as soon as the game booted (`src/Game/Game.SceneFlow/GameManager.cs:649-651`, `:1255-1278`), so it races nothing in the menu (`plugins/cs2-modding/mcp/src/tools.ts:420-423`). `gameOptions` go into `runOnce.txt`, which the game reads and deletes (`GameManager.cs:447-451`) and splits on spaces into a set (`:332-343`), so duplicates collapse and order is lost.
 4. Read what the result says of the mod's load (section 5).
 
 **Whether the build really needs the game stopped is not what the template says.**
@@ -50,17 +50,17 @@ Verdict: the order stands, the reason narrows to "the Burst library and possibly
 **Run `build-open`, Linux, 2026-11-02.** With the game in a new city and a template mod with a Burst library loaded, `dotnet build -c Debug --no-incremental` exited 0 with no warning, and every deployed file changed: the managed DLL and the Burst library both took new hashes and mtimes. `/proc/<pid>/maps` then showed the Burst library as `(deleted)`, so the toolchain replaced the file rather than overwriting it, the game kept running on the old mapping, and it stayed up. **So on Linux a build beside a running game succeeds and the game goes on running the old code, with nothing saying so.** The stop before a build is not needed there; the restart after it is.
 On Windows the same build fails: the deploy's `RemoveDir` meets the library the game holds open (section 8).
 
-**What a clean quit saves.** `Application.wantsToQuit` is hooked to `WantsToQuit` (`GameManager.cs:536`, `:745-758`), which runs `TerminateGame` (`:769-844`):
+**What a clean quit saves.** `Application.wantsToQuit` is hooked to `WantsToQuit` (`GameManager.cs:540`, `:749-762`), which runs `TerminateGame` (`:773-848`):
 
 - waits 30 frames, cancels running work;
-- `TaskManager.instance.Complete("SaveLoadGame")` (`:794`), so **a save in flight finishes**. In the live run of ticket 01, a quit during a forced autosave ended with a whole `.cok`;
-- `if (quittingState >= State.WorldReady)` saves launcher settings and calls `SaveAllSettings` (`:795-799`), and `AssetDatabase.SaveAllSettings` writes every `SettingAsset`, the mods' included (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/AssetDatabase.cs:704`);
-- `m_ModManager?.Dispose()` (`GameManager.cs:802`): **a quit reaches a mod's `OnDispose` only when it is clean**, and a throwing `OnLoad` reaches it with no quit (`ModManager.cs:454-456`);
-- 10 s bounds on `DisposePlatforms` (`GameManager.cs:805`) and `CompleteAndClear` (`:812`), then `Game terminated successfully` or `due to timeout` (`:825/:829`), and `GameManager destroyed` (`:786`).
+- `TaskManager.instance.Complete("SaveLoadGame")` (`:798`), so **a save in flight finishes**. In the live run of ticket 01, a quit during a forced autosave ended with a whole `.cok`;
+- `if (quittingState >= State.WorldReady)` saves launcher settings and calls `SaveAllSettings` (`:799-803`), and `AssetDatabase.SaveAllSettings` writes every `SettingAsset`, the mods' included (`src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/AssetDatabase.cs:704`);
+- `m_ModManager?.Dispose()` (`GameManager.cs:806`): **a quit reaches a mod's `OnDispose` only when it is clean**, and a throwing `OnLoad` reaches it with no quit (`ModManager.cs:454-456`);
+- 10 s bounds on `DisposePlatforms` (`GameManager.cs:809`) and `CompleteAndClear` (`:816`), then `Game terminated successfully` or `due to timeout` (`:829/:833`), and `GameManager destroyed` (`:790`).
 
 **When it saves nothing.**
 
-- A quit before `State.WorldReady`. The `State` enum runs Booting, Terminated, UIReady, BootingPrefabs, WorldDisposed, WorldReady, Quitting, Loading (`GameManager.cs:124-134`), so the guard passes during a load. `WorldReady` is set after prefabs loaded and just before `Boot completed` (`:632`, `:639`). A quit past that saves, a quit before it does not.
+- A quit before `State.WorldReady`. The `State` enum runs Booting, Terminated, UIReady, BootingPrefabs, WorldDisposed, WorldReady, Quitting, Loading (`GameManager.cs:124-134`), so the guard passes during a load. `WorldReady` is set after prefabs loaded and just before `Boot completed` (`:636`, `:643`). A quit past that saves, a quit before it does not.
 - Any forced end. SIGTERM and SIGKILL wrote neither line in the live run of ticket 01, and nothing in the decompile runs on them.
 - **The city, ever.** No path above saves the game world. A close loses unsaved play exactly as a kill does.
 
@@ -85,7 +85,7 @@ Consequence: asking is the agent's own judgement, not the tool's. A session shar
 - **Minidumps.** A dump holds the process's environment block. The one boot dump opened, kept in ticket 01 (139 MB), held 111 entries in UTF-16; only the names were read, among them `STEAM_COMPAT_*`, `SteamUser`, `USER`, `WINEPREFIX` and `LD_PRELOAD`.
 - **Most boots write one.** In ticket 01 every boot wrote a dump 38 to 44 s in, `Simulated Exception`, top frame `BacktraceCrashpadWindows.dll`, 10 of 17 launches with ticket 01's nine counted (`crash-dumps.md`, finding 8), and 7 of 8 reports carried `{"response":"ok"}` in crashpad's `metadata`: uploaded. The hang path is `NativeClient.HandleAnr` (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Windows/NativeClient.cs:115-150`).
 
-The trigger is `AnrWatchdogTimeout`: the game sets 15000 (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`) after the native client copied the library's default of 5000 (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:19`), which a live read confirmed (`crash-dumps.md`, finding 8).
+The trigger is `AnrWatchdogTimeout`: the game sets 15000 (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`) after the native client copied the library's default of 5000 (`src/Backtrace.Unity/Backtrace.Unity.Model/BacktraceConfiguration.cs:19`), which a live read confirmed, re-read 2026-11-11 at 1.6.4f1 (`crash-dumps.md`, finding 8).
 Verdict: the template's "blocked over 5 s" (`gfd-game-cycle/SKILL.md:44`) holds. The sleep is 5 s, and the watchdog compares two samples a sleep apart (`NativeClient.cs:125-142`, `:154`), so the exact blocked time at which it fires is between one and two sleeps.
 
 Unconfirmed: that a token was actually seen in an upload. It settles nothing that matters here, since the dump held the block and the report said uploaded. That a running Steam's forwarded URL carries no caller environment is reasoned from Steam forwarding the URL to its own process, not observed; the Linux launch does not depend on it.
@@ -112,7 +112,7 @@ Rots: harness behaviours above belong to the harnesses and to no game file, so t
 
 ### 3. The running-game moves
 
-**`menu.loadGame`.** Declared at `src/Game/Game.UI.Menu/MenuUISystem.cs:476`, `TriggerBinding<LoadGameArgs, bool>`, arguments at `:108-135`: `saveId`, `cityName`, `options`, `gameMode`. The frontend calls it with the args and the dismiss flag (`source.js:47811-47813`). The reference does not ship this route: a listing and a pointer each drew findings on the frontend's semantics, so `restart`'s `save` is the one taught. The frontend's call is the shape to use, `s` being the entry in `menu.saves`: `engine.trigger("menu.loadGame", {saveId: s.id, cityName: s.cityName, options: s.options, gameMode: s.gameMode || "NormalMode"}, false)` (`source.js:89640-89642`, `:89661-89664`, `:89699`). It merges `menu.defaultGameOptions` under the entry's options, a no-op on six local saves, each carrying all five keys. The template's `options: {}` and fixed `NormalMode` override both for the next save. Passing `true` persists a dismissal of the unsaved-city warning. Not run live. The `id` shape `User/<guid>` was read from a live eval on 2026-09-21; `src/Game/Game.Assets/SaveGameMetadata.cs:54` sets it.
+**`menu.loadGame`.** Declared at `src/Game/Game.UI.Menu/MenuUISystem.cs:476`, `TriggerBinding<LoadGameArgs, bool>`, arguments at `:108-135`: `saveId`, `cityName`, `options`, `gameMode`. The frontend calls it with the args and the dismiss flag (`source.js:47829-47831`). The reference does not ship this route: a listing and a pointer each drew findings on the frontend's semantics, so `restart`'s `save` is the one taught. The frontend's call is the shape to use, `s` being the entry in `menu.saves`: `engine.trigger("menu.loadGame", {saveId: s.id, cityName: s.cityName, options: s.options, gameMode: s.gameMode || "NormalMode"}, false)` (`source.js:89671-89673`, `:89692-89695`, `:89730`). It merges `menu.defaultGameOptions` under the entry's options, a no-op on six local saves, each carrying all five keys. The template's `options: {}` and fixed `NormalMode` override both for the next save. Passing `true` persists a dismissal of the unsaved-city warning. Not run live. The `id` shape `User/<guid>` was read from a live eval on 2026-09-21; `src/Game/Game.Assets/SaveGameMetadata.cs:54` sets it.
 
 The handler (`SafeLoadGame`, `MenuUISystem.cs:784`) enqueues on `SaveLoadGame`; `LoadGame` looks the save up with `m_SavesBinding.value.Find` (`:797`) and dereferences the result (`:798`).
 
@@ -121,7 +121,7 @@ Verdict: "it throws a `NullReferenceException`" (`gfd-game-cycle/SKILL.md:26`, `
 
 **When the list fills.** There is no timer and no constant.
 `m_SavesBinding` is written only by `UpdateSaves` (`MenuUISystem.cs:558-562`, through `MenuHelpers.UpdateMeta`, `src/Game/Game.UI.Menu/MenuHelpers.cs:85-104`), and that runs on two events: `AssetDatabase.global.onAssetDatabaseChanged` for `SaveGameMetadata` (`MenuUISystem.cs:381`, dispatched to the main thread at `:578-581`) and `PrefabSystem.onContentAvailabilityChanged` (`:374`, `:495-500`, fired at `src/Game/Game.Prefabs/PrefabSystem.cs:480/517`). `OnCreate` does not fill it.
-`UpdateMeta` drops an asset whose `target` is null (`FilterSaves`, `MenuUISystem.cs:564-576`), and boot awaits asset caching before `Boot completed` (`GameManager.cs:594-595`, `:612`).
+`UpdateMeta` drops an asset whose `target` is null (`FilterSaves`, `MenuUISystem.cs:564-576`), and boot awaits asset caching before `Boot completed` (`GameManager.cs:598-599`, `:616`).
 So the order against `MainMenu reached` is not settled by the source. Verdict: "some 30 s after `MainMenu reached`" has no decompile support, and on the source it is not a constant at all; treat it as an observation of unknown spread.
 **The durable form:** wait on the state, not on a time. The list is the binding `menu.saves`, so a page can read it (`docs/SOURCES.md` entry 9 gives the `engine.on` subscription form). Send the trigger once the save's id is in it.
 **The better move:** a load from a stopped or restarting game goes through `restart`'s `save`, which skips the menu entirely. `menu.loadGame` is for changing save in a game kept running, the one case worth its timing.
@@ -130,7 +130,7 @@ Unconfirmed: how long the list takes; settled by `saves-list`.
 Rots: the trigger name and argument names, `Game.UI.Menu.MenuUISystem` and `LoadGameArgs`; the id shape, `Game.Assets.SaveGameMetadata`.
 
 **The `GameManager.instance.Load` trap, as observed.** In one run on 2026-09-21: an eval of `Game.SceneFlow.GameManager.instance.Load(GameMode.Game, Purpose.LoadGame, Hash128.Parse(...))` came back after 60 s with `the game took a call and did not answer it within 60s, so the debugger session is being dropped`. `SceneFlow.log` stopped at `Starting game from '<save>'` and `Loading mode Game with purpose LoadGame`, with no further line for over 4 minutes. The game was killed; `menu.loadGame` then loaded the same save.
-The next line due was `HandleLocaleCaching`, after `await UnityTask.WaitForGPUFrame()` (`GameManager.cs:1097-1100`; `src/Colossal.Core/Game.Threading/UnityTask.cs:30-38`, which waits on an `AsyncGPUReadback` callback, so a rendered frame).
+The next line due was `HandleLocaleCaching`, after `await UnityTask.WaitForGPUFrame()` (`GameManager.cs:1101-1104`; `src/Colossal.Core/Game.Threading/UnityTask.cs:30-38`, which waits on an `AsyncGPUReadback` callback, so a rendered frame).
 An eval runs on the main thread inside a debugger invoke (`plugins/unity-devtools/sdb/Invoker.cs:432-448`), and it does not await a returned `Task`: nothing in the eval path holds one. So the part of `Load` before its first real suspension runs inside that invoke.
 **What is established:** the invoke did not return in 60 s, and the load did not progress.
 **What is not:** the exact mechanism. An async method should hand back at its first `await`, so "holds the main thread the load needs" (`gfd-game-cycle/SKILL.md:26`, `docs/ROADMAP.md:1145` at `ad4a7b4`) is a plausible reading rather than a demonstrated one, and "the game must be killed" rests on one run in which no `stop` was tried.
@@ -147,7 +147,7 @@ Verdict: "`CameraController.inputEnabled = false` stops edge scrolling and the c
 
 What does hold, from the source:
 
-- **The whole map.** `ProxyActionMap.enabled` is true only when no barrier on it is blocked (`src/Game/Game.Input/ProxyActionMap.cs:130-141`). `InputManager.instance.CreateMapBarrier("Camera", "<name>")` (`src/Game/Game.Input/InputManager.cs:2120`) returns an `InputBarrier` whose `blocked = true` disables it (`src/Game/Game.Input/InputBarrier.cs:27-41`), and the branch at `CameraController.cs:351` is then skipped whole. The game itself uses this: `src/Game/Game.UI/InputBindings.cs:47/87`, blocked while the frontend observes `input.cameraBarrier` (`source.js:31186`, `:34512`).
+- **The whole map.** `ProxyActionMap.enabled` is true only when no barrier on it is blocked (`src/Game/Game.Input/ProxyActionMap.cs:130-141`). `InputManager.instance.CreateMapBarrier("Camera", "<name>")` (`src/Game/Game.Input/InputManager.cs:2120`) returns an `InputBarrier` whose `blocked = true` disables it (`src/Game/Game.Input/InputBarrier.cs:27-41`), and the branch at `CameraController.cs:351` is then skipped whole. The game itself uses this: `src/Game/Game.UI/InputBindings.cs:47/87`, blocked while the frontend observes `input.cameraBarrier` (`source.js:31205`, `:34531`).
 - **Edge scrolling alone.** `CameraController.edgeScrolling` (`CameraController.cs:278`) is a plain settable property, read at `:356`, set from settings once at `Awake` (`:314-319`), toggled by the debug UI (`src/Game/Game.Debug/CameraDebugUI.cs:224-229`). `false` stops the edge and leaves the keys.
 
 The barrier is the one that answers the need.
@@ -162,7 +162,7 @@ Rots: `Camera` map name, `Game.Input.InputManager.kCameraMap`; the read sites, `
 - **Verdict.** "The game autosaves every five minutes" (`gfd-game-cycle/SKILL.md:28`) is the new-player default, not a fact about a given install. The setting wins. The two `30-October-*` autosaves in this user's saves came from `autoSaveNow` forced in ticket 01, a developer switch (`GeneralSettings.cs:105`).
 - **When.** Only in `GameMode.Game`, only with `autoSave` on, not during a benchmark (`AutoSaveSystem.cs:85-95`), on real time since startup measured from load completion (`:97-105`). The watch arms at the end of a `LoadGame` or `NewGame` load and only if `autoSave` is on then (`:75-82`), or at a settings Apply once it is on (`:42-47`), while turning it off takes effect at once. Nothing in the check reads the simulation speed, so a paused game still autosaves.
 - **What.** A full save named `dd-MMMM-HH-mm-ss` (`:147`) into `AssetDatabase.user`, enqueued on `SaveLoadGame` (`:142-167`). Prunes older autosaves down to `autoSaveCount` (`:107-129`).
-- **Why it matters to a test build.** The save carries the mod's serialized components as that build wrote them, and `GameManager.Save` also records it as `lastSaveGameMetadata` (`GameManager.cs:995`), so the game's continue target becomes that save (reasoned from that field and `LauncherContinueGame`, `GameManager.cs:655`); the prune then removes the player's earlier autosaves. A session on a real city can leave a save whose mod data a later build may not read, and take away the ones before it.
+- **Why it matters to a test build.** The save carries the mod's serialized components as that build wrote them, and `GameManager.Save` also records it as `lastSaveGameMetadata` (`GameManager.cs:999`), so the game's continue target becomes that save (reasoned from that field and `LauncherContinueGame`, `GameManager.cs:659`); the prune then removes the player's earlier autosaves. A session on a real city can leave a save whose mod data a later build may not read, and take away the ones before it.
 - **Off.** The option; or edit `Settings.coc` with the game stopped.
 
 The move: tell the user before the session, since the prune spans every city's autosaves (`AutoSaveSystem.cs:115-120`) and a throwaway save does not stop it. A toggle from the eval is not the move: the timer runs on while it is off, so setting it back in a city fires an overdue autosave (`:99`), and a clean quit persists the off. Tell the user too when an autosave of a real city holds a test build.
@@ -216,7 +216,7 @@ Sources: `src/Colossal.TestFramework/Colossal.TestFramework/`, shortened to the 
 - Registration: `TestScenarioSystem.instance.scenarios[descriptor.description] = new TestScenarioSystem.Scenario { category, testPhase, test = type, disabled }`.
 - Reference: `Colossal.TestFramework.dll` sits in `Cities2_Data/Managed`; a mod references it like `Game` (template `Greenfield/Greenfield.csproj:48`).
 
-**The registry, usable with no template.** The game discovers its own scenarios once, in a constructor at `GameManager.cs:588` (`RegisterScenarios`, `TestScenarioSystem.cs:140-156`), before mods load at `GameManager.cs:624`, so a mod is never discovered and must add itself.
+**The registry, usable with no template.** The game discovers its own scenarios once, in a constructor at `GameManager.cs:592` (`RegisterScenarios`, `TestScenarioSystem.cs:140-156`), before mods load at `GameManager.cs:628`, so a mod is never discovered and must add itself.
 `scenarios` returns `m_Scenarios` itself (`:41`), the same object the automation enumerates (`AutomationClientSystem.cs:366`) and the debug UI reads, so writing into it from `OnLoad` needs no reflection.
 Verdict: the roadmap's "registering needs no reflection" holds, and its "unless the order matters" does not. `SortScenarios` is public static and returns a new dictionary, which a caller can copy back with `Clear` and re-adds on the live `scenarios`, so re-sorting needs no reflection either. An entry added after the sort runs after the game's, in insertion order, ignoring `testPhase`.
 Enumerating an assembly's types with `typeof(TestScenario).IsAssignableFrom(t)` and reading the descriptor is the whole of it (template `Greenfield/Scenarios/ScenarioRegistry.cs`). Write it from `OnLoad`: a write after the automation took its enumerator invalidates it, and its `MoveNext` then throws in `Update` each frame (reasoned from `Dictionary`'s version check; `OnLoad` runs well before).
@@ -231,8 +231,8 @@ Enumerating an assembly's types with `typeof(TestScenario).IsAssignableFrom(t)` 
 Verdict: the template comment that the runner "tells a Debug build by this class's name" (`Greenfield/Scenarios/ScenarioRegistry.cs:12`) is superseded; `test` makes no such check.
 Unconfirmed: that scenarios run on a stock, unpatched game. No gate was read; every run was on the debug-patched install. Settled by `stock`.
 
-**The run path under automation.** `--categoryFilter=<x>` (`AutomationClientSystem.cs:225`, `Enum.Parse` with `+`, numbers work; a bad value throws out of the constructor to `GameManager.cs:667` as Fatal). State waits unless the filter is `None` (`AutomationClientSystem.cs:285`), and starts 5 s after the first main menu (`:179`, `OnMainMenuReached`, `GameManager.cs:569-575`). In ticket 05 a Debug template scenario passed in 117 s.
-**A `--startGame` load holds it back:** only a load completing in `GameMode.MainMenu` calls `OnMainMenuReached` (`GameManager.cs:569-575`), so the automation waits for a main menu that a load at launch never reaches. A scenario loads what it needs instead.
+**The run path under automation.** `--categoryFilter=<x>` (`AutomationClientSystem.cs:225`, `Enum.Parse` with `+`, numbers work; a bad value throws out of the constructor to `GameManager.cs:671` as Fatal). State waits unless the filter is `None` (`AutomationClientSystem.cs:285`), and starts 5 s after the first main menu (`:179`, `OnMainMenuReached`, `GameManager.cs:573-579`). In ticket 05 a Debug template scenario passed in 117 s.
+**A `--startGame` load holds it back:** only a load completing in `GameMode.MainMenu` calls `OnMainMenuReached` (`GameManager.cs:573-579`), so the automation waits for a main menu that a load at launch never reaches. A scenario loads what it needs instead.
 Rots: `Starting test scenarios.`, `Finished test scenarios.`, and the start and finish lines, marked in `plugins/cs2-modding/mcp/src/scenario-log.ts:56-80`.
 
 **The false success.** `TestScenario.Run` (`TestScenario.cs:86-117`) catches everything from `InitializeTestScenario`, `CheckForErrorsAtStart`, `OnPrepare` and `RunTestMethods` at `:103` into `HandleException`, which logs and sends a message that goes nowhere without a client (`AutomationClientSystem.cs:558`). Scenario counts are added only per test (`TestScenario.cs:235-236`).
@@ -253,7 +253,7 @@ Verdict: the template's "takes one `[TestPrepare]` per scenario, base classes in
 - `OnCleanup` runs when `OnPrepare` never did, so it must tolerate nothing built.
 - `IsFinished = true` (`TestScenario.cs:116`) runs only if the `finally` does not throw. **A throw in `OnCleanup` leaves `IsFinished` false, and `Run`'s task is unobserved (`TestScenarioSystem.cs:136`), so `FINISH` is never logged and the automation stays in `RunningScenario`**: `test` ends `stuck` after 360 s (`scenario-run.ts:40`), with nothing naming the cause.
 - A throwing `[TestCleanup]` (`TestScenario.cs:199-212`, in a `finally`) escapes the loop, skips later tests, leaves that test uncounted and logs no `FINISH TEST`.
-- A constructor throw comes through `Activator.CreateInstance` (`TestScenarioSystem.cs:134`) as `TargetInvocationException` out of `Update` (`GameManager.cs:716`): `START` is logged, no `FINISH`, the state stays queueing, so `test` says it did not finish.
+- A constructor throw comes through `Activator.CreateInstance` (`TestScenarioSystem.cs:134`) as `TargetInvocationException` out of `Update` (`GameManager.cs:720`): `START` is logged, no `FINISH`, the state stays queueing, so `test` says it did not finish.
 
 **The main-menu exception.** A system's exception lands via `src/Game/Game/UpdateSystem.cs:188-197` in `SceneFlow` at Critical and in `Player.log`, naming the mod only in its stack, and at any time, not only the main menu. A pending one then aborts the next scenario. `test` fails on it through the stack match (`scenario-run.ts:237-238`).
 
@@ -262,7 +262,7 @@ Verdict: the template's "takes one `[TestPrepare]` per scenario, base classes in
 **The live dictionary and the category.** The filter at `AutomationClientSystem.cs:374`, with a filter set: skip when `category == Debug` or `(category & filter) != category`. So **all of a scenario's category bits must lie in the filter**, and `Category.None` (0) runs under every filter. Skips are logged as `Skipping <category> scenario: <name>` to `Automation.log`. Cite `:374` holds.
 `Category.cs` declares None 0, Debug 2, Serialization 4, Timings 8, General 16, Gameplay 32, QA 64, RunInAllCategories 128 (no special logic reads it), AssetDatabase 256, AssetPipeline 512, IO 1024, Performance 136, Runtime 1972, Nightly 128, Default 1980.
 `test` runs a category as a whole, and it judges every scenario in the log with no mod filter (`scenario-log.ts:90`). **So a second local Debug mod on the same bit joins the run and its failures fail it.** Fix: a distinct bit per mod, `(Category)(1 << 20)` being only the template's default. Not exercised live.
-The developer menu's tab needs `--qaDeveloperMode` (`src/Game/Game.Debug/TestsDebugUI.cs:15`, `GameManager.cs:376`) and lists `category.ToString()`, so a custom bit shows as a number. Rots: the enum's values, `Colossal.TestFramework.Category`; the filter expression, `AutomationClientSystem`.
+The developer menu's tab needs `--qaDeveloperMode` (`src/Game/Game.Debug/TestsDebugUI.cs:15`, `GameManager.cs:380`) and lists `category.ToString()`, so a custom bit shows as a number. Rots: the enum's values, `Colossal.TestFramework.Category`; the filter expression, `AutomationClientSystem`.
 
 **`IgnoreLogForTestResult`.** Set on the scenario (`TestScenario.cs:53`), it guards only `OnErrorOrHigher` (`:268`); `OnException` (`:261`) is not guarded. `ILog.Error(ex)` goes through `OnErrorOrHigher` alone (`CustomLogHandler.cs:164-167`), while an uncaught exception or `Debug.LogException` reaches `OnException` (`:176-187`). The static count (`TestScenarioSystem.cs:60-68`) is unguarded.
 With it set, a thrown test's `HandleException` log is ignored and the test logs `FINISH TEST (Success)` though `Exception` is set (`TestScenario.cs:226-229` only sends).
@@ -348,7 +348,7 @@ The template's step 1 made this the cycle's opening move and gave the game "a mi
 
 | Claim | Source | Finding |
 |---|---|---|
-| Blocked over 5 s makes a hang report | T:44 | 5 s read live, `BacktraceHelper`'s 15000 never reaches the native client (`crash-dumps.md`, finding 8) |
+| Blocked over 5 s makes a hang report | T:44 | 5 s read live 2026-11-11 at 1.6.4f1, and a 6 s main-thread sleep in a running new Archipelago city wrote a hang report; `BacktraceHelper`'s 15000 never reaches the native client (`crash-dumps.md`, finding 8) |
 | `menu.saves` lookup at `MenuUISystem.cs:797` | R:1145 | Holds |
 | `CameraController.cs:248` declares it | R:1146 (since corrected) | The line holds, the effect does not |
 | `Load` from the eval holds the main thread; kill | T:26, R:1145 | Observed no answer, no progress; mechanism not shown, `stop` untried |

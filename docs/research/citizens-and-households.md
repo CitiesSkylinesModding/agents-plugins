@@ -1,10 +1,10 @@
 # Citizens and households
 
-**Baseline.** Established against Cities: Skylines II **1.6.2f1**, Unity 2022.3.71f1, from a decompile regenerated 2026-09-15 (`src/Game/Properties/AssemblyInfo.cs`).
+**Baseline.** Established against Cities: Skylines II **1.6.4f1**, Unity 2022.3.71f1, from a decompile regenerated 2026-11-10 (`src/Game/Properties/AssemblyInfo.cs`).
 Mod corpus read 2026-08-06 at `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods`.
 Wiki fetched live 2026-08-06; the `Citizens` page returned content rather than the bot challenge, so no snapshot substitution was needed.
-Live readings come from the user's running 1.6.0f1 development build on a loaded city of ~13,400 citizens, over the sibling Unity plugin, 2026-08-06; each such finding names the method that produced it.
-The game-update sweep re-read some of them on 2026-09-18 against a 1.6.2f1 build, a different and much larger save, and `NormalMode` rather than `EasyMode`; those readings are stamped `1.6.2f1` where they appear.
+Live readings come from a running new city on Archipelago under `NormalMode` (whose `ModeSetting.m_ModePrefabs` is empty), read over the sibling Unity plugin on 2026-11-11 at 1.6.4f1 (Development Mono build, Cohtml 2.2.11.3; base game with no DLC enabled; playset HallOfFame, DoIt, ProceduralMaps, Skyve, Simple Mod Checker Plus).
+An `EasyMode` value is read off that mode's mode prefabs through `PrefabSystem`; each finding names the method that produced it, and a played save's census figures are reduced to the mechanism they showed.
 
 ---
 
@@ -30,7 +30,7 @@ Two traps the ruling names explicitly:
 - **A derived ratio is a magnitude, not a shape.** "A tax rise costs a highly educated citizen 12.5 times what it costs an uneducated one" and "going home is worth twice the path cost of going to work" are arithmetic over singleton values; they rot invisibly when either end moves. State the direction — the tax multiplier rises with education level, going home outranks going to work — and name the field.
 - **A non-numeric prefab value is still a prefab value.** `FeeParameters.m_Adjustable` does not ship as "basic education is not player-adjustable". It ships as the field to check before building against a fee, with the reason.
 
-**One clause the ruling did not have to state and this file needs anyway: an observation of one loaded city is not a fact about the game.** The census counts, the education distribution, the happiness aggregate, the criminal and tourist and commuter tallies below are all one save at one moment. Several of them established a **structural** finding, and it is the finding that ships while the counts stay here — that a component query and the census count different populations, that a `Criminal` flag outlives its episode, that a query on the age tags matches nothing. State the mechanism; do not state the tally.
+**One clause the ruling did not have to state and this file needs anyway: an observation of one loaded city is not a fact about the game.** The census counts, the education distribution, the happiness aggregate, the criminal and tourist and commuter tallies below are all one save at one moment. Several of them established a **structural** finding, and it is the finding that ships, and this file keeps the finding without the counts — that a component query and the census count different populations, that a `Criminal` flag outlives its episode, that a query on the age tags matches nothing. State the mechanism; do not state the tally.
 
 ---
 
@@ -45,7 +45,7 @@ The prefab itself carries `CitizenData`, a single `bool m_Male` used to pick a m
 Everything else a citizen has is added and removed at runtime by the behaviour systems: `HouseholdMember`, `CurrentBuilding`, `CurrentTransport`, `Worker`, `Student`, `TravelPurpose`, `Criminal`, `HealthProblem`, `Leisure`, `HasSchoolSeeker`, `SchoolSeekerCooldown`, the `Adult`/`Child`/`Teen`/`Elderly` tags.
 **This is the single most important structural fact for a mod in this area**: presence of a component _is_ the citizen's state, so a query on `Worker` is the employed population and a query on `Student` is the enrolled one. There is no status field to switch on.
 
-**Verified live.** `ecs_list_components` on a working citizen (entity 50743 in the loaded city) returned exactly the prefab archetype plus `HouseholdMember`, `CurrentBuilding`, `Worker`, `Criminal`, `SchoolSeekerCooldown`, `PrefabRef`, `RandomLocalizationIndex` and `Simulate` — 17 components.
+**Verified live in a played save.** `ecs_list_components` on a working citizen returns the prefab archetype plus runtime components such as `HouseholdMember`, `CurrentBuilding`, `Worker`, `PrefabRef`, `RandomLocalizationIndex` and `Simulate`, with state tags like `Criminal` or `SchoolSeekerCooldown` where they apply.
 
 Rots: the archetype list. Re-check `src/Game/Game.Prefabs/CitizenPrefab.cs:21-33`.
 
@@ -67,7 +67,7 @@ The remaining flags are plain booleans: `MovingAwayReachOC`, `Male`, `Tourist`, 
 
 `Happiness` is a read-only property, `(m_WellBeing + m_Health) / 2` (`Citizen.cs:31`). There is no stored happiness.
 
-`m_BirthDay` is a **day number, not an age**: age is `TimeSystem.GetDay(simulationFrame, timeData) - m_BirthDay` (`:33-36`), so it goes negative for citizens born before day zero. A live citizen read `m_BirthDay=-72`.
+`m_BirthDay` is a **day number, not an age**: age is `TimeSystem.GetDay(simulationFrame, timeData) - m_BirthDay` (`:33-36`), so it goes negative for citizens born before day zero.
 
 `GetPseudoRandom(CitizenPseudoRandom reason)` (`:38-45`) derives a deterministic `Random` from `m_PseudoRandom` and a magic constant per purpose (`src/Game/Game.Citizens/CitizenPseudoRandom.cs:5-13`: `WorkOffset`, `PartnerType`, `TrafficComfort`, `SleepOffset`, `StudyWillingness`, `Death`, `SpawnResident`, `BicycleModel`, `CarProbability`).
 **This is the mechanism behind every "personality" the game gives a citizen** — the same citizen always sleeps at the same offset, is always the same amount willing to study, always values traffic comfort the same. A mod that overwrites `m_PseudoRandom` rerolls all nine at once.
@@ -87,7 +87,7 @@ A household whose buffer empties deletes itself (`HouseholdBehaviorSystem.cs:151
 
 Three household variants are separate components rather than flags on the struct, each carrying its own state: `TouristHousehold { m_Hotel, m_LeavingTime }` (`src/Game/Game.Citizens/TouristHousehold.cs:8-10`), `CommuterHousehold { m_OriginalFrom }` (`CommuterHousehold.cs:8`), `HomelessHousehold { m_TempHome }` (`HomelessHousehold.cs:8`). `HouseholdFlags.Tourist` and `.Commuter` duplicate the first two as bits; both are set at spawn (`src/Game/Game.Simulation/TouristSpawnSystem.cs:97-106`, `CommuterSpawnSystem.cs:78-90`).
 
-**Verified live.** A resident household (entity 79124) carried exactly the prefab archetype plus `PropertyRenter`, `PathInformation`, `HouseholdAnimal` and `OwnedVehicle`; `Household { m_Flags=MovedIn, m_Resources=5695, m_ConsumptionPerDay=3584 }`. The `PathInformation` is the household's own — property seeking pathfinds from the household entity, not from a citizen.
+**Verified live in a played save.** A resident household carries the prefab archetype plus `PropertyRenter`, `PathInformation`, `HouseholdAnimal` and `OwnedVehicle`, with `Household.m_Flags = MovedIn`. The `PathInformation` is the household's own — property seeking pathfinds from the household entity, not from a citizen.
 
 ### `HouseholdFlags.MovedIn` is set in exactly one place, and it gates almost everything
 
@@ -107,14 +107,14 @@ Rots: the single-writer property. Re-grep `HouseholdFlags.MovedIn` under `src/Ga
 
 The thresholds are hard-coded static methods, not prefab data (`AgingSystem.cs:244-257`):
 
-| Becomes | At age (days) | Verified live |
+| Becomes | At age (days) | Evaluated live (2026-11-11, 1.6.4f1) |
 | --- | --- | --- |
 | Teen | 21 | `AgingSystem.GetTeenAgeLimitInDays()` → 21 |
 | Adult | 36 | `GetAdultAgeLimitInDays()` → 36 |
 | Elderly | 84 | `GetElderAgeLimitInDays()` → 84 |
 
 Those three day counts are C# and ship as numbers.
-The **conversion to game years does not**: it divides by `TimeSettingsData.m_DaysPerYear`, a prefab-singleton value (read live at 12, which is why 1.75 / 3 / 7 game years is what a reader would have seen at 1.6.2f1). This is the derived-ratio trap the ruling names — the reference states the thresholds in days, names `m_DaysPerYear` as the divisor, and leaves the arithmetic to a reader who has read their own value.
+The **conversion to game years does not**: it divides by `TimeSettingsData.m_DaysPerYear`, a prefab-singleton value (12, read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`, which makes the thresholds 1.75 / 3 / 7 game years). This is the derived-ratio trap the ruling names — the reference states the thresholds in days, names `m_DaysPerYear` as the divisor, and leaves the arithmetic to a reader who has read their own value.
 Same shape one line down: `DeathCheckSystem.kMaxAgeInGameYear = 9` is C# and ships (`src/Game/Game.Simulation/DeathCheckSystem.cs:342`); "so the old-age death curve saturates at 108 days" is that constant times the singleton and does not.
 
 Each transition does more than flip bits (`AgingSystem.cs:104-136`):
@@ -127,7 +127,7 @@ Each transition does more than flip bits (`AgingSystem.cs:104-136`):
 
 **The `Adult`/`Child`/`Teen`/`Elderly` tag components are a dead save-format representation, not live state.**
 They exist as zero-size components (`src/Game/Game.Citizens/Adult.cs` and siblings) and nothing in `src/Game/` adds one. The single consumer is a load-time migration: `RequiredComponentSystem`'s `m_AgeGroupQuery` matches any `Citizen` carrying one of the four (`src/Game/Game.Serialization/RequiredComponentSystem.cs:604-614`), reads which tag is present, writes the equivalent through `Citizen.SetAge` and **removes the tag** (`:1447-1479`).
-Verified live: an `ecs_query` on `Game.Citizens.Adult` in the loaded 1.6.2f1 city returned **0**, against the 6,454 adults the census counted in the 1.6.0f1 city. A mod must read `Citizen.GetAge()`; a query on the tags matches nothing.
+Verified live in a played save: an `ecs_query` on `Game.Citizens.Adult` returns **0** in a populated city. A mod must read `Citizen.GetAge()`; a query on the tags matches nothing.
 
 ### Birth: only adult non-male citizens in a rented property, and one bonus for a partner
 
@@ -136,7 +136,7 @@ The candidate must be `CitizenAge.Adult`, must not carry `Male`, `Tourist` or `C
 
 Probability per update is `m_BaseBirthRate`, plus `m_AdultFemaleBirthRateBonus` when the household contains an adult male (`:133-146`), multiplied by `m_StudentBirthRateAdjust` when the mother is a student (`:147-150`), divided by `kUpdatesPerDay` (`:151`).
 
-**Live values** from `CitizenParametersData` (`src/Game/Game.Prefabs/CitizenParametersData.cs:8-33`), read off the singleton in the running city: `m_BaseBirthRate = 0.02`, `m_AdultFemaleBirthRateBonus = 0.08`, `m_StudentBirthRateAdjust = 0.5`.
+**Live values** from `CitizenParametersData` (`src/Game/Game.Prefabs/CitizenParametersData.cs:8-33`), read off the singleton (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): `m_BaseBirthRate = 0.02`, `m_AdultFemaleBirthRateBonus = 0.08`, `m_StudentBirthRateAdjust = 0.5`.
 
 The baby is created with `m_BirthDay = 0`, which `CitizenInitializeSystem` reads as "newborn child" (`src/Game/Game.Citizens/CitizenInitializeSystem.cs:119-150`) and which also fires the `CitizenCoupleMadeBaby` or `CitizenSingleMadeBaby` trigger depending on how many adults the household holds.
 
@@ -181,7 +181,7 @@ Death is expressed as `HealthProblemFlags.Dead` on the citizen's `HealthProblem`
 Partnering is three systems, all at `kUpdatesPerDay = 4` and all in `GameSimulation` (`SystemOrder.cs:508-510`). `LookForPartnerSystem` sets `CitizenFlags.LookingForPartner` at rate `m_LookForPartnerRate` and picks a `PartnerType` from `m_LookForPartnerTypeRate` (`src/Game/Game.Simulation/LookForPartnerSystem.cs:97-132`); the candidate must be adult or elderly and not already looking or dead (`:102`), the household must be moved in and neither tourist nor commuter (`:107`), and the household must hold **fewer than two adult-or-elderly members** (`:111-122`).
 `PartnerSystem` matches two entries whose declared types are compatible (`src/Game/Game.Simulation/PartnerSystem.cs:115-137`); `DivorceSystem` splits a household of two or more adult-or-elderly members at `m_DivorceRate / kUpdatesPerDay` (`src/Game/Game.Simulation/DivorceSystem.cs:131`).
 `LookingForPartner` is a city-level buffer of `{ m_Citizen, m_PartnerType }` (`src/Game/Game.Citizens/LookingForPartner.cs`), and `PartnerType` is `None, Same, Other, Any` (`src/Game/Game.Citizens/PartnerType.cs`).
-**Live values**: `m_DivorceRate = 0.16`, `m_LookForPartnerRate = 0.08`.
+**Live values** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): `m_DivorceRate = 0.16`, `m_LookForPartnerRate = 0.08`.
 
 ### Education: five levels, and the climb is four systems in a loop
 
@@ -193,7 +193,7 @@ The cycle:
 1. **`ApplyToSchoolSystem`** (`SystemOrder.cs:364`, interval 512) decides whether a citizen wants to enrol (`src/Game/Game.Simulation/ApplyToSchoolSystem.cs:99-166`). The target level is `GetEducationLevel() + 1`, except a child always targets Elementary and a citizen with zero failed attempts **and `age > CitizenAge.Teen`** skips College straight to University (`:121-123` — the age term is load-bearing and a teen keeps College). A child must be at least `kElementaryMinAgeInDays = 10` days old (`:110`, `:243`). Elderly citizens never apply (`:103`).
    **An age/level admission matrix then gates the application** (`:125`, enforced `:127`): `age == Child || (age == Teen && schoolLevel >= HighSchool && schoolLevel < University) || (age == Adult && schoolLevel >= HighSchool)`, plus `CitizenUtils.HasMovedIn`. So Elementary is child-only, and a teen or adult still at education level 0 targets it, is refused, and never enrols again. The seeker is created only when the household rents a property and is neither tourist nor moving away (`:135`); failing that, not even the failure count rises.
    `GetEnteringProbability` (`:333-369`): Elementary is 1.0 for a child and 0 for anyone else; High School is `m_EnterHighSchoolProbability` for a teen non-worker and `m_AdultEnterHighSchoolProbability` otherwise; College is `0.5 * (worker ? m_WorkerContinueEducationProbability : 1) * log(1.6n + 1)` and University `0.3 * (…) * n` with `n = wellbeing/60 * (0.5 + studyWillingness)`, University further scaled by the `UniversityInterest` city modifier.
-   **Live values** from `EducationParameterData` (`src/Game/Game.Prefabs/EducationParameterData.cs:6-15`): `m_EnterHighSchoolProbability = 0.75`, `m_AdultEnterHighSchoolProbability = 0.1`, `m_WorkerContinueEducationProbability = 0.05`, `m_InoperableSchoolLeaveProbability = 0.1`.
+   **Live values** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`) from `EducationParameterData` (`src/Game/Game.Prefabs/EducationParameterData.cs:5-16`): `m_EnterHighSchoolProbability = 0.75`, `m_AdultEnterHighSchoolProbability = 0.1`, `m_WorkerContinueEducationProbability = 0.05`, `m_InoperableSchoolLeaveProbability = 0.1`.
    A refusal above High School increments the failed-education count and stamps `SchoolSeekerCooldown`, blocking reapplication for `kCoolDown = 20000` frames (`ApplyToSchoolSystem.cs:157-165`, `:241`).
    Success creates a **separate seeker entity** carrying `SchoolSeeker { m_Level }`, `Owner` pointing back at the citizen and `CurrentBuilding`, and stamps `HasSchoolSeeker` on the citizen (`:138-155`).
 
@@ -209,7 +209,7 @@ The cycle:
 `SchoolData` carries the school side **as designed** (`src/Game/Game.Prefabs/SchoolData.cs:9-17`): `m_StudentCapacity`, `m_GraduationModifier`, `m_EducationLevel`, `m_StudentWellbeing`, `m_StudentHealth`.
 Two corrections the first draft needed, both in [a prefab value read where the simulation reads an instance](../solutions/prefab-data-read-where-the-simulation-reads-an-instance.md). The last two fields are **not** what a student's happiness receives: `CitizenHappinessSystem.cs:172` declares `ComponentLookup<Game.Buildings.School>` and `:356-360` reads that instance component, which `SchoolAISystem.cs:145-146` writes as `clamp(round(efficiency * combined), -100, 100)`. And `ICombineData` does not make upgrades sum in — it declares `Combine` (`SchoolData.cs:19-26`) and each consumer walks `InstalledUpgrade` into a local itself (`GraduationSystem.cs:112-115`), with nothing writing a combined value back onto a prefab.
 
-**Live distribution** across 11,511 moved-in citizens, from `CountHouseholdDataSystem.GetHouseholdCountData()`: uneducated 1,310, poorly educated 5,375, educated 3,298, well educated 1,277, highly educated 251; 4,385 students. The mass sits at level 1, which is where the Elementary→education-1 mapping puts everyone who finished school once.
+**Live distribution** in a played save, from `CountHouseholdDataSystem.GetHouseholdCountData()`: the mass sits at education level 1, which is where the Elementary→education-1 mapping puts everyone who finished school once.
 
 ### School fees are charged per student per tick, from the household's money
 
@@ -217,8 +217,8 @@ Two corrections the first draft needed, both in [a prefab value read where the s
 
 `GetEducationResource` maps three fee buckets onto four school levels (`:464-478`): level 1 → `BasicEducation`, level 2 → `SecondaryEducation`, levels 3 **and 4** → `HigherEducation`. **College and University share one fee.**
 
-**Live defaults** from `ServiceFeeParameterData` (`src/Game/Game.Prefabs/ServiceFeeParameterData.cs:16-20`, `FeeParameters` at `src/Game/Game.Prefabs/FeeParameters.cs:8-12`): basic 25 (max 100, `m_Adjustable = false`), secondary 50 (max 200), higher 100 (max 400).
-**Basic education is not player-adjustable at 1.6.2f1** — that is a fact only the live read produced, since `m_Adjustable` is prefab data.
+**Live defaults** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`) from `ServiceFeeParameterData` (`src/Game/Game.Prefabs/ServiceFeeParameterData.cs:16-20`, `FeeParameters` at `src/Game/Game.Prefabs/FeeParameters.cs:8-12`): basic 25 (max 100, `m_Adjustable = false`), secondary 50 (max 200), higher 100 (max 400).
+**Basic education is not player-adjustable at 1.6.4f1** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`) — that is a fact only the live read produced, since `m_Adjustable` is prefab data.
 
 The same fee feeds the dropout calculation (`GraduationSystem.cs:143`) and the school's own average-graduation-time estimate (`src/Game/Game.Simulation/SchoolAISystem.cs:95`).
 
@@ -243,7 +243,7 @@ So **education is a ceiling, never a floor**: an educated citizen will take an u
 GetWorkerWorkforce(happiness, level) = ((level == 0 ? 2 : 1) + 2.5 * level) * (0.75 + happiness / 200)
 ```
 
-Verified live: `(50, 0)` → 2, `(50, 4)` → 11, `(100, 4)` → 13.75. At happiness 50 the multiplier is exactly 1, so the ladder is **2, 3.5, 6, 8.5, 11** — the level-0 special case lifts the bottom rung from 1 to 2, which makes the gap from uneducated to poorly educated the smallest on the ladder and every rung above it worth 2.5.
+Evaluated live (2026-11-11, 1.6.4f1): `(50, 0)` → 2, `(50, 4)` → 11, `(100, 4)` → 13.75. At happiness 50 the multiplier is exactly 1, so the ladder is **2, 3.5, 6, 8.5, 11** — the level-0 special case lifts the bottom rung from 1 to 2, which makes the gap from uneducated to poorly educated the smallest on the ladder and every rung above it worth 2.5.
 
 That number is summed over a company's `Employee` buffer (`:1418-1430`) and multiplies directly into production: `buildingEfficiency * sectorEfficiency * GetWorkforce(employees, citizens) * kCompanyUpdatesPerDay` (`:1496`).
 **This is the whole of "happiness feeds the economy"** — one term in one product, at `EconomyUtils.cs:1496`.
@@ -275,9 +275,9 @@ A **separate** counter, `m_UnemploymentTimeCounter`, is the one happiness reads 
 
 `EconomyUtils.GetHouseholdIncome` (`src/Game/Game.Economy/EconomyUtils.cs:444-483`) computes the same figures as a projection for the UI and for the move-away decision, applying the residential tax rate above the minimum-earnings threshold (`:457-465`). It differs from `PayWageSystem` in one place worth knowing: it pays `m_FamilyAllowance` to **teens as well as children** (`:469-472`), where the payment system pays teens the unemployment benefit.
 
-Verdict: the wiki's `Citizens` benefit table matches no single game mode, so what looks like a staleness split is a mode split. Its wages are `EasyMode`'s (1500/1800/2100/2400/2700, `conflicts.md:409`); its benefits are `NormalMode`'s (400/1200/800). `EconomyParametersMode` rewrites both groups and returns them field for field at 1.6.2f1, so none of these numbers moved with the game update (`conflicts.md:448`); the reading below is `NormalMode`'s throughout.
+Verdict: the wiki's `Citizens` benefit table matches no single game mode, so what looks like a staleness split is a mode split. Its wages are `EasyMode`'s (1500/1800/2100/2400/2700, `conflicts.md:416`); its benefits are `NormalMode`'s (400/1200/800). `EconomyParametersMode` rewrites both groups and returns them field for field (`EasyMode_EconomyParametersMode` read 2026-11-11 at 1.6.4f1); the reading below is `NormalMode`'s throughout.
 The wiki (https://cs2.paradoxwikis.com/Citizens, fetched 2026-08-06, page banner "verified for 1.0", wage table headed 1.3.3f1) states wages ₡1500/1800/2100/2400/2700, Family Allowance ₡400, Pension ₡1200, Unemployment Benefit ₡800 capped at 10 days, Residential Minimum Earnings ₡1400, Commuter Wage Multiplier 1.1.
-Reading the live `EconomyParameterData` singleton in a running 1.6.2f1 game on `NormalMode` gives **wages 1200/1500/2000/2500/3000, minimum earnings 1000 and commuter multiplier 1.2 (all three stale on the wiki) — and family allowance 400, pension 1200, unemployment benefit 800, unemployment max days 10 (all four match)**.
+Reading the live `EconomyParameterData` singleton (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`) gives **wages 1200/1500/2000/2500/3000, minimum earnings 1000 and commuter multiplier 1.2 (all three stale on the wiki) — and family allowance 400, pension 1200, unemployment benefit 800, unemployment max days 10 (all four match)**.
 The first-party source wins as `SOURCES.md` requires; what makes the verdict worth recording is that it is not uniform, so "the wiki's numbers are stale" and "the wiki's numbers are fine" are both wrong about this table.
 Rots: every number in the paragraph above. Re-read the `EconomyParameterData` singleton in a running game.
 
@@ -320,29 +320,29 @@ m_Health    = clamp(m_Health + d, 0, GetMaxHealth(ageInYears))
 
 **So a mod that changes a happiness input sees the population drift toward the new value over many passes rather than jump.** With interval 16 and sixteen update buckets, one citizen is touched once per 256 simulation frames.
 
-`GetMaxHealth(ageInYears)` is a step function (`:1510-1525`): 100 under 2 years, 90 under 3, 80 under 6, then `80 - 10 * floor(age - 5)`. Verified live: 80 at 5 years, 60 at 7, 40 at 9. **This is the "seniors slowly lose maximum health until they die" the wiki describes**, and it is age in _years_ against `TimeSettingsData.m_DaysPerYear`, not in days.
+`GetMaxHealth(ageInYears)` is a step function (`:1510-1525`): 100 under 2 years, 90 under 3, 80 under 6, then `80 - 10 * floor(age - 5)`. Evaluated live (2026-11-11, 1.6.4f1): 80 at 5 years, 60 at 7, 40 at 9. **This is the "seniors slowly lose maximum health until they die" the wiki describes**, and it is age in _years_ against `TimeSettingsData.m_DaysPerYear`, not in days.
 
 Selected factor formulas worth having (all `CitizenHappinessSystem.cs`):
 
 - **Apartment** (`:1068-1071`): `0.8 * (4*(level-1) + (24.55531 - 70.21 / (1 + (sizePerResident/0.03690514)^25.2376)^0.01494523))`, where `sizePerResident = m_SpaceMultiplier * lotX * lotY / (householdSize * residentialProperties)` (`:503`). A Homeless-flagged citizen, or a home that is not a spawnable residential building, is scored as `GetApartmentWellbeing(0.01, 1)` (`:513`) — only for a household with a `PropertyRenter` property (`:387`).
 - **Leisure** (`:1492-1499`): `(m_LeisureCounter - 128) / 16` for a resident; a flat **+7** for a tourist.
-- **Tax** (`:1370-1396`): `(10 - residentialTaxRate) * -multiplier`, the multiplier per education level, with the `TaxHappiness` city modifier applied to the bracket before the multiply. **Live**: uneducated −0.4, poorly −1, educated −2, well −4, highly −5. So a tax rise costs a highly educated citizen 12.5 times what it costs an uneducated one, and the neutral rate is 10%.
-- **Unemployment** (`:1358-1368`): `-min(m_MaxAccumulatedUnemployedWellbeingPenalty, m_UnemploymentTimeCounter * m_UnemployedWellbeingPenaltyAccumulatePerDay)`, zero for tourists. **Live**: accumulate 35/day, cap 70.
+- **Tax** (`:1370-1396`): `(10 - residentialTaxRate) * -multiplier`, the multiplier per education level, with the `TaxHappiness` city modifier applied to the bracket before the multiply. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): uneducated −0.4, poorly −1, educated −2, well −4, highly −5. So a tax rise costs a highly educated citizen 12.5 times what it costs an uneducated one, and the neutral rate is 10%.
+- **Unemployment** (`:1358-1368`): `-min(m_MaxAccumulatedUnemployedWellbeingPenalty, m_UnemploymentTimeCounter * m_UnemployedWellbeingPenaltyAccumulatePerDay)`, zero for tourists. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): accumulate 35/day, cap 70.
 - **Welfare** (`:1398-1404`): `welfareCoverage * m_WelfareMultiplier * max(0, (50 - currentHappiness) / 50)` — **it only helps citizens below 50 happiness**, and scales to nothing at 50.
 - **Sickness** (`:1419-1431`): on first tick with a health problem, `m_SicknessPenalty` is latched at `m_Health / 2` and applied as a health penalty until the problem clears.
-- **Homelessness** (`:1433-1436`): flat `(m_HomelessHealthEffect, m_HomelessWellbeingEffect)`. **Live, 1.6.2f1, `NormalMode`**: −20 and −20 — `CitizenHappinessParameterMode` rewrites both (`src/Game/Game.Prefabs.Modes/CitizenHappinessParameterMode.cs:62`, `:64`), and the `EasyMode` read gave −10 each.
-- **Death penalty** (`:1438-1454`): any dead member of the household costs every member `(-m_DeathHealthPenalty, -m_DeathWellbeingPenalty)`. **Live**: −10 health, −20 wellbeing.
+- **Homelessness** (`:1433-1436`): flat `(m_HomelessHealthEffect, m_HomelessWellbeingEffect)`. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): −20 and −20 — `CitizenHappinessParameterMode` rewrites both (`src/Game/Game.Prefabs.Modes/CitizenHappinessParameterMode.cs:134-135`), and `EasyMode_CitizenHappinessMode` sets −10 each.
+- **Death penalty** (`:1438-1454`): any dead member of the household costs every member `(-m_DeathHealthPenalty, -m_DeathWellbeingPenalty)`. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): −10 health, −20 wellbeing.
 - **Education** (`:1203-1213`): `sqrt(n) * m_EducationWellbeingMultiplier * (educationCoverage - m_NeutralEducation)`, and **`n` is not the number of children**. The count at `:330-336` is `if (citizen.GetAge() == CitizenAge.Child) { num3 += length; }` over the scored citizen, never a household member. So `n` is the whole household's size when the scored citizen is itself a child, and 0 for every teen, adult and elderly citizen. A game defect: the UI estimator counts the children correctly at `:1684-1687`, so the panel and the simulation disagree. **Live**: multiplier 3, neutral 5.
 - **Consumption** (`:337-346`): a tourist gets `default(int2)`; everyone else gets `new int2(0, GetWealthWellbeing(household2.m_Income, rent, length, in m_CitizenHappinessParameters))`, the rent being `PropertyRenter.m_Rent` or 0. `GetWealthWellbeing` (`:1483-1490`) returns 0 when `income <= 0`, else `math.clamp(Mathf.RoundToInt(GetConsumptionHappiness(math.max(0f, income - rent) / (float)math.max(1, familySize), in data)), -40, 40)`, and `GetConsumptionHappiness` evaluates `CitizenHappinessParameterData.m_ConsumptionHappinessCurve` (`:1478-1481`) — a wellbeing term from −40 to +40.
   `SubObjectSystem` calls the same function to set the `ObjectRequirementFlags.GoodWealth` placeholder requirement when it reaches `m_GoodWealthMinWellbeing` (`src/Game/Game.Objects/SubObjectSystem.cs:3186-3188`), and `DeveloperInfoUISystem` to print the panel's "Wealth Happiness" row (`src/Game/Game.UI.InGame/DeveloperInfoUISystem.cs:1395`), so the simulation and both estimates agree.
-- **Traffic penalty** (`CitizenHappinessSystem.cs:528`, `:552-555`): `m_PenaltyCounter` decays by 1 per pass and while non-zero costs `m_PenaltyEffect` wellbeing. **Live, 1.6.2f1, `NormalMode`**: −50 — `CitizenHappinessParameterMode` rewrites `m_PenaltyEffect` (`CitizenHappinessParameterMode.cs:60`), and the `EasyMode` read gave −25.
+- **Traffic penalty** (`CitizenHappinessSystem.cs:528`, `:552-555`): `m_PenaltyCounter` decays by 1 per pass and while non-zero costs `m_PenaltyEffect` wellbeing. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): −50 — `CitizenHappinessParameterMode` rewrites `m_PenaltyEffect` (`CitizenHappinessParameterMode.cs:133`), and `EasyMode_CitizenHappinessMode` sets −25.
 
 Two modifiers apply after the sums (`:561-566`): `LocalEffectSystem` position-based `Wellbeing`/`Health` modifiers, and the home district's `DistrictModifierType.Wellbeing`.
 
 Per-factor city averages are aggregated separately for the UI: each chunk enqueues an `int4` of (sum, count, healthSum, wellbeingSum) per factor into a queue (`:584-739`), `HappinessFactorJob` folds them into a 26×16 array (`:759-798`), and `GetHappinessFactor` averages across the sixteen buckets and subtracts the factor's `HappinessFactorParameterData.m_BaseLevel` (`:1008-1021`).
 `HappinessFactorParameterData { m_BaseLevel, m_LockedEntity }` is a buffer on the parameter prefab (`src/Game/Game.Prefabs/HappinessFactorParameterData.cs:5-11`); **a factor whose `m_LockedEntity` is a locked (not-yet-unlocked) feature reports zero**, which is how progression hides factors the player has not reached.
 
-**Live aggregate** across 11,511 moved-in citizens: total happiness 969,181 (mean 84.2), total wellbeing 1,104,704 (mean 96.0), total health 838,662 (mean 72.9). The gap is the point — in a well-run city wellbeing saturates near its 100 cap while health is held down by `GetMaxHealth`'s age ceiling, so **happiness in a mature city is mostly a demographic fact about the age pyramid rather than a service one**.
+**Live aggregate** in a played save, over the moved-in citizens: mean wellbeing sits near its 100 cap while mean health sits well below it. The gap is the point — in a well-run city wellbeing saturates near its 100 cap while health is held down by `GetMaxHealth`'s age ceiling, so **happiness in a mature city is mostly a demographic fact about the age pyramid rather than a service one**.
 
 Rots: the `HappinessFactor` enum's 26 members and their order (the factor index is `(int)factor + 26 * updateFrame` at `CitizenHappinessSystem.cs:997-1000`, so inserting a member reindexes the whole array), and every parameter name on `CitizenHappinessParameterData`.
 
@@ -373,7 +373,7 @@ Two components, and the direction between them is the thing to hold:
 
 Priority is assigned at that moment from `TripPriorityParametersData.GetPriority(purpose, citizen)` (`:1064`, `:1384`; the table at `src/Game/Game.Prefabs/TripPriorityParametersData.cs:39-81`), and the pathfinder's cost ceiling is `GetMaxCost(priority) = m_BaseMaxCost * priority / 128` (`:83-86`). `TripPriority.kDefault = 128` (`src/Game/Game.Citizens/TripPriority.cs:5`) is the neutral value, and a save older than `FormatTags.TripPriority` reads back 128 for every trip (`TripNeeded.cs:51-59`).
 
-**Live priority table** from the singleton: base max cost 8000; going home 192, moving away 192, hospital/safety/escape/shelter/deathcare/criminal 128, work 96, school 96, shopping 64, tourist 64, leisure lerped between 32 and 96 by `1 - leisureCounter/255`.
+**Live priority table** from the singleton (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): base max cost 8000; going home 192, moving away 192, hospital/safety/escape/shelter/deathcare/criminal 128, work 96, school 96, shopping 64, tourist 64, leisure lerped between 32 and 96 by `1 - leisureCounter/255`.
 So **going home is worth twice the path cost of going to work**, and a citizen with a full leisure counter will barely path for leisure at all.
 
 `PathUtils.IsPathfindingPurpose` (`src/Game/Game.Pathfind/PathUtils.cs:1852-1868`) names the eight purposes that take the _citizen-level_ pathfind branch rather than the resource/target-seeker branch: `GoingHome, Hospital, Safety, EmergencyShelter, Crime, Escape, Sightseeing, VisitAttractions`.
@@ -404,7 +404,7 @@ Rots: the `Purpose` enum's 41 members and their order — it is serialized as a 
 `GetSleepTime` (`CitizenBehaviorSystem.cs:1058-1106`) starts from `(0.875, 0.175)` of a day, adds a per-citizen offset of up to 0.2 from the `SleepOffset` seed, shifts by −0.05 for elderly, −0.1 for children, +0.05 for teens, and then slides the window to avoid the citizen's work or study hours.
 `kMinLeisurePossibility = 80`, `kLeisureSeekerCooldownFrames = 20000`, `kMaxPathfindCost = 17000` (`:1012-1016`).
 
-`LeisureParametersData` tunes the leisure counter (live read): `m_ChanceCitizenDecreaseLeisureCounter = 2`, `m_ChanceTouristDecreaseLeisureCounter = 20`, `m_AmountLeisureCounterDecrease = 1`, `m_LeisureRandomFactor = 512`, `m_TouristLodgingConsumePerDay = 30`, `m_TouristServiceConsumePerDay = 10`. The decrease is rolled inside the happiness job, not the leisure one (`CitizenHappinessSystem.cs:523-527`).
+`LeisureParametersData` tunes the leisure counter (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): `m_ChanceCitizenDecreaseLeisureCounter = 2`, `m_ChanceTouristDecreaseLeisureCounter = 20`, `m_AmountLeisureCounterDecrease = 1`, `m_LeisureRandomFactor = 512`, `m_TouristLodgingConsumePerDay = 30`, `m_TouristServiceConsumePerDay = 10`. The decrease is rolled inside the happiness job, not the leisure one (`CitizenHappinessSystem.cs:523-527`).
 
 ### Criminals
 
@@ -420,7 +420,7 @@ The probability scale is a population-relative one: the roll is `random.NextFloa
 
 **Criminality is not a citizen archetype**: the citizen keeps its job, its household and its education, and the `Criminal` component is added and removed around the episode. The UI reflects that — `CitizenUIUtils.GetOccupation` returns `Robber` or `Criminal` ahead of `Worker` and `Student` purely as a display precedence (`src/Game/Game.UI.InGame/CitizenUIUtils.cs:108-144`).
 
-**Verified live.** 20 citizens carried `Criminal` out of 13,441 in the loaded city, and the one sampled (entity 50743) was simultaneously an evening-shift level-2 `Worker` with `CriminalFlags.Robber` and no event — a finished episode whose flag had not been cleared. So a mod filtering on `Criminal` presence alone will include citizens who are not currently committing anything; the `m_Event != Entity.Null` test at `CrimeCheckSystem.cs:113` is how the game itself distinguishes them.
+**Verified live in a played save.** A citizen can carry `Criminal` with `CriminalFlags.Robber` and no event while working an ordinary shift — a finished episode whose flag had not been cleared. So a mod filtering on `Criminal` presence alone will include citizens who are not currently committing anything; the `m_Event != Entity.Null` test at `CrimeCheckSystem.cs:113` is how the game itself distinguishes them.
 
 ### Tourists
 
@@ -435,12 +435,12 @@ What differs from a resident, mechanically:
 - **Tax**: `GetTaxBonuses` is skipped for a tourist (`:534-537`), and they are not in the residential tax base.
 - **Unemployment**: `GetUnemploymentBonuses` returns zero (`:1358-1366`).
 - **Wealth wellbeing**: zero, `int5 = default(int2)` (`CitizenHappinessSystem.cs:337-340`); a tourist's leisure weight reads `GetTouristDisposableIncome`, the wage for their education level times `m_TouristTravelSpendMultiplier` (`LeisureSystem.cs:532-536`, `EconomyUtils.cs:439-442`).
-- **Consumption**: multiplied by `m_TouristConsumptionMultiplier` (**live: 2**) (`HouseholdBehaviorSystem.cs:236-238`).
+- **Consumption**: multiplied by `m_TouristConsumptionMultiplier` (**live: 2**, read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`) (`HouseholdBehaviorSystem.cs:236-238`).
 - **Happiness eligibility**: a tourist is the one exception to the moved-in gate (`CitizenHappinessSystem.cs:312`).
 - **No bicycle** (`CitizenInitializeSystem.cs:209`), no births (`BirthSystem.cs:117`), not workable (`CitizenUtils.cs:219-230`), not a resident for any of the three `IsResident`/`TryGetResident` predicates (`CitizenUtils.cs:72-140`).
 - **Lodging**: `TouristHouseholdBehaviorSystem` (`SystemOrder.cs:366`) and `HouseholdBehaviorSystem` add `LodgingSeeker` when the household has no hotel or its hotel is gone (`HouseholdBehaviorSystem.cs:239-252`). `MoveAwayReason` carries three tourist-specific exits: `TouristNoTarget`, `TouristNoHotel`, `TouristNoMoney` (`src/Game/Game.Agents/MoveAwayReason.cs:3-14`).
 
-**Verified live**: 17 tourist households, 30 tourist citizens. A sampled tourist household carried `TouristHousehold { m_Hotel = null }`, `Household { m_Flags = Tourist, m_Resources = 341 }`, an enabled `PropertySeeker` and a `Target` — so tourists use the ordinary property-seeking machinery to find their hotel.
+**Verified live in a played save**: a sampled tourist household carried `TouristHousehold { m_Hotel = null }`, `Household { m_Flags = Tourist }`, an enabled `PropertySeeker` and a `Target` — so tourists use the ordinary property-seeking machinery to find their hotel.
 
 ### Commuters
 
@@ -450,11 +450,11 @@ What differs from a resident, mechanically:
 Each gets `HouseholdFlags.Commuter`, `CommuterHousehold { m_OriginalFrom }` naming the outside connection it came from, and `CurrentBuilding` there.
 Its citizens carry `CitizenFlags.Commuter`.
 
-Differences: wage ×`m_CommuterWageMultiplier` (**live, `NormalMode`: 1.2**; `EconomyParametersMode` rewrites it, `EconomyParametersMode.cs:120`, and `EasyMode` gave 1.1) and no residential tax at all (`PayWageSystem.cs:115-118`, `:158`); no pets (`HouseholdInitializeSystem.cs:183`); no bicycle (`CitizenInitializeSystem.cs:209`); not workable and not a resident (`CitizenUtils.cs:219-230`, `:72-79`); education drawn from the wider 0–4 band at spawn (`CitizenInitializeSystem.cs:156`); and a commuter child or elderly citizen is **deleted outright** by `CitizenBehaviorSystem` (`CitizenBehaviorSystem.cs:686-691`).
+Differences: wage ×`m_CommuterWageMultiplier` (**1.2**, read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`; `EconomyParametersMode` rewrites it, `EconomyParametersMode.cs:120`, and `EasyMode_EconomyParametersMode` sets 1.1) and no residential tax at all (`PayWageSystem.cs:115-118`, `:158`); no pets (`HouseholdInitializeSystem.cs:183`); no bicycle (`CitizenInitializeSystem.cs:209`); not workable and not a resident (`CitizenUtils.cs:219-230`, `:72-79`); education drawn from the wider 0–4 band at spawn (`CitizenInitializeSystem.cs:156`); and a commuter child or elderly citizen is **deleted outright** by `CitizenBehaviorSystem` (`CitizenBehaviorSystem.cs:686-691`).
 `JobSeeker.m_Outside` is set from the commuter flag (`CitizenFindJobSystem.cs:185`), and a commuter's job seeker starts from its `CurrentBuilding` rather than a home property (`:171-174`).
 
 
-**Verified live**: 733 commuter households.
+**Verified live in a played save**: commuter households exist as their own population.
 
 ### Homelessness
 
@@ -463,16 +463,16 @@ A homeless household **loses ₡1 per pass** (`:195`) instead of consuming goods
 `CountHouseholdDataSystem` mirrors the state onto every member as `CitizenFlags.Homeless` (`CountHouseholdDataSystem.cs:324`, `:405`).
 Happiness applies `GetHomelessBonuses` and scores the apartment factor at the floor (`CitizenHappinessSystem.cs:511-521`) — only for a household whose `PropertyRenter` property has a prefab (`:321`, `:387`), so a homeless household with no temp home gets neither — the branch taken unless `(citizen.m_State & CitizenFlags.Homeless) == 0` and the home prefab is a spawnable residential building (`:498`), rather than on the `HomelessHousehold` component, so it follows the citizen flag's moved-in-only stamping.
 
-**Verified live, and the two counts disagree.** An `ecs_query` on `Game.Citizens.HomelessHousehold` returned **404** households; `CountHouseholdDataSystem.GetHouseholdCountData()` reported **249** homeless households and 304 homeless citizens in the same session.
+**Verified live in a played save, and the two counts disagree.** An `ecs_query` on `Game.Citizens.HomelessHousehold` returned more households than `CountHouseholdDataSystem.GetHouseholdCountData()` reported homeless in the same session.
 The gap is real. The census's household tally at `CountHouseholdDataSystem.cs:451-454` applies **no** moved-in filter — it adds `chunk.Count` for every `HomelessHousehold` chunk. It comes out smaller for three other reasons: the query excludes `Deleted` and `Temp` (`:1017-1025`), a chunk carrying `MovingAway` returns early and is booked as moving-away (`:438-443`), and `OnUpdate` publishes the previous pass's snapshot (`:1224`). The moved-in filter is real one level down, for citizens: `CitizenFlags.Homeless` and `ValidCitizen` are stamped only on members of moved-in households (`:315-324`) and `CountCitizensJob` requires `ValidCitizen` (`:540`).
-`HouseholdBehaviorSystem` is also not the only writer of `HomelessHousehold`: `PropertyProcessingSystem.cs:460` and `Game.Serialization/RenterSystem.cs:104` add it for shelter tenancy with no moved-in test, and `HouseholdMoveAwaySystem.cs:125` adds it too.
+`HouseholdBehaviorSystem` is also not the only writer of `HomelessHousehold`: `PropertyProcessingSystem.cs:480` and `Game.Serialization/RenterSystem.cs:104` add it for shelter tenancy with no moved-in test, and `HouseholdMoveAwaySystem.cs:125` adds it too.
 **A mod counting homelessness gets a different number depending on which it asks**, and the census is the one the game's own UI reports.
 
 ### Household consumption, shopping and moving away
 
 `HouseholdBehaviorSystem` (`SystemOrder.cs:365`, `kUpdatesPerDay = 256` at `HouseholdBehaviorSystem.cs:426`) is the household's own tick.
 
-Consumption (`:230-260`): while `m_Resources > 0`, it burns `GetConsumptionMultiplier(m_ResourceConsumptionMultiplier, totalWealth) * m_ResourceConsumptionPerCitizen * citizenCount` per pass and records `m_ConsumptionPerDay = 256 * that`. **Live, 1.6.2f1, `NormalMode`**: `m_ResourceConsumptionPerCitizen = 20` — `EconomyParametersMode` rewrites it (`EconomyParametersMode.cs:128`), and the `EasyMode` read gave 1.
+Consumption (`:230-260`): while `m_Resources > 0`, it burns `GetConsumptionMultiplier(m_ResourceConsumptionMultiplier, totalWealth) * m_ResourceConsumptionPerCitizen * citizenCount` per pass and records `m_ConsumptionPerDay = 256 * that`. **Live** (read live 2026-11-11 at 1.6.4f1, new Archipelago city, `NormalMode`): `m_ResourceConsumptionPerCitizen = 20` — `EconomyParametersMode` rewrites it (`EconomyParametersMode.cs:128`), and `EasyMode_EconomyParametersMode` sets 1.
 When resources hit zero it raises a `HouseholdNeed { m_Resource, m_Amount }` and the household goes shopping, gated on `kMinimumShoppingMoney = 1000` spendable (`:265-268`, constants at `:424-434`: `kCarAmount = 50`, `kMaxShoppingPossibility = 80`, `kMaxHouseholdNeedAmount = 2000`, `kCarBuyingMinimumMoney = 10000`).
 
 Moving away (`:156-177`) has three triggers, evaluated in order: **`NoAdults`** (no member is adult or older), **`NotHappy`** (the happiness curve above), **`NoMoney`** (`totalWealth + dailyIncome < -1000`). `CitizenUtils.HouseholdMoveAway` stamps `MovingAway { m_Reason }` (`CitizenUtils.cs:266-280`), and `CitizenBehaviorSystem` then sends every member to an outside connection with `Purpose.MovingAway`, stripping `Worker`, `Student` and `Leisure` on the way (`CitizenBehaviorSystem.cs:698-720`).
@@ -491,7 +491,7 @@ The workplace side of the same picture is a sibling, `CountWorkplacesSystem`, wh
 **This is the cheapest read in the topic**: a mod wanting population statistics calls `GetHouseholdCountData()` instead of building its own query.
 The same system also owns the `ValidCitizen` and `Homeless` flag maintenance (`CountHouseholdDataSystem.cs:294-408`), which is why it is not merely a counter.
 
-**Verified live** by calling `GetHouseholdCountData()` through the debugger: 4,943 moved-in households, 11,511 moved-in citizens, 1,009 moving in, 660 moving away, 733 commuter households, 30 tourist citizens, 249 homeless households / 304 homeless citizens, ages 2,781/756/6,454/1,520, 4,385 students, 5,494 workable, 4,897 city workers, 0 dead. Employables by education: 41/877/169/7/1 — i.e. the unemployment sits almost entirely at education level 1, which is what a city of Elementary graduates and Complex workplaces produces.
+**Verified live in a played save** by calling `GetHouseholdCountData()` through the debugger: it returns moved-in, moving-in and moving-away counts, commuter households, tourist citizens, homeless households and citizens, the four age groups, students, workable citizens, city workers and the dead, and its employables-by-education split put the unemployment almost entirely at education level 1, which is what a city of Elementary graduates and Complex workplaces produces.
 
 ### Partitioning is per-system, and the constant is not the rate
 
@@ -503,7 +503,7 @@ Ten, five and two account for the seventeen the table below marks yes; a roster 
 
 A `grep -c UpdateFrame` returns zero for `StudentSystem`, `CountHouseholdDataSystem`, `CitizenTravelPurposeSystem`, `TripNeededSystem`, `CountWorkplacesSystem`, `HouseholdSpawnSystem`, `PartnerSystem` and `ServiceFeeSystem`, on top of `FindJobSystem`, `FindSchoolSystem`, `TouristSpawnSystem` and `CommuterSpawnSystem`.
 
-The measured intervals and rates at 1.6.2f1:
+The measured intervals and rates at 1.6.4f1:
 
 | System | Interval | `UpdateFrame` | Per entity, per day |
 | --- | --- | --- | --- |
@@ -555,7 +555,7 @@ and registers forks in `SystemUpdatePhase.GameSimulation` at `:116-145`: `Time2W
 It also injects parameter-rewriting systems, **which is how it retunes the balance data this whole topic reads from prefab singletons without editing any prefab asset**. There is no band between two phases: `TimeSettingsMultiplierSystem`, `HealthEventProbabilityScalerSystem` and `DemandParameterUpdaterSystem` are each registered **twice** (`Mod.cs:154-159`), `UpdateAfter(PrefabUpdate)` and `UpdateBefore(PrefabReferences)`, which buys two run opportunities rather than a span; `EconomyParameterUpdaterSystem` is registered `UpdateAt(GameSimulation)` (`:143`) and re-applies on its own interval; and `HealthEventProbabilityScalerSystem` rewrites `HealthEventData` per health-event prefab, not a singleton at all.
 The generalisable technique is **re-apply on every load**. `LateInitialize` is the first writer, called from `PrefabInitializeSystem` in `PrefabUpdate` for entities carrying `Created` — but it is not the only one. `GameModeSystem` (registered in the front band of `Deserialize`, `SystemOrder.cs:797`) calls `RestoreDefaultData` then `ApplyMode` on every `GameManager.Load`, and all but three of the parameter components this topic reads have a mode class under `Game.Prefabs.Modes` that rebuilds them field by field from authored prefab data (`EconomyParametersMode.cs:156`, `:207`, and the sibling mode classes). `TimeSettingsData`, `CitizenParametersData` and `TripPriorityParametersData` have none and are genuinely write-once. The mode classes read, modify and write back only the fields they name, so fields they do not name — `EconomyParameterData.m_NewHouseholdStartMoney`, `m_MoveOutIncomeToRentRatio`, `m_MinFreeResidentialProperties`, `m_TouristTravelSpendMultiplier`, `CitizenHappinessParameterData.m_ConsumptionHappinessCurve` and `m_GoodWealthMinWellbeing` — are write-once too (`EconomyParametersMode.cs:110-208`, `CitizenHappinessParameterMode.cs:78-138`).
 Where the mode pass sits took two wrong readings before this one. It is registered `UpdateBefore<GameModeSystem>(Deserialize)` (`SystemOrder.cs:797`), so it runs in the **front band** — first in the phase, not last. Everything registered `UpdateAt(Deserialize)` runs after it, including `SerializerSystem` (`:799`), `ResolvePrefabsSystem` (`:802`) and the whole `PrefabReferences` sub-phase that one drives, and a mod's registration is later still. So an ordinary `Deserialize` placement already lands behind the pass and needs no anchor; what the pass is, is the last vanilla **writer** of these components in a load, which is the fact the guidance actually rests on. So a one-shot overwrite holds for its own session and is gone from the next load, which is why `EconomyParameterUpdaterSystem`'s `GameSimulation` placement with an interval works and a `PrefabUpdate` one-shot would not.
-**Live, 1.6.2f1, the user's running game**: `GameModeSystem.modeSetting` was `NormalMode`, which holds **zero** `m_ModePrefabs`, while `EasyMode`'s holds 21 entries including `CitizenHappinessParameterMode`, `EconomyParametersMode`, `HealthcareParametersMode` and `PoliceConfigurationMode`. So whether a load rewrites a given parameter component is a per-mode fact, not a general one, and no code read can answer it: `ModeSetting.m_ModePrefabs` is authored asset data, and a mode prefab is a base-game one, so it sits in `Cities2_Data/resources.assets` behind a field-order derivation rather than in any `.cok`. Read it through `PrefabSystem.GetPrefab<ModeSetting>` on the two `GameModeSettingData` entities. This is the finding that turns "re-apply on every load" from cautious advice into the rule.
+**Live** (read 2026-11-11 at 1.6.4f1, new Archipelago city): `GameModeSystem.modeSetting` is `NormalMode`, which holds **zero** `m_ModePrefabs`, while `EasyMode`'s holds 21 entries including `CitizenHappinessParameterMode`, `EconomyParametersMode`, `HealthcareParametersMode` and `PoliceConfigurationMode`. So whether a load rewrites a given parameter component is a per-mode fact, not a general one, and no code read can answer it: `ModeSetting.m_ModePrefabs` is authored asset data, and a mode prefab is a base-game one, so it sits in `Cities2_Data/resources.assets` behind a field-order derivation rather than in any `.cok`. Read it through `PrefabSystem.GetPrefab<ModeSetting>` on the two `GameModeSettingData` entities. This is the finding that turns "re-apply on every load" from cautious advice into the rule.
 **How far this generalises stayed open** — reach and scope are both authored asset data, so no code read settles whether a given player's save rewrites a given component. [retuning a parameter component the game mode rewrites](../solutions/retuning-a-parameter-component-the-game-mode-rewrites.md) records what the investigation established and what it did not, and is where the next ticket starts. What ships on it is one trap: the citizens entry file warns that the parameter components are not write-once, points the reader at `Game.Prefabs.Modes` for the check, and routes the retune to `OnGameLoaded`.
 
 **A type-name grep will not find these writers**: `ModeSetting` dispatches through `ApplyModeData`/`RestoreDefaultData` on a `ModePrefab` base, and the concrete write is a bare `SetComponentData` inside each mode class. `Game.Prefabs.Modes` writes 65 parameter and service components this way, so it is the directory to check before calling any parameter singleton write-once. [A search taken for a census](../solutions/empty-grep-read-as-proof-of-absence.md).
@@ -643,7 +643,7 @@ This topic produces a `Worker` with a level; that topic consumes it as an `Emplo
 - **The mod corpus outside `Time2Work` and `InfoLoom`.** A grep for `Game.Citizens`, `CitizenHappinessSystem`, `HouseholdCitizen` and `Game.Simulation.WorkerSystem` across all 22 checked-out repositories returned hits in only five: `Time2Work`, `InfoLoom`, and then `Anarchy`, `CS2-Platter`, `ExtraDetailingTools` and `Recolor` — the last four only through bulldozer/selection filtering and component-inspection tooling, never touching a citizen mechanic. Matching on **Demonstrates** as the catalog directs, no entry other than the two above names a system in this area.
 - **`resources.assets` for the balance numbers.** Not opened. `SOURCES.md` entry 5 records that base-game prefabs there carry no field names and need a parser driven by the decompiled field order. The running game answered every number this topic needed in single component reads, so the parser was never worth building. Anyone re-deriving these offline still faces that cost.
 - **The compiled UI bundle.** Not read for this topic. The frontend surfaces citizen state through `Game.UI.InGame`'s C# systems (`CitizenSection`, `CitizenUIUtils`, `AverageHappinessSection`, `EducationInfoviewUISystem`, `CityInfoUISystem.cs:303` for the per-factor averages), all of which are in the decompile, and the topic's subject ships as C# rather than as data or JavaScript — so `SOURCES.md`'s precedence rule puts the decompile first and the bundle adds nothing here. A `citizens` reference that wanted to name the UI _strings_ would need the locale data (entry 4) and `method-decoding-shipped-locale-data.md`.
-- **The `Adult`/`Child`/`Teen`/`Elderly` tag components as live state.** Walked and settled rather than left open: the grep over `src/Game/` found one consumer and no producer, and a live `ecs_query` returned zero against the 1.6.0f1 city's 6,454 adults. The finding is above. What dead-ends here is the assumption that a tag component declared in `Game.Citizens` means anything at runtime — some of them are load-time migration fossils.
+- **The `Adult`/`Child`/`Teen`/`Elderly` tag components as live state.** Walked and settled rather than left open: the grep over `src/Game/` found one consumer and no producer, and a live `ecs_query` in a populated city returned zero. The finding is above. What dead-ends here is the assumption that a tag component declared in `Game.Citizens` means anything at runtime — some of them are load-time migration fossils.
 - **The exact per-month school fee.** `ServiceFeeSystem.PayFee` charges `GetFee(resource, fees) / 128` per invocation at interval 2048 (`ServiceFeeSystem.cs:126`, `:350-353`), and turning that into a per-month figure comparable with the wiki's needs the fee system's own update-frame partitioning resolved against the day length. Not derived; the raw `m_Default` values are recorded instead, which is what a mod actually reads.
   **Moot under the ruling**, and recorded because the reason is instructive: the derivation existed only to compare a first-party figure against the wiki's, and no shipped prose now states either. What the reference owes here is the `/ 128` divisor and the interval, both of which are C#, so a reader can do this arithmetic against their own reading of `m_Default`.
 - **Measuring the happiness random walk's settling time.** The ±1 step and the 1-in-256-frames-per-citizen rate are both established from source, but no experiment was run to see how many in-game days a population takes to converge after a service change. The method would be: read `CountHouseholdDataSystem.GetHouseholdCountData().m_TotalMovedInCitizenWellbeing` at intervals across an `advance` window while a service is toggled. Cheap, and worth running if the reference wants to state a settling time.

@@ -1,9 +1,9 @@
 # Navigating the decompile
 
-**Baseline.** Decompiled game 1.6.2f1 (build 6300.26419, changelist 767.21d1), the checkout at `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2`, read at commit `ec7c3720` and since moved past, produced by `ilspycmd` over the install's own managed DLLs on 2026-06-24 and re-derived for this file on 2026-08-05.
+**Baseline.** Decompiled game 1.6.4f1 (build 6360.18886, changelist 1097.158a), read at decompile commit `7179d263` (2026-11-10). The file was written against an `ilspycmd` decompile of the install's own managed DLLs made 2026-06-24 (the checkout at `C:\Users\Morgan\Documents\Projets\DecompiledCitiesSkylines2`, commit `ec7c3720`), re-derived 2026-08-05, and carried onto each later version by the game-update sweeps.
 Install read at the same version, `C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II`.
 Mod corpus read 2026-08-05 at the 22-repository checkout under `C:\Users\Morgan\Documents\Projets\cs2-third-party-mods`.
-The reformatted UI bundle is `DecompiledCitiesSkylines2/src-ui/source.js`, **140,104 lines**, prettier at its defaults over `Cities2_Data/Content/Game/UI/index.js`; a copy whose line count differs will not resolve the citations below. The same directory also holds `src-ui/source.css`, 26,847 lines, from `index.css`.
+The reformatted UI bundle is `DecompiledCitiesSkylines2/src-ui/source.js`, **140,138 lines**, prettier at its defaults over `Cities2_Data/Content/Game/UI/index.js`; a copy whose line count differs will not resolve the citations below. The same directory also holds `src-ui/source.css`, 26,847 lines, from `index.css`.
 The wiki was not fetched: nothing on it bears on this topic (see `## Dead ends`).
 
 **This file is a verification pass, not a discovery pass.**
@@ -17,12 +17,12 @@ The register matters to the authoring agent: a count that has already drifted on
 
 ### The corpus, measured
 
-`src/` holds **173 assembly directories and 25,554 `.cs` files**, totalling **3,786,644 lines**.
-`src/Game` alone is **4,416 files and 837,115 lines**.
+`src/` holds **183 assembly directories and 25,694 `.cs` files**, totalling **3,797,572 lines**.
+`src/Game` alone is **4,418 files and 837,948 lines**.
 
-The survey's assembly count **moved from 163 to 173**, and there is a counting trap under it worth stating because it is the first command anybody runs.
-Counting directories under `src/` answers **174**: the extra one is `src/.idea/`, a JetBrains IDE settings folder (`src/.idea/.idea.Solution/.idea/vcs.xml` and six siblings) that is not an assembly and holds no C#.
-It is also the **only** thing in the whole tree that nests deeper than two levels — every other directory under `src/` is at depth 2 (`src/<Assembly>/<Namespace>/`) and nothing else at all is at depth 3, 4 or 5.
+The survey's assembly count **moved from 163 to 183**.
+Counting directories under `src/` gives the same 183: every directory there is an assembly.
+Inside one, every directory is a namespace at depth 2 (`src/<Assembly>/<Namespace>/`), and nothing sits deeper.
 
 **Ruled (2026-08-05, maintainer).** Nothing about `src/.idea/` ships: it exists only in this checkout, a provisioned decompile has none, and the maintainer's own files are not the reference's subject. The directory-count exclusion this paragraph recommended was cut, and the reference states no directory count at all — which is why counting them was the wrong instruction twice over.
 
@@ -30,7 +30,7 @@ Rots: every count in this section — re-run against `src/` after any regenerati
 
 ### The decompile is complete for anything a mod can touch, and that is checkable
 
-`Cities2_Data/Managed/` ships **173 `.dll` files** at 1.6.2f1 on the Linux install, and every one of them has a matching directory under `src/`.
+`Cities2_Data/Managed/` ships **183 `.dll` files** at 1.6.4f1 on the Linux install, and every one of them has a matching directory under `src/`.
 The decompile is the provisioning command's output over every managed assembly, so no assembly was pruned and an absence in it is a fact about the game.
 
 
@@ -42,7 +42,7 @@ Re-derived file counts, all **held** against the survey except where noted.
 
 | Assembly | `.cs` files | Survey | What it owns |
 | --- | ---: | :---: | --- |
-| `Game` | 4,416 | moved from 4,388 | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. |
+| `Game` | 4,418 | moved from 4,388 | Simulation, prefabs, tools, UI, the modding API, `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. |
 | `Colossal.Core` | 303 | held | `COSystemBase`, `Colossal.Entities` (3 files), `Colossal.Serialization.Entities` (47), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Versioning`. |
 | `Colossal.IO.AssetDatabase` | 165 | held | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`. |
 | `Colossal.UI.Binding` | 69 | held | The whole C#↔JS binding vocabulary. |
@@ -54,10 +54,10 @@ Re-derived file counts, all **held** against the survey except where noted.
 | `Colossal.Localization` | 18 | held | `LocalizationManager.AddSource`, `MemorySource`, `CSVFileSource`. |
 
 The survey listed `Colossal.IO` under Tier B and gave the Tier A total as "~5,100 files".
-Counting the nine it names gives **5,115**; adding `Colossal.IO` gives **5,148**, which is **20.1% of the tree**.
+Counting the nine it names gives **5,117**; adding `Colossal.IO` gives **5,150**, which is **20.0% of the tree**.
 `Colossal.IO` belongs in Tier A rather than Tier B: it is where the `.cok` package format is read (`ZipUtilities.cs`) and where the 479-line `BinaryReaderExtensions` lives, both of which a save- or asset-touching mod reads.
 
-**Tier B — read when your mod goes there.** `PDX.SDK` 923, `Unity.Entities` 654, `Colossal.Mono.Cecil` 580, `Unity.InputSystem` 334, `PDX.ModsUI` 253, `Colossal.OdinSerializer` 214, `Unity.Collections` 195, `Cohtml.RenderingBackend` 193, `cohtml.Net` 173, `Colossal.AssetPipeline` 132, `Backtrace.Unity` 101, `Colossal.PSI.Common` 89, `Colossal.ATL` 89, `Unity.Mathematics` 79, `Cohtml.Runtime` 70, `Game.ArtPipeline` 48, `Unity.Burst` 38. All **held** except `PDX.SDK` (909), `PDX.ModsUI` (240), `cohtml.Net` (160) and `Cohtml.Runtime` (69), which **moved up**.
+**Tier B — read when your mod goes there.** `PDX.SDK` 933, `Unity.Entities` 654, `Colossal.Mono.Cecil` 580, `Unity.InputSystem` 334, `PDX.ModsUI` 278, `Colossal.OdinSerializer` 214, `Unity.Collections` 195, `Cohtml.RenderingBackend` 193, `cohtml.Net` 173, `Colossal.AssetPipeline` 132, `Backtrace.Unity` 101, `Colossal.PSI.Common` 89, `Colossal.ATL` 89, `Unity.Mathematics` 79, `Cohtml.Runtime` 75, `Game.ArtPipeline` 48, `Unity.Burst` 38. All **held** except `PDX.SDK` (909), `PDX.ModsUI` (240), `cohtml.Net` (160) and `Cohtml.Runtime` (69), which **moved up**.
 
 `Unity.Entities` earns its place for one concrete reason and the survey states it correctly: `TypeManager.InitializeAdditionalTypes(assembly)` is called on a mod's own assembly the moment it loads (`src/Game/Game.Modding/ModManager.cs:149`, inside `AfterLoadAssembly` at `:147`), which is why a mod's `IComponentData` types get type indices at all.
 
@@ -75,7 +75,7 @@ Rots: every count in this table — re-run per assembly directory.
 
 ### The namespace map of `src/Game`: 75 directories, not 70
 
-The survey's header read "4,388 files, 70 directories" when it was written. The file count **moved to 4,416**; the directory count **moved to 75**.
+The survey's header read "4,388 files, 70 directories" when it was written. The file count **moved to 4,418**; the directory count **moved to 75**.
 Part of the gap is a directory the survey's table names nowhere — `Game.PSI.PdxSdk` (3 files) — and the rest is rows that group several directories into one cell, so the table understates its own coverage.
 
 Most per-namespace file counts in the survey's table held; `Game.Prefabs`, `Game.Rendering`, `Game.Net`, `Game.UI.Widgets`, `Game.UI.Editor`, `Game.Tools`, `Game.Settings`, `Game.Debug` and `Game.UI` **moved up**. The full current ranking, all 75, for the authoring agent to use directly:
@@ -83,9 +83,9 @@ Most per-namespace file counts in the survey's table held; `Game.Prefabs`, `Game
 | Directory | Files |  | Directory | Files |
 | --- | ---: | --- | --- | ---: |
 | `Game.Prefabs` | 1284 |  | `Game.City` | 34 |
-| `Game.Simulation` | 479 |  | `Game.Companies` | 30 |
+| `Game.Simulation` | 480 |  | `Game.Companies` | 30 |
 | `Game.UI.InGame` | 224 |  | `Game` (root ns) | 27 |
-| `Game.Rendering` | 157 |  | `Game.Zones` | 27 |
+| `Game.Rendering` | 158 |  | `Game.Zones` | 27 |
 | `Game.Net` | 149 |  | `Game.SceneFlow` | 22 |
 | `Game.UI.Widgets` | 147 |  | `Game.UI.Menu` | 21 |
 | `Game.Buildings` | 145 |  | `Game.Triggers` | 20 |
@@ -138,9 +138,9 @@ Rots: every count in this section, and the namespace directory set itself.
 
 ### The layout is two levels, and the globs that exploit it
 
-`src/<Assembly>/<FullNamespace>/<TypeName>.cs`. Nothing nests further, `src/.idea/` excepted.
-**25,348 of 25,554 files** sit at that depth; the remaining **206** sit one level up, directly in an assembly directory with no namespace folder — those are the assembly-root files, and `PDX.ModsUI` has 12 of them, `src/Game` 10 (above), `System.Data` 9, `Cinemachine` 8, `Unity.Entities.Hybrid` 7, `Unity.Entities` 6, `Colossal.Core` 4, and 88 other assemblies between 1 and 5.
-A glob written as `src/*/*/<Name>.cs` misses all 206. `src/**/<Name>.cs` catches them.
+`src/<Assembly>/<FullNamespace>/<TypeName>.cs`. Nothing nests further.
+**25,477 of 25,694 files** sit at that depth; the remaining **217** sit one level up, directly in an assembly directory with no namespace folder — those are the assembly-root files, and `PDX.ModsUI` has 12 of them, `src/Game` 10 (above), `System.Data` 9, `Cinemachine` 8, `Unity.Entities.Hybrid` 7, `Unity.Entities` 6, `Colossal.Core` 4, and 98 other assemblies between 1 and 5.
+A glob written as `src/*/*/<Name>.cs` misses all 217. `src/**/<Name>.cs` catches them.
 
 Verified with the harness's own `Glob` tool against this checkout:
 
@@ -152,25 +152,25 @@ Verified with the harness's own `Glob` tool against this checkout:
 | Everything in a namespace | `src/Game/<Namespace>/` | verbatim, dots and all |
 | Which assembly owns a namespace | `find src -maxdepth 2 -type d -name '<Namespace>'` | the only reliable route, because of the exceptions below |
 
-**How often a name-glob lands on one file.** Over the whole tree there are 23,746 distinct basenames and 22,599 of them occur once — **95.2%**.
-Inside the Tier A reading universe (5,148 files) there are 4,926 distinct basenames and 4,754 occur once — **96.5%**.
+**How often a name-glob lands on one file.** Over the whole tree there are 23,851 distinct basenames and 22,691 of them occur once — **95.1%**.
+Inside the Tier A reading universe (5,150 files) there are 4,928 distinct basenames and 4,756 occur once — **96.5%**.
 The survey's "works ~99% of the time" **moved down** to 96.5%, and the gap is not academic: the names that collide are the ones a mod author reaches for. `SearchSystem`, `InitializeSystem`, `RaycastJobs`, `ReferencesSystem`, `ValidationHelpers`, `UpdateCollectSystem`, `Node`, `Edge` are all high-traffic types.
 
 **Grep recipes that still work**, each re-run:
 
-| Question | Pattern | Measured against 1.6.2f1 |
+| Question | Pattern | Measured against 1.6.4f1 |
 | --- | --- | --- |
 | When does system X run | `X>` in `src/Game/Game.Common/SystemOrder.cs` | the only file with registrations at all (below) |
 | What runs in phase P | `SystemUpdatePhase.P` in `SystemOrder.cs` | 31 of the 32 phases appear |
 | Every subclass of B | `class [A-Za-z0-9_]+ : B\b` | 282 hits for `ComponentBase`, 113 for `PrefabBase` |
-| Every binding a system exposes | `AddBinding\|AddUpdateBinding` in that file | 895 call sites across `src/Game` |
+| Every binding a system exposes | `AddBinding\|AddUpdateBinding` in that file | 896 call sites across `src/Game` |
 | Which archetype carries C | `GetArchetypeComponents` in `src/Game/Game.Prefabs/` | 376 files |
 | The settings vocabulary | `SettingsUI` in `src/Game/Game.Settings/` | 38 `SettingsUI*Attribute.cs` files of 40 `*Attribute.cs` there |
 
 The survey's "all 40+ `SettingsUI*Attribute` types" **moved**: there are exactly **38**, in a directory holding 40 attribute files.
 
-**File-per-type, quantified.** Counting a top-level type as a `class`, `struct`, `interface`, `enum`, `record` or `delegate` declared at brace depth zero — three passes have disagreed here by using looser or tighter rules, and this one reproduces every figure below. In `src/Game` only **5 files of 4,416** declare more than one top-level type, and they are exactly the five the survey names: `Game.Reflection/DelegateAccessor.cs`, `Game.Settings/QualitySetting.cs`, `Game.UI.Editor/DualPopupValueField.cs`, `Game.UI.Editor/HierarchyMenu.cs`, `Game.UI.Widgets/FloatSliderField.cs`. **Held exactly.**
-Across the whole tree it is **151 files of 25,554**, and three of them are in `Colossal.UI.Binding`, four in `Colossal.IO.AssetDatabase` and three in `Colossal.Core` — all Tier A.
+**File-per-type, quantified.** Counting a top-level type as a `class`, `struct`, `interface`, `enum`, `record` or `delegate` declared at brace depth zero — three passes have disagreed here by using looser or tighter rules, and this one reproduces every figure below. In `src/Game` only **5 files of 4,418** declare more than one top-level type, and they are exactly the five the survey names: `Game.Reflection/DelegateAccessor.cs`, `Game.Settings/QualitySetting.cs`, `Game.UI.Editor/DualPopupValueField.cs`, `Game.UI.Editor/HierarchyMenu.cs`, `Game.UI.Widgets/FloatSliderField.cs`. **Held exactly.**
+Across the whole tree it is **152 files of 25,694**, and three of them are in `Colossal.UI.Binding`, four in `Colossal.IO.AssetDatabase` and three in `Colossal.Core` — all Tier A.
 
 That gap is the topic's own worked example of a scoped claim: file-per-type is a property of `src/Game`, not of the decompile.
 
@@ -182,7 +182,7 @@ Rots: the glob success rates and the five multi-type files in `src/Game`.
 ### The namespace-directory rule, and the six places it lies
 
 The rule: the directory name **is** the fully-qualified namespace, verbatim, dots included.
-It holds for every one of the 1,199 namespace directories. What does not hold is the inference a reader actually draws from it — that a `Game.*` namespace lives in the `Game` assembly.
+It holds for every one of the 1,223 namespace directories. What does not hold is the inference a reader actually draws from it — that a `Game.*` namespace lives in the `Game` assembly.
 
 **Six places it lies, all re-verified:**
 
@@ -219,7 +219,7 @@ Rots: the six-place list and the two `Colossal.IO` twins.
 `src/Game/Game.Common/SystemOrder.cs` is **1,062 lines** and holds **1,014** `UpdateAt<>` / `UpdateBefore<>` / `UpdateAfter<>` registrations.
 
 The stronger claim, which the survey does not make and which is what makes the file worth teaching: **it is the only file in `src/Game` that registers anything.**
-A grep for `UpdateAt<|UpdateBefore<|UpdateAfter<` across all 4,416 files returns exactly two files — `SystemOrder.cs` with 1,014 hits, and `src/Game/Game/UpdateSystem.cs` with 5, which are the method declarations themselves.
+A grep for `UpdateAt<|UpdateBefore<|UpdateAfter<` across all 4,418 files returns exactly two files — `SystemOrder.cs` with 1,014 hits, and `src/Game/Game/UpdateSystem.cs` with 5, which are the method declarations themselves.
 So a system absent from `SystemOrder.cs` is a system the game never registers, full stop. That is a negative result a reader can act on, and it is the one place in this topic where an empty grep does prove something — because the search space is one file and the search is over a closed vocabulary.
 
 **31 of the 32 phases appear there.** `src/Game/Game/SystemUpdatePhase.cs` is 38 lines declaring `Invalid = -1` plus 32 phases (`:5-37`). Every one is named in `SystemOrder.cs` except **`PreSimulation`**, which has zero registrations and is nevertheless pumped: `src/Game/Game.Simulation/SimulationSystem.cs:168` and `:272` both call `m_UpdateSystem.Update(SystemUpdatePhase.PreSimulation)`.
@@ -252,12 +252,12 @@ Two more shapes escape it too: there is **no** `__…EntityTypeHandle` variant w
 
 Verdict: the survey's stated pattern is wrong and the decompile overturns it. `survey-decompile-moddable-surface.md:515` puts `SharedComponentTypeHandle` inside the `<RO|RW>`-bearing alternation; every one of the shared-component fields in `src/Game` carries no access segment, `AgingSystem.cs:149` included. The corrected pattern is two shapes, not one: `__<Namespace>_<Type>_<RO|RW>_<ComponentLookup|ComponentTypeHandle|BufferLookup|BufferTypeHandle>` for the eight measured above, and `__<Namespace>_<Type>_SharedComponentTypeHandle` with no access segment. Note also that `BufferLookup` is in the real family and absent from the survey's list.
 
-**The eight `RO`/`RW` shapes and their populations**, measured across `src/Game` (33,367 occurrences total):
+**The eight `RO`/`RW` shapes and their populations**, measured across `src/Game` (33,370 occurrences total):
 
 | Suffix | Occurrences |
 | --- | ---: |
 | `_RO_ComponentLookup` | 16,041 |
-| `_RO_ComponentTypeHandle` | 7,044 |
+| `_RO_ComponentTypeHandle` | 7,047 |
 | `_RO_BufferLookup` | 4,221 |
 | `_RW_ComponentTypeHandle` | 1,686 |
 | `_RW_ComponentLookup` | 1,371 |
@@ -286,42 +286,42 @@ Every count below was re-run over `src/Game` and **every one held exactly**. Tha
 1. **`[CompilerGenerated]` on hand-written classes — 878 files.** `src/Game/Game.Simulation/AgingSystem.cs:18` carries it on `public class AgingSystem : GameSystemBase`, which is a hand-written simulation system that the DOTS source generator rewrote. **Do not skip a file because it says `[CompilerGenerated]`.** This is the single most misleading artifact in the corpus, and it sits on a fifth of `src/Game`.
 2. **`__TypeHandle` / `__AssignHandles` / `__AssignQueries` / `OnCreateForCompiler`.** In nearly every system. `__AssignQueries` is frequently a no-op (`AgingSystem.cs:286`). Ignore the machinery — but the **field names inside** the `TypeHandle` struct are the best index of what a system reads and writes (previous finding).
 3. **`InternalCompilerInterface.Get*` wrappers.** The codegen form of `SystemAPI.GetComponentLookup<X>()`. A mod writes the ordinary form.
-4. **Field-like events lowered to `Delegate.Combine`/`Delegate.Remove` — 80 occurrences across 30 files.** `src/Game/Game/GameSystemBase.cs:25` reads `loadGameSystem.onOnSaveGameLoaded = (LoadGameSystem.EventGameLoaded)Delegate.Combine(loadGameSystem.onOnSaveGameLoaded, new LoadGameSystem.EventGameLoaded(GameLoaded));` — source-level `+=`. **Held.** The tell the survey misses is two lines below: `:27-29` are ordinary `GameManager.instance.onWorldReady += WorldReady;`. The same method shows both forms, because `onOnSaveGameLoaded` is a delegate **field** and `onWorldReady` is an `event`. So the lowering marks a field, not an event, and a reader can tell which they are looking at by which form appears.
+4. **Field-like events lowered to `Delegate.Combine`/`Delegate.Remove` — 81 occurrences across 30 files.** `src/Game/Game/GameSystemBase.cs:25` reads `loadGameSystem.onOnSaveGameLoaded = (LoadGameSystem.EventGameLoaded)Delegate.Combine(loadGameSystem.onOnSaveGameLoaded, new LoadGameSystem.EventGameLoaded(GameLoaded));` — source-level `+=`. **Held.** The tell the survey misses is two lines below: `:27-29` are ordinary `GameManager.instance.onWorldReady += WorldReady;`. The same method shows both forms, because `onOnSaveGameLoaded` is a delegate **field** and `onWorldReady` is an `event`. So the lowering marks a field, not an event, and a reader can tell which they are looking at by which form appears.
 5. **Meaningless local names.** `num`, `num2`, `flag`, `text2`, `list`, `array` — and worse, locals named after their type with a numeric suffix: `int2 int5 = m_UpdateRanges[(int)phase];` at `UpdateSystem.cs:180` and again at `:220`. **Held at both lines.** Never infer meaning from a local identifier. This one has a second-order cost the survey does not draw out: it is why type-inferred call sites are unsearchable (family trap, below).
 6. **Named arguments partly reconstructed — 754 files carry `isReadOnly: true`.** **Held.** ILSpy restored these from a boolean-literal heuristic; most other call sites show bare positional literals. An absent argument name means nothing.
 7. **Deconstruction noise.** `var (_, modInfo2) = modsInfo;` at `src/Game/Game.Modding/ModManager.cs:270` — a `foreach` over a dictionary rendered oddly. **Held at the exact line.**
 8. **`[Preserve]` — 1,022 files.** IL2CPP link preservation, on `OnCreate`/`OnUpdate`/`OnDestroy`/constructors. Semantically irrelevant. **Held.**
 9. **Explicit no-arg constructors appended to every system.** `AgingSystem.cs:297`, `UpdateSystem.cs:503`. Not in the original source. (Survey said `:296`/`:503`; the AgingSystem line **moved by one**.)
 10. **`goto` and label residue — 41 files.** **Held.**
-11. **`unsafe` and raw pointers — 71 files.** Mostly native interop and `Colossal.Collections`. **Held.**
-12. **Codegen-only files.** Across the whole tree: `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` ×69, `__JobReflectionRegistrationOutput__*.cs` ×14, `-BurstDirectCallInitializer.cs` ×12, `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs` ×10. **All held.** 105 files, **174,035 lines**. The two largest files in `src/Game` are both on this list — `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` at 44,445 lines and `AssemblyTypeRegistry.cs` at 20,796 — against `Game.Net/LaneSystem.cs` at 9,368, the largest real file.
+11. **`unsafe` and raw pointers — 72 files.** Mostly native interop and `Colossal.Collections`. **Held.**
+12. **Codegen-only files.** Across the whole tree: `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` ×79, `__JobReflectionRegistrationOutput__*.cs` ×14, `-BurstDirectCallInitializer.cs` ×12, `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs` ×10. **All held.** 115 files, **175,921 lines**. The two largest files in `src/Game` are both on this list — `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` at 44,459 lines and `AssemblyTypeRegistry.cs` at 20,796 — against `Game.Net/LaneSystem.cs` at 9,368, the largest real file.
 13. **Compiler-generated closure and iterator classes are essentially absent.** **Zero** occurrences of `<>c__DisplayClass`, `_003C`, `_003E` or `<>c` in `src/Game`; only 24 files retain a visible `MoveNext()`. **Held exactly.** Lambdas and LINQ read as ordinary C# — `ModManager.cs:113-115` is a genuine `from r in asset.references where r.Value == null select r.Key`, **held**. This is better than a typical decompile and worth saying positively, because it is why a reader can trust what they read.
 14. **Generic type arguments are preserved**, closed generics included. No evidence of loss.
-15. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy.** `src/Game/Properties/AssemblyInfo.cs:20`. **133 of the 173 assemblies** carry that same string. The real version is the line above it — see the next finding.
+15. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy.** `src/Game/Properties/AssemblyInfo.cs:21`. **143 of the 183 assemblies** carry that same string. The real version is the line above it — see the next finding.
 
-**The Burst mangled names.** `src/Game/Properties/AssemblyInfo.cs:14-18` carries five `BurstCompiler.StaticTypeReinit` attributes naming types like `Game_002ERendering_002EDequeueAndSort_00004CA2_0024BurstDirectCall`. **Held at the exact lines.** `_002E` is `.`, `_0024` is `$`, and the hex block is the RID of the method's metadata token. **Corrected in place (review gate, 2026-08-26): this line read "the four-hex block is a compiler-assigned id" and both halves were wrong — the block is eight hex digits, and it is the method's row id.** The two dated notes below left it standing, which is the shape the repo `CLAUDE.md` warns about: appending a note is not editing the original. **Corrected (review gate, 2026-08-05): these are not dead ends, and the decode is.** The mangled name appears in the declaring source file as well as in the generated tables — `DequeueAndSort_00004CA2_0024BurstDirectCall` resolves to `src/Game/Game.Rendering/WaterRenderSystem.cs:81`, so grepping it lands a reader on the method. The decoded form is what matches nothing: the encoding names the namespace and the method and omits the declaring type, so no `Game.Rendering.DequeueAndSort` exists (it is `WaterRenderSystem.DequeueAndSort`), and the two `CopyWaterValuesInternal` entries decode to one identical name for two different types. **Corrected (review gate, 2026-08-06): the encoding appears in neither file as described.** `__JobReflectionRegistrationOutput__*.cs` carries no `_002E` at all, and `-BurstDirectCallInitializer.cs` carries the `_0024BurstDirectCall` suffix but writes the namespace as ordinary dotted C# — `WaterRenderSystem.DequeueAndSort_00004CA2_0024BurstDirectCall.Initialize();` — which makes it the more useful of the two, since it names the declaring type the encoded form omits.
+**The Burst mangled names.** `src/Game/Properties/AssemblyInfo.cs:14-19` carries six `BurstCompiler.StaticTypeReinit` attributes naming types like `Game_002ERendering_002EDequeueAndSort_00004CCB_0024BurstDirectCall`. **Held at the exact lines.** `_002E` is `.`, `_0024` is `$`, and the hex block is the RID of the method's metadata token. **Corrected in place (review gate, 2026-08-26): this line read "the four-hex block is a compiler-assigned id" and both halves were wrong — the block is eight hex digits, and it is the method's row id.** The two dated notes below left it standing, which is the shape the repo `CLAUDE.md` warns about: appending a note is not editing the original. **Corrected (review gate, 2026-08-05): these are not dead ends, and the decode is.** The mangled name appears in the declaring source file as well as in the generated tables — `DequeueAndSort_00004B5A_0024BurstDirectCall` resolves to `src/Game/Game.Rendering/WaterRenderSystem.cs:81`, so grepping it lands a reader on the method. The decoded form is what matches nothing: the encoding names the namespace and the method and omits the declaring type, so no `Game.Rendering.DequeueAndSort` exists (it is `WaterRenderSystem.DequeueAndSort`), and the two `CopyWaterValuesInternal` entries decode to one identical name for two different types. **Corrected (review gate, 2026-08-06): the encoding appears in neither file as described.** `__JobReflectionRegistrationOutput__*.cs` carries no `_002E` at all, and `-BurstDirectCallInitializer.cs` carries the `_0024BurstDirectCall` suffix but writes the namespace as ordinary dotted C# — `WaterRenderSystem.DequeueAndSort_00004B5A_0024BurstDirectCall.Initialize();` — which makes it the more useful of the two, since it names the declaring type the encoded form omits. Note (2026-11-11, the 1.6.4f1 game-update sweep): the two dated notes keep the ids their reviews read, which renumber with every build; at 1.6.4f1 the method is `DequeueAndSort_00004CCB_0024BurstDirectCall`, and three `CopyWaterValuesInternal` entries share the one decoded name.
 
 Rots: the artifact counts, and the ILSpy version tells.
 
 ### The decompile states its own version, in one line, next to a line that says it does not
 
 `docs/SOURCES.md:9` says "The install is the one that carries a version the agent can state."
-That is narrower than the checkout allows. **`src/Game/Properties/AssemblyInfo.cs:19` is `[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]`** — game version, changelist and build, from the decompile alone.
+That is narrower than the checkout allows. **`src/Game/Properties/AssemblyInfo.cs:20` is `[assembly: VersionInternal("1.6.4f1 (1097.158a) [6360.18886]")]`** — game version, changelist and build, from the decompile alone.
 
 Only **four** assemblies carry a `VersionInternal` attribute, and only one of them is the game's:
 
-- `src/Game/Properties/AssemblyInfo.cs:19` — `1.6.2f1 (767.21d1) [6300.26419]`
-- `src/Colossal.UI/Properties/AssemblyInfo.cs:7` — `1.0.0f1 (767.21d1) [6300.26396]`
-- `src/Colossal.Localization/Properties/AssemblyInfo.cs:6` — `1.0.0a1 (767.21d1) [6300.26396]`
+- `src/Game/Properties/AssemblyInfo.cs:20` — `1.6.4f1 (1097.158a) [6360.18886]`
+- `src/Colossal.UI/Properties/AssemblyInfo.cs:7` — `1.0.0f1 (1097.158a) [6360.18867]`
+- `src/Colossal.Localization/Properties/AssemblyInfo.cs:6` — `1.0.0a1 (1097.158a) [6360.18867]`
 - `src/Colossal.Core/Properties/AssemblyInfo.cs:8` — `1.0.0f1`, no build stamp
 
-The shared changelist `767.21d1` is what corroborates that the three carrying it came off one build.
+The shared changelist `1097.158a` is what corroborates that the three carrying it came off one build.
 
-The trap is the adjacency: `AssemblyVersion("0.0.0.0")` sits one line under the real answer in the same file, and 133 assemblies repeat it. A reader who greps `AssemblyVersion` concludes the decompile is version-blind.
+The trap is the adjacency: `AssemblyVersion("0.0.0.0")` sits one line under the real answer in the same file, and 143 assemblies repeat it. A reader who greps `AssemblyVersion` concludes the decompile is version-blind.
 Corroboration from the corpus, first-hand: the one mod file in twenty-two repositories that ships pasted decompiler output carries `// Assembly: Game, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null` as its header (`Time2Work/NightShift/Systems/Time2WorkResourceBuyerSystem.cs:1-3`) — the decoy propagated into a shipped mod.
 
 **Save-format history** is a second version surface: `src/Game/Game/Version.cs` is 826 lines of `[VersionConstant("<game version> [<build>]")]` fields. The survey's "200+ … through `1.5.7f1 [6157.21012]` at `:821`, `current` at `:825`" is consistent with the file's length: re-derived, the file carries **273** `VersionConstant` attributes.
-**Ruled (2026-08-05, orchestrator).** The inference this pass first drew from that — _the last named constant being `1.5.7f1` means 1.6.0f1 introduced no save-format break_ — does not follow and was cut from the shipped file. `current` at `:825` carries a bare `[VersionConstant]` with no version string and the value `315255277153176524` (`315290461530777395` at 1.6.2f1), past `garbageFeeReset`'s `310874822824251924` at `:821`, so the named milestones are not a reading of what the running build writes. What the gap implies for a save is `save-serialization`'s, and that reference currently says nothing about `Version.cs` at all. `save-serialization` owns the consequence; this topic owns that `Version.cs` is where the answer is and that it is in the root `Game` namespace directory rather than in `Game.Serialization`.
+**Ruled (2026-08-05, orchestrator).** The inference this pass first drew from that — _the last named constant being `1.5.7f1` means 1.6.0f1 introduced no save-format break_ — does not follow and was cut from the shipped file. `current` at `:825` carries a bare `[VersionConstant]` with no version string and the value `315255277153176524`, past `garbageFeeReset`'s `310874822824251924` at `:821`, so the named milestones are not a reading of what the running build writes. What the gap implies for a save is `save-serialization`'s, and that reference currently says nothing about `Version.cs` at all. `save-serialization` owns the consequence; this topic owns that `Version.cs` is where the answer is and that it is in the root `Game` namespace directory rather than in `Game.Serialization`.
 
 Rots: the four `VersionInternal` values, and `Version.cs`'s last named constant.
 
@@ -370,11 +370,11 @@ The failure is not the search. `placement-definitions` shipped "the only system 
 
 A grep scoped to `src/Game/Game.Tools/` returns 25 of the 34 and reads like a census. Of the nine it misses, one is codegen and the other eight are exactly the ones that make a claim about who produces definitions wrong: the two simulation spawners build definitions from a `CreateArchetype` rather than through a tool, and `ClearSystem`, `PlaceholderSystem` and `ReplacePrefabSystem` are outside the tool pipeline entirely.
 
-**A second case this file produced by accident**, which is the honest one to teach from because nobody set it up: the survey's own §5.1 claim that "only 5 files in all of `src/Game/` declare more than one top-level type". It is exactly right, and I reproduced it exactly. Corpus-wide the number is **151**, and three of the extras are in `Colossal.UI.Binding` — Tier A, and the assembly a UI mod reads first. A reader who drops "in `src/Game`" concludes file-per-type is a property of the decompile and then trusts `Glob CallBinding*.cs` to have found one type.
+**A second case this file produced by accident**, which is the honest one to teach from because nobody set it up: the survey's own §5.1 claim that "only 5 files in all of `src/Game/` declare more than one top-level type". It is exactly right, and I reproduced it exactly. Corpus-wide the number is **152**, and three of the extras are in `Colossal.UI.Binding` — Tier A, and the assembly a UI mod reads first. A reader who drops "in `src/Game`" concludes file-per-type is a property of the decompile and then trusts `Glob CallBinding*.cs` to have found one type.
 
 **What stating the scope looks like.** Two forms, and both are in the shipped tree already:
 
-- Scope in the sentence: `conflicts.md:594` — "A grep of `src/Game/` **outside `Game.Input` and `Game.Settings`** returns no other consumer of `Usages` at 1.6.0f1."
+- Scope in the sentence: `conflicts.md:605` — "A grep of `src/Game/` **outside `Game.Input` and `Game.Settings`** returns no other consumer of `Usages` at 1.6.0f1." (the sentence as it stood at 1.6.0f1; the line now names the one consumer that grep missed, `InputRebindingUISystem.cs`, with the scope still in the sentence)
 - Scope in the claim's own terms: `placement-definitions.md:16` — "`EntityManager.CreateArchetype` is used for a definition in exactly two places **in `src/Game/`**, both in the simulation rather than in a tool".
 
 The rule for the reference: **a negative claim carries the span it was run over, in the sentence, not in the citation.** A citation names where the evidence is; a scope names where the search was not.
@@ -382,8 +382,8 @@ The rule for the reference: **a negative claim carries the span it was run over,
 #### Trap 3: whole subsystems are invisible to a C# search
 
 **The frontend, quantified.** `src/` contains **zero** `.js`, `.css`, `.html`, `.tsx` and `.jsx` files.
-The shipped frontend is `Cities2_Data/Content/Game/UI/index.js`, 2,308,356 bytes on one line, reformatting to **140,104 lines** at `DecompiledCitiesSkylines2/src-ui/source.js`, beside `index.css` at 497,413 bytes / 26,847 lines.
-The bundle names **1,438 distinct `game-ui/…` module paths** (`src-ui/source.js`, e.g. `"game-ui/common/tooltip/description-tooltip/description-tooltip.tsx"`, `"game-ui/overlay/logo-screen/loading/loading-progress.tsx"`). A grep for `game-ui/` across all 25,554 C# files returns **nothing**.
+The shipped frontend is `Cities2_Data/Content/Game/UI/index.js`, 2,309,185 bytes on one line, reformatting to **140,138 lines** at `DecompiledCitiesSkylines2/src-ui/source.js`, beside `index.css` at 497,393 bytes / 26,847 lines.
+The bundle names **1,438 distinct `game-ui/…` module paths** (`src-ui/source.js`, e.g. `"game-ui/common/tooltip/description-tooltip/description-tooltip.tsx"`, `"game-ui/overlay/logo-screen/loading/loading-progress.tsx"`). A grep for `game-ui/` across all 25,694 C# files returns **nothing**.
 So the entire module registry — the surface a UI mod extends — is unreachable from the decompile by any search, and the decompile does not hint that it exists.
 
 **Anything shipping as data, quantified.** `Cities2_Data/resources.assets` is 221,648,712 bytes and holds the prefabs the base game shipped with. **Corrected (review gate, 2026-08-06): not "every base-game prefab".** Content added by free updates and packs lives in the `Content/Game/Prefabs_*.cok` packages beside it — `ChirperPark01` returns zero from `resources.assets` and eight from `Prefabs_FreeUpdate02.cok`, while `ElementarySchool01` and `CoalPowerPlant01` are in `resources.assets` as this section claims. It carries type names and no field names, confirmed first-hand by byte-grep: `ServiceConsumption` 432 matches, `BuildingPrefab` 265, `ObjectSubObjects` 4,183, `Citizen` 76 — while `m_Upkeep` and `m_ElectricityConsumption` return **zero**.
@@ -392,14 +392,14 @@ So the entire module registry — the surface a UI mod extends — is unreachabl
 **The 72% figure re-derived, and it holds.** `docs/solutions/empty-grep-read-as-proof-of-absence.md:45-47` states "72% of this game's localization namespaces never appear in C#". Re-derived against the 75 groups in `plugins/cs2-modding/skills/cs2-modding/references/technique/localization/vanilla-namespaces.md`:
 
 - Searching `src/Game` for each group name **used as a namespace prefix** — the literal `"<Group>.` — returns exactly **21**: `Assets`, `Common`, `DefaultTool`, `Editor`, `GameListScreen`, `Infoviews`, `Loading`, `Maps`, `Menu`, `Notifications`, `Options`, `Paradox`, `PhotoMode`, `Policy`, `Properties`, `Radio`, `SelectedInfoPanel`, `Services`, `StatisticsPanel`, `SubServices`, `Tools`.
-  That is the same 21 `localization.md` and `conflicts.md:548` name, reproduced independently. **54 of 75 groups — 72.0% — are invisible.** **Held.**
+  That is the same 21 `localization.md` and `conflicts.md:557` name, reproduced independently. **54 of 75 groups — 72.0% — are invisible.** **Held.**
 - Loosening the search to the bare literal `"<Group>"` adds eight — `Budget`, `Chirper`, `Climate`, `Content`, `Main`, `Overlay`, `Toolbar`, `Tutorials` — for 29 found and **46 of 75 (61.3%) invisible**. Several of the eight are coincidences rather than localization uses.
 
 So the shipped figure holds under the strict reading and 61% is the floor under the loosest one. The reference should state 72% with the counting rule attached, because a reader who counts differently gets a different number and will think the claim moved.
 
 **The verdict this trap produces.** For the frontend and for shipped data, `docs/SOURCES.md` names the source that can answer (entries 3, 4, 5, 9) and the decompile cannot answer at all. An empty C# grep on those subjects is not weak evidence — it is **no** evidence.
 
-Rots: the 1,438 module paths and the 140,104-line count.
+Rots: the 1,438 module paths and the 140,138-line count.
 
 #### Trap 4: a pattern naming one member of a family, taken for the family
 
@@ -439,13 +439,13 @@ The reading discipline behind this — read past the line that confirms you, int
 
 ### The surfaces that resist search, and what to do instead
 
-**String-literal-driven lookups.** Binding names and localization keys have no type-level trace: `src/Game` holds **895** `AddBinding`/`AddUpdateBinding` call sites, and each names its group and its key as two bare string literals. `src/Game/Game.UI.InGame/ToolUISystem.cs:135` is `new GetterValueBinding<uint>("tool", "allSnapMask", …)`; `src/Game/Game.UI.InGame/ChirperUISystem.cs` has `"chirper", "chirpAdded"`; `src/Game/Game.UI.InGame/GamePanelUISystem.cs` has `"Tool", "GamePanelUISystem"`. Grepping the literal is the only route.
+**String-literal-driven lookups.** Binding names and localization keys have no type-level trace: `src/Game` holds **896** `AddBinding`/`AddUpdateBinding` call sites, and each names its group and its key as two bare string literals. `src/Game/Game.UI.InGame/ToolUISystem.cs:135` is `new GetterValueBinding<uint>("tool", "allSnapMask", …)`; `src/Game/Game.UI.InGame/ChirperUISystem.cs` has `"chirper", "chirpAdded"`; `src/Game/Game.UI.InGame/GamePanelUISystem.cs` has `"Tool", "GamePanelUISystem"`. Grepping the literal is the only route.
 
-**The literal is also the only bridge to the frontend, and it works — sometimes.** `"allSnapMask"` appears in the C# at `ToolUISystem.cs:135-143` and in the bundle at `src-ui/source.js:46145` (plus `:13091`, `:46293-46296`). Grepping the same string on both sides is what joins the two halves of a binding.
+**The literal is also the only bridge to the frontend, and it works — sometimes.** `"allSnapMask"` appears in the C# at `ToolUISystem.cs:135-143` and in the bundle at `src-ui/source.js:46164` (plus `:13091`, `:46312-46315`). Grepping the same string on both sides is what joins the two halves of a binding.
 But `"ModLoadingStatus"` and `"ModsLoading"` — the survey's own examples, at `src/Game/Game.Modding/ModManager.cs:241/263/351/358` — return **zero** hits in the bundle. Their absence there means nothing about the frontend, because they are not binding names: they are notification ids consumed in C#.
 
 **And the worst case is a key that exists in no file as a contiguous string.** `src/Game/Game.UI.Menu/NotificationUISystem.cs:166` returns `"Menu.NOTIFICATION_TITLE[" + titleId + "]"`. So the runtime key for the mod-loading notification is `Menu.NOTIFICATION_TITLE[ModsLoading]`, and grepping that string finds it in **neither** the C# nor the bundle. It exists only in the shipped locale data — where a plain byte-grep does find it, one of thirteen (next finding).
-**A key the game constructs is a key no source-level search can find.** That is the rule, and `Assets` at 30 ids against 12,030 entries (`vanilla-namespaces.md`) is how big the constructed half of the key space is.
+**A key the game constructs is a key no source-level search can find.** That is the rule, and `Assets` at 30 ids against 12,032 entries (`vanilla-namespaces.md`) is how big the constructed half of the key space is.
 
 **Reflection-driven behaviour, and the good news that it is enumerable.** There is no call graph from `[SettingsUISlider]` to the slider widget. But only **37 files in `src/Game` import `System.Reflection`**, and the list is short enough to hand a reader whole:
 
@@ -477,13 +477,13 @@ The same works on `resources.assets` for type names (previous finding): `Service
 ### The exclusion list, measured
 
 The survey's standing exclusions are `src/mscorlib`, `src/System*`, `src/UnityEngine*`, `src/Unity.RenderPipelines*`, `src/Newtonsoft.Json`, `src/Colossal.Mono.Cecil`, `src/PDX.SDK`, plus four filename patterns.
-That set covers **14,819 of 25,554 files — 58.0%**.
+That set covers **14,829 of 25,694 files — 57.7%**, counting the directory globs alone.
 
-Extending it with the rest of Tier C — `src/netstandard`, `src/Mono.*`, `src/Microsoft.*`, `src/PDX.ModsUI`, `src/com.rlabrecque.steamworks.net`, `src/ICSharpCode.SharpZipLib`, `src/Cinemachine`, `src/DiscordSDK`, `src/Unity.TextMeshPro`, `src/Unity.VectorGraphics`, `src/Unity.Timeline`, `src/Colossal.OdinSerializer`, `src/*TestScenarios`, `src/Colossal.TestFramework`, `src/DryDock.Runtime` — brings it to **16,998 files, 66.5%**, leaving 8,556.
+Extending it with the rest of Tier C — `src/netstandard`, `src/Mono.*`, `src/Microsoft.*`, `src/PDX.ModsUI`, `src/com.rlabrecque.steamworks.net`, `src/ICSharpCode.SharpZipLib`, `src/Cinemachine`, `src/DiscordSDK`, `src/Unity.TextMeshPro`, `src/Unity.VectorGraphics`, `src/Unity.Timeline`, `src/Colossal.OdinSerializer`, `src/*TestScenarios`, `src/Colossal.TestFramework`, `src/DryDock.Runtime` — brings it to **17,033 files, 66.3%**, leaving 8,661.
 
-**The four filename patterns are worth more than their file count suggests.** `**/UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `**/-BurstDirectCallInitializer.cs`, `**/__JobReflectionRegistrationOutput__*.cs` and `**/AssemblyTypeRegistry.cs` are 105 files and **174,035 lines** — and they include the two largest files in `src/Game`, at 44,445 and 20,796 lines, against 9,368 for the largest real one (`Game.Net/LaneSystem.cs`). A grep for a common identifier without them spends most of its output on generated tables.
+**The four filename patterns are worth more than their file count suggests.** `**/UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs`, `**/-BurstDirectCallInitializer.cs`, `**/__JobReflectionRegistrationOutput__*.cs` and `**/AssemblyTypeRegistry.cs` are 115 files and **175,921 lines** — and they include the two largest files in `src/Game`, at 44,459 and 20,796 lines, against 9,368 for the largest real one (`Game.Net/LaneSystem.cs`). A grep for a common identifier without them spends most of its output on generated tables.
 
-`**/AssemblyInfo.cs` should **not** be excluded despite being 173 near-identical files: it is where the version lives.
+`**/AssemblyInfo.cs` should **not** be excluded despite being 183 near-identical files: it is where the version lives.
 
 Rots: both coverage percentages.
 
@@ -534,6 +534,7 @@ Four amendments, in the order they cost the reader.
 **1. Entry 1 should say the decompile states its own version.**
 `SOURCES.md:9` reads "The install is the one that carries a version the agent can state", and entry 1 says nothing about a version at all. The decompile carries it exactly, at `src/Game/Properties/AssemblyInfo.cs:19` — `[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]` — with three corroborating assemblies sharing the changelist. The line below it, `AssemblyVersion("0.0.0.0")`, is repeated by 133 assemblies and is what makes the checkout look version-blind.
 Proposed addition to entry 1: _"It states its own version: `src/Game/Properties/AssemblyInfo.cs` carries a `VersionInternal` attribute with the game version, changelist and build. The `AssemblyVersion` attribute on the line below it reads `0.0.0.0` in 133 of the 173 assemblies and settles nothing."_
+At 1.6.4f1 the attribute sits at `src/Game/Properties/AssemblyInfo.cs:20` and reads `1.6.4f1 (1097.158a) [6360.18886]`, and `AssemblyVersion("0.0.0.0")` is in 143 of the 183 assemblies.
 The precedence sentence at `:9` should narrow to what it is actually about — the install carries a version for the **frontend and the shipped data**, which the decompile does not cover.
 
 **2. Entry 4 should say a byte-grep answers existence without decoding.**
@@ -567,7 +568,7 @@ This pass proposed a durable consequence — _hand-written prose sitting in a de
 
 ## Bridge
 
-This topic bridges to **every** reference in the plugin, because it is the re-check path any claim goes through. A reader arriving at any reference with a type name, a message string or a field name and wanting to confirm it against 1.6.2f1 comes here for the route. That is the general bridge; the specific ones below are where a mechanics or technique topic needs a named artifact from this file rather than the general habit.
+This topic bridges to **every** reference in the plugin, because it is the re-check path any claim goes through. A reader arriving at any reference with a type name, a message string or a field name and wanting to confirm it against 1.6.4f1 comes here for the route. That is the general bridge; the specific ones below are where a mechanics or technique topic needs a named artifact from this file rather than the general habit.
 
 **`diagnostics`** — the named partner, and the traffic runs one way into this topic. A reader arrives holding a type name or a message string out of a log line and needs to find it. Three routes this file establishes serve exactly that:
 the name-glob (`src/**/<Name>.cs`, one hit 96.5% of the time in Tier A);
@@ -583,11 +584,11 @@ and the constructed-string rule for a message that is assembled rather than writ
 
 **`custom-tools`** — `kSnapAllIgnoredMask` at `ToolBaseSystem.cs:98` and its inlined consumer at `ToolUISystem.cs:142` is the const trap's headline case and is that reference's own corrected claim. The reference should not restate the correction; this topic teaches the mechanism that produced it.
 
-**`localization`** — the 72% figure is re-derived here (21 of 75 groups named as C# string literals) and is this topic's proof that a C# grep cannot survey the key space. The constructed-key rule (`Assets` at 30 ids and 12,030 entries) is why. The `.cok` byte-grep is the cheapest check a reader can run against that reference's table.
+**`localization`** — the 72% figure is re-derived here (21 of 75 groups named as C# string literals) and is this topic's proof that a C# grep cannot survey the key space. The constructed-key rule (`Assets` at 30 ids and 12,032 entries) is why. The `.cok` byte-grep is the cheapest check a reader can run against that reference's table.
 
-**`binding-layer`** and **`frontend-and-injection`** — the 895 `AddBinding` sites, the string-literal shape (**corrected, review gate 2026-08-06: the _key_ is always a literal, the _group_ often is not** — the info-panel sections write `new TriggerBinding(group, "toggle", …)` against the abstract `group` property in `Game.UI.InGame/InfoSectionBase.cs:38`, so a group-name grep misses every section that inherits it), and the fact that the literal is the **only** link between the C# and the bundle: `"allSnapMask"` in both (`ToolUISystem.cs:135`, `src-ui/source.js:46145`), `"ModLoadingStatus"` in one (`ModManager.cs:241`, absent from the bundle). Also the hard boundary: 1,438 `game-ui/…` module paths in the bundle, zero occurrences of `game-ui/` in 25,554 C# files, so nothing about the module registry is derivable from the decompile.
+**`binding-layer`** and **`frontend-and-injection`** — the 896 `AddBinding` sites, the string-literal shape (**corrected, review gate 2026-08-06: the _key_ is always a literal, the _group_ often is not** — the info-panel sections write `new TriggerBinding(group, "toggle", …)` against the abstract `group` property in `Game.UI.InGame/InfoSectionBase.cs:38`, so a group-name grep misses every section that inherits it), and the fact that the literal is the **only** link between the C# and the bundle: `"allSnapMask"` in both (`ToolUISystem.cs:135`, `src-ui/source.js:46164`), `"ModLoadingStatus"` in one (`ModManager.cs:241`, absent from the bundle). Also the hard boundary: 1,438 `game-ui/…` module paths in the bundle, zero occurrences of `game-ui/` in 25,694 C# files, so nothing about the module registry is derivable from the decompile.
 
-**`ui-build-and-devloop`** — the same boundary decides where that reference's reader looks. The install's `Cities2_Data/Content/Game/UI/` is the whole first-party frontend (`index.js` 2,308,356 bytes, `index.css` 497,413, plus `index.html`, `gameui.uiHost`, `Fonts/`, `Media/`, `Static/`), the reformatted copies at `DecompiledCitiesSkylines2/src-ui/source.js` (140,104 lines) and `source.css` (26,847) are what make a citation possible, and `grep -c` over the shipped one-line bundle is the counting trap (`docs/SOURCES.md:43`). Two corpus mods carry their own copies and both are stale — `CS2-Platter/Platter/UI/tools/source.js` at 123,754 lines and `HallOfFame/UI/vanilla-modules.source.js` at 119,304, against the install's 140,104 — which is why the install rather than a repository is the source.
+**`ui-build-and-devloop`** — the same boundary decides where that reference's reader looks. The install's `Cities2_Data/Content/Game/UI/` is the whole first-party frontend (`index.js` 2,309,185 bytes, `index.css` 497,393, plus `index.html`, `gameui.uiHost`, `Fonts/`, `Media/`, `Static/`), the reformatted copies at `DecompiledCitiesSkylines2/src-ui/source.js` (140,138 lines) and `source.css` (26,847) are what make a citation possible, and `grep -c` over the shipped one-line bundle is the counting trap (`docs/SOURCES.md:43`). Two corpus mods carry their own copies and both are stale — `CS2-Platter/Platter/UI/tools/source.js` at 123,754 lines and `HallOfFame/UI/vanilla-modules.source.js` at 119,304, against the install's 140,138 — which is why the install rather than a repository is the source.
 
 **`settings-and-input`** — `AutomaticSettings.cs` (1,896 lines, 20 reflection sites) and `ModSetting.cs:32-34`'s property-type scan are the two places where there is no call graph to follow, and the 38 `SettingsUI*Attribute` files are the vocabulary a reader enumerates instead. The 37-file reflection list is where that reference's "no static route" claims stop.
 
@@ -597,7 +598,7 @@ and the constructed-string rule for a message that is assembled rather than writ
 
 **`patching`** — a patch target has to be named exactly, so the disambiguation rule is that reference's precondition: qualify a colliding type by namespace directory, then by assembly. `src/Game` holds 149 duplicated basenames and 33 registrations the game itself has to write fully qualified.
 
-**`performance-and-memory`** — the Burst mangled names (`Game_002ERendering_002EDequeueAndSort_00004CA2_0024BurstDirectCall`, `AssemblyInfo.cs:14-18`) are what a reader chasing a Burst-compiled method greps for, from the method name onward. **Corrected in place (review gate, 2026-08-26): this line read that the names "are a dead end" and that the decode "gets them back to `Game.Rendering.DequeueAndSort`".** Both were retired by the 2026-08-05 correction above and survived here: the mangled name is what resolves, and the decoded form is what matches nothing, since the encoding omits the declaring type.
+**`performance-and-memory`** — the Burst mangled names (`Game_002ERendering_002EDequeueAndSort_00004CCB_0024BurstDirectCall`, `AssemblyInfo.cs:14-19`) are what a reader chasing a Burst-compiled method greps for, from the method name onward. **Corrected in place (review gate, 2026-08-26): this line read that the names "are a dead end" and that the decode "gets them back to `Game.Rendering.DequeueAndSort`".** Both were retired by the 2026-08-05 correction above and survived here: the mangled name is what resolves, and the decoded form is what matches nothing, since the encoding omits the declaring type.
 
 **`debug-menu`** — `Game.Debug` is 70 files with 30 `: BaseDebugSystem` subclasses, and `Game.Debug/DebugSystem.cs` (7,778 lines, the third-largest real file in `src/Game`) is both a reflection user and a `Citizen` writer, which is why it turns up in searches that have nothing to do with debugging.
 
@@ -631,10 +632,10 @@ No repository documents how to search a decompile, and the catalog's `Demonstrat
 
 **This file was named in neither of ticket 38's lists**, and was swept under the ticket's own rule that a file scoped out which turns out to assert engine behaviour is a finding. The assembly map, the grep recipes and the decompiler's own artifacts stayed out of scope — those are facts about ILSpy's output and about this checkout, and no Unity page speaks to them. What was swept is everything the two files claim about **what the DOTS generators and Burst's IL post-processor emit**, since those ship as source in the package cache and are therefore checkable by construction rather than by sampling.
 
-Unity docs fetched live 2026-08-26 at the version-pinned URLs `SOURCES.md` entry 13 fixes, Burst at `@1.8`; decompile read the same day at 1.6.0f1; package sources (entry 15) at `com.unity.burst@1.8.23` and `com.unity.entities@1.3.10`. No live game was used.
+Unity docs fetched live 2026-08-26 at the version-pinned URLs `SOURCES.md` entry 13 fixes, Burst at `@1.8`; decompile read the same day at 1.6.0f1, its cites and figures carried onto each later version by the game-update sweeps; package sources (entry 15) at `com.unity.burst@1.8.23` and `com.unity.entities@1.3.10`. No live game was used.
 
-- **The Burst mangled block is eight hex digits, not four, and the shipped grep recipe was built on the wrong width.** The post-processor builds it as `$"_{burstCompileMethod.MetadataToken.RID:X8}"` (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:670`), appended before `"$BurstDirectCall"` (`:727`, the constant at `:41`). `X8` is hex zero-padded to eight, and the value is the method's row id in the assembly's `MethodDef` table. Every instance in this build is eight digits — five in `src/Game/Properties/AssemblyInfo.cs:14-18` (`DequeueAndSort_00004CA2_…`, `CopyWaterValuesInternal_0000675C_…`, `_00006763_…`, `SimplexNoise_000094ED_…`, `PerlinNoise_000094EE_…`) and three more in `src/Unity.Burst/Properties/AssemblyInfo.cs:14-16`. Eight for eight. **This was not a docs-versus-decompile question at all** — the docs name the post-processor and never the mangling — it was a shipped sentence that miscounted, and the count is load-bearing because the next line tells the reader to grep the mangled name: a pattern built on four hex matches none of the eight names in this build. The shipped sentence now also says what the block *is*, so a reader knows it moves when the method table shifts rather than treating it as a stable id.
-- **The missing declaring type has a cause, and the cause confirms the shipped rule rather than moving it.** The post-processor creates the generated class with the *declaring type's namespace as its own* `Namespace` and only the method in its `Name`, then nests it (`ILPostProcessing.cs:727-739`, the nesting at `:739`) — which is exactly why an ILSpy-rendered `typeof(...)` yields namespace-plus-method and no declaring type. `src/Game/-BurstDirectCallInitializer.cs:11-15` names the declaring type, and the class is declared nested at `src/Game/Game.Rendering/WaterRenderSystem.cs:81`. No change; recorded because a claim verified reads differently from one nobody checked, and because this mechanism is what stops a later pass "correcting" it.
+- **The Burst mangled block is eight hex digits, not four, and the shipped grep recipe was built on the wrong width.** The post-processor builds it as `$"_{burstCompileMethod.MetadataToken.RID:X8}"` (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:670`), appended before `"$BurstDirectCall"` (`:727`, the constant at `:41`). `X8` is hex zero-padded to eight, and the value is the method's row id in the assembly's `MethodDef` table. Every instance in this build is eight digits — six in `src/Game/Properties/AssemblyInfo.cs:14-19` (`DequeueAndSort_00004CCB_…`, `CopyWaterValuesInternal_0000678F_…`, `_00006796_…`, `_0000679B_…`, `SimplexNoise_00009525_…`, `PerlinNoise_00009526_…`) and three more in `src/Unity.Burst/Properties/AssemblyInfo.cs:14-16`, and 128 for 128 over the twelve `src/*/Properties/AssemblyInfo.cs` files carrying a `StaticTypeReinit` line. **This was not a docs-versus-decompile question at all** — the docs name the post-processor and never the mangling — it was a shipped sentence that miscounted, and the count is load-bearing because the next line tells the reader to grep the mangled name: a pattern built on four hex matches none of the 128 names in this build. The shipped sentence now also says what the block *is*, so a reader knows it moves when the method table shifts rather than treating it as a stable id.
+- **The missing declaring type has a cause, and the cause confirms the shipped rule rather than moving it.** The post-processor creates the generated class with the *declaring type's namespace as its own* `Namespace` and only the method in its `Name`, then nests it (`ILPostProcessing.cs:727-739`, the nesting at `:739`) — which is exactly why an ILSpy-rendered `typeof(...)` yields namespace-plus-method and no declaring type. `src/Game/-BurstDirectCallInitializer.cs:11-16` names the declaring type, and the class is declared nested at `src/Game/Game.Rendering/WaterRenderSystem.cs:81`. No change; recorded because a claim verified reads differently from one nobody checked, and because this mechanism is what stops a later pass "correcting" it.
 - **`_RW_` is write *access*, not writes, and the shipped complement was drawn on one side only.** The access segment is decided by one boolean at the call the generator saw, never by what the code does with the handle: `$"__{Type}_{(IsReadOnly ? "RO" : "RW")}_…"` in `ComponentLookupFieldDescription.cs:32`, `BufferLookupFieldDescription.cs:31`, and `TypeHandleFieldDescription.cs:97/107`. The counterexample is in the game's own code: `src/Game/Game.Rendering/EditorGizmoSystem.cs` declares **both** handles on `SubObject` (`:315` read-only, `:317` read-write), uses the read-write one once to copy the buffer into a `NativeArray` a read-only gizmo job walks (`:455`, `:70-72`), and writes `SubObject` nowhere. So the system appears in an `_RW_` sweep and is not a writer. Reach, reported, on whether a third limit belongs beside the two the file already gives: `src/Game` has **zero** direct `GetComponentTypeHandle<…>(false)` and zero direct `GetComponentLookup<…>(false)` outside `InternalCompilerInterface`, so every read-write handle in the game is generator-emitted and the two stated limits are the right two on that side.
 - **The shipped set of eight was cleared by construction rather than confirmed, which is the discipline this plugin's sets have failed before.** The brief was to build a ninth from the generator source, not to check the eight given. The generators ship under `com.unity.entities@1.3.10/Unity.Entities/SourceGenerators/Source~/`, and every `TypeHandle` field name is one string interpolation in a field-description type, so reading them enumerates the family by construction — which no grep of `src/Game` can do. **The answer is four more access-bearing shapes** — `AspectTypeHandle` and `AspectLookup`, each in `RO` and `RW` (`TypeHandleFieldDescription.cs:92/118`, `AspectLookupFieldDescription.cs:32`) — **plus two kinds carrying no access segment**: `__<Type>_<WithDefaultQuery|WithoutDefaultQuery>_JobEntityTypeHandle` (`JobEntityQueryAndHandleDescription.cs:29`), which is the one that would defeat a `_RW_` sweep by putting `WithDefaultQuery` or `WithoutDefaultQuery` in the slot a reader expects `RO` or `RW` in, and the IFE container handle (`IfeTypeHandleFieldDescription.cs:24`). **And not one of them appears in this build**: `_AspectTypeHandle`, `_AspectLookup` and `_JobEntityTypeHandle` return zero across the whole of `src/`, and a terminal-segment census over the distinct `__…` identifiers in `src/Game` returns exactly the four access-bearing families, the shared-component shape with no access variant, the two escapees the file already lists, and the `__query_<hash>_<n>` fields. So the shipped eight are **complete for this checkout and are not the family**, and the shipped sentence now says which of the two it is — the honest fix, given that the file's subject is navigating *this* decompile. That a build using aspects or the per-entity job interface would carry the other four is what makes the zero result a measurement rather than an assumption.
 - **`__AssignQueries` is almost always the no-op, and the query fields it does assign had no entry.** The exact one-line body dominates by a wide margin across `src/Game`. **The census figures did not ship** — "frequently" became "almost always", which is what a reader acts on, and a proportion swept across an assembly is a search result. What did ship is the gap: the catalogue named `__AssignQueries` and never the `__query_<hash>_<n>` fields it assigns (for example `__query_350738572_0`, declared at `src/Game/Game.Rendering/WaterRenderSystem.cs:195`, assigned at `:666`), which a reader grepping `__` inside a system meets beside the handle fields with nothing explaining them.
@@ -645,7 +646,7 @@ Unity docs fetched live 2026-08-26 at the version-pinned URLs `SOURCES.md` entry
 
 Two corrections and a marker split, all from the generator sources rather than from `src/Game`.
 
-- **"The method's own metadata token" is the RID, not the token.** Burst builds the suffix as `$"_{burstCompileMethod.MetadataToken.RID:X8}"` (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:670`), spliced at `:727` before the `"$BurstDirectCall"` constant at `:41`; the generator's own comment at `:726` reads `// private static class (Name_RID.$Postfix)`. Every instance in this build has a zero high byte, which a MethodDef token — high byte `0x06` — cannot. A reader holding a token from a decompiler would compose `DequeueAndSort_06004CA2_0024BurstDirectCall` and grep for a name that does not exist, and the next line of that paragraph is the instruction to grep.
+- **"The method's own metadata token" is the RID, not the token.** Burst builds the suffix as `$"_{burstCompileMethod.MetadataToken.RID:X8}"` (`com.unity.burst@1.8.23/Unity.Burst.CodeGen/ILPostProcessing.cs:670`), spliced at `:727` before the `"$BurstDirectCall"` constant at `:41`; the generator's own comment at `:726` reads `// private static class (Name_RID.$Postfix)`. Every instance in this build has a zero high byte, which a MethodDef token — high byte `0x06` — cannot. A reader holding a token from a decompiler would compose `DequeueAndSort_06004CCB_0024BurstDirectCall` and grep for a name that does not exist, and the next line of that paragraph is the instruction to grep.
 - **The shipped set omitted the IFE container handle.** Constructed rather than confirmed, as `plugins/cs2-modding/AGENTS.md` requires of a set: every field of a generated `TypeHandle` struct is written from `TypeHandleStructNestedFields` (`SourceGenerators/Source~/SystemGenerator.Common/QueriesAndHandles.cs:14`), emitted by its only two writers (`:103-129`, `:165-198`), so the set is closed by the implementers of `IMemberDescription` — all of them under `INonQueryFieldDescriptions/`, and each one's `GeneratedFieldName` interpolation is one name shape. The one outside the shipped list is `__{ContainerTypeFullName}_TypeHandle` (`IfeTypeHandleFieldDescription.cs:24`), built for a `SystemAPI.Query` foreach from `IFE_{UniqueId}_{n}` (`SystemGenerator.SystemAPI.Query/IfeDescription.cs:345`). It carries no namespace, type or access segment, so neither shipped bullet caught it — and it is in this checkout, at `src/Unity.Scenes/Unity.Scenes/WeakAssetReferenceLoadingSystem.cs:274/276` and `src/Unity.Transforms.Hybrid/Unity.Entities/CompanionGameObjectUpdateTransformSystem.cs:189`.
 - **The marker named `src/Game`, where none of the beyond-this-build shapes appears.** `_AspectTypeHandle`, `_AspectLookup` and `JobEntityTypeHandle` return zero files across the whole decompile, and `_IFE_` returns only the two files above — nothing under `src/Game`. A sweep opening only what the marker named could never confirm, extend or retire the clause, which is how the clause came to omit a shape. The marker is now split per claim: `src/Game` for which shapes this build uses, and the package's field-description directory for the scheme's full list. It also read "the two shapes it takes" while closing a passage stating two shapes plus four exceptions.
 

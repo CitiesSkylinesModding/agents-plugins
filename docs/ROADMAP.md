@@ -175,7 +175,7 @@ ship, and the interesting version is the one a modder actually has.
 For the reference target the mechanism is now the repo-only `gameface-update` skill and the probe
 catalogue beside it (`.agents/skills/gameface-update/probes.md`): every claim the plugin rests on a
 probe, re-run through the `game_*` tools whenever the target's engine moves, as it did to the 2.2
-line CS2 ships as of 1.6.2f1 (`src/cohtml.Net/Properties/AssemblyInfo.cs:16`). The catalogue's own
+line CS2 ships as of 1.6.4f1 (`src/cohtml.Net/Properties/AssemblyInfo.cs:16`). The catalogue's own
 as-of line says whether its answers have been probed yet or are still the plugin's inferred claims.
 What remains beyond that is the part anyone can point at their own game: a probe script beside the
 `gameface` skill's `scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection —
@@ -1051,7 +1051,7 @@ failure surfaces should gain that row: set `Enabled = false` in such a catch.
 
 `ProxyBinding`'s `Equals`, `==`, `!=` and `GetHashCode` all go through `Comparer.defaultComparer`,
 whose options are `MapName`, `ActionName`, `Name` and `Device` (`ProxyBinding.cs:29-39`, `:812-845`
-at 1.6.2f1): a binding compares equal to itself after a rebind, whatever its new path and
+at 1.6.4f1): a binding compares equal to itself after a rebind, whatever its new path and
 modifiers, so a `==`, a `Distinct` or a dictionary keyed on a binding misses the change.
 `settings-and-input.md` documents
 `PathEquals` but not this; a line there should name `PathEquals` or `ConflictsWith` as the
@@ -1090,7 +1090,7 @@ publisher's copyrighted text, which is the line the recipe file states and any s
 Two constraints that would shape it. A script here is repository tooling of the kind `scripts/`
 already holds, not something the marketplace copies into a user's install; that makes it a
 maintenance tool for regenerating a shipped table, which is the honest framing rather than a
-user-facing feature. And every base locale file carries trailing bytes past their declared end, so
+user-facing feature. And a base locale file can carry trailing bytes past its declared end, so
 end-of-file is not end-of-data and the decoder has to stop on the counts.
 
 A second consumer, met in a mod's translation pass: an agent translating a mod into the game's
@@ -1185,8 +1185,8 @@ The `RegisterUpdater(Action)` row of `mod-lifecycle-and-ordering.md` needs the t
 
 **Priority:** medium · **Cost:** trivial
 
-`localization.md` closes the `ToUpper()`/`ToUpperInvariant()` enum-key mismatch as inert (`:161`, `:675`), because `GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`src/Game/Game.SceneFlow/GameManager.cs:542`).
-But `Awake` is `async void` (`:518`) and sets it before its first `await` (`:557`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
+`localization.md` closes the `ToUpper()`/`ToUpperInvariant()` enum-key mismatch as inert (`:161`, `:675`), because `GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`src/Game/Game.SceneFlow/GameManager.cs:546`).
+But `Awake` is `async void` (`:522`) and sets it before its first `await` (`:561`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
 So culture-sensitive calls (`ToLower()`, `ToUpper()`, `StartsWith(string)`, a culture `IndexOf`) follow the player's locale, and the enum-key mismatch is live under a Turkish or Azeri one.
 Colossal.Json is one: it decodes a JSON number into a `string` field through `Convert.ChangeType(data, typeof(string))` with no provider (`src/Colossal.Core/Colossal.Json/JSON.cs:199`), so `6.5` arrives as `"6,5"` under a comma-decimal locale (confirmed in game under `fr-FR`; Hall of Fame's photo mode settings read NaN that way).
 Correct both passages, and add the rules: use the invariant or ordinal forms wherever a string must compare the same for every player, and decode a JSON number into a numeric field. Found while reviewing a Find It search change.
@@ -1195,14 +1195,14 @@ Correct both passages, and add the rules: use the invariant or ordinal forms whe
 
 **Priority:** low · **Cost:** trivial
 
-No reference says the PDX SDK's local mod lookup completes synchronously: `ModsInformationService.GetLocalModDetails` reads only the local cache and returns `Task.FromResult` on both paths (`src/PDX.SDK/PDX.SDK.Internal.Service.Mods.Services/ModsInformationService.cs:92-130`), so a mod's `async` method awaiting it never yields and runs to its end inside the call.
+No reference says the PDX SDK's local mod lookup completes synchronously: `ModsInformationService.GetLocalModDetails` reads only the local cache and returns `Task.FromResult` on both paths (`src/PDX.SDK/PDX.SDK.Internal.Service.Mods.Services/ModsInformationService.cs:96-134`), so a mod's `async` method awaiting it never yields and runs to its end inside the call.
 The fact to add, beside the SDK's entry in `navigating-the-decompile`: code after that await runs before the caller's next line, so no frame or other thread sees the method half done. Found while reviewing a Find It change, whose reviewers raised a race on the mod dates it fills that cannot happen.
 
 ### A mod-held runtime prefab survives the load's asset unload
 
 **Priority:** low · **Cost:** trivial
 
-`prefabs-and-assets.md` covers `ScriptableObject.CreateInstance` (`:337`) but not whether such an object outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`src/Game/Game.SceneFlow/GameManager.cs:927`).
+`prefabs-and-assets.md` covers `ScriptableObject.CreateInstance` (`:337`) but not whether such an object outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`src/Game/Game.SceneFlow/GameManager.cs:931`).
 Unity keeps what script fields and statics reach, and a managed system is reachable from the static `World.s_AllWorlds` (`src/Unity.Entities/Unity.Entities/World.cs:57`), so an instance a system's field (or an object it holds) references survives without `HideFlags`. Read from the decompile and Unity's documented rule, not tested in game. The fact to add there; found while reviewing a Find It change, where three reviewers raised the opposite as a bug.
 
 ### An updated prefab's old entity can come first, and still resolves
@@ -1388,16 +1388,16 @@ What sends the agent there is untraced: `cs2-mod-project`'s description, a point
 
 **Priority:** high · **Cost:** trivial
 
-`mod-lifecycle-and-ordering.md`'s startup sequence puts mod loading before the world is ready, but a Paradox Mods mod can load after the main menu: when the Paradox login and the mod sync outlast the boot, `RegisterDatabase` logs `Defer Mods load` in `SceneFlow.log`, waits for the ready state, then calls `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1501-1526`, `:1643`).
-The systems such a mod creates never get that main menu's `OnGameLoadingComplete` (`:1136`), and nothing logs it.
-The rule to add: a system that acts on a loading completion replays it at the end of `OnCreate` when `gameMode` is `MainMenu` and `state` is `WorldReady`; the game sets that state right after raising the event (`:1137`), so a system sees one or the other, never neither. A read made during the replay sees only the mods loaded before this one, and a late load landing after a city load still misses it.
+`mod-lifecycle-and-ordering.md`'s startup sequence puts mod loading before the world is ready, but a Paradox Mods mod can load after the main menu: when the Paradox login and the mod sync outlast the boot, `RegisterDatabase` logs `Defer Mods load` in `SceneFlow.log`, waits for the ready state, then calls `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1544-1569`, `:1686`).
+The systems such a mod creates never get that main menu's `OnGameLoadingComplete` (`:1150`), and nothing logs it.
+The rule to add: a system that acts on a loading completion replays it at the end of `OnCreate` when `gameMode` is `MainMenu` and `state` is `WorldReady`; the game sets that state right after raising the event (`:1151`), so a system sees the main menu's event or the replay, never neither. A read made during the replay sees only the mods loaded before this one. A city or editor load first awaits `WaitForModsLoaded()` (`:1109-1118`, body at `:1328-1349`), which the session's first mods-database registration completes (`:1417`, `:1452`), so a late load from that registration lands inside the city load and gets its completion. A late load still misses it when no registration has started 60 s into the wait (`kModsRegistrationTimeout`, `:221`; the wait is unbounded once one has, `:1339`), where the load logs `Mods registration did not start within {0}s, continuing` (`:1345`); after a later login; and for a mod enabled later through a playset or mod-status change.
 Found in Hall of Fame's usage statistics, where about 9% of 2026.6.0 sessions never tracked the main menu; its `docs/solutions/a-late-loaded-mod-misses-the-main-menus-loading-completion.md` carries the evidence.
 
 ### A mod's settings are written only on a clean quit
 
 **Priority:** medium · **Cost:** trivial
 
-`settings-and-input.md` says nothing about when settings reach disk: the game writes them only on a clean quit (`AssetDatabase.global.SaveAllSettings()`, `src/Game/Game.SceneFlow/GameManager.cs:798`), so a crash loses every change made since the launch.
+`settings-and-input.md` says nothing about when settings reach disk: the game writes them only on a clean quit (`AssetDatabase.global.SaveAllSettings()`, `src/Game/Game.SceneFlow/GameManager.cs:802`), so a crash loses every change made since the launch.
 The base `Setting.ApplyAndSave` is the obvious way out and the wrong one: it applies first, raising `onSettingsApplied`, and it picks the file to write from the short class name, so two mods with a `Settings` class write each other's file.
 The rule to add: save a change that must survive a crash through `AssetDatabase.global.SaveAllSettings()`, which writes every mod's settings without applying them; the game queues those saves with one running and one waiting and drops the rest, so a burst costs at most two.
 Found in Hall of Fame, whose menu tour came back after crashes; its `docs/solutions/a-setting-is-lost-when-the-game-crashes.md` carries the fix.
@@ -1442,7 +1442,7 @@ Try the smaller fix first: that error naming the saves it did find answers the s
 A `cs2-dev` tool, or a skill teaching a recipe, that switches the active playset and enables, disables, subscribes or unsubscribes a mod in it, with or without a running game.
 The same tool could search the Paradox Mods API for mods, so a session finds a mod's id, author and versions without the in-game screen or the website.
 Without it, a session drives the in-game Paradox Mods screen by hand, or hands the step to the user; that screen renders in its own view, out of the `game_*` tools' reach, so only computer use clicks through it.
-The game reaches the playset through the PDX SDK: `ModManager` disables a failed mod with `EnableModInActivePlayset(platformID, enable: false)` (`src/Game/Game.Modding/ModManager.cs:331`), and a change in a running game reaches `OnEntryIsInActivePlaysetChanged`, which re-runs `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1529-1643`).
+The game reaches the playset through the PDX SDK: `ModManager` disables a failed mod with `EnableModInActivePlayset(platformID, enable: false)` (`src/Game/Game.Modding/ModManager.cs:331`), and a change in a running game reaches `OnEntryIsInActivePlaysetChanged`, which re-runs `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1572-1686`).
 That second path is how a session loads a mod late on purpose, the only way to reproduce a bug that needs a playset sync, so the tool would also make that repro deterministic.
 `.cache/Mods/playset_config.json` is not the seam: hand-editing it fights the playset sync, as "Running the game without mods" notes.
 Hit on 2026-11-05 (session `47ef7feb-8a68-4b88-8947-3f03f487d22d`): reproducing a ToggleMarkers bug that shows only when Paradox mods load after boot took a subscription the user made by hand, then a disable and re-enable through the in-game screen, since boots kept logging `Preload Mods at boot` rather than `Defer Mods load`.

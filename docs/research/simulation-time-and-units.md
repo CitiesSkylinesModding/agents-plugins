@@ -1,16 +1,16 @@
 # Simulation time and units
 
-**Baseline.** Game version 1.6.2f1, established against the decompiled C# under `DecompiledCitiesSkylines2/src/`, against the installed game's UI bundle read through the reformatted copy at `DecompiledCitiesSkylines2/src-ui/source.js` (prettier at its defaults, **140,104 lines** — check your copy's count before trusting a line number from it), and against the user's running city — a debug-patched development build, read live over the sibling `unity-devtools` plugin and the `coherent-gameface` plugin — on 2026-08-22. Wiki pages fetched 2026-08-22. The mod corpus at `cs2-third-party-mods` was read on 2026-08-22 (22 repositories).
+**Baseline.** Game version 1.6.4f1, established against the decompiled C# under `DecompiledCitiesSkylines2/src/`, against the installed game's UI bundle read through the reformatted copy at `DecompiledCitiesSkylines2/src-ui/source.js` (prettier at its defaults, **140,138 lines** — check your copy's count before trusting a line number from it), and against a running new Archipelago city in NormalMode on a 1.6.4f1 development build with a five-mod playset, read live over the sibling `unity-devtools` plugin and the `coherent-gameface` plugin on 2026-11-11. Wiki pages fetched 2026-08-22. The mod corpus at `cs2-third-party-mods` was read on 2026-08-22 (22 repositories).
 
-**The live save is a throwaway continued city, not a fresh one.** `SimulationSystem.frameIndex = 5,632,217` against `TimeData.m_FirstFrame = 5,600,069`, so the city is 32,148 frames — about 2 h 56 min of in-game clock — old inside a process whose frame counter had already reached 5.6 million. That gap is itself a finding (below); nothing else here depends on the save's age, because everything live read is either a singleton the game rebuilds each load or a prefab component.
+**The live city is a new one, running at `selectedSpeed = 1`.** `TimeData.m_FirstFrame = 15,253,731`, so the process's frame counter had already reached 15 million when the city was created. That gap is itself a finding (below); nothing else here depends on the city's age, because everything live read is either a singleton the game rebuilds each load or a prefab component.
 
 **Ruled (2026-08-06, the citizens-and-households pass; conflicts.md), governing every finding in this file.** A shipped reference states **no prefab value**. It names the component and the field, with the access shape, and that is the whole of what it says about the magnitude. Three things survive untouched: **C# constants ship, as numbers** — a `const` or `static readonly` the consuming code compiled in is offline-checkable and citable to a line; **formulas ship whole** — the expression a system evaluates, its baseline and its step functions are invariant structure rather than balance; and **the component-to-number-family map ships whole**, with the access shape beside each component, because an agent cannot perform the read without it. Two consequences bind: a derived ratio is a magnitude wearing a mechanism's clothes, and an adverb carrying the same magnitude ("far longer", "roughly twice") counts as the number.
 **This topic sits unusually well under that ruling and the split runs through the middle of the clock.** The tick count per day is `public const int TimeSystem.kTicksPerDay = 262144` — a `const` the consuming code compiles in, at 275 sites across the assembly — so it ships as the number. The days-per-year is `TimeSettingsPrefab.m_DaysPerYear`, a Unity-serialized field copied into `TimeSettingsData` — so **twelve does not ship as a prefab value**, even though it is what the shipped asset carries. What rescues it is that consuming C# compiles a twelve in independently, in four places that no data can replace (the `CalendarEventMonths` enum's twelve members, `ClimateSystem`'s `Assert.AreEqual(12, …)` and its `int[12,5]` lookup table, `TimeUISystem`'s query-empty fallback), and those are constants. So the reference states **"the game's own code compiles a twelve-day year in as an assertion, an enum and a table dimension, while the operative value is `TimeSettingsData.m_DaysPerYear` and a mod may change it"** — never "`m_DaysPerYear` is 12".
 
 **Ruled (2026-08-08, the zoning-buildings-and-land-value pass; conflicts.md), governing this file's prefab classes.** A field initializer on a `ComponentBase` / `ScriptableObject`-derived prefab class is a Unity-serialized default the shipped asset overrides. It ships as **the field, never as the figure**, and a reference whose map or traps send a reader into a file carrying them states once, as a trap, that these are Unity-serialized defaults the shipped asset overrides, with nothing in the C# marking which survived. The test is what consumes the value, not where it is written.
 Four classes in this topic carry the shape and one of them is the day-length itself.
-`TimeSettingsPrefab.m_DaysPerYear = 12` (`src/Game/Game.Prefabs/TimeSettingsPrefab.cs:10`), copied into `TimeSettingsData` by `LateInitialize` (`:23-30`). `ClimatePrefab` initializes `m_Latitude = 61.49772f`, `m_Longitude = 23.767042f`, `m_MaxSunElevationAngle = 90.0`, `m_SunElevationClampStart = 45.0` (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs:612/615/619/623`) — two of which the live map overrides (read live: latitude 35.20208, longitude −101.887344, sun limit (π/4, π/2), so **two of the four survive and two do not**, on one asset). `ClimateSystem.SeasonInfo` initializes `m_TempNightDay = new float2(5f, 20f)` and ten siblings (`src/Game/Game.Simulation/ClimateSystem.cs:28-81`), all `[Serializable]` on a per-season authored object. `DayNightCycleData : ScriptableObject` initializes thirty-odd rendering fields (`src/Game/DayNightCycleData.cs`).
-**The live diff on `ClimatePrefab` is the trap's own worked example** and belongs in the reference's trap sentence: a reader who opens the file, sees `m_Latitude = 61.49772f` (Tampere) and writes it down has a number the map replaced with a different continent's.
+`TimeSettingsPrefab.m_DaysPerYear = 12` (`src/Game/Game.Prefabs/TimeSettingsPrefab.cs:10`), copied into `TimeSettingsData` by `LateInitialize` (`:23-30`). `ClimatePrefab` initializes `m_Latitude = 61.49772f`, `m_Longitude = 23.767042f`, `m_MaxSunElevationAngle = 90.0`, `m_SunElevationClampStart = 45.0` (`src/Game/Game.Prefabs.Climate/ClimatePrefab.cs:612/615/619/623`) — two of which the live map overrides (read live on the Archipelago map: latitude 37.2201, longitude 25.03183, sun limit (π/4, π/2), so **two of the four survive and two do not**, on one asset). `ClimateSystem.SeasonInfo` initializes `m_TempNightDay = new float2(5f, 20f)` and ten siblings (`src/Game/Game.Simulation/ClimateSystem.cs:28-81`), all `[Serializable]` on a per-season authored object. `DayNightCycleData : ScriptableObject` initializes thirty-odd rendering fields (`src/Game/DayNightCycleData.cs`).
+**The live diff on `ClimatePrefab` is the trap's own worked example** and belongs in the reference's trap sentence: a reader who opens the file, sees `m_Latitude = 61.49772f` (Tampere) and writes it down has a number the map replaced with another place's.
 
 **Ruled (2026-08-06, the citizens-and-households pass; conflicts.md), governing this file's use of the wiki.** No mechanics reference borrows a wiki stat table's numbers at all — first-party or nothing. It does not bite hard here: the wiki has no stat table in this area. What it does have is four constants (below) that all reconcile exactly with the decompile, so they are corroboration rather than source.
 
@@ -90,27 +90,20 @@ Five things fall out:
 
 1. **The nominal rate is 60 simulation frames per real second at speed 1.** That is the `* 60f` at `:238` against a timer accumulating `deltaTime * selectedSpeed`, and it is the constant every `/ 60` frames-to-seconds conversion in the mechanics references resolves through.
 2. **A rendered frame carries at most eight simulation steps and at most `max(1, round(selectedSpeed * 2))`.** At 1× the ceiling is 2, at 2× it is 4, at 4× it is 8, and the `min(8, …)` means the ceiling saturates there. So the highest a mod can drive the clock by writing `selectedSpeed` is 8 steps per rendered frame regardless of the value written.
-3. **Pausing is exactly `selectedSpeed == 0`, and it freezes `frameIndex` bit-for-bit** — no steps run, `smoothSpeed` goes to 0, and `PreSimulation`/`PostSimulation` still fire. Verified live: held at speed 0 across 4 real seconds, `frameIndex` read 5,634,509 before and 5,634,509 after.
+3. **Pausing is exactly `selectedSpeed == 0`, and it freezes `frameIndex` bit-for-bit** — no steps run, `smoothSpeed` goes to 0, and `PreSimulation`/`PostSimulation` still fire.
 4. **Two independent throttles sit above the nominal rate**, and both make "frames per real second" a machine fact rather than a game fact. The pathfinder's `pendingSimulationFrame` backpressure (`:231-245`) also feeds the step-count clamp through `num3`, so a pathfinding backlog slows the clock and lowers the per-frame ceiling at the same time. And unless `performancePreference == SimulationSpeed`, the frame-budget clamp at `:246-253` caps steps by measured headroom.
 5. **`PreSimulation` and `PostSimulation` run once per *rendered* frame, not once per simulation frame**, and they run even at zero steps. `PreSimulation` has zero vanilla registrations (`mod-lifecycle-and-ordering.md`), so a mod registering there gets a render-rate hook that keeps firing while paused — which is either exactly what it wants or a bug it will not notice.
 
 **The whole loop runs a second time during loading, on a different phase.** `OnGamePreload` sets `m_LoadingCount = (purpose == Purpose.NewGame) ? 1024 : 0` (`:160`) and `UpdateLoadingProgress` (`:164-186`) then runs eight `LoadSimulation` steps per rendered frame, incrementing `frameIndex` on each, until the count drains. **So a new game burns 1,024 simulation frames — a 256th of a day — before the player sees anything, and a loaded save burns none.** That is where the wiki's "`LoadSimulation` executes 8 times in a row" comes from.
 
-### Live: the frame rate at each speed, and why the number is not a constant
+### Live: the frame rate, and why the number is not a constant
 
-Read over the sibling Unity plugin on 2026-08-22, on the user's throwaway city, `performancePreference = Balanced`, starting at `frameIndex = 5,632,217`. Each window is a held `suspend` released for 6 real seconds with `selectedSpeed` set in the before-snippet:
+Read over the sibling Unity plugin at `selectedSpeed = 1`, `performancePreference = Balanced`, between two evals 16.2 real seconds apart: 322 frames, so 19.9 frames/s, with `smoothSpeed` about 0.33 and about 10 rendered frames/s. The other speeds were not measured, since changing the speed was out of scope.
 
-| `selectedSpeed` | frames in 6 s | frames/s | `smoothSpeed` | render fps |
-| --- | --- | --- | --- | --- |
-| 1 | 285 | 47.5 | 0.975 | 47.8 |
-| 2 | 599 | 99.8 | 1.72 | 45.8 |
-| 4 | 1220 | 203 | 3.25 | 30.9 |
-| 0 | 0 | 0 | 0 | — |
-
-The ratios are 1 : 2.10 : 4.28, so the clock scales linearly with `selectedSpeed` exactly as the formula says. The absolute rate is below the nominal 60/s because the `Balanced` frame-budget clamp was binding and because the measurement window includes suspend/resume overhead.
+The clock scales with `selectedSpeed` because the timer accumulates `deltaTime * selectedSpeed`, up to the per-frame step ceiling above. The absolute rate falls below the nominal 60/s when the `Balanced` frame-budget clamp binds (`:246-253`).
 **The durable claim is the nominal one — 60 frames per real second per unit of `selectedSpeed`, so 262144 / 60 ≈ 4,369 real seconds ≈ 72.8 real minutes for one in-game day at 1×.** The observed one is machine-specific and must not ship as a figure. The wiki reaches the same conclusion from the other end and is the only source that states it in prose (see the wiki finding).
 
-`Unconfirmed:` whether `performancePreference == SimulationSpeed` actually reaches the nominal 60/s on this machine. The branch that would be skipped is `:246-253`; the experiment is the same six-second window with `simulationSystem.performancePreference = PerformancePreference.SimulationSpeed` in the before-snippet. Not run, because it changes a persisted user setting.
+`Unconfirmed:` whether `performancePreference == SimulationSpeed` actually reaches the nominal 60/s on this machine. The branch that would be skipped is `:246-253`; the experiment is the same window with `simulationSystem.performancePreference = PerformancePreference.SimulationSpeed` in the before-snippet. Not run, because it changes a persisted user setting.
 
 ### There are three selectable speeds and they are 1×, 2× and 4×, not 1/2/3
 
@@ -121,7 +114,7 @@ private static float IndexToSpeed(int index) => Mathf.Pow(2f, Mathf.Clamp(index,
 private static int   SpeedToIndex(float speed) => speed > 0f ? Mathf.Clamp((int)Mathf.Log(speed, 2f), 0, 2) : 0;
 ```
 
-So the three buttons are indices 0, 1, 2 and the speeds are **1, 2, 4**. Read live off the `time.simulationSpeed` binding: `2` while paused at `m_SpeedBeforePause = 4`, and `0` when paused at 1, because `GetSimulationSpeed` reports `SpeedToIndex(m_SpeedBeforePause)` when paused (`:188-191`) — **the binding carries the speed to resume at rather than "paused"; `time.simulationPaused` is the separate boolean that does.**
+So the three buttons are indices 0, 1, 2 and the speeds are **1, 2, 4**. Read live at `selectedSpeed = 1`, the `time.simulationSpeed` binding is `0` and `time.simulationPaused` is `false`. When paused, `GetSimulationSpeed` reports `SpeedToIndex(m_SpeedBeforePause)` (`:188-191`) — **the binding carries the speed to resume at rather than "paused"; `time.simulationPaused` is the separate boolean that does.**
 
 **Verdict.** The wiki states three speeds "1x, 2x, and 3x" (https://cs2.paradoxwikis.com/Applying_Animation_Curves_to_Multiple_Emissive_Light_Sources, `§ Duration`). The decompile shows the third is 4×. `docs/SOURCES.md` makes the decompile ground truth for anything C# names; the wiki page is naming the three buttons by ordinal and got the multiplier wrong. **The decompile wins: 1, 2, 4.**
 
@@ -140,9 +133,9 @@ Two more clock controls reach `selectedSpeed` from outside the UI: photo mode's 
 
 The epoch that makes the calendar work is elsewhere. `TimeSystem.PostDeserialize` (`src/Game/Game.Simulation/TimeSystem.cs:69-87`) creates the `TimeData` singleton if the save has none, and **on `Purpose.NewGame` only** writes `singleton.m_FirstFrame = m_SimulationSystem.frameIndex` and `singleton.m_StartingYear = startingYear`. So the epoch is "whatever the frame counter read when this city was created", and every date calculation subtracts it.
 
-Read live at 1.6.0f1: `m_FirstFrame = 5,600,069` against `frameIndex = 5,632,217`. **The epoch is 5.6 million, not zero**, and the city is the 32,148-frame difference old. Any code treating `frameIndex` as time-since-founding is wrong by whatever the counter held at creation.
+Read live 2026-11-11 at 1.6.4f1, in a running new Archipelago city minutes old: `m_FirstFrame = 15,253,731`. **The epoch is in the millions, not zero**, and the city is the `frameIndex - m_FirstFrame` difference old. Any code treating `frameIndex` as time-since-founding is wrong by whatever the counter held at creation.
 
-`Unconfirmed:` *why* the counter was already at 5.6 M. Two candidates — the main menu's background city driving `SimulationSystem`, or a previous city in the same process — and neither is settled. The experiment that settles it: read `SimulationSystem.frameIndex` at the main menu before loading anything, then start a new game and read `TimeData.m_FirstFrame`. Not run, because starting a new game is an act on the user's running game.
+`Unconfirmed:` *why* the counter was already in the millions. Two candidates — the main menu's background city driving `SimulationSystem`, or a previous city in the same process — and neither is settled. The experiment that settles it: read `SimulationSystem.frameIndex` at the main menu before loading anything, then start a new game and read `TimeData.m_FirstFrame`. Not run, because starting a new game is an act on the user's running game.
 
 One consumer visibly assumes zero: `RecentClearSystem.OnUpdate` guards its whole job with `if (m_SimulationSystem.frameIndex >= 262144)` (`src/Game/Game.Tools/RecentClearSystem.cs:93`), an underflow guard for `m_SimulationFrame - 262144` at `:35`. With a nonzero epoch the guard is always satisfied, so it is inert rather than wrong — but it is first-party evidence that the counter was designed to start at zero.
 
@@ -164,7 +157,7 @@ Two derived properties turn three of them into fractions (`:27-43`): `TimeOffset
 
 **The read shape is a static helper, not `GetSingleton`.** `TimeData.GetSingleton(EntityQuery)` (`:82-91`) returns the singleton if the query is non-empty and a defaulted struct otherwise, so a caller never has to guard. `TimeUISystem` uses it in three places; `TimeSystem` uses the raw `GetSingleton<TimeData>()` and takes `RequireForUpdate` on the query instead (`:64-66`).
 
-**`Game.Prefabs.TimeSettingsData`** (`src/Game/Game.Prefabs/TimeSettingsData.cs:5-8`) is one `int m_DaysPerYear` and it lives on **a prefab entity**, built by `TimeSettingsPrefab.LateInitialize` (`src/Game/Game.Prefabs/TimeSettingsPrefab.cs:23-30`) from the class's own serialized field. Read live, the query returns exactly one entity, index 12, which carries `PrefabData` and whose `PrefabSystem.GetPrefabName` is `TimeSettings`; `TimeData` lives on entity 65911, which carries no `PrefabData` and only two components.
+**`Game.Prefabs.TimeSettingsData`** (`src/Game/Game.Prefabs/TimeSettingsData.cs:5-8`) is one `int m_DaysPerYear` and it lives on **a prefab entity**, built by `TimeSettingsPrefab.LateInitialize` (`src/Game/Game.Prefabs/TimeSettingsPrefab.cs:23-30`) from the class's own serialized field. Read live, the query returns exactly one entity, index 12, which carries `PrefabData` and whose `PrefabSystem.GetPrefabName` is `TimeSettings`; `TimeData` lives on a plain entity (49525 in this city), which carries no `PrefabData` and only two components.
 
 **Prefab-twin check** (`docs/solutions/prefab-data-read-where-the-simulation-reads-an-instance.md`): there is **no twin**. `TimeSettingsData` exists on exactly one entity and the simulation reads that same prefab entity. What makes it safe is that the query carries no prefab exclusion — this game's prefab entities carry `PrefabData` rather than Unity's `Prefab` tag, so an ordinary `GetEntityQuery(ComponentType.ReadOnly<TimeSettingsData>())` finds it (`TimeSystem.cs:63`). `PlanetarySystem` builds the same two queries with `EntityQueryOptions.IncludeSystems` (`src/Game/Game.Simulation/PlanetarySystem.cs:543-551`), which is unrelated to prefabs and is the codegen's doing.
 
@@ -193,9 +186,9 @@ The whole set has a second, `double`-taking overload keyed on a *rendering* fram
 
 `UpdateTime` (`:203-211`) recomputes `m_Time`, `m_Date`, `m_Year` and caches `m_DaysPerYear` off the singleton, and it is called from `OnUpdate` and from `PostDeserialize`. **`TimeSystem` declares no `GetUpdateInterval`**, so it runs every simulation frame, registered `UpdateAt<TimeSystem>(SystemUpdatePhase.GameSimulation)` (`src/Game/Game.Common/SystemOrder.cs:359`) and `EditorSimulation` (`:603`), with `PostDeserialize<TimeSystem>` in the `Deserialize` phase (`:861`).
 
-**Live cross-check.** `frameIndex - m_FirstFrame = 32,148`; `TimeOffset = 0.29167667`; `GetDateOffset(12) = 5/12`. `ticks = 32148 + 76461 + 1310720 = 1,419,329`. `timeOfDay = 1419329 % 262144 / 262144 = 0.4143105`; `timeOfYear = 1419329 / 3145728 = 0.4511925`. `TimeSystem` reported `normalizedTime = 0.41431046`, `normalizedDate = 0.45119253`, `year = 2024`, `daysPerYear = 12`. The formula reproduces both to seven decimals.
+**Live cross-check.** `frameIndex - m_FirstFrame = 14,469`; `TimeOffset = 0.33334333`; `GetDateOffset(12) = 5/12`. `ticks = 14469 + 87384 + 1310720 = 1,412,573`. `timeOfDay = 1412573 % 262144 / 262144 = 0.3885384`; `timeOfYear = 1412573 / 3145728 = 0.4490449`. `TimeSystem` reported `normalizedTime = 0.38853836`, `normalizedDate = 0.44904485`, `year = 2026`, `daysPerYear = 12`. The formula reproduces both to seven decimals.
 
-**Trap: `TimeSystem.startingYear` is not the city's starting year.** It is a plain settable property `PostDeserialize` reads once when creating a new game (`:34`, used at `:83`) and nothing maintains afterwards. Read live it is **0** while the city's actual starting year is 2024, which lives on `TimeData.m_StartingYear`. A mod reading `timeSystem.startingYear` gets zero on every loaded save.
+**Trap: `TimeSystem.startingYear` is not the city's starting year.** It is a plain settable property `PostDeserialize` reads once when creating a new game (`:34`, used at `:83`) and nothing maintains afterwards. Only the new-game paths write it (`MenuUISystem.cs:771`, `GameManager.cs:1259`), so on a loaded save it holds whatever the process's last new game set, and 0 if there was none; the city's own starting year lives on `TimeData.m_StartingYear`. In this new city both read 2026. A mod reading `timeSystem.startingYear` on a loaded save reads a stale or zero value.
 
 ### A day is a month, a year is twelve of them, and months are zero-based
 
@@ -208,7 +201,7 @@ Four independent, compiled-in statements of twelve, none of them a prefab value:
 - **`CalculateTemperatureAverage` branches on `if (m_TimeSystem.daysPerYear == 12)`** (`:401`), taking the Ekholm–Modén weighted monthly mean at twelve and a plain mean otherwise. So the game already handles a non-twelve year, degrading the temperature estimator rather than failing.
 - **`TimeUISystem.GetTimeSettingsData` falls back to `new TimeSettingsData { m_DaysPerYear = 12 }` when the query is empty** (`src/Game/Game.UI.InGame/TimeUISystem.cs:193-204`, the literal at `:199`).
 
-**Months are zero-based on the wire and one-based in `DateTime`.** `MenuUISystem` builds its save-info date as `new SimulationDateTime(currentDateTime.Year, currentDateTime.DayOfYear - 1, currentDateTime.Hour, currentDateTime.Minute)` (`src/Game/Game.UI.Menu/MenuUISystem.cs:869`) — the `- 1` is the zero-basing — and the frontend's `AA` returns `month: mod(dayIndex, daysPerYear)`, also zero-based (`DecompiledCitiesSkylines2/src-ui/source.js:46003-46010`). The wiki's localization page states the same from the mod-author side: *"the month being 0-indexed"* (https://cs2.paradoxwikis.com/Localize_your_mod, `§ Format date`).
+**Months are zero-based on the wire and one-based in `DateTime`.** `MenuUISystem` builds its save-info date as `new SimulationDateTime(currentDateTime.Year, currentDateTime.DayOfYear - 1, currentDateTime.Hour, currentDateTime.Minute)` (`src/Game/Game.UI.Menu/MenuUISystem.cs:869`) — the `- 1` is the zero-basing — and the frontend's `AA` returns `month: mod(dayIndex, daysPerYear)`, also zero-based (`DecompiledCitiesSkylines2/src-ui/source.js:46022-46029`). The wiki's localization page states the same from the mod-author side: *"the month being 0-indexed"* (https://cs2.paradoxwikis.com/Localize_your_mod, `§ Format date`).
 
 The derived quantities every duration calculation needs, all exact consequences of `262144` and `D = 12`:
 
@@ -232,7 +225,7 @@ float num = 182.04445f;
 return Mathf.FloorToInt(Mathf.Floor((float)(m_SimulationSystem.frameIndex - TimeData.GetSingleton(m_TimeDataQuery).m_FirstFrame) / num) * num);
 ```
 
-`182.04445` is 262144/1440 written as a literal with no relation to `kTicksPerDay` in the source. **So the `time.ticks` binding is quantized to in-game minute boundaries**, which is what stops the clock re-rendering sixty times a second. Read live: `ticks = 34406`, which is `floor(189 * 182.04445)` — the `FloorToInt` makes the binding a whole tick count, not an exact multiple.
+`182.04445` is 262144/1440 written as a literal with no relation to `kTicksPerDay` in the source. **So the `time.ticks` binding is quantized to in-game minute boundaries**, which is what stops the clock re-rendering sixty times a second. Read live: `ticks = 14927`, which is `floor(82 * 182.04445)` — the `FloorToInt` makes the binding a whole tick count, not an exact multiple.
 
 That number is the one thing the wiki's units page does state, to eighteen digits (`182.044444444444444444`, https://cs2.paradoxwikis.com/Commonly_units_in_the_game). **Verdict: corroborated by the decompile at `TimeUISystem.cs:159`, which carries the float literal the game actually uses.** A mod reproducing the quantization must use the game's `182.04445f`, not the exact ratio, or its minute boundaries drift from the vanilla clock's over a long city. `Time2Work` copies the literal rather than deriving it, in three places (`Time2Work/NightShift/Systems/Time2WorkTimeUISystem.cs:58/169`, `Time2WorkUISystem.cs:148`), scaling it by its own factor.
 
@@ -256,36 +249,36 @@ That number is the one thing the wiki's units page does state, to eighteen digit
 
 `GetTimeSettings` (`:144-155`) composes `epochTicks` as `round(TimeOffset * 262144) + round(GetDateOffset(D) * 262144 * D)` — **the same two offset terms `TimeSystem.GetTicks` adds**, which is what lets the frontend do the whole calendar itself from `ticks` alone.
 
-**Read live off the running UI**, subscribing to each `time.<name>.update` and triggering `time.<name>.subscribe`:
+**Read live off the running UI** at `selectedSpeed = 1`, subscribing to each `time.<name>.update` and triggering `time.<name>.subscribe`:
 
 ```json
-{"timeSettings":{"__Type":"Game.UI.InGame.TimeUISystem+TimeSettings","ticksPerDay":262144,"daysPerYear":12,"epochTicks":1387181,"epochYear":2024},
- "ticks":34406,"day":0,"simulationSpeed":2,"simulationPaused":true,"lightingState":2}
+{"timeSettings":{"__Type":"Game.UI.InGame.TimeUISystem+TimeSettings","ticksPerDay":262144,"daysPerYear":12,"epochTicks":1398104,"epochYear":2026},
+ "ticks":14927,"day":0,"simulationSpeed":0,"simulationPaused":false,"lightingState":2}
 ```
 
-`epochTicks` 1,387,181 is the formula's `76461 + 1310720` exactly, with `round(TimeOffset * 262144)` computed from the nudged `TimeOffset`; `76459` is the no-nudge figure.
+`epochTicks` 1,398,104 is the formula's `87384 + 1310720` exactly, with `round(TimeOffset * 262144)` computed from the nudged `TimeOffset`; `87381` is the no-nudge figure.
 
 ### The frontend recomputes the calendar itself, and the arithmetic is four functions
 
-`game-ui/game/data-binding/time-bindings.ts` (`DecompiledCitiesSkylines2/src-ui/source.js:46042`) exports the bindings above plus the conversions, and those are the mechanism half a UI mod needs (`:45999-46033`):
+`game-ui/game/data-binding/time-bindings.ts` (`DecompiledCitiesSkylines2/src-ui/source.js:46061`) exports the bindings above plus the conversions, and those are the mechanism half a UI mod needs (`:46015-46052`):
 
 ```js
-MA(e, t) = ((e % t) + t) % t                                  // positive modulo, :45975
-PA(s, ticks):  n = s.epochTicks + ticks; d = floor(n / s.ticksPerDay)
-               → { year: s.epochYear + floor(d / s.daysPerYear), month: MA(d, s.daysPerYear) }   // :45947
-OA(s, days) = PA(s, days * s.ticksPerDay)                     // :45943
-AA(s, ticks):  as PA, plus  o = MA(n, s.ticksPerDay)
+RA(e, t) = ((e % t) + t) % t                                  // positive modulo, :46050
+AA(s, ticks):  n = s.epochTicks + ticks; d = floor(n / s.ticksPerDay)
+               → { year: s.epochYear + floor(d / s.daysPerYear), month: RA(d, s.daysPerYear) }   // :46022
+PA(s, days) = AA(s, days * s.ticksPerDay)                     // :46019
+LA(s, ticks):  as AA, plus  o = RA(n, s.ticksPerDay)
                hour   = trunc(o / s.ticksPerDay * 24)
-               minute = trunc(MA(o / s.ticksPerDay * 1440, 60))                                  // :45955
-LA(s, ticks) = 60 * trunc(...*24) + trunc(MA(...*1440, 60))   // minute-of-day, :45968
-wA(minutes)  = { hour: floor(minutes/60) % 24, minute: minutes % 60 }                             // :45940
+               minute = trunc(RA(o / s.ticksPerDay * 1440, 60))                                  // :46030
+MA(s, ticks) = 60 * trunc(...*24) + trunc(RA(...*1440, 60))   // minute-of-day, :46043
+OA(minutes)  = { hour: floor(minutes/60) % 24, minute: minutes % 60 }                             // :46015
 ```
 
-The frontend's `LightingState` enum (`:46034-46041`) declares `Dawn=0, Sunrise=1, Day=2, Sunset=3, Dusk=4, Night=5`, matching C# `LightingSystem.State` member for member except that C# carries a seventh, `Invalid = 6` (`src/Game/Game.Rendering/LightingSystem.cs:30-39`). **`TimeUISystem.GetLightingState` never sends `Invalid`** — it substitutes a time-window fallback (`TimeUISystem.cs:168-179`), so the frontend's six-member enum is complete for what crosses the wire.
+The frontend's `LightingState` enum (`:46053-46060`) declares `Dawn=0, Sunrise=1, Day=2, Sunset=3, Dusk=4, Night=5`, matching C# `LightingSystem.State` member for member except that C# carries a seventh, `Invalid = 6` (`src/Game/Game.Rendering/LightingSystem.cs:30-39`). **`TimeUISystem.GetLightingState` never sends `Invalid`** — it substitutes a time-window fallback (`TimeUISystem.cs:168-179`), so the frontend's six-member enum is complete for what crosses the wire.
 
-**Trap in the chart scale.** The `simulationTime` Chart.js scale declares `defaults.timeSettings = { daysPerYear: 12, ticksPerDay: 1 << 17, epochTicks: 0, epochYear: 0 }` (`source.js:115424-115429`). `1 << 17` is **131,072 — half a day**. It is latent because the live binding always supplies real settings, but a mod reusing that scale without passing `timeSettings` gets an axis whose day is half the game's. Its tick intervals are the useful half and are derived correctly from whatever is passed: `ticksPerDay / 24` for an hour, `/ 8`, `/ 4`, `/ 2`, `ticksPerDay` for a day, `3 * ticksPerDay`, `daysPerYear * ticksPerDay` for a year (`:115455-115474`), and `ticksPerDay / 1440` for a minute in the tooltip hit-test (`:115600/115615`).
+**Trap in the chart scale.** The `simulationTime` Chart.js scale declares `defaults.timeSettings = { daysPerYear: 12, ticksPerDay: 1 << 17, epochTicks: 0, epochYear: 0 }` (`source.js:115455-115460`). `1 << 17` is **131,072 — half a day**. It is latent because the live binding always supplies real settings, but a mod reusing that scale without passing `timeSettings` gets an axis whose day is half the game's. Its tick intervals are the useful half and are derived correctly from whatever is passed: `ticksPerDay / 24` for an hour, `/ 8`, `/ 4`, `/ 2`, `ticksPerDay` for a day, `3 * ticksPerDay`, `daysPerYear * ticksPerDay` for a year (`:115486-115505`), and `ticksPerDay / 1440` for a minute in the tooltip hit-test (`:115631/115646`).
 
-`LocalizedDuration` takes its value **in days** and converts up: `round(value) >= maxMonths ? round(value / daysPerYear) years : value months`, with `maxMonths` defaulting to `daysPerYear` (`source.js:29994-30023`). So a duration crossing to the frontend for display is a day count, matching the C# convention that a prefab duration is in days.
+`LocalizedDuration` takes its value **in days** and converts up: `round(value) >= maxMonths ? round(value / daysPerYear) years : value months`, with `maxMonths` defaulting to `daysPerYear` (`source.js:30013-30042`). So a duration crossing to the frontend for display is a day count, matching the C# convention that a prefab duration is in days.
 
 ### Update interval and offset: the real expression, and what a cadence is worth
 
@@ -373,13 +366,13 @@ and `normalizedDayOfYear`'s setter is `dayOfYear = value * 365f + 1f` (`Planetar
 
 **Two overrides bypass all of it**, both compiled-in literals (`PlanetarySystem.cs:418-430`): `overrideTime`, which the developer menu sets (`DebugSystem.cs:1849-1853`), and the `gameplay.dayNightVisual` setting, whose off-branch pins `latitude = 51.2277f, longitude = 6.7735f, time = 14.5f, day = 177, year = 2020`. That is a fixed mid-afternoon midsummer sun over Düsseldorf, and it is what a player who turned the day-night cycle off is looking at.
 
-**Live** (2026-08-22, paused at `frameIndex = 5,632,217`): `lat = 35.20208, lon = −101.887344, year = 2024, day = 165, time = 10.153096, normalizedDayOfYear = 0.4504741, lunarCycles = 1, moonDay = 13, sunLimit = (0.7853982, 1.5707963)` — π/4 and π/2, so the map authored 45° and 90°, the class initializers' own values. Astronomical day 165 is mid-June against a simulation `normalizedDate` of 0.4512, which is day 5 of 12 with a starting month of 5 — the two calendars agreeing on "early summer" through the fraction and nothing else.
+**Live** (at `frameIndex = 15,268,200`): `lat = 37.2201, lon = 25.03183, year = 2026, day = 164, time = 9.32498, normalizedDayOfYear = 0.44763982, lunarCycles = 1, moonDay = 13, sunLimit = (0.7853982, 1.5707963)` — π/4 and π/2, so the map authored 45° and 90°, the class initializers' own values. Astronomical day 164 is mid-June against a simulation `normalizedDate` of 0.4490, which is day 5 of 12 with a starting month of 5 — the two calendars agreeing on "early summer" through the fraction and nothing else.
 
 ### The rendering clock is a second, interpolated frame index, and it is the one the visuals read
 
 `RenderingSystem` keeps its own `public uint frameIndex` and `public float frameTime` (`src/Game/Game.Rendering/RenderingSystem.cs:57/59`), advanced from the simulation's plus an interpolation offset (`:180-218`), reset to the simulation's exactly on a discontinuity (`:292-293`). It runs ahead of or behind `SimulationSystem.frameIndex` by a small signed amount and carries a fractional remainder, which is what gives the sun, the clock hands and the climate curves a smooth motion between two discrete simulation ticks.
 
-Read live while paused: `simFrame = 5,634,509`, `renderFrame = 5,634,506`, `renderFrameTime = 0.6243`. **The two counters are not equal even at rest**, and the difference is not a bug.
+Read live: `simFrame = 15,268,200`, `renderFrame = 15,268,200`, `renderFrameTime = 0.7252`, so in that reading the two indices matched and the offset sat in `frameTime`. **The two counters need not be equal**, and a difference is not a bug.
 
 `RenderingSystem` also derives its own periodic values from it: `(frameIndex % uint2(60, 3600) + frameTime)` for shader time (`:224`) and `(frameIndex % 216000) + frameTime` (`:227`) — 216,000 being 60 × 3600, an hour of *real-time-equivalent* frames rather than an in-game hour.
 
@@ -393,7 +386,7 @@ Read live while paused: `simFrame = 5,634,509`, `renderFrame = 5,634,506`, `rend
 
 **A climate may declare any number of seasons.** Nothing constrains the array length, `FindSeasonByTime` short-circuits at 0 and 1 elements, and the modulo walk handles the rest. The 1.6.0-verified wiki page says the same in prose (https://cs2.paradoxwikis.com/Map_Creation:_Climate): *"A climate may contain one season, two seasons, four seasons, six seasons, or any other number."* **Verdict: corroborated by the decompile at `ClimatePrefab.cs:1286-1360`.** The 1.0-stamped `Climate` page's "four distinct seasons" and "each season lasts three months" is the stale statement; `docs/SOURCES.md` entry 10 already prefers the `Map Creation:` family, and the decompile settles it independently.
 
-`ClimateSystem.UpdateSeason(prefab, normalizedDate)` (`ClimateSystem.cs:654-664`) recomputes the season's mean temperature, precipitation and cloudiness **only when the season entity changes**, and `SampleClimate(prefab, t)` evaluates the prefab's five curves at `t * daysPerYear` (`ClimateSystem.cs:605-607`). Live: `currentSeason = SeasonSummer`, `currentClimate = ContinentalCorralRichesClimate`, at `normalizedDate = 0.4512`.
+`ClimateSystem.UpdateSeason(prefab, normalizedDate)` (`ClimateSystem.cs:654-664`) recomputes the season's mean temperature, precipitation and cloudiness **only when the season entity changes**, and `SampleClimate(prefab, t)` evaluates the prefab's five curves at `t * daysPerYear` (`ClimateSystem.cs:605-607`). Live: `currentSeason = SeasonSummer`, `currentClimate = TemperateArchipelagoHavenClimate`, at `normalizedDate = 0.4490`.
 
 **The curve axis and the calendar are two twelves that are not the same twelve.** `ClimatePrefab`'s generated curves run on a fixed 0..12 axis inlined as literals, while `SampleClimate` evaluates at `t * daysPerYear` from the prefab field — `environment-and-pollution.md`'s climate facet already records this and it holds. So a mod changing `m_DaysPerYear` desynchronises the sample point from the curve axis, on top of degrading the temperature estimator at `ClimateSystem.cs:401`. **That is the concrete cost of changing the year length and it belongs in this reference's traps**, since this is the reference that says the field is changeable.
 
@@ -403,7 +396,7 @@ Read live while paused: `simFrame = 5,634,509`, `renderFrame = 5,634,506`, `rend
 
 The C# side is `Game.UI.Unit`, a static class of 33 `public const string` values (`src/Game/Game.UI/Unit.cs:3-69`) — `kInteger = "integer"`, `kPower = "power"`, and so on. A `LocalizedNumber<T>` carries one of those strings and the frontend dispatches on it.
 
-**The frontend's value-formatter table is `game-ui/common/localization/unit.ts`'s enum (`DecompiledCitiesSkylines2/src-ui/source.js:29023-29062`, 38 members) against the formatter map at `:29181-29314`.** Transcribed whole; every conversion is the divisor or expression the bundle applies to the raw C# value, and the `Sc.Common.*` names are the localization keys the result is rendered into.
+**The frontend's value-formatter table is `game-ui/common/localization/unit.ts`'s enum (`DecompiledCitiesSkylines2/src-ui/source.js:29042-29081`, 38 members) against the formatter map at `:29200-29333`.** Transcribed whole; every conversion is the divisor or expression the bundle applies to the raw C# value, and the `Sc.Common.*` names are the localization keys the result is rendered into.
 
 | Unit string | Metric branch | Freedom branch | So the C# value is in |
 | --- | --- | --- | --- |
@@ -444,7 +437,7 @@ The C# side is `Game.UI.Unit`, a static class of 33 `public const string` values
 | `custom` | dispatches on the caller's own format and fraction-digit arguments | — | |
 | `bodiesPerMonth` | **no entry in the value table** | — | see the trap below |
 
-**The US-customary conversions, verbatim** (`source.js:28982-29014`, exported as `game-ui/common/localization/units-us-customary.ts` at `:29072`):
+**The US-customary conversions, verbatim** (`source.js:29002-29034`, exported as `game-ui/common/localization/units-us-customary.ts` at `:29091`):
 
 ```js
 fahrenheit(e) = (9 * e) / 5 + 32      kelvin(e)  = e + 273.16
@@ -459,15 +452,15 @@ fromFeet(e)   = e / 3.28084
 
 **Three traps in the table itself:**
 
-1. **`netElevation`'s Freedom branch multiplies by 3, not by 3.28084**, where every other length uses `feet()` (`:29224`). A road at 12 m reads 36 ft in the game and 39.4 ft anywhere else.
-2. **`bodiesPerMonth` has a fraction entry and no value entry.** It is declared in the enum (`:29054`) and appears in the fraction table as `FRACTION_BODIES_PER_MONTH` (`:29638-29639`, key declared at `:26889`), but the value-formatter map at `:29181-29314` has no key for it, so a plain `LocalizedNumber` carrying it falls through to `` `${value} <bodiesPerMonth>` `` (`:29178-29180`). It is also one of the five units missing from the C# constant list.
+1. **`netElevation`'s Freedom branch multiplies by 3, not by 3.28084**, where every other length uses `feet()` (`:29243`). A road at 12 m reads 36 ft in the game and 39.4 ft anywhere else.
+2. **`bodiesPerMonth` has a fraction entry and no value entry.** It is declared in the enum (`:29073`) and appears in the fraction table as `FRACTION_BODIES_PER_MONTH` (`:29657-29658`, key declared at `:26889`), but the value-formatter map at `:29200-29333` has no key for it, so a plain `LocalizedNumber` carrying it falls through to `` `${value} <bodiesPerMonth>` `` (`:29197-29199`). It is also one of the five units missing from the C# constant list.
 3. **The C# constant list is five short of the frontend enum.** `Game.UI.Unit` declares 33 strings; the frontend declares 38. Missing from C#: `percentagePrecise`, `bodiesPerMonth`, `temperaturePrecise`, `height`, `durationSeconds`. A mod wanting any of those must pass the raw string rather than a `Unit.k*` constant.
 
-**Fractions and bounds have their own tables and they are not the same table.** `LocalizedFraction`'s map (`vd`, `:29595-29649`, exported at `:29663`) covers `volume`, `volumePerMonth`, `weight`, `weightPerMonth`, `power`, `energy`, `bodiesPerMonth`, `xp`, `integer`, `integerPerMonth`, `integerRounded` — eleven units — and **its `energy` entry has a kilowatt-hours branch (`/10`) the value table lacks**, confirming energy is hundreds of watt-hours from the other side. `LocalizedBounds`' map (`pd`, `:29548-29564`) covers three: `power`, `percentageSingleFraction`, `temperature`. Any other unit passed to a fraction falls through to a `` `${value} / ${total} <unit>` `` placeholder; bounds render equal `min`/`max` as a plain `LocalizedNumber` before consulting the table (`:29543-29546`), and otherwise fall through to `` `${min}–${max} <unit>` ``.
+**Fractions and bounds have their own tables and they are not the same table.** `LocalizedFraction`'s map (`vu`, `:29614-29668`, exported at `:29682`) covers `volume`, `volumePerMonth`, `weight`, `weightPerMonth`, `power`, `energy`, `bodiesPerMonth`, `xp`, `integer`, `integerPerMonth`, `integerRounded` — eleven units — and **its `energy` entry has a kilowatt-hours branch (`/10`) the value table lacks**, confirming energy is hundreds of watt-hours from the other side. `LocalizedBounds`' map (`pu`, `:29567-29583`) covers three: `power`, `percentageSingleFraction`, `temperature`. Any other unit passed to a fraction falls through to a `` `${value} / ${total} <unit>` `` placeholder; bounds render equal `min`/`max` as a plain `LocalizedNumber` before consulting the table (`:29560-29564`), and otherwise fall through to `` `${min}–${max} <unit>` ``.
 
 **The player's unit preferences are three settings**, `Game.Settings.InterfaceSettings` (`src/Game/Game.Settings/InterfaceSettings.cs`): `TimeFormat { TwentyFourHours, TwelveHours }` (`:33-37`), `TemperatureUnit { Celsius, Fahrenheit, Kelvin }` (`:39-44`), `UnitSystem { Metric, Freedom }` (`:46-50`), all under the `"Unit"` settings section (`:186-193`) and defaulting to 24 h / Celsius / Metric (`:248-250`). The frontend's enums declare the same ordinals (`source.js:26105-26116`), so the wire is the integer and the two ends agree.
 
-`Rots:` the unit enum, its 38 members, the C#/frontend gap and every threshold above. Re-check against `src/Game/Game.UI/Unit.cs` and `source.js`'s `:29023-29062` / `:29181-29314`, at a copy whose line count matches the baseline.
+`Rots:` the unit enum, its 38 members, the C#/frontend gap and every threshold above. Re-check against `src/Game/Game.UI/Unit.cs` and `source.js`'s `:29042-29081` / `:29200-29333`, at a copy whose line count matches the baseline.
 
 ### The C# side's own unit conventions, cross-checked
 
@@ -583,7 +576,7 @@ The shipped mechanics directory is nine reference *families*, 63 files. **58 car
 ### The UI skill
 
 - **`binding-layer`** — the `time` group's nine members above, with `TimeSettings`'s `__Type` string `Game.UI.InGame.TimeUISystem+TimeSettings`, and the observer-counted `simulationPausedBarrier` event, which is the one binding in this group whose *subscription* is the mechanism rather than its payload.
-- **`frontend-and-injection`** — three registry paths a UI mod reaching the clock needs: `game-ui/game/data-binding/time-bindings.ts` (`source.js:46042`) for the bindings and the tick arithmetic, `game-ui/common/localization/unit.ts` (`:29063-29071`) for the `Unit` enum, `game-ui/common/localization/units-us-customary.ts` (`:29072`, functions at `:28982-29014`) for the eleven conversion functions, and `game-ui/common/localization/localized-date.tsx` (`:29941-29988`) for the date, time and duration components `cs2/l10n` does not export.
+- **`frontend-and-injection`** — three registry paths a UI mod reaching the clock needs: `game-ui/game/data-binding/time-bindings.ts` (`source.js:46061`) for the bindings and the tick arithmetic, `game-ui/common/localization/unit.ts` (`:29082-29090`) for the `Unit` enum, `game-ui/common/localization/units-us-customary.ts` (`:29091`, functions at `:29002-29034`) for the eleven conversion functions, and `game-ui/common/localization/localized-date.tsx` (`:29960-30007`) for the date, time and duration components `cs2/l10n` does not export.
 - **`ui-build-and-devloop`** — nothing specific from here.
 
 ---

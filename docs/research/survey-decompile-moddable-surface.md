@@ -13,13 +13,13 @@ A note on the shipped docs first: `AGENTS.md` and `docs/*.md` are useful orienta
 
 ## 1. Assembly triage
 
-173 assemblies under `src/` (the prompt's "~130" undercounts). Sorted by relevance to a complex code mod.
+183 assemblies under `src/` (the prompt's "~130" undercounts). Sorted by relevance to a complex code mod.
 
 ### Tier A — core modding surface (you will read these)
 
 | Assembly | .cs files | Why it matters |
 | --- | ---: | --- |
-| `Game` | **4416** | Everything: simulation, prefabs, tools, UI, the modding API itself (`Game.Modding`), `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. This is ~90% of what a mod touches. |
+| `Game` | **4418** | Everything: simulation, prefabs, tools, UI, the modding API itself (`Game.Modding`), `SystemUpdatePhase`, `GameSystemBase`, `SystemOrder`. This is ~90% of what a mod touches. |
 | `Colossal.Core` | 303 | `COSystemBase` (root of every game system), `Colossal.Entities` ECS extension methods, `Colossal.Serialization.Entities` (save/load `Context`, `Purpose`, `IJsonWritable` plumbing), `Colossal.Json`, `Colossal.Randomization`, `Colossal.Reflection`, `Colossal.Version`. |
 | `Colossal.IO.AssetDatabase` | 165 | Mod discovery and loading (`ExecutableAsset`), `AssetDatabase.global/game/user/packages`, `LocaleAsset`, `PrefabAsset`, `UIModuleAsset`, `ParadoxModsDataSource`. The asset-injection entry point. |
 | `Colossal.UI.Binding` | 69 | The entire C#↔JS binding vocabulary. Any mod with UI reads all 69 files' worth of concepts. |
@@ -37,10 +37,10 @@ A note on the shipped docs first: `AGENTS.md` and `docs/*.md` are useful orienta
 | --- | ---: | --- |
 | `Unity.Entities` | 654 | You need DOTS semantics: `EntityQuery`, `ComponentLookup`, `EntityCommandBuffer`, `IJobChunk`, `TypeManager`. Reference material, not modding surface — but `TypeManager.InitializeAdditionalTypes` is called on your assembly (`src/Game/Game.Modding/ModManager.cs:149`). |
 | `Colossal.PSI.Common` | 89 | Achievements, platform gating, DLC checks. `PlatformManager`. |
-| `PDX.ModsUI` | 253 | Paradox Mods browser UI. Relevant only if you touch mod distribution/playsets. |
-| `PDX.SDK` | 923 | Paradox backend contracts (`PDX.SDK.Contracts.Service.Mods.Models` is imported by `ModManager`). Mostly opaque; skim only. |
+| `PDX.ModsUI` | 278 | Paradox Mods browser UI. Relevant only if you touch mod distribution/playsets. |
+| `PDX.SDK` | 933 | Paradox backend contracts (`PDX.SDK.Contracts.Service.Mods.Models` is imported by `ModManager`). Mostly opaque; skim only. |
 | `Colossal.Collections`/`Colossal.IO` | 54/33 | Low-level containers and file IO. |
-| `Cohtml.Runtime` / `cohtml.Net` / `Cohtml.RenderingBackend` | 70/173/193 | Only if you are doing something exotic with the HTML view itself. The `Colossal.UI` wrapper is normally sufficient. |
+| `Cohtml.Runtime` / `cohtml.Net` / `Cohtml.RenderingBackend` | 75/173/193 | Only if you are doing something exotic with the HTML view itself. The `Colossal.UI` wrapper is normally sufficient. |
 | `Unity.Mathematics` | 79 | `float3`, `quaternion`, `math.*`. Reference. |
 | `Unity.Collections` | 195 | `NativeArray`, `NativeList`, `Allocator`. Reference. |
 | `Unity.Burst` | 38 | `[BurstCompile]` semantics. |
@@ -63,16 +63,16 @@ A note on the shipped docs first: `AGENTS.md` and `docs/*.md` are useful orienta
 
 ---
 
-## 2. Namespace map of `src/Game/` (4,416 files, 75 directories)
+## 2. Namespace map of `src/Game/` (4,418 files, 75 directories)
 
 Ranked by size. "Rel" = mod relevance (★★★ = you will live here).
 
 | Namespace dir | Files | Rel | What lives there |
 | --- | ---: | :---: | --- |
 | `Game.Prefabs` | **1284** | ★★★ | The data-driven layer. 282 `ComponentBase` subclasses, 113 `PrefabBase` subclasses, 390 files with `IComponentData`, plus `PrefabSystem`. Biggest namespace by far. |
-| `Game.Simulation` | 479 | ★★★ | 300 `GameSystemBase` subclasses — the actual simulation. Citizens, traffic, economy, water, climate, pathfinding setup. |
+| `Game.Simulation` | 480 | ★★★ | 300 `GameSystemBase` subclasses — the actual simulation. Citizens, traffic, economy, water, climate, pathfinding setup. |
 | `Game.UI.InGame` | 224 | ★★★ | 67 UI systems + their DTOs: info panels, infoviews, Chirper, budget, selected-info sections. |
-| `Game.Rendering` | 157 | ★ | 64 systems: batching, culling, overlays, infoview rendering. Only for visual mods. |
+| `Game.Rendering` | 158 | ★ | 64 systems: batching, culling, overlays, infoview rendering. Only for visual mods. |
 | `Game.Net` | 149 | ★★★ | Road/rail/pipe network components + 26 systems. 58 files with `IComponentData` (`Edge`, `Node`, `Lane`, `Curve`, …). |
 | `Game.UI.Widgets` | 147 | ★★ | The declarative widget model (`IWidget`, `DropdownField`, `IntSliderField`, …) used by the editor and by the options UI that renders `ModSetting`. |
 | `Game.Buildings` | 145 | ★★★ | 80 files with `IComponentData` — building state components. |
@@ -99,7 +99,7 @@ Ranked by size. "Rel" = mod relevance (★★★ = you will live here).
 | `Game.Companies` | 30 | ★★ | Commercial/industrial/office company components. |
 | `Game.Zones` | 27 | ★★ | Zone blocks and cells. |
 | `Game` (root ns) | 27 | ★★★ | **`SystemUpdatePhase`, `UpdateSystem`, `GameSystemBase`, `GameMode`, `Version`, `EndFrameBarrier`, `SafeCommandBufferSystem`, `AutoSaveSystem`, camera controllers.** Tiny but the single most important directory. |
-| `Game.SceneFlow` | 22 | ★★★ | `GameManager` (2440 lines — the app lifecycle god-object), `UserInterface`, `AssetLibrary`, loading screens. |
+| `Game.SceneFlow` | 22 | ★★★ | `GameManager` (2483 lines — the app lifecycle god-object), `UserInterface`, `AssetLibrary`, loading screens. |
 | `Game.UI.Menu` | 21 | ★★★ | `OptionsUISystem` and **`AutomaticSettings`** — the reflection engine that turns your `ModSetting` + attributes into widgets. |
 | `Game.Triggers` | 20 | · | Chirper/social triggers. |
 | `Game.Prefabs.Climate` | 19 | · | Weather prefabs. |
@@ -121,7 +121,7 @@ Ranked by size. "Rel" = mod relevance (★★★ = you will live here).
 | `Properties`, `Unity.Mathematics`, `Unity.Entities.CodeGeneratedRegistry`, `System.Runtime.CompilerServices`, `Game.PSI.Internal`, `Game.CinematicCamera`, `Colossal.Atmosphere.Internal`, `Game.Rendering.Climate` | 1 | · | Codegen/attribute stubs. |
 | `src/Game/*.cs` (root, no namespace dir) | 10 | · | `__JobReflectionRegistrationOutput__17016606566994089001.cs`, `-BurstDirectCallInitializer.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` + a handful of orphans (`ShowIfAttribute`, `DayNightCycleData`, `GameModeSettingData`, `DebugCamera`). **Pure codegen — ignore.** |
 
-**Biggest:** `Game.Prefabs` (1284). **Most mod-relevant, in order:** `Game` (root, 27 files), `Game.Modding` (3), `Game.Common` (49), `Game.Simulation` (479), `Game.Prefabs` (1284), `Game.UI` + `Game.UI.InGame`, `Game.Settings`.
+**Biggest:** `Game.Prefabs` (1284). **Most mod-relevant, in order:** `Game` (root, 27 files), `Game.Modding` (3), `Game.Common` (49), `Game.Simulation` (480), `Game.Prefabs` (1284), `Game.UI` + `Game.UI.InGame`, `Game.Settings`.
 
 ---
 
@@ -210,24 +210,24 @@ Exceptions thrown by a system's `OnUpdate` are caught per-system and logged, not
 
 ### 3.4 The game's own registration table
 
-`src/Game/Game.Common/SystemOrder.cs:42` — `public static class SystemOrder`, `Initialize(UpdateSystem)` at `:44`, **1014 `UpdateAt/Before/After<T>` calls** in 1062 lines. Called from `src/Game/Game.SceneFlow/GameManager.cs:2395`.
+`src/Game/Game.Common/SystemOrder.cs:42` — `public static class SystemOrder`, `Initialize(UpdateSystem)` at `:44`, **1014 `UpdateAt/Before/After<T>` calls** in 1062 lines. Called from `src/Game/Game.SceneFlow/GameManager.cs:2438`.
 
 This file is the single best navigation artifact in the whole decompile: it is a complete, ordered index of every game system and the phase it runs in. An agent asked "when does X run?" should grep `SystemOrder.cs` first.
 
 ### 3.5 Mod loading — `Game.SceneFlow`
 
-`src/Game/Game.SceneFlow/GameManager.cs` (2440 lines):
+`src/Game/Game.SceneFlow/GameManager.cs` (2483 lines):
 
-- `GameManager.instance` — `:260`
-- `modManager` property — `:278`
-- `userInterface` property — `:302`
-- lifecycle events `onGamePreload` / `onGameLoadingComplete` / `onWorldReady` — `:308`, `:310`, `:312`
-- `m_ModManager = new ModManager(configuration.disableCodeModding)` — `:611`
-- `InitializeModManager()` → `m_ModManager.Initialize(m_UpdateSystem)` — `:674`, `:678`
-- `m_UpdateSystem = m_World.GetOrCreateSystemManaged<UpdateSystem>()` — `:2386`
-- `SystemOrder.Initialize(m_UpdateSystem)` — `:2395`
-- Main loop pumps: `Update(SystemUpdatePhase.MainLoop)` `:2405`, `Cleanup` `:2413`, `LateUpdate` `:2421`
-- Hot-reload path: `m_ModManager?.Initialize(m_UpdateSystem, reinitialize: true)` — `:1643`
+- `GameManager.instance` — `:264`
+- `modManager` property — `:282`
+- `userInterface` property — `:306`
+- lifecycle events `onGamePreload` / `onGameLoadingComplete` / `onWorldReady` — `:312`, `:314`, `:316`
+- `m_ModManager = new ModManager(configuration.disableCodeModding)` — `:615`
+- `InitializeModManager()` → `m_ModManager.Initialize(m_UpdateSystem)` — `:678`, `:682`
+- `m_UpdateSystem = m_World.GetOrCreateSystemManaged<UpdateSystem>()` — `:2429`
+- `SystemOrder.Initialize(m_UpdateSystem)` — `:2438`
+- Main loop pumps: `Update(SystemUpdatePhase.MainLoop)` `:2448`, `Cleanup` `:2456`, `LateUpdate` `:2464`
+- Hot-reload path: `m_ModManager?.Initialize(m_UpdateSystem, reinitialize: true)` — `:1686`
 
 `src/Game/Game.Modding/ModManager.cs`:
 
@@ -394,7 +394,7 @@ In `src/Game/`:
 - **148 `IBufferElementData`** structs
 - **2 `ISharedComponentData`** (notably `UpdateFrame` in `Game.Simulation`)
 - **1383 `IJob*` structs** — of which **583 files contain `IJobChunk`**. There is **zero `IJobEntity`** in the entire `Game` assembly; the codebase predates / avoids it and uses `IJobChunk` + explicit `TypeHandle`s exclusively.
-- 758 files carry `[BurstCompile]`
+- 759 files carry `[BurstCompile]`
 
 Clustering of `IComponentData` by namespace:
 
@@ -488,7 +488,7 @@ Cross-system communication is by `Game.Common` tag components (`Created`, `Updat
 | find all subclasses of B | `class [A-Za-z0-9_]+ : B\b` |
 | find all bindings a system exposes | `AddBinding\|AddUpdateBinding` in that file |
 
-**File-per-type is near-perfect**: only 5 files in all of `src/Game/` (4416 files) declare more than one top-level type — `Game.Reflection/DelegateAccessor.cs`, `Game.Settings/QualitySetting.cs`, `Game.UI.Editor/DualPopupValueField.cs`, `Game.UI.Editor/HierarchyMenu.cs`, `Game.UI.Widgets/FloatSliderField.cs`. Nested types are always inside the parent's file.
+**File-per-type is near-perfect**: only 5 files in all of `src/Game/` (4418 files) declare more than one top-level type — `Game.Reflection/DelegateAccessor.cs`, `Game.Settings/QualitySetting.cs`, `Game.UI.Editor/DualPopupValueField.cs`, `Game.UI.Editor/HierarchyMenu.cs`, `Game.UI.Widgets/FloatSliderField.cs`. Nested types are always inside the parent's file.
 
 **Naming conventions that hold**
 
@@ -513,7 +513,7 @@ Cross-system communication is by `Game.Common` tag components (`Created`, `Updat
 - **Anything driven by string literals.** UI binding names (`"ModLoadingStatus"`, `"ModsLoading"`) and localization keys are strings with no type-level trace. You must grep the literal, and the JS side isn't in this corpus at all.
 - **Reflection-driven behaviour.** `AutomaticSettings` builds the whole options UI by reflecting over attributes — there is no call graph from `[SettingsUISlider]` to the slider widget. Same for `ModSetting`'s keybinding discovery (property-type scanning, `ModSetting.cs:32`).
 - **Who writes a component.** Because writes go through `EntityCommandBuffer.ParallelWriter` inside a Burst job, and the handle is a `TypeHandle` field with a mangled name, "find all writers of `Citizen`" requires grepping `__Game_Citizens_Citizen_RW_ComponentLookup` — the mangled name is actually _more_ greppable than the type. Learn the pattern: `__<Namespace_With_Underscores>_<Type>_<RO|RW>_<ComponentLookup|ComponentTypeHandle|BufferTypeHandle|SharedComponentTypeHandle>`.
-- **Burst-compiled function pointers.** `-BurstDirectCallInitializer.cs` and `__JobReflectionRegistrationOutput__*.cs` reference mangled types like `Game_002ERendering_002EDequeueAndSort_00004CA2_0024BurstDirectCall` (`src/Game/Properties/AssemblyInfo.cs:14-18`) — `_002E` is `.`, `_0024` is `$`. The declaring type is `WaterRenderSystem`, which the encoded name omits.
+- **Burst-compiled function pointers.** `src/Game/Properties/AssemblyInfo.cs:14-19` references mangled types like `Game_002ERendering_002EDequeueAndSort_00004CCB_0024BurstDirectCall` — `_002E` is `.`, `_0024` is `$`. The declaring type is `WaterRenderSystem`, which the encoded name omits.
 - **No `.js`/`.css`/HTML.** The Cohtml front-end is not decompiled. Only the C# binding side exists. Say so rather than searching.
 
 ### 5.4 Decompilation artifacts an agent must be warned about
@@ -530,11 +530,11 @@ The decompiler is ILSpy (file-scoped namespaces, primary constructors on structs
 8. **`[Preserve]` everywhere** (1022 files) — Unity IL2CPP link preservation, semantically irrelevant. It appears on `OnCreate`/`OnUpdate`/`OnDestroy`/constructors. Noise.
 9. **Explicit no-arg constructors** appended to every system (`AgingSystem.cs:296`, `UpdateSystem.cs:503`). Not in original source.
 10. **`goto` and label residue** in 41 files where loop/switch reconstruction failed.
-11. **`unsafe` blocks and raw pointers** in 71 files (mostly native interop and `Colossal.Collections`).
-12. **Codegen-only files with illegal-ish names**: `src/Game/-BurstDirectCallInitializer.cs` (12 copies across assemblies), `src/Game/__JobReflectionRegistrationOutput__17016606566994089001.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` (69 copies), `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs` (10 copies). Exclude these from every search.
+11. **`unsafe` blocks and raw pointers** in 72 files (mostly native interop and `Colossal.Collections`).
+12. **Codegen-only files with illegal-ish names**: `src/Game/-BurstDirectCallInitializer.cs` (12 copies across assemblies), `src/Game/__JobReflectionRegistrationOutput__17016606566994089001.cs`, `UnitySourceGeneratedAssemblyMonoScriptTypes_v1.cs` (79 copies), `Unity.Entities.CodeGeneratedRegistry/AssemblyTypeRegistry.cs` (10 copies). Exclude these from every search.
 13. **Compiler-generated closure/iterator classes are largely absent.** I found **zero** occurrences of `<>c__DisplayClass`, `_003C`, `_003E`, or `<>c` in `src/Game/` — ILSpy successfully re-inlined lambdas into normal C# lambda syntax (see `ModManager.cs:113-115`, `:223-227`). Only 24 files retain a visible `MoveNext()`, i.e. an unrecovered iterator/async state machine. **This is better than a typical decompile** and is worth stating positively: lambdas and LINQ read normally.
 14. **Generic type arguments are preserved**, including on the `CellMapSystem<T>` closed generics and `AllowBarrier<ModificationBarrier1>`. I found no evidence of lost generics.
-15. **`[assembly: AssemblyVersion("0.0.0.0")]`** (`src/Game/Properties/AssemblyInfo.cs:20`) — the real version is in `VersionInternal`, see below. Don't read `AssemblyVersion`.
+15. **`[assembly: AssemblyVersion("0.0.0.0")]`** (`src/Game/Properties/AssemblyInfo.cs:21`) — the real version is in `VersionInternal`, see below. Don't read `AssemblyVersion`.
 
 ### 5.5 A suggested agent search order
 
@@ -550,36 +550,36 @@ The decompiler is ILSpy (file-scoped namespaces, primary constructors on structs
 
 ## 6. Version
 
-**Cities: Skylines II `1.6.2f1`, build `6300.26419`, changelist `767.21d1`.**
+**Cities: Skylines II `1.6.4f1`, build `6360.18886`, changelist `1097.158a`.**
 
-Primary evidence — `src/Game/Properties/AssemblyInfo.cs:19`:
+Primary evidence — `src/Game/Properties/AssemblyInfo.cs:20`:
 
 ```csharp
-[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]
+[assembly: VersionInternal("1.6.4f1 (1097.158a) [6360.18886]")]
 ```
 
 Corroborating:
 
-- `src/Colossal.UI/Properties/AssemblyInfo.cs:7` — `VersionInternal("1.0.0f1 (767.21d1) [6300.26396]")`
-- `src/Colossal.Localization/Properties/AssemblyInfo.cs:6` — `VersionInternal("1.0.0a1 (767.21d1) [6300.26396]")`
+- `src/Colossal.UI/Properties/AssemblyInfo.cs:7` — `VersionInternal("1.0.0f1 (1097.158a) [6360.18867]")`
+- `src/Colossal.Localization/Properties/AssemblyInfo.cs:6` — `VersionInternal("1.0.0a1 (1097.158a) [6360.18867]")`
 - `src/Colossal.Core/Properties/AssemblyInfo.cs:8` — `VersionInternal("1.0.0f1")` (no build stamp)
-- Git history of the decompile repo: `e72fb4e7 1.6.2f1`, preceded by `ec7c3720 1.6.0f1`, `8027f747 1.5.9f1` and `c3eeaa11 1.5.7f1`; the two commits above it re-decompile the same version.
+- Git history of the decompile repo: `7179d263 1.6.4f1`, preceded by `e72fb4e7 1.6.2f1`, `ec7c3720 1.6.0f1`, `8027f747 1.5.9f1` and `c3eeaa11 1.5.7f1`; the two commits between `e72fb4e7` and `7179d263` re-decompile 1.6.2f1.
 
 Save-format history is in `src/Game/Game/Version.cs` — 200+ `[VersionConstant("<game version> [<build>]")]` fields spanning `0.9.0a1 [3651.20586]` (`Version.cs:8`) through `1.5.7f1 [6157.21012]` (`Version.cs:821`), with `Version.cs:825` holding the bare `current`:
 
 ```csharp
 [VersionConstant]
-public static readonly Colossal.Version current = new Colossal.Version(1, 315290461530777395L, 50274769);
+public static readonly Colossal.Version current = new Colossal.Version(1, 315325645906790854L, 71898506);
 ```
 
-Note the last _named_ save-migration constant's label is `1.5.7f1`, and 1.6.2f1 changed only `current` (`Version.cs:825`). There is no CHANGELOG file in the repo; `README.md` is a single line.
+Note the last _named_ save-migration constant's label is `1.5.7f1`, and 1.6.4f1 changed only `current` (`Version.cs:825`). There is no CHANGELOG file in the repo; `README.md` is a single line.
 
 ---
 
 ## Things I could not confirm
 
 - **Exact distinct system count.** 726 direct `: GameSystemBase` declarations, 931 `*System.cs` files, 1014 `SystemOrder` registrations — these disagree because some systems register in multiple phases, some `*System.cs` files hold non-system types, and some systems derive from intermediate bases. I did not build a full type graph. "~800–950" is my honest range.
-- **Whether all 33 `SystemUpdatePhase` values are actually driven.** I verified `MainLoop`, `LateUpdate`, `Cleanup` are pumped from `GameManager.cs:2405-2421` and that `SystemOrder.cs` registers into `Modification1..ModificationEnd`, but I did not trace the pump sites for every phase (e.g. `GameSimulation`, `Raycast`, `PrefabReferences`).
+- **Whether all 33 `SystemUpdatePhase` values are actually driven.** I verified `MainLoop`, `LateUpdate`, `Cleanup` are pumped from `GameManager.cs:2448-2464` and that `SystemOrder.cs` registers into `Modification1..ModificationEnd`, but I did not trace the pump sites for every phase (e.g. `GameSimulation`, `Raycast`, `PrefabReferences`).
 - **The JS/HTML side of the UI.** Not present in this corpus at all. Any claim about the front-end contract beyond the C# binding types would be a guess.
 - **Whether `ModSetting` requires `RegisterInOptionsUI()` to be called manually.** The method exists (`ModSetting.cs:46`) and is not called from `ModManager`; I saw no auto-registration path, which implies the mod must call it — but I did not exhaustively search for an alternative registration site.
 - **`docs/colossal.md` and `docs/cohtml.md`** — I read `docs/game.md` and `AGENTS.md` only; given `game.md` contained the incorrect `[UpdateAfter]` guidance echoed in `AGENTS.md:56`, I would not rely on the other two without verification.
