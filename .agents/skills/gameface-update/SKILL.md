@@ -30,6 +30,8 @@ The `Browser` string `game_status` reported must carry the new version. Where it
 
 `curl -s https://docs.coherent-labs.com/cpp-gameface/changelog/feature/` into `.scratch/gameface-update-<new>/`, and parse the saved page there: a summarising fetch tool returns the range abridged. Inside `<main>`, a release opens at each `Version X.Y.Z` heading, the pattern `scripts/check-skill-changelog.ts` matches.
 
+Fetch `changelog/lts/` the same way. Where old or new sits on an LTS branch — a version above the last release its line has on the feature page — the feature page stops short of it, so that part of the range comes off the LTS page.
+
 Write to `changelog.md` in that folder every release above old up to new, and every release above the `<!-- timeline-ceiling: … -->` marker in `plugins/coherent-gameface/skills/gameface/references/version-gating.md`. Nothing fetched is tracked ([ADR-11](../../../docs/adr/0011-coherent-labs-documentation-corpus-stays-out-of-the-gameface-skill.md)).
 
 ## 4. Build or resume the plan
