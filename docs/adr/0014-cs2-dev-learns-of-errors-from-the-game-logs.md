@@ -32,7 +32,7 @@ Error reporting works on any install, stock or patched, with no step, and adds n
 it observes.
 
 The parser's limits stay: a block whose first line is not exception-shaped is not taken, and the
-log lines it reads move with the game, which the `VOLATILE:` markers in `mcp/src/` track.
+log lines it reads move with the game, which the `[symbol: …]` markers in `mcp/src/` track.
 
 Reverse this when a real error is lost to a shape the parser cannot read, or when an in-game
 component loads in every session anyway, which leaves a hook little to cost.
