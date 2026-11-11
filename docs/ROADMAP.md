@@ -286,6 +286,17 @@ the name's first write carried, a property beyond them reads out of bounds, as g
 and the first write is whichever a payload's order reaches first, so keeping the varying presence in the type
 name stays the safe rule. Session `12ee6d3f-9851-4277-a276-db808e87c85d`.
 
+### Idea: trim the version timeline and fold the `VOLATILE:` markers into the probes
+
+**Priority:** medium · **Cost:** unsure
+
+Just ideas, from the `cs2-modding` purge; nothing measured says either one is needed.
+`version-gating.md`, the largest skill file, spends most of its length on a changelog timeline that
+`mise skills:check-changelog` could fetch live; it could shrink to the probes and the gates that bite.
+The `VOLATILE:` markers label claims the engine moves while unmarked lines promise nothing; the
+`gameface-update` probe catalogue could own those claims instead, the way the trap check owns the
+`cs2-modding` traps.
+
 ## unity-devtools
 
 Drive a running Unity Mono development build from the outside over the Mono Soft Debugger protocol
