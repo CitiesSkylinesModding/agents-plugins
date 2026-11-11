@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.2.2...gameface-devtools-mcp-v1.2.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** move every probed claim to Cohtml 2.2.11.3 ([a863c8f](https://github.com/CitiesSkylinesModding/agents-plugins/commit/a863c8f77d712eac60450e94687590ca787cd908))
+
 ## [1.2.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.2.1...gameface-devtools-mcp-v1.2.2) (2026-09-30)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.3.1...cs2-modding-v1.4.0) (2026-11-11)
+
+
+### Features
+
+* **cs2-modding:** carry the references onto game 1.6.4f1 ([d5e66a3](https://github.com/CitiesSkylinesModding/agents-plugins/commit/d5e66a34e5eff94d81fb957c6dcb587a99f23344))
+
 ## [1.3.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.3.0...cs2-modding-v1.3.1) (2026-11-03)
 
 
