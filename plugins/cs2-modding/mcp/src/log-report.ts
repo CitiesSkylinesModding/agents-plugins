@@ -165,7 +165,7 @@ function byFirstOccurrence(a: Kind, b: Kind): number {
 
 /**
  * Reads the run's state and version block off `SceneFlow.log`.
- * (VOLATILE: the lines it reads -- `Game.SceneFlow.GameManager`.)
+ * The lines it reads are printed by [symbol: Game.SceneFlow.GameManager].
  */
 async function readSceneFlow(userDataPath: string): Promise<SceneFlowReport> {
   const filePath = sceneFlowPath(userDataPath);

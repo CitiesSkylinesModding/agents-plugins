@@ -440,8 +440,8 @@ function readStartGuid(
 
 /**
  * What `Logs/Modding.log` shows of a mod's load since the launch.
- * (VOLATILE: the Burst line -- `Colossal.IO.AssetDatabase.ExecutableAsset`.)
- * (VOLATILE: the load and error lines -- `Game.Modding.ModManager`.)
+ * Its Burst line is printed by [symbol: Colossal.IO.AssetDatabase.ExecutableAsset],
+ * its load and error lines by [symbol: Game.Modding.ModManager].
  */
 async function describeModLoad(
   userDataPath: string,

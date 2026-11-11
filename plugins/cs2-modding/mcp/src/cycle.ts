@@ -99,7 +99,7 @@ export const TEST_CEILING_SECONDS =
 export const READ_CEILING_SECONDS = 120;
 
 /**
- * (VOLATILE: this line -- `Game.SceneFlow.GameManager`.)
+ * Printed by [symbol: Game.SceneFlow.GameManager].
  */
 export const MAIN_MENU_REACHED = 'MainMenu reached';
 
@@ -388,7 +388,7 @@ export async function readLog(logPath: string, since: Date): Promise<LogEntry[]>
  * Where the last logged load stands: when it completed, `fellBack` when it ended at the main menu
  * after `fallbackSince`, or `pending`.
  * The main menu takes a load of its own, which is what a failed load falls back through.
- * (VOLATILE: the `Loading` lines -- `Game.SceneFlow.GameManager`.)
+ * The `Loading` lines are printed by [symbol: Game.SceneFlow.GameManager].
  */
 function readLoad(
   entries: readonly LogEntry[],
@@ -503,7 +503,7 @@ async function readShutdown(
  * neither.
  * Unity rewrites `Player.log` at launch, while `SceneFlow.log` may still be the last run's, so the
  * first keeps a stale line of the second from passing for this run's.
- * (VOLATILE: the two lines -- `Game.SceneFlow.GameManager`.)
+ * Both lines are printed by [symbol: Game.SceneFlow.GameManager].
  */
 async function hasCleanShutdown(userDataPath: string): Promise<boolean> {
   const playerLogPath = path.join(userDataPath, 'Player.log');

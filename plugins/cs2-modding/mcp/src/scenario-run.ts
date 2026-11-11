@@ -50,7 +50,7 @@ const SCENARIOS_FILE = 'Logs/TestScenarios.log';
 
 /**
  * Opens the memory figures the game logs after every scenario.
- * (VOLATILE: this prefix -- `Colossal.TestFramework.TestScenario`.)
+ * Printed by [symbol: Colossal.TestFramework.TestScenario].
  */
 const METRICS_PREFIX = '[Metrics]';
 

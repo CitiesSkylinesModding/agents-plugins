@@ -54,28 +54,28 @@ export interface RunLimits {
 }
 
 /**
- * (VOLATILE: this line -- `Colossal.TestFramework.AutomationClientSystem`.)
+ * Printed by [symbol: Colossal.TestFramework.AutomationClientSystem].
  */
 const SCENARIOS_STARTING = `Starting test scenarios.`;
 
 /**
- * (VOLATILE: this line -- `Colossal.TestFramework.AutomationClientSystem`.)
+ * Printed by [symbol: Colossal.TestFramework.AutomationClientSystem].
  */
 const SCENARIOS_FINISHED = `Finished test scenarios.`;
 
 /**
- * (VOLATILE: this line -- `Colossal.TestFramework.TestScenarioSystem`.)
+ * Printed by [symbol: Colossal.TestFramework.TestScenarioSystem].
  */
 const scenarioStartPattern = /^---\| START TEST SCENARIO: (?<name>.+?)\s*$/u;
 
 /**
- * (VOLATILE: this line -- `Colossal.TestFramework.TestScenarioSystem`.)
+ * Printed by [symbol: Colossal.TestFramework.TestScenarioSystem].
  */
 const scenarioFinishPattern =
   /^---\| FINISH TEST SCENARIO \((?<outcome>Success|Failure), exceptions: \d+, errors: \d+\): (?<name>.+?)\s*$/u;
 
 /**
- * (VOLATILE: this line -- `Colossal.TestFramework.TestScenario`.)
+ * Printed by [symbol: Colossal.TestFramework.TestScenario].
  */
 const testFinishPattern = /^---\| FINISH TEST \((?<outcome>Success|Failure), /u;
 

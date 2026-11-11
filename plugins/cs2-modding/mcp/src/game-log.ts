@@ -67,7 +67,7 @@ export const EXCEPTION_LEVEL = 'EXCEPTION';
 export const PLAYER_ENTRY_LINES = 2000;
 
 /**
- * (VOLATILE: the level names -- `Colossal.Logging.Level`.)
+ * The level names of [symbol: Colossal.Logging.Level].
  */
 const taggedLevels = [
   'VERBOSE',
@@ -96,14 +96,14 @@ const errorLevels: ReadonlySet<string> = new Set([
 
 /**
  * A stamped line of a `Logs/*.log` file.
- * (VOLATILE: the stamp and level format -- `Colossal.Logging.UnityLogger`.)
+ * Stamped by [symbol: Colossal.Logging.UnityLogger].
  */
 const entryPattern =
   /^\[(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2}) (?<hours>\d{2}):(?<minutes>\d{2}):(?<seconds>\d{2}),(?<milliseconds>\d{3})\] \[(?<level>[A-Z]+)\] {1,2}(?<message>.*)$/u;
 
 /**
  * A tagged `Player.log` line: `[HallOfFame] [ERROR] message`.
- * (VOLATILE: the tag format -- `Colossal.Logging.CustomLogHandler`.)
+ * Tagged by [symbol: Colossal.Logging.CustomLogHandler].
  */
 const taggedPattern = new RegExp(
   String.raw`^\[(?<logger>[^\]]+)\] \[(?<level>${taggedLevels.join('|')})\] {1,2}(?<message>.*)$`,
@@ -130,7 +130,7 @@ const unityFramePattern = /^(?<frame>[\w.+<>`$|]+:[\w.<>`$|]+\(.*?\))(?: \(at .*
 
 /**
  * The frames Unity's stack opens on, its own logging path and the game's, the same at every site.
- * (VOLATILE: this path's namespace -- `Colossal.Logging`.)
+ * The game's logging path is the `Colossal.Logging` namespace. [symbol: none]
  */
 const loggingFramePattern = /^(?:UnityEngine|Colossal\.Logging)\./u;
 
@@ -139,8 +139,8 @@ const loggingFramePattern = /^(?:UnityEngine|Colossal\.Logging)\./u;
  * on a stock game and a debug-patched one, with a PDB or without,
  * and on no exception logged as text.
  * A rename silences those exceptions, and no test sees it.
- * (VOLATILE: this method's name -- `UnityEngine.DebugLogHandler`.)
- * (VOLATILE: the route an uncaught exception takes to it -- `Colossal.Logging.CustomLogHandler`.)
+ * The method belongs to [symbol: UnityEngine.DebugLogHandler], and an uncaught exception reaches
+ * it through [symbol: Colossal.Logging.CustomLogHandler].
  */
 const HANDLER_LINE = 'UnityEngine.DebugLogHandler:Internal_LogException(';
 
