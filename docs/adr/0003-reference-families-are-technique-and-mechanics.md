@@ -1,6 +1,6 @@
 ---
 date: 2026-08-02
-status: accepted
+status: superseded by 0015
 area: plugins/cs2-modding
 ---
 
