@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.3...coherent-gameface-v1.3.0) (2026-11-11)
+
+
+### Features
+
+* **cs2-modding:** keep only the traps an agent cannot guess, and let it report the ones it meets ([e63398d](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e63398d3c23039fbc0ec5b8cd2961edad92a27a8))
+
 ## [1.2.3](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.2...coherent-gameface-v1.2.3) (2026-11-11)
 
 

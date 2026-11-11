@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.4.0...cs2-modding-v1.5.0) (2026-11-11)
+
+
+### Features
+
+* **cs2-modding:** drop the reference files, so a game update costs one trap-check run ([6765799](https://github.com/CitiesSkylinesModding/agents-plugins/commit/6765799273e0ec303829c0f5cc4350688fec2ea0))
+* **cs2-modding:** keep only the traps an agent cannot guess, and let it report the ones it meets ([e63398d](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e63398d3c23039fbc0ec5b8cd2961edad92a27a8))
+
 ## [1.4.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.3.1...cs2-modding-v1.4.0) (2026-11-11)
 
 
