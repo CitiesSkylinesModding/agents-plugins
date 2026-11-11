@@ -11,7 +11,7 @@
 - `plugins/cs2-modding/`: teaches an agent to write **Cities: Skylines II** code mods; skills + the TypeScript `cs2-dev` MCP server over the game's lifecycle, bundled and never published.
 
 The first two are generic toolkits, developed and verified against that game as the reference target.
-Each plugin documents its own architecture and gotchas in its `AGENTS.md` (with a `CLAUDE.md` symlink).
+Each plugin documents its own architecture and gotchas in its `AGENTS.md`.
 
 Everything a plugin ships MUST live inside its `plugins/<name>/` directory: marketplace installs copy only that subtree.
 New plugins get a sibling directory and an entry in both marketplace files.

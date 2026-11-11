@@ -171,7 +171,7 @@ function mirror(target: Target): void {
     const destination = path.join(target.installPath, file);
 
     mkdirSync(path.dirname(destination), { recursive: true });
-    // Verbatim, so a symlink such as CLAUDE.md stays the link an install holds.
+    // Verbatim, so a symlink stays the link an install holds.
     cpSync(path.join(source, file), destination, { verbatimSymlinks: true });
   }
 
