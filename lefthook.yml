@@ -43,12 +43,14 @@ pre-commit:
       glob: "{package.json,.claude-plugin/*.json,plugins/*/package.json,plugins/*/.claude-plugin/*.json,plugins/*/.codex-plugin/*.json,plugins/*/.mcp.json,scripts/check-plugin-sync.ts}"
       run: mise exec bun -- bun scripts/check-plugin-sync.ts
     skill-content:
-      # The cs2-modding plugin's shipped prose is a deliverable with no other automated coverage;
-      # the check reads the whole skills tree, so any staged file in it triggers a full pass.
-      # The gameface skills take its marker and baseline rules.
+      # Agent-facing prose is a deliverable with no other automated coverage; the check reads every
+      # file it judges, so any staged file among them triggers a full pass. Any staged Markdown
+      # triggers it, since the line-cite scope is Markdown alone; the other globs mirror the
+      # check's non-Markdown roots (the skills trees and the server's markers): widen both.
       glob:
-        - "plugins/cs2-modding/skills/**/*"
-        - "plugins/coherent-gameface/skills/**/*"
+        - "*.md"
+        - "plugins/*/skills/**/*"
+        - "plugins/cs2-modding/mcp/src/*.ts"
         - "scripts/check-skill-content.ts"
       run: mise exec bun -- bun scripts/check-skill-content.ts
     oxlint:

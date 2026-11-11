@@ -125,8 +125,7 @@ markers, and is its own investigation.
 
 Reading a C# value binding from the page means hand-writing the subscribe dance through
 `game_eval` — `engine.on("<group>.<name>.update", cb)`, then `engine.trigger("<group>.<name>.subscribe")`,
-then the matching unsubscribe — which the cs2-modding research pipeline ran to reach
-simulation-side data the DOM never renders (the workaround `docs/SOURCES.md` entry 9 records).
+then the matching unsubscribe — the route to simulation-side data the DOM never renders.
 A `game_binding` tool would make it one call: subscribe, capture the first payload, unsubscribe,
 return it.
 
@@ -175,7 +174,7 @@ ship, and the interesting version is the one a modder actually has.
 For the reference target the mechanism is now the repo-only `gameface-update` skill and the probe
 catalogue beside it (`.agents/skills/gameface-update/probes.md`): every claim the plugin rests on a
 probe, re-run through the `game_*` tools whenever the target's engine moves, as it did to the 2.2
-line CS2 ships as of 1.6.4f1 (`src/cohtml.Net/Properties/AssemblyInfo.cs:16`). The catalogue's own
+line CS2 ships as of 1.6.4f1 (`cohtml.Net`'s `AssemblyVersion`). The catalogue's own
 as-of line says whether its answers have been probed yet or are still the plugin's inferred claims.
 What remains beyond that is the part anyone can point at their own game: a probe script beside the
 `gameface` skill's `scripts/fetch-doc.mjs` running the same three sweeps over a live CDP connection —
@@ -474,14 +473,14 @@ trading a rare by-value call into such an assembly for the game staying up.
 
 **Priority:** medium · **Cost:** cheap
 
-A Unity game's own logs are the primary evidence for a whole class of diagnostics claims — the
+A Unity game's own logs are the primary evidence for a whole class of diagnostics questions — the
 version block, the debugger-port lines, the absence of a warning — and no `unity` tool reads them;
 `cs2-dev`'s `logs` serves one game, on its own machine. `System.IO.File.ReadAllText` through `eval`
 covers a game's own log files, but `Player.log` is held open by the player and answers
 `Sharing violation`; the workaround is
 `new FileStream(path, Open, Read, FileShare.ReadWrite)` wrapped in a `StreamReader`, which is a lot
 of incantation for "show me the log". A read-file or tail-N-lines verb, sharing-mode correct by
-construction, would serve every such claim directly.
+construction, would serve each of them directly.
 
 ### A system's query descriptor
 
@@ -686,9 +685,9 @@ Overload matching takes a variadic method's array as one argument and array crea
 grammar, so `CreateEntityQuery(typeof(A), typeof(B))`, `String.Join(",", a, b)` and `Split('\n')`
 need the array built first: `System.Array.CreateInstance(typeof(T), n)` plus `SetValue(x, i)` builds
 one, and a local holding it binds a `T[]` parameter (`em.CreateEntityQuery(all)` worked). Documenting
-that route at `unity-driving/SKILL.md:74`, which calls such a method out of reach, is the cheap fix;
-packing the trailing arguments into the parameter's array type when no overload binds them as
-written is the full one.
+that route in `unity-driving`'s "Evaluating C# in the game" section, which calls such a method out
+of reach, is the cheap fix; packing the trailing arguments into the parameter's array type when no
+overload binds them as written is the full one.
 
 ### Collection initializers in `eval`
 
@@ -1018,9 +1017,10 @@ Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), re-enabling 
 
 ## cs2-modding
 
-Skills and references teaching an agent to write Cities: Skylines II code mods, distilled from the
-decompiled game, the wiki and a corpus of open-source mods, and the `cs2-dev` MCP server over the
-game's lifecycle.
+Skills teaching an agent to write Cities: Skylines II code mods, a working loop and the traps the
+decompile and the live game would not warn of, and the `cs2-dev` MCP server over the game's
+lifecycle. An entry carrying a game fact is a trap candidate: it joins a body only if it meets the
+trap bar.
 
 ### `Time` in a system body wakes the Entities generator
 
@@ -1030,44 +1030,27 @@ A Do It UI system under a file-scoped namespace kept compiling until its `OnUpda
 `UnityEngine.Time.unscaledTime`, with no `SystemAPI` call or schedule site: the generator then
 emitted `ActionsUISystem__System_*.g.cs` into the global namespace, and the build failed with
 `CS0311` at `UpdateAt<T>` and `GetExistingSystemManaged<T>` rather than on `OnCreateForCompiler`.
-Establish which generator module matches `Time`, then amend the three passages on the trap,
-`cs2-mod-project/SKILL.md`, `references/build-pipeline.md` and `ecs-in-this-game.md`, with that
-trigger and this symptom.
+Establish which generator module matches `Time`, then amend the two passages on the trap,
+`cs2-mod-project/SKILL.md` and `references/build-pipeline.md`, with that trigger and this symptom.
 
 ### A system that catches its own `OnCreate` failure keeps updating
 
 **Priority:** medium · **Cost:** trivial
 
-"When a lifecycle hook throws" in `mod-lifecycle-and-ordering.md` covers an uncaught `OnCreate`
-throw and an `OnUpdate` throw, not the pattern between them: an `OnCreate` that catches and logs its
+Between an uncaught `OnCreate` throw and an `OnUpdate` throw sits a third pattern: an `OnCreate` that catches and logs its
 own failure leaves the system enabled and half-built, and its `OnUpdate` throws on the missing
 fields, which `UpdateSystem` logs as Critical on every update. A Do It UI system took 21 of those
-errors before the main menu (2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`). The section's table of
-failure surfaces should gain that row: set `Enabled = false` in such a catch.
+errors before the main menu (2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`). The rule: set `Enabled = false` in such a catch.
 
 ### `ProxyBinding` equality ignores the key
 
 **Priority:** medium · **Cost:** trivial
 
 `ProxyBinding`'s `Equals`, `==`, `!=` and `GetHashCode` all go through `Comparer.defaultComparer`,
-whose options are `MapName`, `ActionName`, `Name` and `Device` (`ProxyBinding.cs:29-39`, `:812-845`
-at 1.6.4f1): a binding compares equal to itself after a rebind, whatever its new path and
+whose options are `MapName`, `ActionName`, `Name` and `Device` (`ProxyBinding.Comparer`,
+`ProxyBinding.Equals`, at 1.6.4f1): a binding compares equal to itself after a rebind, whatever its new path and
 modifiers, so a `==`, a `Distinct` or a dictionary keyed on a binding misses the change.
-`settings-and-input.md` documents
-`PathEquals` but not this; a line there should name `PathEquals` or `ConflictsWith` as the
-comparison for the key itself.
-
-### A check for the cites research files make into each other
-
-**Priority:** medium · **Cost:** trivial
-
-`docs/research/README.md` lets a file cite a sibling as `<name>.md:<line>`, and those rot the moment
-the target gains a line above the target — which every authoring pass and every sweep does. The
-1.6.2f1 review found 32 of them landing on blank or out-of-range lines; a sampling reviewer found 6
-of the 32, and a twenty-line script found all of them in a second. The check is mechanical: resolve
-each cite against the citing file's own directory, open the line, fail on empty or out of range.
-It belongs beside `check-skill-content.ts` in `mise check`, where nothing external is needed — unlike
-`research:cite-audit`, which reads a local decompile and so cannot run in CI.
+The right move: `PathEquals` or `ConflictsWith` as the comparison for the key itself.
 
 ### Extracting the shipped localization dictionaries
 
@@ -1075,70 +1058,16 @@ It belongs beside `check-skill-content.ts` in `mise check`, where nothing extern
 
 The game's compiled `.loc` assets are the only first-party, version-known source for the vanilla
 localization key set, and decoding them is mechanical: `Locale.cok` is a plain stored zip, and the
-payload is a flat `BinaryWriter` stream whose reader is its own specification. A one-off decoder
-produced the 75-group namespace table the `localization` reference bakes.
-`docs/research/method-decoding-shipped-locale-data.md` holds the recipe, the two traps and the
-citations.
+payload is a flat `BinaryWriter` stream whose reader is its own specification. A base locale file
+can carry trailing bytes past its declared end, so end-of-file is not end-of-data and a decoder has
+to stop on the counts.
 
-Ship that as a script, so the table is regenerable rather than re-derived by hand each game version.
-Shape, sketched not settled: it belongs to `cs2-modding-setup`, which is where procedure over the
-user's own install already lives, and it would run against a recorded install path the way the
-decompile step already does. The output worth committing is the group table and the identifier-shape
-distribution, not the strings — the key identifiers are mechanism and the translations are the
-publisher's copyrighted text, which is the line the recipe file states and any script inherits.
-
-Two constraints that would shape it. A script here is repository tooling of the kind `scripts/`
-already holds, not something the marketplace copies into a user's install; that makes it a
-maintenance tool for regenerating a shipped table, which is the honest framing rather than a
-user-facing feature. And a base locale file can carry trailing bytes past its declared end, so
-end-of-file is not end-of-data and the decoder has to stop on the counts.
-
-A second consumer, met in a mod's translation pass: an agent translating a mod into the game's
+The consumer, met in a mod's translation pass: an agent translating a mod into the game's
 languages wants each locale's official terms (photo mode, milestone, playset) so the mod reads like
 the vanilla UI, and decoding the dictionaries by hand was a detour. `cs2-modding-setup` could decode
 them into a machine-local directory recorded in `~/.cs2-modding/setup.md`, beside the decompile;
-a local copy commits nothing, so it stays on the right side of the copyright line.
-
-### Marker namespace lint
-
-**Priority:** low · **Cost:** cheap
-
-A mechanics file's `VOLATILE:` marker lists the namespaces its names live in, and re-closing that
-list by hand drifted across six files in one review gate. `check-skill-content.ts` can enforce the
-mechanical half: every `src/Game/<namespace>/` path a file cites must have its namespace in the
-file's marker. Types named without a path stay the reviewer's job.
-
-### A source-first sweep of the shipped references
-
-**Priority:** medium · **Cost:** moderate
-
-Four of eight shipped claims sampled in one pass came back contradicted by the first-party source
-they describe: a mod-failure state the player is never shown, an upkeep share the game computes and
-never reads, an input option the prose said nothing reads, and a cell map glossed as the panel it
-does not feed. None was found by an audit. The benchmark ticket needed its answers verified against
-the owning source rather than against our own prose, so each agent was barred from reading
-`plugins/` and `docs/`, told to derive the answer from source before comparing it with the claim,
-and told that a disagreement was a useful result.
-
-Run the same fan-out deliberately over every shipped reference file, rather than over the claims a
-benchmark happened to touch. The plugin's `AGENTS.md` already prescribes this briefing for a review
-gate, but a gate runs at authoring time, on prose the same session wrote, aimed at one reference;
-afterwards, only the benchmark has re-derived shipped claims. What it costs is an agent per claim
-family and the maintainer's time ruling on what comes back. What it buys is the first evidence about
-the rest of the corpus.
-
-The benchmark's code tasks have already re-derived part of it. A verifier barred from `plugins/` and
-`docs/` ruled every checklist item under `bench/tasks/` from the decompile alone, and an item it
-contradicted or could not settle left the key. The 131 items that survived are confirmed claims, each
-naming the shipped file it came from on its `Reference` line, across 45 reference files. A sweep can
-take those claims as checked and spend its agents on the rest of each file.
-
-Six items the verifier contradicted are where a sweep starts, since each was drawn from a shipped
-claim and none was fixed: generator-machinery lookups (`daily-city-snapshot`), `GetComponentLookup`
-in `OnUpdate` as a per-update sync (`repeat-fire-ledger`), the tool-mode gate (`tree-species-mix`),
-the `LoadSettings` defaults instance (`low-funds-alert`), the Modify event (`city-festival-policy`)
-and the mutate-in-place panel map (`city-pulse-panel`). Either the claim or the item's reading of it
-is wrong.
+a local copy commits nothing, so it stays on the right side of the copyright line: the
+translations are the publisher's copyrighted text.
 
 ### What serializes a `CallBinding`'s result
 
@@ -1147,92 +1076,89 @@ is wrong.
 A `CallBinding` hands its callback to `view.BindCall` (`RawCallBindingBase.Attach`), so its return
 value reaches JavaScript through cohtml's own reflection `Exporter`, never through the
 `IWriter`/`IJsonWritable` path a `ValueBinding` takes, so a returned type's own `Write` never runs.
-Neither `binding-layer.md`
-nor any other reference says which serializer a call result meets; a task author met it while
-writing a panel task and found nothing to cite. A short section in `binding-layer.md` would settle
-it, sourced to `RawCallBindingBase.cs` and `cohtml.Net/Exporter.cs`.
+No skill says which serializer a call result meets (`Colossal.UI.Binding.RawCallBindingBase`,
+cohtml's `Exporter`).
 
 ### `SystemAPI` needs the Entities source generator
 
 **Priority:** medium · **Cost:** cheap
 
 Every `SystemAPI` member's body is `throw InternalCompilerInterface.ThrowCodeGenException()`
-(`src/Unity.Entities/Unity.Entities/SystemAPI.cs`): the call only works where the Entities source
-generator rewrote it at compile time. `ecs-in-this-game.md` lists `SystemAPI.Query<T>()` and
-`SystemAPI.QueryBuilder()` as ordinary forms, and `placement-definitions.md` uses
-`SystemAPI.QueryBuilder()` in an example, without saying a mod build has to run the generator for
-any of them. Whether the mod template's build does is the fact to establish first; the references
-then either say so or steer to `GetComponentLookup`/`EntityQueryBuilder` on the system itself.
+(`Unity.Entities.SystemAPI`): the call only works where the Entities source
+generator rewrote it at compile time, and `SystemAPI.Query<T>()` and `SystemAPI.QueryBuilder()` read
+as ordinary forms. Whether the mod template's build runs the generator is the fact to establish
+first; a trap then either says so or steers to `GetComponentLookup`/`EntityQueryBuilder` on the
+system itself.
 
 ### `EntityQuery.Matches` and the unchecked query-mask limit
 
 **Priority:** medium · **Cost:** trivial
 
-`ecs-in-this-game.md` never mentions query masks. A world has 1024: `Matches` (or `GetEntityQueryMask`) takes one for each distinct query descriptor it is called on, deduplicated by descriptor hash (`src/Unity.Entities/Unity.Entities/EntityQueryManager.cs:576-596`, `:1043`), and frees none before the world goes.
-The limit check, `ThrowIfEntityQueryMasksIsGreaterThanLimit` (`:1032`), is `[Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]`/`[Conditional("UNITY_DOTS_DEBUG")]`, so the game's release build skips it, and the 1025th mask writes past `Archetype.QueryMaskArray` (`fixed byte[128]`, `Archetype.cs:80`) instead of throwing.
+A world has 1024 query masks: `Matches` (or `GetEntityQueryMask`) takes one for each distinct query descriptor it is called on, deduplicated by descriptor hash (`Unity.Entities.EntityQueryManager`), and frees none before the world goes.
+The limit check, `EntityQueryManager.ThrowIfEntityQueryMasksIsGreaterThanLimit`, is `[Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]`/`[Conditional("UNITY_DOTS_DEBUG")]`, so the game's release build skips it, and the 1025th mask writes past `Archetype.QueryMaskArray` (`fixed byte[128]`) instead of throwing.
 The rule to add: call `Matches` only on a bounded set of queries with fixed descriptors, never on queries whose component set varies with the input. Found while reviewing a Find It change that filters changed prefabs with each processor's cached query (23 masks in a loaded world).
 
 ### A disposed mod stays in `modManager` with its assembly set
 
 **Priority:** medium · **Cost:** trivial
 
-`loader-states.md` says `GeneralError` "in practice means `OnLoad` threw", but `ModInfo.Load` runs `GetTypesDerivedFrom<IMod>()` inside the same `try` (`src/Game/Game.Modding/ModManager.cs:120`, its catch-all at `:141`), so a mod whose assembly loads and whose types do not, such as one a game update left outdated, lands there too.
+`GeneralError` reads as "`OnLoad` threw", but `ModInfo.Load` runs `GetTypesDerivedFrom<IMod>()` inside the same `try` (`Game.Modding.ModManager.ModInfo.Load`, its catch-all), so a mod whose assembly loads and whose types do not, such as one a game update left outdated, lands there too.
 Like the other rethrowing states it ends at `Disposed`, and the entry stays in `modManager` with `asset.assembly` set, so reflecting over it throws `ReflectionTypeLoadException` again.
 The rule to add: code that enumerates `modManager` and reflects over each assembly skips a mod whose `state` is not `Loaded`. Found while reviewing Asset Icon Library, whose API calls now do; Find It's API registration did not, and threw in a dispatcher updater on every frame.
-The `RegisterUpdater(Action)` row of `mod-lifecycle-and-ordering.md` needs the throw path too: the action unregisters only once it returns, so one that throws re-runs every tick, as Find It's did in game (2026-10-21, with Asset Icon Library's broken-mod fixture).
+`RegisterUpdater(Action)` has a throw path too: the action unregisters only once it returns, so one that throws re-runs every tick, as Find It's did in game (2026-10-21, with Asset Icon Library's broken-mod fixture).
 
 ### The game's culture is not invariant after boot
 
 **Priority:** medium · **Cost:** trivial
 
-`localization.md` closes the `ToUpper()`/`ToUpperInvariant()` enum-key mismatch as inert (`:161`, `:675`), because `GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`src/Game/Game.SceneFlow/GameManager.cs:546`).
-But `Awake` is `async void` (`:522`) and sets it before its first `await` (`:561`), and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
+`GameManager.Awake` sets `CultureInfo.CurrentCulture = CultureInfo.InvariantCulture` (`Game.SceneFlow.GameManager`), which reads as making a `ToUpper()`/`ToUpperInvariant()` enum-key mismatch inert.
+But `Awake` is `async void` and sets it before its first `await`, and a culture set inside an async method is undone for its caller at that await: at the main menu, a `unity` eval on the main thread read `CultureInfo.CurrentCulture.Name` as `en-US` (Proton, en-US locale). Thread-pool threads carry the OS locale too (desktop Mono under `LANG=tr_TR` read `tr-TR`; not checked in game).
 So culture-sensitive calls (`ToLower()`, `ToUpper()`, `StartsWith(string)`, a culture `IndexOf`) follow the player's locale, and the enum-key mismatch is live under a Turkish or Azeri one.
-Colossal.Json is one: it decodes a JSON number into a `string` field through `Convert.ChangeType(data, typeof(string))` with no provider (`src/Colossal.Core/Colossal.Json/JSON.cs:199`), so `6.5` arrives as `"6,5"` under a comma-decimal locale (confirmed in game under `fr-FR`; Hall of Fame's photo mode settings read NaN that way).
-Correct both passages, and add the rules: use the invariant or ordinal forms wherever a string must compare the same for every player, and decode a JSON number into a numeric field. Found while reviewing a Find It search change.
+Colossal.Json is one: it decodes a JSON number into a `string` field through `Convert.ChangeType(data, typeof(string))` with no provider (`Colossal.Json.JSON`), so `6.5` arrives as `"6,5"` under a comma-decimal locale (confirmed in game under `fr-FR`; Hall of Fame's photo mode settings read NaN that way).
+The rules: use the invariant or ordinal forms wherever a string must compare the same for every player, and decode a JSON number into a numeric field. Found while reviewing a Find It search change.
 
 ### The local mod details call never suspends
 
 **Priority:** low · **Cost:** trivial
 
-No reference says the PDX SDK's local mod lookup completes synchronously: `ModsInformationService.GetLocalModDetails` reads only the local cache and returns `Task.FromResult` on both paths (`src/PDX.SDK/PDX.SDK.Internal.Service.Mods.Services/ModsInformationService.cs:96-134`), so a mod's `async` method awaiting it never yields and runs to its end inside the call.
-The fact to add, beside the SDK's entry in `navigating-the-decompile`: code after that await runs before the caller's next line, so no frame or other thread sees the method half done. Found while reviewing a Find It change, whose reviewers raised a race on the mod dates it fills that cannot happen.
+The PDX SDK's local mod lookup completes synchronously: `ModsInformationService.GetLocalModDetails` reads only the local cache and returns `Task.FromResult` on both paths (`PDX.SDK.Internal.Service.Mods.Services.ModsInformationService`), so a mod's `async` method awaiting it never yields and runs to its end inside the call.
+The fact: code after that await runs before the caller's next line, so no frame or other thread sees the method half done. Found while reviewing a Find It change, whose reviewers raised a race on the mod dates it fills that cannot happen.
 
 ### A mod-held runtime prefab survives the load's asset unload
 
 **Priority:** low · **Cost:** trivial
 
-`prefabs-and-assets.md` covers `ScriptableObject.CreateInstance` (`:337`) but not whether such an object outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`src/Game/Game.SceneFlow/GameManager.cs:931`).
-Unity keeps what script fields and statics reach, and a managed system is reachable from the static `World.s_AllWorlds` (`src/Unity.Entities/Unity.Entities/World.cs:57`), so an instance a system's field (or an object it holds) references survives without `HideFlags`. Read from the decompile and Unity's documented rule, not tested in game. The fact to add there; found while reviewing a Find It change, where three reviewers raised the opposite as a bug.
+Whether a prefab made with `ScriptableObject.CreateInstance` outlives `Resources.UnloadUnusedAssets`, which `GameManager.CleanupMemory` runs on a load (`Game.SceneFlow.GameManager`), goes unsaid.
+Unity keeps what script fields and statics reach, and a managed system is reachable from the static `World.s_AllWorlds` (`Unity.Entities.World`), so an instance a system's field (or an object it holds) references survives without `HideFlags`. Read from the decompile and Unity's documented rule, not tested in game. Found while reviewing a Find It change, where three reviewers raised the opposite as a bug.
 
 ### An updated prefab's old entity can come first, and still resolves
 
 **Priority:** medium · **Cost:** trivial
 
-`regenerating-a-prefab.md`'s "What the call does" lists the drain's steps but not two consequences for code that reads both entities in the `Deleted` frame.
-The drain tags the old entity `Deleted` before it creates the new one (`src/Game/Game.Prefabs/PrefabSystem.cs:782`, `:798`), so when the rebuilt component set is new, the old entity's `Deleted` archetype is created first and a query over both lists the old entity before its replacement; with an unchanged set the replacement reuses the boot archetype and comes first. Shown in game: an `EditorAssetCategoryOverride` added before the call flipped the order.
-And the old entity keeps its `PrefabData` (`:799` copies it to the new one), so `TryGetPrefab(Entity)` (`:669`) still resolves it to the live prefab during that frame.
-The facts to add there, with the rule: code that pairs an updated prefab's old and new entities matches them by prefab, never by query order, and checks `Deleted` before `TryGetPrefab`. Found while fixing Find It's partial index, which lost an updated prefab's fields to both.
+Regenerating a prefab through `PrefabSystem.UpdatePrefab` drains it with two consequences for code that reads both entities in the `Deleted` frame.
+The drain tags the old entity `Deleted` before it creates the new one (`Game.Prefabs.PrefabSystem.UpdatePrefabs`), so when the rebuilt component set is new, the old entity's `Deleted` archetype is created first and a query over both lists the old entity before its replacement; with an unchanged set the replacement reuses the boot archetype and comes first. Shown in game: an `EditorAssetCategoryOverride` added before the call flipped the order.
+And the old entity keeps its `PrefabData` (the drain copies it to the new one), so `TryGetPrefab(Entity)` still resolves it to the live prefab during that frame.
+The rule: code that pairs an updated prefab's old and new entities matches them by prefab, never by query order, and checks `Deleted` before `TryGetPrefab`. Found while fixing Find It's partial index, which lost an updated prefab's fields to both.
 
 ### Escape and the game's UI actions
 
 **Priority:** medium · **Cost:** cheap
 
-No reference says how a key reaches a UI `InputActionConsumer` (`cs2/input`), so a mod that wants Escape to close its panel starts from the decompile.
-Escape is bound to several UI actions (`Back`, `Pause Menu`, `Close`, `Default Tool UI`): the UI input stack sends each action's stack index through `input.setActionPriority`, and `InputActionBindings.ResolveConflicts` (`src/Game/Game.UI/InputActionBindings.cs`) enables only the highest-priority action per key, so a consumer claiming `Back` above them blocks the pause menu and an open panel's `Close`, even when its handler returns `false`.
+No skill says how a key reaches a UI `InputActionConsumer` (`cs2/input`), so a mod that wants Escape to close its panel starts from the decompile.
+Escape is bound to several UI actions (`Back`, `Pause Menu`, `Close`, `Default Tool UI`): the UI input stack sends each action's stack index through `input.setActionPriority`, and `InputActionBindings.ResolveConflicts` (`Game.UI.InputActionBindings`) enables only the highest-priority action per key, so a consumer claiming `Back` above them blocks the pause menu and an open panel's `Close`, even when its handler returns `false`.
 An `ignoreFocusState` consumer attaches to the input root in mount order and the last attached wins; changing its `actions` keeps its slot, and on a first mount of the tree React runs child effects first, so a consumer mounted with the game screen lands before the game's own chain.
 The rule: mount the consumer only while it should take the key, and yield to the game's panels while one is open (`game.activeGamePanel$`, `selectedInfo.activeSelection$`).
-While a text field has focus, `InputManager.GetMaskForControlScheme` (`src/Game/Game.Input/InputManager.cs:630`) masks keyboard and mouse to the mouse (`hasInputFieldFocus`), so no keyboard UI action fires and Escape reaches only the field's DOM `keydown`.
+While a text field has focus, `InputManager.GetMaskForControlScheme` (`Game.Input.InputManager`) masks keyboard and mouse to the mouse (`hasInputFieldFocus`), so no keyboard UI action fires and Escape reaches only the field's DOM `keydown`.
 To check routing in game: a `unity` eval of `InputActionBindings.m_UIActionStates[m_ActionOrder["Back"]]` gives each action's `priority` and `state`, and `engine.trigger("input.onActionPerformed.update", {action: "Back", value: null})` fires an action where a real key press can't be queued (an unfocused game window).
-The facts to add to `frontend-and-injection.md`'s `cs2/input` passage. Found while making Escape close Find It's panel.
+Found while making Escape close Find It's panel.
 
 ### A second confirmation dialog orphans the first's callback
 
 **Priority:** low · **Cost:** trivial
 
-`AppBindings.ShowConfirmationDialog` (`src/Game/Game.UI/AppBindings.cs`) keeps one callback slot: each request overwrites it, and `OnConfirmationDialogCallback` calls the slot once and clears it, while the UI stacks the dialogs and moves focus to the dialog layer.
+`AppBindings.ShowConfirmationDialog` (`Game.UI.AppBindings`) keeps one callback slot: each request overwrites it, and `OnConfirmationDialogCallback` calls the slot once and clears it, while the UI stacks the dialogs and moves focus to the dialog layer.
 So of two requests in flight only the latest is answered, the first's callback never firing, and a reentrancy guard around a confirmation buys nothing: a second request cannot double-act, it can only strand an awaiter.
-The facts to add to `reporting-to-the-player.md`'s dialog table. Found while reviewing Hall of Fame's delete confirmation, a verifier having checked the decompile.
+Found while reviewing Hall of Fame's delete confirmation, a verifier having checked the decompile.
 
 ### Harvesting the mods' `docs/solutions/` into the plugins
 
@@ -1246,7 +1172,7 @@ A repo-only skill in `.agents/skills/`, beside `scan-mcp-failures`, would:
 
 - read every `docs/solutions/*.md` of the CS2 mods checked out on the machine, and class each as engine-level or the mod's own;
 - check whether a plugin skill already carries it, and verify the rest against the game: the decompile or the readable UI bundle for a claim about code, the live game through the `unity` and gameface tools for behaviour;
-- fold each verified fix into the skill that owns it (`gameface`, `gameface-driving`, `unity-driving`, `cs2-modding`, `cs2-modding-ui`, `cs2-mod-project`), a `cs2-modding` claim through `docs/authoring/reference-ticket-protocol.md` like any other;
+- fold each verified fix into the skill that owns it (`gameface`, `gameface-driving`, `unity-driving`, `cs2-modding`, `cs2-modding-ui`, `cs2-mod-project`), a `cs2-modding` claim only as a trap that meets the bar;
 - delete the harvested files from the mod repos once the plugin change has landed, and leave the mod's own.
 
 Shape, not settled: whether the deletion is a commit the skill makes in each mod repo or a handoff to that repo's session.
@@ -1255,7 +1181,7 @@ Shape, not settled: whether the deletion is a commit the skill makes in each mod
 
 **Priority:** medium · **Cost:** cheap
 
-`performance-and-memory.md` says what a job, a scan or an allocator costs and how to catch a native leak, but not how to measure a mod's own time or managed allocations, so each optimisation pass works its method out again.
+No skill says how to measure a mod's own time or managed allocations, so each optimisation pass works its method out again.
 Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-findit` (not in its git history): the Diagnostics section of `CLAUDE.local.md`, and `.scratch/tools/`.
 
 - Time inside compiled code, a bench class the `unity` eval calls or a hooked build: the eval's own timing of ECS work overstates it (`ToComponentDataArray` over one query read ~30 ms from the eval, 0.4–0.6 ms in a hooked build).
@@ -1264,9 +1190,9 @@ Find It's performance work did, in machine-local files of `~/Documents/Dev/cs2-f
 - Per-call allocations: set `GarbageCollector.GCMode` to `Disabled` and run several passes reading `GC.GetTotalMemory(false)`, the last agreeing passes giving the figure (`AllocBench` in `.scratch/tools/Item3Bench.cs`).
   A single pass after `GC.Collect` undercounts small objects, which refill the freed slots (a ~120 B/call `int[]` read 0), and `GC.GetAllocatedBytesForCurrentThread` returns 0 in the game's Mono.
 - A frame-time recording (rAF in the Gameface page) takes no other call into the game while it runs: each `unity` or gameface eval stalls the game and shows as a long frame.
-- A UI mod's load cost: during boot the UI view advances about once per second until the main menu, so each async step of the mod loader takes a tick and in-page timings read seconds; `frontend-and-injection.md`'s loader section does not say so. Hall of Fame timed `UIManager.Update` through Harmony, compared deployed-file variants interleaved, and attributed JS through the CDP `Profiler` domain, which works on Cohtml 2.2.1.3 and still on 2.2.11.3 (`docs/solutions/measuring-the-ui-bundles-load-cost.md` in `toverux/HallOfFame`).
+- A UI mod's load cost: during boot the UI view advances about once per second until the main menu, so each async step of the mod loader takes a tick and in-page timings read seconds. Hall of Fame timed `UIManager.Update` through Harmony, compared deployed-file variants interleaved, and attributed JS through the CDP `Profiler` domain, which works on Cohtml 2.2.1.3 and still on 2.2.11.3 (`docs/solutions/measuring-the-ui-bundles-load-cost.md` in `toverux/HallOfFame`).
 
-Shape, not settled: a `measuring.md` sibling in `performance-and-memory/`, with the two eval traps also a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
+Shape, not settled: the two eval traps a line each in `unity-driving` and `gameface-driving`, where an agent timing through the tools reads them.
 The figures come from one Linux machine under Proton; verify each in game before it ships.
 The unattended loop driving such runs belongs to the UI-trigger-from-a-shell-loop entry under `coherent-gameface`, and the game threads' OS culture, from the same notes, to the culture entry above.
 
@@ -1286,12 +1212,11 @@ The two copies are byte-identical today and will drift, and a mod started withou
 
 **Priority:** medium · **Cost:** cheap
 
-`binding-layer.md` says navigation detaches and re-attaches the whole registry (`UserInterface.OnNavigateTo`, `OnReadyForBindings`), and that a system's `OnDestroy` is where an event subscription is unhooked, but not what that means for a binding that subscribes to something itself.
+Navigation detaches and re-attaches the whole binding registry (`UserInterface.OnNavigateTo`, `OnReadyForBindings`), and a system's `OnDestroy` is where an event subscription is unhooked; neither says what that means for a binding that subscribes to something itself.
 Such a binding acquires in an `Attach(View)` override and releases in `Detach()`, the pair the game runs on every navigation and on teardown: a subscription made in the constructor and released in `Detach` is dead after the first navigation, and one released in a finalizer is never released, since the subscription roots the binding.
 A `ValueBinding`'s `value` survives `Detach`, and `OnSubscribe` re-sends it after the re-attach, so transient state (an input action's phase) is reset in `Detach`.
 Overriding `Attach` needs a `cohtml.Net` reference for `View`.
 The worked instance is `Greenfield/Utils/InputActionBinding.cs` in `~/Documents/Dev/cs2-greenfield-mod-template` (a `ProxyBinding.Watcher` and `ProxyAction.onInteraction`); its review gate of 2026-10-23 caught a fix that released in `Detach` while still acquiring in the constructor.
-The facts to add to `binding-layer.md`'s teardown passage.
 
 ### How Paradox Mods serves a mod's published images
 
@@ -1326,80 +1251,48 @@ The facts belong beside the detail call the entry above reads, in a Paradox Mods
 
 **Priority:** medium · **Cost:** cheap
 
-`settings-and-input.md` covers `ResetKeyBindings()` and the reset-key-bindings button, but not what an all-settings reset button needs.
 `SetDefaults()` never touches key bindings, so a reset that calls only it keeps the player's rebinds: an all-settings reset calls `ResetKeyBindings()` as well.
-`ResetKeyBindings()` applies and saves only when `keyBindingRegistered` (`src/Game/Game.Modding/ModSetting.cs:279-287`), so a reset that must save whatever the mod registers keeps its own `ApplyAndSave()`.
+`ResetKeyBindings()` applies and saves only when `keyBindingRegistered` (`Game.Modding.ModSetting.ResetKeyBindings`), so a reset that must save whatever the mod registers keeps its own `ApplyAndSave()`.
 Verified in game on 2026-10-23: a binding rebound to J stayed J through a `SetDefaults`-only reset, and returned to Ctrl+K once the reset called `ResetKeyBindings()`.
 The worked instance is the template's `ResetSettings` (CitiesSkylinesModding/greenfield-mod-template, `Greenfield/Settings.cs`); HallOfFame's `Settings.cs` has the gap.
-Both facts belong in `settings-and-input.md`'s `ResetKeyBindings()` passage.
 
 ### `getModule(path, 'classes')` returns the game's live classes object
 
 **Priority:** medium · **Cost:** cheap
 
-No `cs2-modding-ui` reference says what `getModule` hands back for a stylesheet module.
+No `cs2-modding-ui` skill says what `getModule` hands back for a stylesheet module.
 Its `classes` getter returns the object the vanilla component styles with, often its default theme, so a mod writing into it (fallback names for missing classes, say) changes the classes the game and every other mod read; a mod copies it before writing.
 The registry throws one `Module <path>@<export> was not found.` error for a missing module and a missing export alike, so a resolver cannot tell the two apart from the error.
 Traced in the readable bundle copy on 2026-10-23 (the registry's `getModule`, and `game-ui/common/tooltip/tooltip.module.scss`'s registration).
 The worked instance is the template's `getClassesModule` (CitiesSkylinesModding/greenfield-mod-template, `Greenfield/UI/src/utils/vanilla-modules.ts`); HallOfFame's copy writes into the live object.
-Both facts belong in `frontend-and-injection.md`'s module registry passage.
 
 ### Running the game without mods
 
 **Priority:** medium · **Cost:** cheap
 
-No reference says how to start a vanilla run, which an upstream bug report stands on and a mod-conflict bisect starts from.
+No skill says how to start a vanilla run, which an upstream bug report stands on and a mod-conflict bisect starts from.
 Two sources load mods: the user data folder's local mods, and the active Paradox playset.
 The game loads every folder under the user data path whose name does not begin with `.`, so a mod folder renamed to `Mods.disabled` still loads; a hidden name (`.Mods.disabled`) keeps it out.
-`Colossal.IO.FileSystem.Snapshot.IsExcluded` (`src/Colossal.IO/Colossal.IO.FileSystem/Snapshot.cs:49-56`) skips names starting with `.` or `~`; that it is the scan the mod loader uses is not traced.
+`Colossal.IO.FileSystem.Snapshot.IsExcluded` skips names starting with `.` or `~`; that it is the scan the mod loader uses is not traced.
 Moving the local mods out leaves the playset's mods loading: switching to an empty playset in the game's Paradox Mods screen is the other half, where hand-editing `.cache/Mods/playset_config.json` would fight the playset sync.
 Found on 2026-10-25 setting up a vanilla repro of a photo mode bug in Hall of Fame; the folder-name rule is Morgan's, from experience.
-Both halves belong in `diagnostics.md`, beside the `Enabled Mods` block that lists the playset alone.
-
-### Phase placement the references teach and the code misses
-
-**Priority:** medium · **Cost:** unsure
-
-Two checklist items failed in all eight baseline runs, treatment and control alike: "The system is registered into `Modification2`, the phase the building initialiser runs in" (`new-building-log`) and "The system whose query names the foreign component is registered after every mod has loaded" (`abandoned-auto-bulldoze`).
-The treatment read each item's cited reference: `mod-lifecycle-and-ordering.md` in three of the four `new-building-log` runs and `phase-catalogue.md` in the fourth, `mod-compatibility.md` in all four `abandoned-auto-bulldoze` runs.
-The rule reaches the agent and not its code, so the passage carrying it is the suspect: whether it states the phase as a step taken while writing the registration call, and whether it is reached before the code is written or after.
-Found in the 2026-10 baseline run that `bench/results.md` records.
-
-### The build references load on tasks that build nothing
-
-**Priority:** medium · **Cost:** unsure
-
-In the 2026-10 baseline run, 75 of 120 treatment runs read `cs2-mod-project`'s `linux-toolchain.md` and 45 read `build-pipeline.md`, though every task's prompt says not to build.
-Each read costs the treatment turns and dollars on nothing a checklist scores.
-What sends the agent there is untraced: `cs2-mod-project`'s description, a pointer from another `cs2-*` skill, or the agent reaching for a build check on its own.
-
-### Benchmark fixes the baseline run surfaced
-
-**Priority:** low · **Cost:** cheap
-
-- Five checklist items were not applicable in any run of either arm, so they cannot separate the arms: `bulldoze-hidden-paths`' "The widening adds to the frame's raycast flags rather than replacing them" and "The hit filter acts only on hits the widening caused", `daily-city-snapshot`'s "The student count queries the citizen-side `Student`", and `unpowered-buildings-button`'s "Sizes are written in rem" and "The badge's font size follows the text-scale setting", the last two because every run reused the game's components and wrote no stylesheet.
-  Each needs a prompt that makes it apply, or a replacement.
-- Judging a UI task costs about fifteen times a C# one: the judge gets every workspace file, so a seeded bug the run never touched stays in front of it, and the UI template's `bindings.d.ts` (147 KB) and `Thumbnail.png` bring its prompt to about 490 KB.
-  Leaving out the template files no task seeds would keep that rule and drop the bulk.
-- `results.md`'s header gives a run's start date only, though `--resume` spreads one run over sittings: the baseline ran from 2026-10-09 to 2026-10-25.
-  `bench:promote` could print the first and last jobs' dates.
 
 ### A mod loaded late misses the main menu's loading completion
 
 **Priority:** high · **Cost:** trivial
 
-`mod-lifecycle-and-ordering.md`'s startup sequence puts mod loading before the world is ready, but a Paradox Mods mod can load after the main menu: when the Paradox login and the mod sync outlast the boot, `RegisterDatabase` logs `Defer Mods load` in `SceneFlow.log`, waits for the ready state, then calls `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1544-1569`, `:1686`).
-The systems such a mod creates never get that main menu's `OnGameLoadingComplete` (`:1150`), and nothing logs it.
-The rule to add: a system that acts on a loading completion replays it at the end of `OnCreate` when `gameMode` is `MainMenu` and `state` is `WorldReady`; the game sets that state right after raising the event (`:1151`), so a system sees the main menu's event or the replay, never neither. A read made during the replay sees only the mods loaded before this one. A city or editor load first awaits `WaitForModsLoaded()` (`:1109-1118`, body at `:1328-1349`), which the session's first mods-database registration completes (`:1417`, `:1452`), so a late load from that registration lands inside the city load and gets its completion. A late load still misses it when no registration has started 60 s into the wait (`kModsRegistrationTimeout`, `:221`; the wait is unbounded once one has, `:1339`), where the load logs `Mods registration did not start within {0}s, continuing` (`:1345`); after a later login; and for a mod enabled later through a playset or mod-status change.
+Mod loading reads as happening before the world is ready, but a Paradox Mods mod can load after the main menu: when the Paradox login and the mod sync outlast the boot, `RegisterDatabase` logs `Defer Mods load` in `SceneFlow.log`, waits for the ready state, then calls `ModManager.Initialize(reinitialize: true)` (`Game.SceneFlow.GameManager.RegisterPdxSdk`, its local `RegisterDatabase`).
+The systems such a mod creates never get that main menu's `OnGameLoadingComplete` (raised in `GameManager.Load`), and nothing logs it.
+The rule: a system that acts on a loading completion replays it at the end of `OnCreate` when `gameMode` is `MainMenu` and `state` is `WorldReady`; the game sets that state right after raising the event, so a system sees the main menu's event or the replay, never neither. A read made during the replay sees only the mods loaded before this one. A city or editor load first awaits `GameManager.WaitForModsLoaded()`, which the session's first mods-database registration completes (`GameManager.RegisterPdxSdk`), so a late load from that registration lands inside the city load and gets its completion. A late load still misses it when no registration has started 60 s into the wait (`kModsRegistrationTimeout`; the wait is unbounded once one has), where the load logs `Mods registration did not start within {0}s, continuing`; after a later login; and for a mod enabled later through a playset or mod-status change.
 Found in Hall of Fame's usage statistics, where about 9% of 2026.6.0 sessions never tracked the main menu; its `docs/solutions/a-late-loaded-mod-misses-the-main-menus-loading-completion.md` carries the evidence.
 
 ### A mod's settings are written only on a clean quit
 
 **Priority:** medium · **Cost:** trivial
 
-`settings-and-input.md` says nothing about when settings reach disk: the game writes them only on a clean quit (`AssetDatabase.global.SaveAllSettings()`, `src/Game/Game.SceneFlow/GameManager.cs:802`), so a crash loses every change made since the launch.
+The game writes settings to disk only on a clean quit (`AssetDatabase.global.SaveAllSettings()`, `Game.SceneFlow.GameManager.TerminateGame`), so a crash loses every change made since the launch.
 The base `Setting.ApplyAndSave` is the obvious way out and the wrong one: it applies first, raising `onSettingsApplied`, and it picks the file to write from the short class name, so two mods with a `Settings` class write each other's file.
-The rule to add: save a change that must survive a crash through `AssetDatabase.global.SaveAllSettings()`, which writes every mod's settings without applying them; the game queues those saves with one running and one waiting and drops the rest, so a burst costs at most two.
+The rule: save a change that must survive a crash through `AssetDatabase.global.SaveAllSettings()`, which writes every mod's settings without applying them; the game queues those saves with one running and one waiting and drops the rest, so a burst costs at most two.
 Found in Hall of Fame, whose menu tour came back after crashes; its `docs/solutions/a-setting-is-lost-when-the-game-crashes.md` carries the fix.
 
 ### A game lock across sessions
@@ -1415,14 +1308,14 @@ Found reviewing the server, and hit when a stdio script drove the bundle while `
 **Priority:** medium · **Cost:** unsure
 
 A load that fails after a UI trigger holds `wait_load` to its ceiling: the game stays where it was and logs no fallback, so no `MainMenu reached` line ends the wait as it ends a failed `restart` load.
-`MenuUISystem`'s load catch (`MenuUISystem.cs:815`) only logs, which makes that entry the signal to try.
+`MenuUISystem`'s load catch (`Game.UI.Menu.MenuUISystem`) only logs, which makes that entry the signal to try.
 Found reviewing the server, by reading the catch; no live failed load has been seen.
 
 ### A `crash_dumps` tool
 
 **Priority:** low · **Cost:** moderate
 
-A `cs2-dev` tool that lists a run's crashpad reports and gives each one's verdict, in place of the steps `reading-a-crash-dump.md` teaches.
+A `cs2-dev` tool that lists a run's crashpad reports and gives each one's verdict, in place of reading each dump by hand with `minidump-stackwalk`.
 Build it when a session answering `A new crash report appeared` or `The game went away with no cs2-dev stop` read another run's report, took a `Simulated Exception` for a crash, or stopped because `minidump-stackwalk` was missing.
 That last case decides the shape: the server would have to bundle a minidump parser, since it cannot install the tool.
 Hit on 2026-11-03 (session `bd9d090f-c93c-439b-8abe-772f2fadddb5`): after a crash forced on Windows, a report beside the hint's `which may be a hang snapshot` was read as a boot snapshot until `minidump-stackwalk` showed `EXCEPTION_ACCESS_VIOLATION`.
@@ -1442,12 +1335,12 @@ Try the smaller fix first: that error naming the saves it did find answers the s
 A `cs2-dev` tool, or a skill teaching a recipe, that switches the active playset and enables, disables, subscribes or unsubscribes a mod in it, with or without a running game.
 The same tool could search the Paradox Mods API for mods, so a session finds a mod's id, author and versions without the in-game screen or the website.
 Without it, a session drives the in-game Paradox Mods screen by hand, or hands the step to the user; that screen renders in its own view, out of the `game_*` tools' reach, so only computer use clicks through it.
-The game reaches the playset through the PDX SDK: `ModManager` disables a failed mod with `EnableModInActivePlayset(platformID, enable: false)` (`src/Game/Game.Modding/ModManager.cs:331`), and a change in a running game reaches `OnEntryIsInActivePlaysetChanged`, which re-runs `ModManager.Initialize(reinitialize: true)` (`src/Game/Game.SceneFlow/GameManager.cs:1572-1686`).
+The game reaches the playset through the PDX SDK: `ModManager` disables a failed mod with `EnableModInActivePlayset(platformID, enable: false)` (`Game.Modding.ModManager.Initialize`), and a change in a running game reaches `OnEntryIsInActivePlaysetChanged`, which re-runs `ModManager.Initialize(reinitialize: true)` (`Game.SceneFlow.GameManager.RegisterPdxSdk`, its local `OnEntryIsInActivePlaysetChanged`).
 That second path is how a session loads a mod late on purpose, the only way to reproduce a bug that needs a playset sync, so the tool would also make that repro deterministic.
 `.cache/Mods/playset_config.json` is not the seam: hand-editing it fights the playset sync, as "Running the game without mods" notes.
 Hit on 2026-11-05 (session `47ef7feb-8a68-4b88-8947-3f03f487d22d`): reproducing a ToggleMarkers bug that shows only when Paradox mods load after boot took a subscription the user made by hand, then a disable and re-enable through the in-game screen, since boots kept logging `Preload Mods at boot` rather than `Defer Mods load`.
 A recipe that forces the late load with no tool: move one subscribed mod's folder out of `.cache/Mods/pdx_mods/` (out of the user data path too, or the user database loads it as a local mod) before the launch.
-Online, `onLoggedIn` assigns the mods database task only after `SyncMods`, and `Initialize` waits on it after a fixed `Task.Delay(2000)` in `RegisterPdxSdk` (`src/Game/Game.SceneFlow/GameManager.cs`), so a sync that has to download the folder again outlasts the wait and the boot logs `Defer Mods load`; offline, `onNoLogin` registers at once and the boot preloads.
+Online, `onLoggedIn` assigns the mods database task only after `SyncMods`, and `Initialize` waits on it after a fixed `Task.Delay(2000)` in `RegisterPdxSdk` (`Game.SceneFlow.GameManager`), so a sync that has to download the folder again outlasts the wait and the boot logs `Defer Mods load`; offline, `onNoLogin` registers at once and the boot preloads.
 Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): reproducing Extra Assets Importer's losses on a late playset load, a 175 MB subscription moved aside gave `Defer Mods load` on each of three boots, against two preloads and two late loads by chance before it; local edits of `activePlaysetId` and of `isEnabled` in `playset_config.json` held across those online boots.
 
 ### `restart` names a mod's folder only through its Burst line
@@ -1462,7 +1355,7 @@ Hit on 2026-11-03 (session `994514f5-49e9-40e9-a829-1522b6a7d659`): the mod temp
 
 **Priority:** medium · **Cost:** unsure
 
-`InitializeMods` logs `Loaded <mod> in <n>ms` around `ModInfo.Load` whatever the outcome, and `Load` sets `MissedDependenciesError` and returns without throwing when a reference is unresolved (`src/Game/Game.Modding/ModManager.cs`), so a mod that never ran logs a load and no error.
+`InitializeMods` logs `Loaded <mod> in <n>ms` around `ModInfo.Load` whatever the outcome, and `Load` sets `MissedDependenciesError` and returns without throwing when a reference is unresolved (`Game.Modding.ModManager.ModInfo.Load`), so a mod that never ran logs a load and no error.
 Its Burst line is no proof either: a dependent mod's load pulls the assembly in as a reference and logs `Loaded additional Burst code` for it.
 `restart` reads both lines and answers `Modding.log logs its load … and no error` with the Burst path.
 Candidate signals: the mod's own log not rewritten by this run, or a load time under a few milliseconds with no Burst line in the same initialize pass; the game's own record is the `ModsLoadingFailed` notification, which reaches no log.
@@ -1472,15 +1365,14 @@ Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): a local Extr
 
 **Priority:** medium · **Cost:** cheap
 
-The `roads-and-traffic` reference gives the `Curve { m_Bezier, m_Length }` data model but nothing on
-how the game places a bezier's handles, so a mod that refits a road (moving a node, reshaping its
-neighbours) invents its own rule. Two facts would cover it, in a paragraph of that reference: in
+Nothing says how the game places a `Curve`'s bezier handles, so a mod that refits a road (moving a
+node, reshaping its neighbours) invents its own rule. Two facts would cover it: in
 plan, `NetUtils.FitCurve(startPos, startTangent, endTangent, endPos)` fits the curve to the end
-tangents (`src/Game/Game.Net/NetUtils.cs:102`); in height, `NetToolSystem.LinearizeElevation` sets
+tangents (`Game.Net.NetUtils.FitCurve`); in height, `NetToolSystem.LinearizeElevation` sets
 `b.y` and `c.y` at a third and two thirds of the end-to-end change, by curve parameter, whatever the
-plan shape (`src/Game/Game.Tools/NetToolSystem.cs:4743`), and every curve the net tool draws
+plan shape (`Game.Tools.NetToolSystem`), and every curve the net tool draws
 (simple, complex, continuous, parallel) goes through it; Replace instead refits the plan with
-`FitCurve` and keeps the old `b.y` and `c.y` (`src/Game/Game.Tools/NetToolSystem.cs:3392-3399`). A
+`FitCurve` and keeps the old `b.y` and `c.y` (`NetToolSystem`'s `CreateReplacement`). A
 refit that shares the rise by plan position instead pulls a road that curves in plan off the game's
 height profile.
 Hit on 2026-11-04 (session `030e656a-6e9b-4907-992a-1680d06ee970`): fixing Move It's neighbour
@@ -1517,8 +1409,8 @@ The monitor already reads the logs: check them again a little after the report, 
 Hit on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): the event fired on every deferred boot of the session, the game recovered each time, and the boots' main-thread busy spells ran up to 117 s.
 Hit on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`): one snapshot 72 s into a boot and one during a save load, the game recovering from both; each weighs about 130 MB in `.cache/backtrace/crashpad/reports`.
 Wanted too: hang snapshots off during development, or opt-in.
-The watchdog is Backtrace's ANR thread (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Windows/NativeClient.cs:114-157`): it starts only when `BacktraceConfiguration.HandleANR` is set, true by default, and snapshots when the main thread's update time stays still across one `AnrWatchdogTimeout`, which the game raises to 15 s (`src/Colossal.Logging/Colossal.Logging.Backtrace/BacktraceHelper.cs:20`).
-`PauseAnrThread(true)` and `Disable()` (`src/Backtrace.Unity/Backtrace.Unity.Runtime.Native.Base/NativeClientBase.cs:75-86`), reached through `BacktraceClient.Instance.NativeClient`, stop it on a running game, so `restart` could take an option that calls one through the `unity` eval on a debug-patched game. (UNVERIFIED: whether an eval reaches the game before a boot's first busy spell.)
+The watchdog is Backtrace's ANR thread (`Backtrace.Unity.Runtime.Native.Windows.NativeClient`): it starts only when `BacktraceConfiguration.HandleANR` is set, true by default, and snapshots when the main thread's update time stays still across one `AnrWatchdogTimeout`, which the game raises to 15 s (`Colossal.Logging.Backtrace.BacktraceHelper`).
+`PauseAnrThread(true)` and `Disable()` (`Backtrace.Unity.Runtime.Native.Base.NativeClientBase`), reached through `BacktraceClient.Instance.NativeClient`, stop it on a running game, so `restart` could take an option that calls one through the `unity` eval on a debug-patched game. (Unverified: whether an eval reaches the game before a boot's first busy spell.)
 
 ### An exception in a coroutine's first segment never reaches `StartCoroutine`'s caller
 
@@ -1526,7 +1418,7 @@ The watchdog is Backtrace's ANR thread (`src/Backtrace.Unity/Backtrace.Unity.Run
 
 `StartCoroutine` runs a coroutine up to its first `yield` before it returns, and the engine logs an exception thrown in that part and stops the coroutine: a `try`/`catch` around `StartCoroutine` never sees it.
 A mod that starts a coroutine inside a `try` to catch its start-up failure gets a silent stop, the error only in `Player.log`.
-The fact to add, beside the `MainThreadDispatcher` table in `mod-lifecycle-and-ordering.md`: catch inside the coroutine, and have it report a failure to whatever waits on it.
+The rule: catch inside the coroutine, and have it report a failure to whatever waits on it.
 Seen on 2026-11-07 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), reviewing ExtraAssetsImporter's import pass: `Player.log` held a coroutine's first-segment exception while the `catch` around its start stayed silent.
 
 ### The error monitor is gone after a context summary
@@ -1542,41 +1434,52 @@ Wanted: the monitor in every session that drives the game, however the agent got
 
 **Priority:** medium · **Cost:** trivial
 
-`mod-lifecycle-and-ordering.md` says a mod whose `OnLoad` threw still gets `OnDispose` "and the failure is logged" (`:393`), and calls the null guards in `OnDispose` load-bearing (`:528`), but not what a throw there costs.
-`InitializeMods` calls `Dispose` inside its catch with no `try` of its own (`src/Game/Game.Modding/ModManager.cs:456`), so a throw from that `OnDispose` escapes: the `Error initializing mod` line never comes, no mod after it loads, and no UI module registers.
-The fact to add, under "`OnDispose` hygiene": an `OnDispose` that runs after a failed `OnLoad` must not throw, since only the quit wraps each dispose in a `try` (`:508-523`).
+A mod whose `OnLoad` threw still gets `OnDispose`, and the failure reads as logged.
+`InitializeMods` calls `Dispose` inside its catch with no `try` of its own (`Game.Modding.ModManager.InitializeMods`), so a throw from that `OnDispose` escapes: the `Error initializing mod` line never comes, no mod after it loads, and no UI module registers.
+The rule: an `OnDispose` that runs after a failed `OnLoad` must not throw, since only the quit wraps each dispose in a `try` (`ModManager.Dispose`).
 Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: with its `OnLoad` made to throw before its settings loaded, its `OnDispose` threw a `NullReferenceException`, and 7 mods loaded and no UI module registered, against 151 mods and 45 UI modules once guarded.
 
 ### One null value drops a whole `MemorySource`
 
 **Priority:** medium · **Cost:** trivial
 
-`localization.md` says one bad entry drops every entry after it, the survivors being those enumerated before it (`:112`); `MemorySource` loses them all.
-Its `ReadEntries` parses every entry in a first pass and only then returns the dictionary (`src/Colossal.Localization/Colossal.Localization/MemorySource.cs:14-29`), so a null value throws there, an `ArgumentNullException` from `Regex.Matches`, before any entry is read.
+One bad entry in a localization source drops every entry after it, the survivors being those enumerated before it; `MemorySource` loses them all.
+Its `ReadEntries` parses every entry in a first pass and only then returns the dictionary (`Colossal.Localization.MemorySource.ReadEntries`), so a null value throws there, an `ArgumentNullException` from `Regex.Matches`, before any entry is read.
 The source stays registered, so it fails again each time the locale is read.
-The fact to add, under "How entries reach the dictionary": a `MemorySource` holding one null value adds nothing, so a mod batching many assets' strings into one source keeps nulls out of it.
+The rule: a `MemorySource` holding one null value adds nothing, so a mod batching many assets' strings into one source keeps nulls out of it.
 Seen on 2026-11-08 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a pack with no name put a null into the batch of every pack's default names, a name added before the null was lost, and `Localization.log` logged the failure three more times at quit.
 
 ### One settings name in two `.coc` files breaks the settings save at quit
 
 **Priority:** medium · **Cost:** trivial
 
-`settings-and-input.md` says a `.coc` file holds one named block per settings class and that the `ModsSettings/<Mod>/<Mod>` folder is a convention (`:228-234`), but not what follows when two files hold the same name.
+A `.coc` file holds one named block per settings class, and the `ModsSettings/<Mod>/<Mod>` folder is a convention; two files can hold the same name.
 The quit's settings save then fails with "An item with the same key has already been added", then a sharing violation on the `.coc`, and the game appends a second block to the file `FileLocation` names.
-The fact to add: a settings name lives in one file, so a mod that moves its `FileLocation` deletes the file it left. (UNVERIFIED: the move case; a mod update that moves its `FileLocation` would settle it.)
+The rule: a settings name lives in one file, so a mod that moves its `FileLocation` deletes the file it left. (Unverified: the move case; a mod update that moves its `FileLocation` would settle it.)
 Seen on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a bench script wrote the mod's settings to `ModsSettings/ExtraAssetsImporter/ExtraAssetsImporter.coc` beside the root `ExtraAssetsImporter.coc` that its `[FileLocation("ExtraAssetsImporter")]` names, and the quit of each of four runs logged the error.
 
-### Predictable names for the UI bundle copy's minified identifiers
+### Two mods' same-named images answer each other's requests
 
-**Priority:** medium · **Cost:** moderate
+**Priority:** unsure · **Cost:** cheap
 
-`cs2-modding-setup` makes the readable UI bundle copy with one prettier pass, so the copy keeps the minifier's names, and each game build re-minifies them all.
-At 1.6.4f1 the copy's diff ran to 14968 added and 14934 removed lines, and 272 changed lines remained once every identifier of one to three characters was replaced by one placeholder on both sides, so nearly the whole diff is renaming.
-That renaming is why `cs2-game-update` has its bundle cluster verify every cite by opening the line rather than matching text, and why `mise research:cite-audit` cannot re-point a bundle cite by text identity.
+The scaffold emits images as `images/[name][ext][query]` under `publicPath: "coui://ui-mods/"`, and every mod's folder is a location of that one host, tried in an order no mod controls, so two mods each shipping `images/icon.svg` request one URL and one of them gets the other's file.
+The right move: give the images output a mod-prefixed directory through the asset rule's `generator.filename`.
+A raster base name the game also ships in its `UI/SharedImages` resources is shadowed whatever the directory.
+The symbol would be `Colossal.UI.DefaultResourceHandler`, the base of the `GameUIResourceHandler` the game's UI runs on, rather than the engine's stock `cohtml` handler of the same name.
 
-- Rename every minified binding before prettier runs, since longer names move prettier's line wraps: a scope-aware AST pass (a parser dependency, to be approved) names each binding from something the next build keeps, such as its kind and its position within its own scope, or the `Q.add` registration path and export name for a module's exports.
-  A change then renames only within the scope it touched.
-- The cost hinge is module scope, where most of those names live and position is the only anchor: an insertion there renames everything after it in that scope, unless the name is derived from the binding's content instead.
-- Landing it changes `cs2-modding-setup`'s step 5 for every user, retires the bundle cluster's open-the-line rule in `cs2-game-update`, and re-points every bundle cite in `docs/research/` and the shipped `cs2-modding-ui` references once, since every line moves.
+### A `try`/`catch` around a call to a missing member never runs
 
-Measured on 2026-11-10 during the 1.6.4f1 refresh (decompile commit `7179d263` against `43da1009`).
+**Priority:** unsure · **Cost:** cheap
+
+Mono resolves a member reference when the containing method is JIT-compiled, so a member another mod or a game update removed throws before the method's first statement, and a `try`/`catch` around the call never fires.
+The right move: put the call in its own `[MethodImpl(MethodImplOptions.NoInlining)]` method and guard the call to that, or look the member up by reflection, where a missing one is a testable `null`.
+It rests on the runtime rather than game code, so the trap would carry `[symbol: none]`.
+Not re-run in the game's Mono.
+
+### Another assembly's constants go stale in a mod without a sign
+
+**Priority:** unsure · **Cost:** cheap
+
+A `const`, an enum member's value and an optional parameter's default are copied into the calling mod at compile time, so after a game update or another mod changes one, the mod keeps running with the old value, with no exception and no log line.
+The right move: rebuild against the current assemblies after a game update, and read a value that must track its source through a `static readonly` field or a property.
+It rests on the compiler rather than game code, so the trap would carry `[symbol: none]`.

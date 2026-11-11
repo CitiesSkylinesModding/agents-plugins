@@ -52,6 +52,3 @@ A confounded run is not evidence, so record which single thing changed alongside
 Correcting one gap opens the next: the same passage was wrong on three consecutive rounds, each
 fix correct and each opening a neighbouring hole. When a claim comes back wrong twice, narrow it to
 what was actually measured and state the boundary, rather than extending the list again.
-
-[A derivation stopped at the line that agreed with it](decompile-read-stopped-at-the-confirming-line.md)
-is the reading-shaped version of the same habit.

@@ -18,7 +18,7 @@ Marking the unmarked claims as reviewers found them. Each round surfaced more â€
 
 ## Root cause
 
-A marker labels one claim; its complement is a promise about every line without one. `plugins/cs2-modding` can state "unmarked prose is architecture and holds" because its authoring pipeline marks exhaustively, per reference. The gameface skills borrowed the token without that pass, so the borrowed complement quantified over lines nobody had judged.
+A marker labels one claim; its complement is a promise about every line without one. The gameface skills took the token without a pass that marked exhaustively, so the complement quantified over lines nobody had judged.
 
 ## Fix
 

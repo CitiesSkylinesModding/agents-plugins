@@ -7,10 +7,8 @@
       "devDependencies": {
         "@toverux/blanc-hopital": "^6.0.1",
         "@types/bun": "^1.3.14",
-        "@types/common-tags": "^1.8.4",
         "@types/node": "^24.13.3",
         "chalk": "^5.6.2",
-        "common-tags": "^1.8.2",
         "lefthook": "^2.1.6",
         "oxfmt": "^0.73.0",
         "oxlint": "^1.88.0",
@@ -20,7 +18,7 @@
     },
     "plugins/coherent-gameface/mcp": {
       "name": "@csmodding/gameface-devtools-mcp",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "bin": {
         "gameface-devtools-mcp": "dist/server.mjs",
       },

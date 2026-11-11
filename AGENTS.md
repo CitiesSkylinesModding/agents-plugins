@@ -19,26 +19,23 @@ New plugins get a sibling directory and an entry in both marketplace files.
 ## Tech stack
 
 - [mise-en-place](https://mise.jdx.dev): dev tools, env vars and tasks.
-- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` and `bench/` import; the gameface and `cs2-modding` `mcp/` folders are the workspace packages, and `bun.lock` lives at the root.
+- Bun workspaces: the root `package.json` carries lint/format tooling (`oxfmt.config.ts`, `oxlint.config.ts`), lefthook, and what `scripts/` imports; the gameface and `cs2-modding` `mcp/` folders are the workspace packages, and `bun.lock` lives at the root.
 - .NET 10 SDK: the unity-devtools C# projects, grouped by `agents-plugins.slnx` at the repo root.
 
 ## Repository structure
 
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`: the Claude Code and Codex CLI marketplace files. Both list every plugin.
 - `.mcp.json` (root): LOCAL DEV ONLY, wiring the MCP servers for sessions in this repo (gameface and `cs2-dev` from their committed bundles, unity from sources via `dotnet run`). Installed users get each plugin's own `.mcp.json`; keep them in sync when changing server wiring.
-- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` shipped-prose rules, plus the marker spelling and the baseline lines of the gameface skills), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `research-cite-audit.ts` (`mise research:cite-audit`, the `cs2-game-update` sweep's cite step, reads a local decompile so not in CI); `trap-check/` (`mise skills:trap-check`, the symbol markers' check, reads a local decompile so not in CI).
+- `scripts/`: `check-plugin-sync.ts` (manifest consistency) and `check-skill-content.ts` (the `cs2-modding` trap contract, the gameface skills' marker spelling and baseline lines, and the line-cite ban over every maintained agent-facing file), both part of `mise check`; `check-skill-changelog.ts` (`mise skills:check-changelog`, network-dependent, not in CI); `trap-check/` (`mise skills:trap-check`, the symbol markers' check, reads a local decompile so not in CI).
 - `.agents/hooks/check-line-length.ts`: PostToolUse hook reporting `.ts`/`.cs` lines over 100 characters. Synced verbatim from the `scrolls` repo, which is why oxlint ignores `.agents/hooks` and oxfmt all of `.agents`. Markdown is deliberately out of scope: these docs are agent-facing and unwrapped by design.
-- `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` is the `cs2-modding` version sweep: the `VOLATILE:` markers and the baseline lines are its checklist, and it edits `docs/research/` and `docs/SOURCES.md`, which is why it cannot ship. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it. `scan-mcp-failures` mines this machine's transcripts for failed gameface, unity and `cs2-dev` calls, and feeds the **Hits** of `docs/ROADMAP.md` entries. `terra-nil-debuggee` launches a release Mono game from this machine's Steam library as a second debuggee for the unity server, the shape of a BepInEx-community report.
+- `.agents/skills/`: repo-only maintenance skills, each symlinked from `.claude/skills/` and shipped by no plugin. `cs2-game-update` re-verifies the `cs2-modding` traps a game update touched, through the trap check. `gameface-update` sweeps the gameface plugin after the reference target's engine moved, and keeps the probe catalogue beside it. `scan-mcp-failures` mines this machine's transcripts for failed gameface, unity and `cs2-dev` calls, and feeds the **Hits** of `docs/ROADMAP.md` entries. `terra-nil-debuggee` launches a release Mono game from this machine's Steam library as a second debuggee for the unity server, the shape of a BepInEx-community report.
 - `docs/ROADMAP.md`: planned facets. `docs/solutions/`: one file per hard-won problem, linked from where it bites. `docs/adr/`: numbered decision records.
-- `docs/authoring/`: standing authoring contracts. The ticket template any spec's tickets take, pointed at from `docs/agents/cantrips-loop.md`'s publish-tickets verb; and the `cs2-modding` reference pipeline's own — one shape doc per reference family and the reference-ticket protocol — disclosed out of the plugin's `AGENTS.md` because only an authoring pass reaches them. `check-skill-content.ts` enforces both families' prose-line budgets.
-- `docs/SOURCES.md`: every source the `cs2-modding` pipeline may read, what each settles, and how to locate it. Other files point at it; keep it pointing at as few as possible.
-- `bench/`: the skill-efficacy benchmark, measuring what the four `cs2-*` skills are worth to an agent writing mod code against the same model without them. Its `README.md` holds the invocation contract, the task format, and how a run is resumed, calibrated and promoted; `core.ts` holds every decision and `run.ts` is a thin, deliberately untested shell. `results.md` is the tracked baseline, written only by `mise bench:promote` from an Opus run, never by hand.
-- `docs/research/`: the `cs2-modding` pipeline's cited stage, sitting outside `plugins/` so none of it ships. Its `README.md` holds the conventions a research file satisfies; nothing under `plugins/` may reference it or `SOURCES.md`, and `check-skill-content.ts` fails any shipped link resolving outside the plugin directory, since existence alone passes one that works here and dead-ends for every installed user.
+- `docs/authoring/ticket-template.md`: the shape any spec's tickets take, pointed at from `docs/agents/cantrips-loop.md`'s publish-tickets verb.
 
 ## Commands
 
 - `mise check:agents`: read-only type check, lint, format and plugin-sync, output tuned for agents. `mise fix` applies auto-fixes; C# formatting is `mise fix:cs` (write-only, no read-only counterpart).
-- `mise test`: the .NET test suite. `mise test:gameface` and `mise test:cs2-dev` are the TypeScript MCP servers', `mise test:trap-check` the trap check core's, and `mise bench:test` the benchmark core's, the four TypeScript suites; no task runs another, and the benchmark's is the one left out of CI.
+- `mise test`: the .NET test suite. `mise test:gameface` and `mise test:cs2-dev` are the TypeScript MCP servers', and `mise test:trap-check` the trap check core's; no task runs another.
 - `mise build:gameface`, `mise build:cs2-dev`: rebuild a shipped bundle (commit the result).
 
 Run `mise tasks` to see the full shortcut list; append arguments freely, mise passes them through (ex. `mise some:task --some-arg`).
@@ -94,7 +91,7 @@ Five stores, checked in this order when writing something down:
 3. **`docs/solutions/`**: expensive investigations with dead ends, one file per problem, loaded on demand through a pointer placed where the problem bites.
 4. **`docs/adr/`**: why a choice was made, one record per decision.
 5. **`AGENTS.md`**: what no single site owns — the map, the conventions, the invariants spanning files. Plugin-specific facts go in that plugin's file, repo-wide facts at the root.
-   An `AGENTS.md` may disclose a contract only one branch of work reaches into a `docs/` file of its own, pointed at from the rule it elaborates — the `cs2-modding` contracts under `docs/authoring/` are the ones that do, and the ticket template there is the loop config's parallel case, disclosed from its publish-tickets verb.
+   An `AGENTS.md` may disclose a contract only one branch of work reaches into a `docs/` file of its own, pointed at from the rule it elaborates, as the ticket template under `docs/authoring/` is from the loop config's publish-tickets verb.
 
 An `AGENTS.md` line that restates a comment, a tool description, or plainly readable code is dead weight: delete it.
 
@@ -104,8 +101,6 @@ Propose updates whenever you detect drift.
 The exception is machine-local state a tracked script writes there and recreates when missing, such as the `scan-mcp-failures` ledger: that path cannot dangle.
 Because it is gitignored, a repo-wide sweep — renaming a term, retiring a rule — has to name `.scratch/` explicitly, since the search tools honour `.gitignore` and skip it by default.
 Such a sweep edits what it finds there: a live spec and its tickets are the instructions the next authoring pass runs on, so one still teaching a rule a decision has retired is a defect like any other, and a review that parks it as out of scope leaves the sweep half done.
-A sweep correcting shipped `cs2-modding` prose covers `docs/research/` too: those files are the next authoring pass's inputs, and a retired teaching surviving there walks straight back into the reference.
-Any edit to shipped `cs2-modding` prose also re-points the research files' line cites into it, since a line added or removed shifts every cite below it.
 **Sweep by subject rather than by the sentence being retired** — the same wrong claim is stated in other words elsewhere, and a grep for the old phrasing returns none of those files. It is also stated in places that are not prose and that a subject sweep misses: [the carriers a correction leaves behind](docs/solutions/a-correction-that-landed-on-one-carrier.md) enumerates them.
 Rescoping a rule takes the same sweep: enumerate every copy first and land them all in one batch, since each copy left behind becomes the file's counterexample.
 A file carrying a dated correction can still carry the pre-correction claim further down, since appending the note is not editing the original.
@@ -126,7 +121,7 @@ It takes the opposite register to the above — contractions, one idea per sente
 - Make the smallest safe change, but speak up when a refactor is overdue.
 - Prefer editing existing files over creating parallel abstractions.
 - When uncertain, state the assumption and proceed conservatively.
-- When correcting prose, quote the owning source or delete; a paraphrase or an added rationale is what the next review indicts. The `cs2-modding` `AGENTS.md` states the full rule for reference corrections.
+- When correcting prose, quote the owning source or delete; a paraphrase or an added rationale is what the next review indicts.
 - Resolve a ticket only after its review gate passes.
 - A test written to hold a fix earns belief once you have watched it fail with that fix backed out; reading cannot settle whether it is coupled ([the shapes that fool a reading](docs/solutions/a-regression-guard-that-passes-without-its-behavior.md)).
 - Actively propose updates to `AGENTS.md`, comments, or other docs when you detect drift.

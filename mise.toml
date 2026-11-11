@@ -61,8 +61,7 @@ run = [
   "bun --bun tsc --noEmit -p plugins/coherent-gameface/mcp/tests",
   "bun --bun tsc --noEmit -p plugins/cs2-modding/mcp",
   "bun --bun tsc --noEmit -p plugins/cs2-modding/mcp/tests",
-  "bun --bun tsc --noEmit -p tsconfig.json",
-  "bun --bun tsc --noEmit -p bench/tsconfig.json"
+  "bun --bun tsc --noEmit -p tsconfig.json"
 ]
 
 [tasks."check:oxfmt"]
@@ -80,7 +79,7 @@ description = "Checks that the Claude and Codex plugin manifests stay in sync."
 run = "bun scripts/check-plugin-sync.ts"
 
 [tasks."check:skill-content"]
-description = "Checks the cs2-modding plugin's shipped prose against its own content rules, and the gameface skills' markers and baseline lines."
+description = "Checks the cs2-modding skills against the trap contract, the gameface skills' markers and baseline lines, and the maintained prose for line cites."
 run = "bun scripts/check-skill-content.ts"
 
 # No check:cs: jb cleanupcode (the C# formatter, see fix:cs) has no read-only/dry-run mode, and C#
@@ -108,8 +107,7 @@ run = [
   "bun --bun tsc --noEmit --pretty false -p plugins/coherent-gameface/mcp/tests",
   "bun --bun tsc --noEmit --pretty false -p plugins/cs2-modding/mcp",
   "bun --bun tsc --noEmit --pretty false -p plugins/cs2-modding/mcp/tests",
-  "bun --bun tsc --noEmit --pretty false -p tsconfig.json",
-  "bun --bun tsc --noEmit --pretty false -p bench/tsconfig.json"
+  "bun --bun tsc --noEmit --pretty false -p tsconfig.json"
 ]
 
 [tasks."check:agents:oxlint"]
@@ -139,31 +137,6 @@ description = "Run the trap check's unit tests (scripts/trap-check/core.ts, the 
 raw = true
 run = "bun test scripts/trap-check"
 
-[tasks."bench:test"]
-description = "Run the skill-efficacy benchmark's unit tests (bench/core.ts, the tool's pure core)."
-raw = true
-run = "bun test bench"
-
-[tasks."bench:validate"]
-description = "Check the benchmark's task folders parse and their roots resolve. Spends nothing."
-raw = true
-run = "bun bench/run.ts --validate-only"
-
-[tasks."bench:run"]
-description = "Run the skill-efficacy benchmark. Real API spend: read bench/README.md first."
-raw = true
-run = "bun bench/run.ts"
-
-[tasks."bench:calibrate"]
-description = "Judge each benchmark task's two calibration samples. Real API spend, judge calls only."
-raw = true
-run = "bun bench/run.ts --calibrate"
-
-[tasks."bench:promote"]
-description = "Write a finished benchmark run into the tracked bench/results.md; pass the run directory."
-raw = true
-run = "bun bench/run.ts --promote"
-
 # SKILL MAINTENANCE TASKS
 # =======================
 
@@ -177,11 +150,6 @@ description = "Name each cs2-modding trap and server marker whose decompile file
 # Reads a local decompile checkout, so it cannot run in CI; --base and --target override the
 # baseline file and HEAD.
 run = "bun scripts/trap-check/run.ts"
-
-[tasks."research:cite-audit"]
-description = "Check the docs' line cites into the decompile by text identity across a game update (the cs2-game-update sweep's cite step)."
-# Reads a local decompile checkout, so it cannot run in CI; pass --decompile and --old.
-run = "bun scripts/research-cite-audit.ts"
 
 # VENDOR TASKS
 # ============

@@ -7,7 +7,7 @@ description: 'Sweeps the coherent-gameface plugin after the reference target''s 
 
 This skill re-probes every version-dependent claim against the running game, reads the rest off Coherent's feature changelog, and ends with every `Verified against Cohtml` line on the new version.
 
-It edits `plugins/coherent-gameface/`, `docs/ROADMAP.md` and the [probe catalogue](probes.md). The research files' observed-Cohtml lines, `docs/SOURCES.md` and all `cs2-modding` prose are `cs2-game-update`'s.
+It edits `plugins/coherent-gameface/`, `docs/ROADMAP.md` and the [probe catalogue](probes.md). The `cs2-modding` traps are `cs2-game-update`'s.
 
 **A stale ceiling alone is a shorter run.** It applies where `mise skills:check-changelog` is red and the two versions below are equal, and comparing them needs no game. Fetch the changelog, work the timeline-and-ceiling step, run the checks, then take the close's review pause before committing it as `fix(coherent-gameface):`. The refusal, the plan and the rest of the close belong to a moved engine.
 

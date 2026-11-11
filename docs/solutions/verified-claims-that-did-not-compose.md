@@ -1,6 +1,6 @@
 ---
 date: 2026-08-06
-area: docs/research and plugins/cs2-modding/skills (any reference that prescribes a procedure)
+area: plugins/*/skills (any skill or reference that prescribes a procedure)
 symptoms:
   - 'every claim in a passage re-derives clean and the passage still cannot be followed'
   - 'a reader-perspective review returns no findings twice, then four the moment it writes code'
@@ -14,7 +14,7 @@ updated: 2026-08-11
 
 ## Problem
 
-The `mod-compatibility` reference went through six review rounds. Correctness finders re-derived
+A three-file skill reference went through six review rounds. Correctness finders re-derived
 every claim from the decompile. A reader-perspective finder read all three files end to end against
 four concrete tasks and returned no findings, twice.
 
@@ -123,4 +123,4 @@ simply aimed at the file's own distances instead of its edges.
 (nine → sixteen → nineteen mode classes), each recount matching only the shapes the corrector
 already held — this doc's defect at the scale of a number. What held: strip the count of its
 authority — ship the set's shape with the re-check attached (the grep or query that re-derives
-membership), and have the volatility marker direct the sweep to run it.
+membership).

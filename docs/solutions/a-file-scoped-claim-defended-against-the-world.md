@@ -1,20 +1,20 @@
 ---
 date: 2026-08-08
-area: plugins/cs2-modding/skills (shipped-prose review)
+area: any review of shipped skill prose
 symptoms:
-  - 'a warning-block middle line survived two independent review verdicts and was reversed on the third'
-tags: [review, prose, quantifier, warning-block]
+  - 'a header line survived two independent review verdicts and was reversed on the third'
+tags: [review, prose, quantifier]
 ---
 
 # A file-scoped claim defended against the world
 
 ## Problem
 
-`debug-patch-signals.md`'s warning line read "every game symbol named below is checkable only there" — false, because the file names no game C# at all. The line survived two review rounds before a third reversed both verdicts.
+A file's header line read "every game symbol named below is checkable only there" — false, because the file names no game C# at all. The line survived two review rounds before a third reversed both verdicts.
 
 ## What didn't work
 
-Both defenses checked the world instead of the sentence: the decompile does contain the code producing the file's signals (`GameManager.GetVersionsInfo` at `GameManager.cs:2148` builds the first log line), so "the decompile is relevant here" felt like confirmation. Relevance of the source is not what the sentence asserts.
+Both defenses checked the world instead of the sentence: the decompile does contain the code producing the file's signals (`GameManager.GetVersionsInfo` builds the first log line), so "the decompile is relevant here" felt like confirmation. Relevance of the source is not what the sentence asserts.
 
 ## Root cause
 

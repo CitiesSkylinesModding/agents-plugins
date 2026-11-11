@@ -17,7 +17,7 @@
     {
       "name": "cs2-modding",
       "source": "./plugins/cs2-modding",
-      "description": "Teach your coding agent to write Cities: Skylines II code mods: the game's architecture, the modding techniques and the game mechanics behind them, every claim verified against the decompiled game. Ships the cs2-dev MCP server, which restarts, stops and awaits the game, reports its errors, and runs a mod's in-game scenarios."
+      "description": "Teach your coding agent to write Cities: Skylines II code mods: a working loop that checks the result in the running game, and the traps an agent with the decompiled game open still falls into. Ships the cs2-dev MCP server, which restarts, stops and awaits the game, reports its errors, and runs a mod's in-game scenarios."
     }
   ]
 }

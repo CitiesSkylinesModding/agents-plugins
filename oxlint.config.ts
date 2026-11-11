@@ -8,9 +8,8 @@ export default defineConfig({
   // .agents/hooks is synced verbatim from another repo and lives outside the tsconfig program, so
   // type-aware rules only see `error` types there, and fixing them in place would break the next
   // sync. .claude holds symlinks into linted trees and the full checkouts of agent worktrees, both
-  // outside the program too. A benchmark task's samples are mod sources that compile only against
-  // the game's UI scaffold declarations, so the same `error` types are all the rules see there.
-  ignorePatterns: ['dist', '.agents/hooks', '.claude', 'bench/tasks'],
+  // outside the program too.
+  ignorePatterns: ['dist', '.agents/hooks', '.claude'],
   rules: {
     // The server is Node/Bun-only (page-context code is kept self-contained by design and cannot
     // import anything anyway), so Node builtins are fine.
@@ -36,14 +35,6 @@ export default defineConfig({
       ],
       rules: {
         // Config.ts is the designated env boundary; everything else must go through it.
-        'node/no-process-env': 'off'
-      }
-    },
-    {
-      files: ['bench/run.ts'],
-      rules: {
-        // The benchmark driver reads the CSII_* variables that locate the game and hands them to
-        // the core: it is that tool's env boundary, the way config.ts is the server's.
         'node/no-process-env': 'off'
       }
     },
