@@ -1,6 +1,6 @@
 # Reading a system's `UpdateFrame` bucketing before you fork it
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Every step below is a read of that tree, so without one there is nothing here to run.
@@ -71,4 +71,4 @@ That `interval` argument is commonly the system's own `GetUpdateInterval`, so a 
 Copy the original's form rather than converting between the two, and carry the index and the count these steps established across with it — the form is the only part a fork inherits for free.
 What a bucket is worth in simulated time belongs to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 
-(VOLATILE: the load-balanced and dispatch group counts — `SimulationUtils`'s `*_UPDATE_GROUP_COUNT` and `*_DISPATCH_GROUP_COUNT` declarations, `UpdateGroupSystem`'s group arrays, and the request group's own count field. The interval and offset defaults this page reads — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The `GetUpdateFrame` helpers' signatures — `SimulationUtils`. The interpolation ring's length — `TransformFrame`'s buffer-capacity attribute.)
+(VOLATILE: the load-balanced and dispatch group counts — `SimulationUtils`'s `*_UPDATE_GROUP_COUNT` and `*_DISPATCH_GROUP_COUNT` declarations, `UpdateGroupSystem`'s group arrays, and `RequestGroup.m_GroupCount`. The interval and offset defaults this page reads — `GameSystemBase`'s `GetUpdateInterval` and `GetUpdateOffset`. The `GetUpdateFrame` helpers' signatures — `SimulationUtils`. The interpolation ring's length — `TransformFrame`'s buffer-capacity attribute.)

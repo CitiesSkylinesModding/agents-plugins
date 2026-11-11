@@ -1,6 +1,6 @@
 # The production graph
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -10,12 +10,13 @@ Without one you cannot check anything below.
 There is no table, no chart asset and no chain system: each recipe is one component on one company prefab, and the "graph" is the join over all of them by resource.
 A mod reaches a recipe by query, never by prefab name: an `EntityQuery` on `Game.Prefabs.IndustrialProcessData` filtered on its output resource.
 The game's own join is narrower: every `ZonePrefab` declares a `ProcessEstimate` buffer whose element at a dense resource index carries `m_ProcessEntity`, but `ZonePrefabInitializeSystem` fills it only on non-office industrial zone prefabs, from every recipe on a prefab carrying `IndustrialCompanyData` — office and extractor recipes included; no retail, converter or warehouse recipe resolves through it, and a resource with several producer prefabs keeps whichever was written last (`src/Game/Game.Zones/ProcessEstimate.cs`, `src/Game/Game.Prefabs/ZonePrefabInitializeSystem.cs`).
-The edges below were enumerated from one install's full prefab set at 1.6.2f1; the query above is the check, and content packs extend the set.
+The edges below were enumerated from the base game's prefab set, no DLC enabled, at 1.6.4f1; the query above is the check, and content packs extend the set.
 Recipe *amounts* are asset data — the `ResourceStack.m_Amount` fields on each `IndustrialProcessData` — and a game mode multiplies them: `ProcessingCompanyGlobalMode` scales `m_Input1`/`m_Input2`/`m_Output` amounts over every recipe and never touches `m_Resource` (`src/Game/Game.Prefabs.Modes/ProcessingCompanyGlobalMode.cs`), so the edges are mode-invariant and the amounts are not.
 
 ## Materials — extractor recipes, no input
 
 The ten resources with `ResourceData.m_IsMaterial == true`: Wood, Grain, Vegetables, Livestock, Cotton, Oil, Ore, Coal, Stone, Fish — the same ten `EconomyUtils.IsExtractorResource` declares as a C# mask (`src/Game/Game.Economy/EconomyUtils.cs`).
+The base game's prefab set, no DLC enabled, carries an extractor recipe for the first nine; the Fish extractor and its Fish → Food recipe come with a content pack.
 Extractor company prefab names are asset data with no derivable convention — `Industrial_OreExtractor` (output Ore) is the worked example, and the rest are reached by the query above, never by name.
 
 ## Material goods — industrial recipes
@@ -40,7 +41,6 @@ Extractor company prefab names are asset data with no derivable convention — `
 | Livestock | ConvenienceFood |
 | Fish | ConvenienceFood |
 | Vegetables + Livestock | Food |
-| Fish | Food |
 | Cotton | Textiles |
 | Livestock | Textiles |
 | Petrochemicals | Textiles |
@@ -100,7 +100,7 @@ CommercialSpawnSystem (runs only on one frame in every 128, and only while the c
 IndustrialSpawnSystem (same gate on another frame, against the industrial + storage + office demand sum), per resource:
   produceable non-material: roll NextInt(round(5000 / min(5, max(1, log10(1 + population))))) < demand, skip if a propertyless industrial company already produces it, else spawn
   produceable material: spawn an extractor when no propertyless extractor company produces it -- no demand test -- and break out of the resource loop, ending the pass: no later resource's roll or warehouse check runs
-  independently, any tradable resource with warehouse demand > 0: spawn a warehouse
+  independently, any tradable resource with warehouse demand > 0: skip if a propertyless storage company already produces it, else spawn a warehouse
 ```
 
 Both spawn gates also test an empty-signature-building count that nothing in `src/` ever assigns, so that bypass cannot fire — a reader tracing a signature building's company should look at the demand systems instead.

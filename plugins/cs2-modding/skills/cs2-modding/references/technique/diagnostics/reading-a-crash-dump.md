@@ -1,6 +1,6 @@
 # Reading a crash dump
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Reading a dump needs none, since what follows rests on the dumps and their tools; only the `Source:` lines into game C# go uncheckable.

@@ -1,6 +1,6 @@
 # Prefabs and assets
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -103,7 +103,7 @@ Call `base` first, then add — and where the archetype hook runs more than once
 An authoring component whose two overrides are both **empty** is a supported and useful shape: it contributes nothing to the ECS and exists purely as a managed marker you test with `prefab.Has<T>()`, which is exactly what the vanilla obsolete-identifiers component is.
 Source: `src/Game/Game.Prefabs/ObsoleteIdentifiers.cs`.
 
-(VOLATILE: which prefab bases build an archetype, how many seeds each runs, and where each writes what it built — each prefab base's own `LateInitialize` and whatever `RefreshArchetype` it calls.)
+(VOLATILE: which prefab bases build an archetype, how many seeds each runs, and where each writes what it built — each `PrefabBase` subclass's own `LateInitialize` and whatever `RefreshArchetype` it calls.)
 
 ## What `PrefabSystem` exposes for lookup
 
@@ -178,7 +178,7 @@ Some authoring fields have **no counterpart on the prefab entity at all** — th
 Cataloguing assets rather than reading simulation state reads the authoring object throughout: the UI object, theme object, asset-pack item, content prerequisite, spawn-location and LOD-properties components are where a catalogue's fields are authored.
 Source: `src/Game/Game.Prefabs/UIObject.cs`, `src/Game/Game.Prefabs/UIObjectData.cs`, `src/Game/Game.UI/ImageSystem.cs`.
 
-(VOLATILE: the prefab system's member names and signatures, and the authoring-side accessor names on `PrefabBase` — the prefab system's lookup region.)
+(VOLATILE: the prefab system's member names and signatures, and the authoring-side accessor names on `PrefabBase` — `PrefabSystem`'s lookup region.)
 
 ## What `PrefabSystem` exposes for mutation
 
@@ -212,7 +212,7 @@ Source: `src/Game/Game.Prefabs/PrefabSystem.cs`.
 
 `AddUnlockRequirement(unlocker, unlocked)` is the one domain-specific mutator, appending to the unlock-requirement buffer and warning when either side is not unlockable.
 
-(VOLATILE: the mutator names above and the negative index sentinel `-1000000000` — the prefab system's registry region.)
+(VOLATILE: the mutator names above and the negative index sentinel `-1000000000` — `PrefabSystem`'s registry region.)
 
 ## The short names that compile on both sides
 
@@ -236,7 +236,7 @@ Reading the wrong one gives you the list of prefabs a building is _made of_ when
 **Fully qualify a short name that appears on both sides**, in queries and in lookups alike.
 Source: `src/Game/Game.Prefabs/SubObject.cs` against `src/Game/Game.Objects/SubObject.cs`, `src/Game/Game.Prefabs/WaterSourceData.cs` against `src/Game/Game.Simulation/WaterSourceData.cs`.
 
-(VOLATILE: the collision count, the 98-to-13 split and which pairs compile on both sides — the prefab namespace's type declarations, against every other game namespace.)
+(VOLATILE: the collision count, the 98-to-13 split and which pairs compile on both sides — `Game.Prefabs`' type declarations, against every other `Game.*` namespace.)
 
 ## What initialises prefab data, and when
 
@@ -260,7 +260,7 @@ The general claim that prefab edits do not reach placed instances is false, and 
 
 **1. A value the simulation reads off the prefab entity each pass changes immediately.**
 This is the common case by a wide margin: most simulation jobs hold a `ComponentLookup` and index it with `prefabRef.m_Prefab` inside the loop.
-A sweep of the simulation namespace finds 292 such indexed lookups, 210 of them written in exactly that form.
+A sweep of the simulation namespace finds 293 such indexed lookups, 210 of them written in exactly that form.
 A write to the prefab entity is live on the next pass, for every placed instance, with nothing to trigger.
 Source: `src/Game/Game.Simulation/BuildingUpkeepSystem.cs`.
 
@@ -299,7 +299,7 @@ Before reaching for it, grep the field name across the simulation namespace and 
 A computed runtime value written from outside is where side effects come from.
 Where asking the player to rebuild is acceptable, it is both easier and safe, and every _new_ building is already handled by the prefab-entity edit.
 
-(VOLATILE: the workplace initialize system's two query descs and its `Modification5` registration, the three types the instance-archetype reconciliation covers, the three prefab-namespace systems that consume `Updated`, and the 292/210 lookup counts — the workplace initialize system, the replacement system, and `.m_Prefab]` across the simulation namespace.)
+(VOLATILE: the workplace initialize system's two query descs and its `Modification5` registration, the three types the instance-archetype reconciliation covers, the three prefab-namespace systems that consume `Updated`, and the 293/210 lookup counts — `CityServiceWorkplaceInitializeSystem`, `ReplacePrefabSystem`, and `.m_Prefab]` across `Game.Simulation`.)
 
 ## Editing vanilla prefabs in bulk, and tagging them for your own queries
 
@@ -327,7 +327,7 @@ Such a tag is deliberately _not_ an archetype-hook component: it never reaches a
 A bulk edit the player can turn on and off is driven by a control rather than by the phase walk, so it runs from the loading-complete hook for the initial application and directly from the settings page for a mid-session toggle.
 That is the arrangement that needs the authoring baseline above: without it, a second toggle restores your own first write.
 
-(VOLATILE: `PlaceableObjectData.m_ConstructionCost` and the `PlantData` component name — both in the prefab namespace.)
+(VOLATILE: `PlaceableObjectData.m_ConstructionCost` and the `PlantData` component name — both in `Game.Prefabs`.)
 
 ## Synthesising a new prefab type
 
@@ -419,8 +419,7 @@ Source: `src/Game/Game.Prefabs/PrefabSystem.cs`, `src/Game/Game.Prefabs/ReplaceP
 Queue them rather than acting on one inline, refuse to drain while a drag is in progress, and hold a cooldown between rebuilds — otherwise a slider's setter regenerates on every intermediate value; and the drain wraps each prefab in its own `try`/`catch` that logs and moves on, so a failed rebuild leaves the registry on the old entity and reports nothing to your caller.
 Source: `src/Game/Game.Prefabs/PrefabSystem.cs`.
 
-So **regenerate prefabs you minted and treat a vanilla one as a last resort**, and when you do reach for one, expect the damage to surface somewhere that never mentions prefabs: the game mode that restores service-consumption defaults holds a cache keyed by prefab entity, and after regenerating a city-service building it logs `Cached ServiceUpkeepData not found` against the new entity — in a captured run, during a save, long after the call that caused it.
-Source: `src/Game/Game.Prefabs.Modes/ServiceConsumptionGlobalMode.cs` (the cache and the log line).
+**Regenerate prefabs you minted and treat a vanilla one as a last resort**.
 
 [Regenerating a prefab in place](regenerating-a-prefab.md) walks the drain step by step — reach for it before regenerating a prefab you did not mint, or when a regeneration leaves something stale you cannot account for.
 
@@ -466,7 +465,7 @@ Prefabs a save references and the install no longer has get a negative index and
 The format itself is [`save-serialization`](../save-serialization/save-serialization.md).
 Source: `src/Game/Game.Prefabs/PrefabSystem.cs`.
 
-(VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — the prefab id type, and the prefab system's serialization region.)
+(VOLATILE: the `PrefabID` field set and the format tag gating its hash, and the `ObsoleteIdentifiers` / `PrefabIdentifierInfo` member names — `PrefabID`, and `PrefabSystem`'s serialization region.)
 
 ## Getting content and files in front of the game
 

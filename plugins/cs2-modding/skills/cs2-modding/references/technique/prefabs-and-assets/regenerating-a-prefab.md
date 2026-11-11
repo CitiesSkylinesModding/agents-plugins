@@ -1,6 +1,6 @@
 # Regenerating a prefab in place
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -57,11 +57,9 @@ That split is the whole of what this call costs, and the first half is the one t
 The game's own editor does the same thing on a routine path — the duplicate-and-replace-a-mesh and inspector-reparenting flows both hand `UpdatePrefab` whatever prefab is being edited, which is often a vanilla one.
 Source: `src/Game/Game.Prefabs/ReplacePrefabSystem.cs` (the instance remap), `src/Game/Game.UI.Editor/EditorHierarchyUISystem.cs` and `src/Game/Game.UI.Editor/InspectorPanelSystem.cs` (the two editor flows).
 
-**What breaks is any managed state the game keys by prefab `Entity`**, because that key is exactly what the rebuild throws away.
-The vanilla case is not hypothetical: the game mode that restores service-consumption defaults holds a cache keyed by prefab entity, and after regenerating a city-service building it logs `Cached ServiceUpkeepData not found` against the new entity — in a captured run, during a save, long after the call that caused it.
-Nothing in the ECS graph is wrong at that point, which is why the failure reads as unrelated to anything you did.
-Source: `src/Game/Game.Prefabs.Modes/ServiceConsumptionGlobalMode.cs` (the cache and the log line).
+**What breaks is any managed state keyed by prefab `Entity`**, because that key is exactly what the rebuild throws away.
+Source: `src/Game/Game.Prefabs.Modes/ServiceConsumptionGlobalMode.cs` (a vanilla cache keyed by prefab entity).
 
-So **regenerate prefabs you minted and treat a vanilla one as a last resort**, and when you do reach for one, expect the damage to surface somewhere that never mentions prefabs.
+So **regenerate prefabs you minted and treat a vanilla one as a last resort**.
 
-(VOLATILE: the replacement system's 14-component query list — the replacement system.)
+(VOLATILE: the replacement system's 14-component query list — `ReplacePrefabSystem`.)

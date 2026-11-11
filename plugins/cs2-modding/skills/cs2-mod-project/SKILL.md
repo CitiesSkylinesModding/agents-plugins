@@ -5,7 +5,7 @@ description: 'The official Cities: Skylines II modding toolchain. Use when the u
 
 # Building and shipping a Cities: Skylines II mod
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 On Linux, where the game runs under Proton, the toolchain is set up by hand and every project needs two csproj edits the Windows toolchain never asks for: [linux-toolchain.md](references/linux-toolchain.md) carries both, and without them a template project fails on an empty target framework rather than on anything naming the toolchain.
 A `VOLATILE:` or `UNVERIFIED:` marker in this skill's references follows the plugin-wide policy the `cs2-modding` trunk skill states: a label naming what moves or what went unconfirmed, with unmarked prose holding as architecture.
 **IMPORTANT: follow this skill's sections and references on anything they own — or at the very least grep them before writing a familiar csproj or build shape, because the toolchain inverts several standard .NET idioms and the familiar one builds cleanly, then fails inside the game.**
@@ -39,7 +39,7 @@ What lands in the folder:
 - `MyMod.csproj`, importing `Mod.props` and `Mod.targets` from `%CSII_TOOLPATH%` — those two files own the whole build.
 - `Mod.cs`, a class implementing `IMod`, which is what makes the assembly a mod: the game scans each shipped assembly for a type implementing that interface and ignores the ones that carry none.
 - `Setting.cs`, when settings were asked for.
-- `Properties/PublishConfiguration.xml` and `Properties/Thumbnail.png`, the publishing metadata.
+- `Properties/PublishConfiguration.xml`, the publishing metadata, whose `Thumbnail` names a `Properties/Thumbnail.png` the template does not create — [publishing.md](references/publishing.md) says what publishes in its place.
 - `Properties/PublishProfiles/`, three profiles that are the three publishing modes.
 
 ### The UI half

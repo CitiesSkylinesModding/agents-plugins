@@ -1,6 +1,6 @@
 # Custom tools
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -18,7 +18,7 @@ The map editor's toolbar is a separate surface — its entry list shares no code
 `ToolBaseSystem` is abstract, derives from `GameSystemBase`, implements `IEquatable<ToolBaseSystem>`, and is what every tool derives from.
 `ObjectToolBaseSystem` is the only intermediate abstract class the game ships.
 The game has eleven concrete tools — nine directly under `ToolBaseSystem`, plus the object tool and the upgrade tool under the heavier base — and the rest of the tools namespace is the consumer half: the apply and generate system families, validation, the clear and apply dispatchers, and the components and enums everything below names.
-(VOLATILE: the number of vanilla tools and the split between the two base classes — the vanilla tool registrations in the game's system-order class for the count, and the tool classes' own declarations in the tools namespace for the split.)
+(VOLATILE: the number of vanilla tools and the split between the two base classes — the tool registrations in `SystemOrder` for the count, and each tool class's declaration in `Game.Tools` for the split.)
 
 **What the heavier base adds is exactly one protected helper.**
 `CreateDefinitions(...)` takes 24 parameters, schedules the game's own definition job wired with dozens of component and buffer lookups, and emits `CreationDefinition` and `ObjectDefinition` entities through `ToolOutputBarrier` — sub-objects, sub-nets, sub-lanes, sub-areas, placeholder resolution and attachment included.
@@ -137,7 +137,7 @@ The mode icon path the UI synthesises is `"Media/Tools/" + toolID + "/" + modeNa
 Source: `src/Game/Game.UI.InGame/ToolUISystem.cs` (the two triggers and the synthesised path) and `Cities2_Data/Content/Game/UI/Media/Tools/` (the vanilla tool directories that path resolves into).
 [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md) owns the panel that replaces all of this, and [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns host locations.
 
-(VOLATILE: the hard-coded tool-id switch and the mode type-test — the tool UI system.)
+(VOLATILE: the hard-coded tool-id switch and the mode type-test — `ToolUISystem`.)
 
 ## Position in the tool list decides who claims a prefab
 
@@ -204,7 +204,7 @@ It is **not** a flags enum, despite the name and the power-of-two values.
 `None = -1`, then `Bus`, `Train`, `Taxi`, `Tram`, `Ship`, `Post`, `Helicopter`, `Airplane`, `Subway`, `Rocket`, `Work`, `Ferry`, `Bicycle`, `Car` at 0 through 13, and `Count = 14`.
 Note the namespace: it is `Game.Prefabs.TransportType`, not the routes namespace, and `System.Net.TransportType` exists as well, so an unqualified `TransportType` in a file carrying both usings is ambiguous.
 
-(VOLATILE: every member of the nine enums above, the eleven settable raycast fields, and any mask combination built from them — the common, net, areas, routes and prefabs namespaces, and the tool raycast system.)
+(VOLATILE: every member of the nine enums above, the eleven settable raycast fields, and any mask combination built from them — each enum's own declaration, `RaycastInput`, and `ToolRaycastSystem`.)
 
 ### Reading the result
 
@@ -273,7 +273,7 @@ What a tool needs from it is the flag set.
 `Error` is another zero-size tag, added in `ModificationEnd` by `ValidationSystem.Components` — a separate system spliced after `ValidationSystem`, which produces the error records but tags nothing itself — and it is the only thing `ToolBaseSystem` keeps a query for.
 Behind that tag is an error record naming a cause and a severity, and the severity is what decides whether the validation ends in the blocking tag at all; [`placement-definitions`](../placement-definitions/placement-definitions.md) owns the record, its causes, the severity levels and the error prefabs that decide which of them are raised, which is also where the suppression technique lives.
 
-(VOLATILE: the `TempFlags` member set — the tools namespace.)
+(VOLATILE: the `TempFlags` member set — `TempFlags`.)
 
 **`GetAllowApply()` is the gate, and it has a second clause tools forget.**
 The base returns false when errors exist and the tool system's ignore-errors flag is off, and _also_ returns false when the original-deleted system reports a result for the current window.
@@ -282,7 +282,7 @@ A tool whose previews point at originals that legitimately vanish therefore refu
 **Override `GetAllowApply()` and keep only the error clause** when your tool does that deliberately; the second clause is the one you are dropping, and you drop it for the whole tool.
 A vanilla tool's own gate can differ from the base, so read the override on the tool's class before reasoning from these two clauses: the bulldoze tool, for one, keeps only the second clause (below), and the object tool in move mode replaces the base's error test with one counting only an `Error` that traces back to the object being moved.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the two clauses), `src/Game/Game.Tools/BulldozeToolSystem.cs` and `src/Game/Game.Tools/ObjectToolSystem.cs` (their overrides), `src/Game/Game.Tools/OriginalDeletedSystem.cs` (the two-frame ring) and `src/Game/Game.Common/SystemOrder.cs` (its `PreTool` registration).
-(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — those two tool classes.)
+(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — `BulldozeToolSystem` and `ObjectToolSystem`.)
 (UNVERIFIED: whether that refusal is a game bug or the intended consequence of pointing `Temp` at originals the check considers gone — watching the check fire in a running game against a tool that does it deliberately would settle it.)
 
 **The canonical loop is the vanilla bulldoze tool**, and it is worth reading before writing your own.
@@ -324,7 +324,7 @@ Source: `src/Game/Game.Tools/ToolBaseSystem.cs`.
 
 `kSnapAllIgnoredMask` is a public constant equal to `AutoParent | PrefabType | ContourLines`: the three flags an "all snapping" toggle is meant to leave alone.
 The tool UI system applies it to build `allSnapMask` — the tool's user-selectable set minus those three — and the panel's "All" button toggles exactly that set, leaving contour lines a control of their own.
-(VOLATILE: the `Snap` member set and the contents of `kSnapAllIgnoredMask` — the snap enum and the base tool class.)
+(VOLATILE: the `Snap` member set and the contents of `kSnapAllIgnoredMask` — `Snap` and `ToolBaseSystem`.)
 
 Four UI bindings read all of this: two that call `GetAvailableSnapMask`, one that reads the selected snap, and a trigger that writes it back.
 Unlike tool selection and mode selection, **these four go through the base-class virtuals and therefore work for a mod tool unchanged.**
@@ -346,7 +346,7 @@ The system is registered at `SystemUpdatePhase.Rendering`, immediately after the
 `Buffer` is a struct holding four native lists, a bounds value and two terrain-derived floats, with `DrawCircle`, `DrawLine`, `DrawDashedLine`, `DrawCurve`, `DrawDashedCurve`, `DrawCustomMesh` and `DrawText` in plain and styled overloads.
 The styled ones take an outline colour, a fill colour, an outline width and `StyleFlags { Grid = 1, Projected = 2, DepthFadeBelow = 4 }`.
 
-(VOLATILE: the draw-method set on `Buffer` and the `StyleFlags` members — the overlay render system.)
+(VOLATILE: the draw-method set on `Buffer` and the `StyleFlags` members — `OverlayRenderSystem`.)
 
 The contract is four steps, and every draw site repeats them:
 
@@ -382,7 +382,7 @@ The mouse group sits at the mouse position plus sixteen pixels in flipped screen
 
 The widget types available, one file each in the tooltip namespace: `StringTooltip`, `FloatTooltip`, `IntTooltip`, `NumberTooltip`, `IconTooltip`, `LabelIconTooltip`, `NameTooltip`, `NotificationTooltip`, `ProgressTooltip`, `InputHintTooltip` and `ZoningEvaluationTooltip`, plus `TooltipColor` and `TooltipGroup`.
 
-(VOLATILE: the widget type names above — the tooltip namespace, one file each.)
+(VOLATILE: the widget type names above — `Game.UI.Tooltip`, one file each.)
 
 The shape: construct the widgets once in `OnCreate` with a stable path and a localised-string id, return early from `OnUpdate` unless your tool is the active tool, then set the values and call `AddMouseTooltip`.
 Colour is per widget, so a warning and a success line can sit in the same group.
@@ -416,7 +416,7 @@ Which specific actions carry the built-in flag is asset data rather than code: t
 The one site in the game that clears it is a mod's own key-binding registration, so treat a vanilla action as built-in and **the inherited property as the sanctioned way in.**
 Source: `src/Game/Game.Input/ProxyAction.cs` and `src/Game/Game.Input/InputActivator.cs` (the two throws and the internal overload past them), `src/Game/Game.Modding/ModSetting.cs` (the one site that clears the flag).
 
-(VOLATILE: the five action alias strings above and the `internal` accessibility of the tool action collection — the base tool class's create body, and the input manager.)
+(VOLATILE: the five action alias strings above and the `internal` accessibility of the tool action collection — `ToolBaseSystem.OnCreate`, and `Game.Input.InputManager`.)
 
 **A tool's own extra actions are declared as settings, and they live in the mod's own action map**, where nothing is built in and `shouldBeEnabled` works normally; [`settings-and-input`](../settings-and-input/settings-and-input.md) owns that declaration side, and the split is clean — this reference owns the three actions the base class provides, that one owns every action a mod declares.
 To make one of them fire on whatever button the user rebound a vanilla action to, mimic it: declaratively with the binding-mimic attribute naming the map and the action, or imperatively by looking up the vanilla action, copying its binding path and modifiers onto your own binding, and setting the binding back.

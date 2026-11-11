@@ -1,6 +1,6 @@
 # The level-up loop: land value, rent, upkeep, condition
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -70,9 +70,9 @@ PropertyRenterSystem.PayRentJob (kUpdatesPerDay = 16, UpdateFrame bucket), per b
   raises a RentersUpdated event entity when anything changed
 
 PropertyProcessingSystem.PutPropertyOnMarketJob (interval 16):
-  abandoned -> drop PropertyToBeOnMarket and stop
+  abandoned, or a prefab without BuildingPropertyData -> drop PropertyToBeOnMarket and stop
   otherwise recompute the asking rent and swap PropertyToBeOnMarket for PropertyOnMarket -- unless PropertyOnMarket is already there, in which case it is REMOVED instead (an unlisting)
-  a Signature building gets its company MANUFACTURED here, from the matching company prefab's archetype -- signature buildings do not wait for a company to find them
+  a Signature building no company rents yet gets its company MANUFACTURED here, from the matching company prefab's archetype -- signature buildings do not wait for a company to find them
 ```
 
 ## Condition, level-up, abandonment

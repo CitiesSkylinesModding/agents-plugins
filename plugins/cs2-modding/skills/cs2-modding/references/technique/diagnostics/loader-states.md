@@ -1,6 +1,6 @@
 # The loader's states, and the failure notification behind them
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -27,7 +27,7 @@ The loader records one state per mod asset, in this declaration order — the or
 
 Source: `src/Game/Game.Modding/ModManager.cs` (the enum, its order, and where each state is set), `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (what makes an asset required, the duplicate ordering, and the two assembly-load throws).
 
-(VOLATILE: the state member names and their order — the mod manager's own state enum; they are also the interpolated half of the failure dialog's localisation key, so a rename moves a key too.)
+(VOLATILE: the state member names and their order — `ModManager.ModInfo.State`; they are also the interpolated half of the failure dialog's localisation key, so a rename moves a key too.)
 
 ## The failure notification, and the dialog behind it
 

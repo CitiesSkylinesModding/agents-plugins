@@ -1,6 +1,6 @@
 # The phase catalogue
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -10,7 +10,7 @@ What lives in each of the 32 update phases, for choosing between two candidates 
 The names below are a phase's characteristic occupants rather than a full listing, and where a phase's purpose is stated it is inferred from what lives there: the enum carries no documentation and neither does any vanilla comment.
 Where each phase sits in the frame, and what that position costs, is the phase tree in the entry file.
 
-(VOLATILE: the per-phase occupant names below — the vanilla system-order class.)
+(VOLATILE: the per-phase occupant names below — `SystemOrder`.)
 Source: `src/Game/Game.Common/SystemOrder.cs` (every occupant and the band it is registered into), `src/Game/Game/SystemUpdatePhase.cs` (the phases themselves).
 
 ## Driven from the frame update

@@ -1,6 +1,6 @@
 # Diagnosing a mod that does not work
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -53,7 +53,7 @@ Where the symptom is memory growth rather than silence, this order has nothing t
 A process that died with no managed exception is the other symptom this order cannot take: it assumes a live process still writing lines, so [reading a crash dump](reading-a-crash-dump.md) reads the death's record, and [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns the native failures that end a run without one.
 Copy the logs before going there — the log-directory section below states the deadline.
 
-(VOLATILE: the loader and lifecycle message strings quoted above — the mod manager, `GameSystemBase`'s hook wrappers, and `UpdateSystem.Update`.)
+(VOLATILE: the loader and lifecycle message strings quoted above — `ModManager`, `GameSystemBase`'s hook wrappers, and `UpdateSystem.Update`.)
 
 ## The log directory, and the six files that matter
 
@@ -116,7 +116,7 @@ Or the open itself failed and was swallowed — the directory create and the fil
 Source: `src/Colossal.Logging/Colossal.Logging/CustomLogHandler.cs` (the first two routes), `src/Colossal.Logging/Colossal.Logging/ILog.cs` (the property and its unused setter), `src/Colossal.Logging/Colossal.Logging/UnityLogger.cs` (the open, its untyped catch and the unvalidated path).
 
 `--duplicateLogToDefault` is the launch flag whose name promises a copy, and nothing acts on it — the parsed value is only echoed back in the boot transcript's `Configuration:` dump.
-(VOLATILE: that this flag is still inert — the game manager's configuration type, whose fields are all echoed into that dump.)
+(VOLATILE: that this flag is still inert — `GameManager.Configuration`, whose fields are all echoed into that dump.)
 
 `Critical` sits above `Error`, which is the threshold that raises the modal error dialog.
 
@@ -156,7 +156,7 @@ Source: `src/Colossal.Logging/Colossal.Logging/LogManager.cs` (one object per na
 
 What a log call costs, and how to make one cheap enough to leave in a shipped build, is [`performance-and-memory`](../performance-and-memory/performance-and-memory.md).
 
-(VOLATILE: the settings key suffix `" Logger"`, the file name `FallbackSettings.coc`, and which logger names the game has already taken — the asset database's settings provider, the game's own user data root, and the `Logs/` directory of a vanilla run, which lists every logger the game itself creates.)
+(VOLATILE: the settings key suffix `" Logger"`, the file name `FallbackSettings.coc`, and which logger names the game has already taken — `AssetDatabase.LogSettingsProvider`, the game's own user data root, and the `Logs/` directory of a vanilla run, which lists every logger the game itself creates.)
 
 ## What the boot transcript answers before any mod question is asked
 
@@ -200,7 +200,7 @@ Source: `src/Game/Game.Modding/ModManager.cs`.
 
 [The loader states](loader-states.md) take them one by one — reach for it when a mod is missing from the list and you need to know which state to look for, or when you have a state name in hand and need what it says about the assembly.
 
-(VOLATILE: the state member names quoted above — the mod manager's own state enum.)
+(VOLATILE: the state member names quoted above — `ModManager.ModInfo.State`.)
 
 ## What the loader never reports at all
 

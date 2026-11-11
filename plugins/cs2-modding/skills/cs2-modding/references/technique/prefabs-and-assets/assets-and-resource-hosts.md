@@ -1,6 +1,6 @@
 # Assets and resource hosts
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -112,4 +112,4 @@ Source: `src/Game/Game.UI/ImageSystem.cs` (the fallback chain), `src/Game/Game.P
 
 The Cohtml side of the frontend is [`frontend-and-injection`](../../../../cs2-modding-ui/references/frontend-and-injection/frontend-and-injection.md).
 
-(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names and which scheme each is registered under, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — the UI system, the UI live-reload class, the default resource handler, and for the host schemes the game manager's UI initialisation over the install's `*.uiHost` files.)
+(VOLATILE: the scheme names `coui`, `assetdb`, `thumbnail`, `screencapture` and `useravatar`, the `gameui` and `ui-mods` host names and which scheme each is registered under, `AddHostLocation`'s signature, what a watched change reloads, and the raster extension list and `UI/SharedImages` path behind the collision above — `UISystem`, `UILiveReload`, `DefaultResourceHandler` and `GameUIResourceHandler`, and for the host schemes `GameManager`'s UI initialisation over the install's `*.uiHost` files.)

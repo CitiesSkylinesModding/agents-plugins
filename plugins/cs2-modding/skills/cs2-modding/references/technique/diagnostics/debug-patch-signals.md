@@ -1,6 +1,6 @@
 # Confirming the debug patch took
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the game install open.**
 Every signal below is a string in a log, a config file or a shipped binary, and reading them is the whole of this technique.
@@ -36,6 +36,6 @@ Not a signal that the patch took — this is the mod's own symbols rather than t
 The loader loads a `.pdb` sitting beside the mod's assembly when one is there, and the toolchain's deployment copies the whole output directory, so a locally deployed mod gets file and line numbers in every logged stack trace.
 Source: `src/Colossal.IO.AssetDatabase/Colossal.IO.AssetDatabase/ExecutableAsset.cs` (the symbols passed to the assembly load), `%CSII_TOOLPATH%/Mod.targets` (the deploy target's whole-output copy).
 
-(VOLATILE: the quoted strings above — the game manager's version block, the mono debugger agent's own startup output, the install's `Cities2_Data` directory, and `UnityPlayer.dll`'s own embedded debug-directory path.)
+(VOLATILE: the quoted strings above — `GameManager`'s version block, the mono debugger agent's own startup output, the install's `Cities2_Data` directory, and `UnityPlayer.dll`'s own embedded debug-directory path.)
 
 (UNVERIFIED: whether a single missing line names which of the two edits failed — only the both-applied case has been observed. Reverting one edit at a time on a patched install and re-reading the two lines settles it.)

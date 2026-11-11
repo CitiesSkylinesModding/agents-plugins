@@ -1,6 +1,6 @@
 # The developer menu
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there, and the few claims naming the shipped UI bundle answer only to the install's own copy.

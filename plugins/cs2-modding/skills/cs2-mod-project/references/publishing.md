@@ -1,6 +1,6 @@
 # Publishing a mod
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 Three modes, one per publish profile in `Properties/PublishProfiles/`, run with the IDE's publish command.
 
@@ -32,12 +32,16 @@ With a non-zero id in the attribute, `PublishNewMod` refuses, which is what make
 `Properties/PublishConfiguration.xml`, validated up front: a missing field is reported as an error before anything is uploaded.
 
 Enforced for every mode: `DisplayName`, `ShortDescription`, `LongDescription`, `Thumbnail`, `ModVersion` and `GameVersion` — a missing one is named in an error and nothing uploads.
+A `Thumbnail` naming a file that does not exist is no error: the publisher uploads a default image of its own in its place, and that is what a project fresh from the template publishes.
 Enforced by the two modes that touch an existing mod: `ModId` and `ChangeLog`.
-Repeatable and optional: `Screenshot`, `Tag`, `ExternalLink`, `Dependency` and `RequiredDLC`. `ForumLink` is optional but single — a second one silently replaces the first.
+Repeatable and optional: `Screenshot`, `Tag`, `ExternalLink`, `Dependency`, `RequiredDLC` and `AiTag`, with `ExternalLink` repeating once per `Type`. `ForumLink` and `Disclosure` are optional but single — a second one, like a second `ExternalLink` of the same `Type`, silently replaces the first.
 (VOLATILE: the accepted `ExternalLink` types and `RequiredDLC` names — both grow with the game, and the template's own comments carry the current sets.)
 
-`AccessLevel` is the field to write carefully, because it is the one that fails quietly: it accepts `Public`, `Private` or `Unlisted`, case-sensitively, and anything else — a lowercase `private`, a typo, a missing element — is read as `Public` with no error.
-A mod meant to stay unlisted goes public on a lowercase letter, so read it back after editing.
+`AiTag` names one of the platform's AI-disclosure tags, by its tag name or its display name in any case; an unknown one stops the publish before anything uploads, with an error listing the tags it accepts, or saying none are available.
+`Disclosure` holds at most 1,000 characters.
+
+The file sets no visibility: the publisher reads no `AccessLevel` element, so one an older project still carries is dropped without an error, whatever its value.
+A new mod is published with no access level, so the platform assigns one, and an update keeps the level the mod already has.
 
 Almost every field is read from a `Value` attribute, which is why the template writes them that way and why the attribute is the safe default for a field this file does not name.
 `Dependency` and `ExternalLink` are the exceptions: `Dependency` carries `Id` — plus an optional `DisplayName` and `Version` — and `ExternalLink` carries `Type` and `Url`. A `Value` on either is read by nothing and dropped without an error.
@@ -65,6 +69,8 @@ Line one.
 Line two.
 </LongDescription>
 ```
+
+`Disclosure` reads its element text too, but trims every line of it, so indenting it is safe.
 
 ## Signing in
 

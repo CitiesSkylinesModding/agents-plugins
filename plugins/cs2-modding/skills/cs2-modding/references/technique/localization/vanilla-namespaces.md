@@ -1,6 +1,6 @@
 # The vanilla key namespaces
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the game's string tables open.**
 The counts below are taken from those tables and the decompile carries none of them; [`localization`](localization.md) owns the C# behind a key lookup.
@@ -12,23 +12,23 @@ Each row is a **group**: the segment before the first dot.
 **Ids** counts the distinct `Group.ID` pairs in the group, ignoring hash and index.
 **Entries** counts the actual rows, so a group whose ids are mostly hashed or indexed carries far more entries than ids — and the gap between the two columns is what tells you whether to look a key up or construct one.
 
-**75 groups, 2,181 ids, 22,163 entries**, counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in these counts.
+**75 groups, 2,200 ids, 22,221 entries**, counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in these counts.
 
 | Group | Ids | Entries | Covers |
 | --- | ---: | ---: | --- |
 | `Achievements` | 2 | 82 | achievement `TITLE`/`DESCRIPTION`, both hashed by achievement id |
 | `AirPollutionInfoPanel` | 1 | 1 | the air-pollution info view's average readout |
 | `AnimationCurve` | 2 | 2 | axis labels on a curve editor |
-| `Assets` | 30 | 12,030 | prefab display names and descriptions, citizen and vehicle name formats, address formats, themes, upgrades, and the indexed generated-name pools |
+| `Assets` | 30 | 12,032 | prefab display names and descriptions, citizen and vehicle name formats, address formats, themes, upgrades, and the indexed generated-name pools |
 | `BikesInfoPanel` | 2 | 2 | parked bikes and bike-parking availability |
 | `Budget` | 7 | 35 | budget-panel tooltips, including the tax breakdowns |
 | `Chirper` | 116 | 341 | every Chirper message, most of them indexed variants |
 | `CinematicCamera` | 24 | 24 | the cinematic camera editor |
 | `CityInfoPanel` | 14 | 70 | demand factors and their descriptions |
 | `Climate` | 1 | 4 | `SEASON`, hashed by season |
-| `Common` | 153 | 438 | shared actions, dialog scaffolding, separators, month names, and **every `VALUE_*`, `FRACTION_*` and `BOUNDS_*` unit string** |
+| `Common` | 153 | 439 | shared actions, dialog scaffolding, separators, month names, and **every `VALUE_*`, `FRACTION_*` and `BOUNDS_*` unit string** |
 | `CompanyInfoPanel` | 3 | 3 | commercial, industrial and office profitability |
-| `Content` | 2 | 15 | content-pack name and prerequisite |
+| `Content` | 2 | 17 | content-pack name and prerequisite |
 | `DefaultTool` | 1 | 15 | `INFOMODE_TOOLTIP` |
 | `DisasterInfoPanel` | 3 | 3 | shelter capacity and evacuation |
 | `EconomyPanel` | 114 | 373 | the whole economy panel: budget lines, taxation, loans, production |
@@ -53,21 +53,21 @@ Each row is a **group**: the segment before the first dot.
 | `Main` | 69 | 69 | the main toolbar and its per-button tooltips |
 | `Maps` | 4 | 51 | map titles, descriptions, outside connections |
 | `MapTilePurchase` | 17 | 44 | the tile-purchase panel's resource summary |
-| `Menu` | 98 | 185 | main menu, achievements warnings, asset upload, notifications |
+| `Menu` | 99 | 190 | main menu, achievements warnings, asset upload, notifications |
 | `NaturalResourcesInfoPanel` | 8 | 8 | fertility, ore, oil, fish availability |
 | `NoisePollutionInfoPanel` | 1 | 1 | average noise pollution |
 | `Notifications` | 2 | 142 | `TITLE`/`DESCRIPTION`, hashed by notification icon prefab name; not every icon prefab has one |
-| `Options` | 149 | 1,595 | the whole options screen, including the mod-page keys the settings helpers generate |
+| `Options` | 151 | 1,605 | the whole options screen, including the mod-page keys the settings helpers generate |
 | `OutsideConnectionsInfoPanel` | 2 | 2 | top imports and exports |
 | `Overlay` | 19 | 19 | platform overlay actions and controller-disconnect prompts |
-| `Paradox` | 82 | 168 | account linking, the mods UI, playsets |
+| `Paradox` | 85 | 171 | account linking, the mods UI, playsets |
 | `PhotoMode` | 19 | 321 | photo-mode property titles and tooltips |
 | `PoliceInfoPanel` | 10 | 10 | crime probability, arrests, success rate |
 | `Policy` | 2 | 44 | `TITLE`/`DESCRIPTION`, hashed by policy prefab name |
 | `PopulationInfoPanel` | 15 | 15 | age distribution, birth and death rates |
 | `PostInfoPanel` | 4 | 4 | mail collected, delivered, rate |
 | `Progression` | 74 | 320 | milestones, development trees, unlock panels |
-| `Properties` | 68 | 138 | the per-prefab stat rows in the selected-info and tooltip panels |
+| `Properties` | 70 | 153 | the per-prefab stat rows in the selected-info and tooltip panels |
 | `Radio` | 14 | 19 | radio station UI and emergency messages |
 | `Resources` | 1 | 41 | `TITLE`, hashed by resource name |
 | `RoadsInfoPanel` | 4 | 4 | parking availability and income |
@@ -76,9 +76,9 @@ Each row is a **group**: the segment before the first dot.
 | `Statistics` | 2 | 214 | statistics panel title and per-statistic label |
 | `StatisticsPanel` | 4 | 441 | statistic titles and time-scale labels |
 | `SubServices` | 1 | 64 | `NAME` for an asset-category prefab |
-| `Toolbar` | 45 | 45 | the asset menu, theme and asset-pack panels, brush controls |
-| `ToolOptions` | 28 | 102 | the tool-options panel's titles and tooltips |
-| `Tools` | 33 | 70 | tool tooltips — area size, resource yields, flow and consumption labels |
+| `Toolbar` | 46 | 46 | the asset menu, theme and asset-pack panels, brush controls |
+| `ToolOptions` | 36 | 119 | the tool-options panel's titles and tooltips |
+| `Tools` | 35 | 72 | tool tooltips — area size, resource yields, flow and consumption labels |
 | `TourismInfoPanel` | 4 | 4 | attractiveness, hotel price, tourism rate |
 | `Transport` | 27 | 69 | transport overlay legends and line UI |
 | `TransportInfoPanel` | 10 | 22 | passengers, cargo, line counts |
@@ -92,7 +92,7 @@ Each row is a **group**: the segment before the first dot.
 | `WorkplacesInfoPanel` | 4 | 4 | workplaces, workers, availability |
 | `ZoningFactors` | 3 | 19 | zoning factor panel title and positive/negative labels |
 
-(VOLATILE: the whole table — its group set, both count columns and the coverage of each group all move with the game's shipped locale data.)
+(VOLATILE: the whole table — its group set, both count columns and the coverage of each group all move with the game's shipped locale data — `Cities2_Data/Content/Game/Locale.cok`.)
 
 The 21 groups [`localization`](localization.md) names as the C#-visible ones are `Editor`, `Common`, `Options`, `Properties`, `Paradox`, `Assets`, `Tools`, `Menu`, `PhotoMode`, `DefaultTool`, `SelectedInfoPanel`, `Services`, `Maps`, `Infoviews`, `Policy`, `GameListScreen`, `SubServices`, `StatisticsPanel`, `Radio`, `Notifications` and `Loading`.
 Every other row above is built entirely in the frontend.

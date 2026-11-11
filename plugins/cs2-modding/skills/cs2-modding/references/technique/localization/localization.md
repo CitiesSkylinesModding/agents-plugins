@@ -1,6 +1,6 @@
 # Localization
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -103,7 +103,7 @@ The rule for a mod that wants to swap a source out and back in: **construct a ne
 **"New instance" means new to the guard, which compares with `Equals` rather than by reference.** A source type that overrides `Equals` — `LocaleAsset` does, on asset id — is refused however many instances you build, so for those the second add needs a source the comparison genuinely distinguishes.
 **And test the removal itself before trusting it.** `RemoveSource` rebuilds one dictionary, chosen by which of the two the locale is: the active one, or — when the locale is only the fallback — the fallback one. Removing a fallback-locale source while the player is on another language therefore rebuilds a dictionary nobody is reading, and the entries it contributed stay in the active one, where they arrived by the fallback fill. Test a withdrawal in a language other than the one you registered under.
 
-(VOLATILE: the re-add guard on the recorded pair list, and that removal never prunes it — the localization manager's add-source and remove-source methods.)
+(VOLATILE: the re-add guard on the recorded pair list, and that removal never prunes it — `LocalizationManager`'s `AddSource` and `RemoveSource`.)
 
 ## How entries reach the dictionary
 
@@ -147,11 +147,11 @@ A localization identifier is parsed by four regexes and nothing else.
 Read off the regexes: **exactly one dot separates group from id**, neither part may start with a digit, both are `\w`-or-`$`, and the hash body accepts a far wider set — letters, digits, `-+/*._&<>` and the space — which is why a generated key can carry a whole dotted type name or a slashed path inside the brackets.
 Source: `src/Colossal.Localization/Colossal.Localization/LocalizationValidation.cs`.
 
-Those four shapes account for **every key in the base game's package** with nothing left over, its 22,163 splitting as 16,642 hashed, 3,715 indexed, 1,684 single, 122 hashed-and-indexed.
+Those four shapes account for **every key in the base game's package** with nothing left over.
 So the one-dot grammar is not merely what the compiler enforces, it is what the shipped data obeys.
 Source: the shipped `en-US.loc` inside `Cities2_Data/Content/Game/Locale.cok`.
 
-(VOLATILE: the four identifier regexes — the localization validation type.)
+(VOLATILE: the four identifier regexes — `LocalizationValidation`.)
 
 **Nothing on the mod path validates a key.**
 An in-memory source parses only to maintain the index counts and returns its raw dictionary regardless; a locale asset yields stored entries with no parsing at all; the dictionary accepts any non-empty key; and the frontend's `translate` is a plain map lookup.
@@ -290,7 +290,7 @@ Four locales mod translations commonly carry — `nl-NL`, `pt-PT`, `ar-SA` and `
 **Test `SupportsLocale` on that event, and re-run `AddLocale` when it comes back false.** A bulk asset change raises the same signal, and it raises it having just cleared the locale table and rebuilt it from the `.loc` assets in the database — every database, so a `.loc` your mod wrote survives, and a locale you introduced with the string overload and no asset does not. Nothing records or replays an `AddLocale`, so that locale stays gone for the session unless you add it again: adding a source blind on that firing records another dead pair and logs nothing, and testing without re-adding leaves the language silently missing.
 Source: `src/Colossal.Localization/Colossal.Localization/LocalizationManager.cs` (the re-add guard, the silent return when the locale is absent, the event `AddLocale` raises, and that only a bulk locale reload replays recorded sources).
 
-(VOLATILE: the shipped locale set and the per-locale entry counts — the game's own locale assets.)
+(VOLATILE: the shipped locale set and the per-locale entry counts — the game's own `Cities2_Data/Content/Game/Locale.cok`.)
 
 ### A mod-private language, chosen independently of the game's
 
@@ -337,7 +337,7 @@ The three numeric elements a substitution carries — `LocalizedNumber<T>`, `Loc
 
 ## The vanilla key namespaces
 
-The game's own strings occupy **75 groups** — the segment before the first dot — totalling 2,181 ids and 22,163 entries, counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in these counts.
+The game's own strings occupy **75 groups** — the segment before the first dot — counted in the base game's English, which is the fallback locale; each content pack's keys sit in that pack's own locale package and are not in that count.
 A group is a naming convention the panels agree on rather than a registered thing, so a mod can write a key into any of them — and whether that key is ever displayed depends on a panel asking for it, which is what the reuse section below governs.
 
 **Only 21 of the 75 groups are named as string literals anywhere in the game's C#**, and the other 54 are built entirely in the frontend, so grepping the decompile for a namespace and finding nothing proves nothing about whether it exists.
@@ -364,7 +364,7 @@ A prefab a mod registers has its display name and description looked up by the p
 So naming a prefab is not a free choice: the mod ships the key the system will ask for, and the prefab's name and its key are one decision rather than two.
 [`prefabs-and-assets`](../prefabs-and-assets/prefabs-and-assets.md) owns the registration on the other side of that seam.
 
-(VOLATILE: the branch that picks a prefab's name and description keys — the prefab UI system's title-and-description lookup.)
+(VOLATILE: the branch that picks a prefab's name and description keys — `PrefabUISystem.GetTitleAndDescription`.)
 Source: `src/Game/Game.UI.InGame/PrefabUISystem.cs`.
 
 **An invented namespace is where mods collide with each other.**
@@ -440,7 +440,7 @@ The game ships a diagnostic for exactly this, in the developer-mode debug window
 - a **Print input bindings and controls** button that logs a ready-to-paste tab-separated block of `Options.OPTION[...]` and `Options.OPTION_DESCRIPTION[...]` rows for every rebindable binding;
 - a **Print asset categories** button that writes a category CSV into the user data path.
 
-(VOLATILE: the localization debug tab's contents — the developer-mode localization debug UI.)
+(VOLATILE: the localization debug tab's contents — `LocalizationDebugUI`.)
 
 The other diagnostic is the log: the `Localization` logger writes `Added localization source ...` at Debug and the import failure at Error, and the `ToString()` override is what makes either line identify your mod.
 [`debug-menu`](../debug-menu/debug-menu.md) owns the developer menu itself; [`diagnostics`](../diagnostics/diagnostics.md) owns the log channels and what each line proves.

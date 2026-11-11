@@ -1,6 +1,6 @@
 # Patching the game for debugging
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 Paths throughout are Windows.
 On Linux, where the game runs under Proton, the edits are the same and only getting the library differs: [debug-patching-linux.md](debug-patching-linux.md) carries the commands.
 
@@ -17,7 +17,7 @@ Read it off the game:
 (Get-Item "$env:CSII_INSTALLATIONPATH\Cities2.exe").VersionInfo.ProductVersion
 ```
 
-(VOLATILE: the game's Unity version — the executable itself, which is the only copy that tracks a game update; a number written down anywhere else is a snapshot.)
+(VOLATILE: the game's Unity version — `Cities2.exe` itself, which is the only copy that tracks a game update; a number written down anywhere else is a snapshot.)
 
 A library from an older Unity than the game's no longer matches the game's own data, and the game fails at launch with `Failed to load PlayerSettings`.
 

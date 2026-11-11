@@ -1,6 +1,6 @@
 # Contending for a prefab from the toolbar
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -15,7 +15,7 @@ Creating a system runs that system's `OnCreate` synchronously, inside the caller
 A tool appended from `OnLoad` lands behind every tool already constructed and never sees a prefab first, and any mod constructing one early shifts everything after it.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the append at the end of `OnCreate`, after the systems it resolves) and `src/Game/Game.Tools/ToolSystem.cs` (the default tool created from the tool system's own `OnCreate`).
 
-(VOLATILE: `ToolSystem.tools` being a mutable `List<ToolBaseSystem>` rather than a read-only view — the tool system's list property, and the tool base class's `OnCreate` append.)
+(VOLATILE: `ToolSystem.tools` being a mutable `List<ToolBaseSystem>` rather than a read-only view — `ToolSystem.tools`, and the append in `ToolBaseSystem.OnCreate`.)
 
 **Take the slot of the one tool you must precede, rather than the front of the list.**
 Read the position back and reinsert at it, from `OnCreate`, immediately after the base has appended you:

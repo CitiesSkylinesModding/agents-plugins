@@ -1,6 +1,6 @@
 # Reporting a problem to the player
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -86,4 +86,4 @@ So passing a literal English sentence to a dialog or a notification passes it as
 Write `LocalizedString.Value(...)` explicitly for literal text; [`localization`](../localization/localization.md) owns what an unresolved key falls back to.
 Source: `src/Game/Game.UI.Localization/LocalizedString.cs`.
 
-(VOLATILE: the action-bit values and the `ErrorDialog` field names, the `AppBindings` method names, and the notification key namespaces — the game's own error dialog, app bindings and notification UI types.)
+(VOLATILE: the action-bit values and the `ErrorDialog` field names, the `AppBindings` method names, and the notification key namespaces — `ErrorDialog`, `AppBindings` and `NotificationUISystem`.)

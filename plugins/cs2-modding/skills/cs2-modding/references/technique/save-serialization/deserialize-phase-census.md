@@ -1,6 +1,6 @@
 # The deserialize phase, band by band
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The census below is read straight off that tree's registrations, so without one there is nothing here to act on.
@@ -57,4 +57,4 @@ if (!(m_LoadGameSystem.context.version >= Version.laneDirectionNetObject) && !m_
 All four version-gated ones schedule a Burst job.
 Source: `src/Game/Game.Serialization.DataMigration/LaneDirectionNetObjectSystem.cs` (the quoted gate), `src/Game/Game.Serialization.DataMigration/` (the twelve repair paths).
 
-(VOLATILE: the system names, the band counts and the registrations above — the vanilla system-order class's deserialize-phase registrations.)
+(VOLATILE: the system names, the band counts and the registrations above — `SystemOrder`'s deserialize-phase registrations.)

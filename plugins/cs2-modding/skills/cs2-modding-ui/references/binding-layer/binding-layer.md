@@ -1,6 +1,6 @@
 # The binding layer
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Nearly every line here names a game type or a method on one, and the wire strings are checkable only against the shipped frontend bundle, so without the tree the kinds and their lifecycle still hold but no signature, log text or `__Type` spelling below can be confirmed.
@@ -177,14 +177,14 @@ Every subscribe fans the push out to every JS listener on that path, not only th
 
 **This layer logs nothing for a path nobody registered.**
 At the raw engine layer the subscribe trigger returns normally, throws nothing, and no update ever fires.
-At the `cs2/api` layer `bindValue` throws on first read of its value when no fallback was passed, with a message saying the update was not called after subscribe and asking whether the binding was added on the C# side; the map flavour names the key instead (VOLATILE: both texts — the frontend bundle's data-binding module).
+At the `cs2/api` layer `bindValue` throws on first read of its value when no fallback was passed, with a message saying the update was not called after subscribe and asking whether the binding was added on the C# side; the map flavour names the key instead (VOLATILE: both texts — the bundle's `game-ui/common/data-binding/binding.ts`).
 With a fallback passed there is no throw either: the panel renders the fallback forever.
 So a binding the C# side never registered — a typo in the group — surfaces only in the frontend, as that throw or that frozen fallback; an `OnCreate` that threw is logged by the mod loader instead, since `UpdateAt` creates the system synchronously and the throw fails the whole mod's `OnLoad` with a stack trace in `Modding.log` and no dialog.
 The registry walk and the live read-back under `## Two things that look like bindings and are not` settle which end failed.
 Source: `Cities2_Data/Content/Game/UI/index.js`.
 
 **A payload whose `__Type` no component is registered for does not throw.**
-The typed renderer substitutes a yellow-on-red box reading `Unknown element type <typeName>`, which is the visible signature of a `TypeBegin` string that does not match what the frontend expects (VOLATILE: the box text — the frontend bundle's typed renderer).
+The typed renderer substitutes a yellow-on-red box reading `Unknown element type <typeName>`, which is the visible signature of a `TypeBegin` string that does not match what the frontend expects (VOLATILE: the box text — the bundle's `game-ui/common/typed-renderer/typed-renderer.tsx`).
 Source: `Cities2_Data/Content/Game/UI/index.js`.
 
 ## Map bindings: one key at a time
@@ -259,7 +259,7 @@ Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/ValueWritersStruct.cs`, `Nu
 Implementing the first makes `Create<T>()` resolve to `ValueWriter<T>`; implementing the second plus a public parameterless constructor resolves `ValueReader<T>`, which is constrained `where T : IJsonReadable, new()`.
 
 `IJsonWriter` declares a `debugName` and these writing members (`src/Colossal.UI.Binding/Colossal.UI.Binding/IJsonWriter.cs`): `TypeBegin(string)`/`TypeEnd()`, `MapBegin(uint)`/`MapEnd()`, `ArrayBegin(uint)`/`ArrayEnd()`, `PropertyName(string)`, `WriteNull()`, and `Write` for `bool`, `int`, `uint`, `long`, `ulong`, `float`, `double` and `string` — the `long` and `ulong` overloads losing integers above 2^53, as the trap above states.
-`JsonWriterExtensions` adds the `int`-taking begins, empty array and map, `string[]` and `int[]`, `Write<T>` over an `IJsonWritable` and over a nullable struct one, `WriteNullable<T>` for a class one, `IList<T>` and `IList<string>`, and three `IReadOnlyDictionary` overloads (VOLATILE: both member sets — those two files).
+`JsonWriterExtensions` adds the `int`-taking begins, empty array and map, `string[]` and `int[]`, `Write<T>` over an `IJsonWritable` and over a nullable struct one, `WriteNullable<T>` for a class one, `IList<T>` and `IList<string>`, and three `IReadOnlyDictionary` overloads (VOLATILE: both member sets — `IJsonWriter` and `JsonWriterExtensions`).
 
 The canonical shape is one `TypeBegin`, a `PropertyName` and value pair per field, one `TypeEnd`:
 
@@ -284,7 +284,7 @@ public struct MyPayload : IJsonWritable, IEquatable<MyPayload>
 ```
 
 On arrival, `TypeBegin(s)` becomes a `__Type` string property on the JS object, `MapBegin` a plain object with no `__Type`, and `ArrayBegin` an array.
-`GetType().FullName` on a nested type yields the CLR `Outer+Inner` spelling and the `+` reaches the frontend verbatim; the `__Type` string is data, never reflection (VOLATILE: the `Outer+Inner` spelling the bundle switches on — the `LineVisualizerSection` `__Type` compares in the frontend bundle).
+`GetType().FullName` on a nested type yields the CLR `Outer+Inner` spelling and the `+` reaches the frontend verbatim; the `__Type` string is data, never reflection (VOLATILE: the `Outer+Inner` spelling the bundle switches on — the `__Type` compares in the bundle's `selected-info-bindings.ts` and `line-visualizer-canvas.tsx`).
 
 **The `__Type` string is a free-form contract and is often not a C# type name.**
 Most of the game's literals are `<group>.<TypeName>` short forms, a few gathered in `src/Game/Game.UI/TypeNames.cs` and the rest inline in their owning file, and some name a namespace the game does not have: the prefab panel's number and string properties write `Game.UI.Common.*` tags while the types live in `Game.UI.InGame` (VOLATILE: every `__Type` string — the `TypeBegin` literals under `src/Game/`, matched against the scaffold's `bindings.d.ts`).
@@ -295,7 +295,7 @@ Source: `src/Game/Game.UI/TypeNames.cs`, `src/Game/Game.UI.InGame/IntProperty.cs
 
 **A generic writable uses a literal for its `TypeBegin`.**
 The wire's worked polymorphic example is the four localized elements: `LocalizedString` passes `GetType().FullName`, while the generic `LocalizedNumber<T>`, `LocalizedFraction<T>` and `LocalizedBounds<T>` hard-code `Game.UI.Localization.LocalizedNumber`, `…LocalizedFraction` and `…LocalizedBounds` (VOLATILE: those four tags — `src/Game/Game.UI.Localization/`).
-They must, because the frontend dispatches on exact string equality — a `switch` over the four tag constants falling through to a literal `<INVALID TYPE>`, and the typed renderer's key lookup falling through to the unknown-element box above — so a generic `FullName`, whose backtick arity suffix and type-argument list make it a different string, matches nothing (VOLATILE: both fallbacks — the frontend bundle's localization dispatch and typed renderer).
+They must, because the frontend dispatches on exact string equality — a `switch` over the four tag constants falling through to a literal `<INVALID TYPE>`, and the typed renderer's key lookup falling through to the unknown-element box above — so a generic `FullName`, whose backtick arity suffix and type-argument list make it a different string, matches nothing (VOLATILE: both fallbacks — the bundle's `game-ui/common/localization/localized.tsx` and `typed-renderer.tsx`).
 Source: `src/Game/Game.UI.Localization/LocalizedString.cs`, `LocalizedNumber.cs`, `Cities2_Data/Content/Game/UI/index.js`.
 
 `Entity` is the one payload every mod sends and it is pre-registered: a `Unity.Entities.Entity` tag with `index` and `version`, read back symmetrically; [`ecs-in-this-game`](../../../cs2-modding/references/technique/ecs-in-this-game/ecs-in-this-game.md) owns the type.
@@ -310,7 +310,7 @@ Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/EnumReader.cs`, `DelegateRe
 Source: `src/Colossal.UI.Binding/Colossal.UI.Binding/RawCallBindingBase.cs`, `CallBinding.cs`.
 
 At the far end `call(group, name, ...args)` is `engine.call` on the path: it allocates a request id, sends, and returns a promise.
-A name with no C# handler rejects on the next animation frame with a message saying no handler is registered with that name (VOLATILE: the text — the frontend bundle's engine shim).
+A name with no C# handler rejects on the next animation frame with a message saying no handler is registered with that name (VOLATILE: the text — `engine._Reject` in the bundle's engine shim).
 
 The game's own call bindings all answer the same shape of question: **a value the frontend cannot compute and does not want to cache** — is this prerequisite met, what index did the keyframe land at, what does this controller read right now.
 

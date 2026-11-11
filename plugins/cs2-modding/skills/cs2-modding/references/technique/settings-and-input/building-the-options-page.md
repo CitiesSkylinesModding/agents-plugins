@@ -1,6 +1,6 @@
 # Building the options page
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -29,7 +29,7 @@ Source: `src/Game/Game.Settings/Setting.cs` (the virtual entry point), `src/Game
 Which property type, accessor set and attribute combination produces which widget is the dispatch table in [the settings attribute catalog](attribute-catalog.md).
 Everything else produces no widget.
 
-(VOLATILE: the property-type-to-widget dispatch and the widget class names behind it — the automatic settings page builder, and the menu widgets namespace.)
+(VOLATILE: the property-type-to-widget dispatch and the widget class names behind it — `AutomaticSettings`, and the `Game.UI.Widgets` namespace.)
 
 **Buttons group by side effect.**
 The builder keeps a dictionary of button rows for the duration of one page build, cleared at both ends.

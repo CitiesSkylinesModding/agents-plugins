@@ -1,6 +1,6 @@
 # Units and formatting
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The C# types below are checkable there; the frontend behaviour is not, and its ground truth is the game's own UI bundle.
@@ -60,7 +60,7 @@ The sign prefix is `-` for a negative value always, and `+` for a positive one o
 Source: the separator and sign helpers in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
 **Fractions and bounds support far fewer units than numbers, and fail ugly outside them.**
-`LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else; its `Energy` entry divides by `10` into kilowatt-hours while the total is under `1e4`, a branch the number table lacks (VOLATILE: that divisor and threshold — the frontend's fraction formatter table.)
+`LocalizedFraction` handles eleven — `Volume`, `VolumePerMonth`, `Weight`, `WeightPerMonth`, `Power`, `Energy`, `BodiesPerMonth`, `XP`, `Integer`, `IntegerPerMonth`, `IntegerRounded` — and renders `${value} / ${total} <${unit}>` for anything else; its `Energy` entry divides by `10` into kilowatt-hours while the total is under `1e4`, a branch the number table lacks (VOLATILE: that divisor and threshold — the formatter table in `game-ui/common/localization/localized-fraction.tsx`.)
 `LocalizedBounds` handles three — `Power`, `PercentageSingleFraction`, `Temperature` — renders `${min}–${max} <${unit}>` otherwise, and short-circuits to a plain number when min equals max.
 Both default to `Integer` when no unit is given.
 Source: `game-ui/common/localization/localized-fraction.tsx` and `localized-bounds.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
@@ -110,7 +110,7 @@ The practical answer is that **a mod formatting through `LocalizedNumber` with t
 Read them directly only for the cases the unit table does not cover — a time of day, most of all.
 Source: the unit table in `game-ui/common/localization/localized-number.tsx` (`Cities2_Data/Content/Game/UI/index.js`).
 
-(VOLATILE: the three preference enums and their member order — the interface settings class.)
+(VOLATILE: the three preference enums and their member order — `InterfaceSettings`.)
 
 ## What this reference hands to others
 

@@ -1,6 +1,6 @@
 # Save serialization
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -68,7 +68,7 @@ Two modifiers ride on top:
 - **`ISerializeAsEnabled`** means _do not persist the enabled bit_.
   The type serializes as if it were not enableable and comes back enabled.
   Vanilla declares it on very few types, `PrefabData` among them — so before assuming a vanilla component's disabled state survives a save, read that component's own interface list.
-  (VOLATILE: this modifier's effect on the written bit — the component serializer library.)
+  (VOLATILE: this modifier's effect on the written bit — `ComponentSerializerLibrary`.)
   Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the branch routing the marker to the non-enableable serializer), `src/Game/Game.Prefabs/PrefabData.cs`.
 - **`IStrideSerializable`** adds `int GetStride(Context)`.
   A non-zero stride declares the fixed byte size of one element and switches the writer into byte-plane column filtering before compression.
@@ -126,7 +126,7 @@ Both halves have been observed on a running game: the save query matches such an
 Delete your own marker entities yourself, from a main-loop system that runs after the one which wrote them, rather than relying on the clear.
 Source: `src/Game/Game.Serialization/ClearSystem.cs` and `src/Game/Game.Serialization/SerializerSystem.cs` (the two queries' `Any` lists).
 
-(VOLATILE: the eighteen save anchors and the twenty clear types — the serializer system's query construction and the clear system's own.)
+(VOLATILE: the eighteen save anchors and the twenty clear types — `SerializerSystem`'s query construction and `ClearSystem`'s own.)
 
 ## The read and write contract
 
@@ -282,12 +282,12 @@ Source: `src/Colossal.Core/Colossal.Serialization.Entities/ComponentDataSerializ
 
 ## The game's own version constants, and what a format break looks like
 
-`Game.Version` is nothing but named build stamps — **273 of them** in 1.6.2f1, ending in `current`.
+`Game.Version` is nothing but named build stamps — **273 of them** in 1.6.4f1, ending in `current`.
 Each packs its fields so that `>=` is a chronological test, which is what the comparisons below rely on.
 Source: `src/Game/Game/Version.cs`, `src/Colossal.Core/Colossal/Version.cs` (the packing).
 
 **Beside them sits a coarser mechanism the game uses for two thirds of its own migrations: format tags.**
-`Game.FormatTags` is a flat enum — **42 members** in 1.6.2f1 — each naming one format change.
+`Game.FormatTags` is a flat enum — **43 members** in 1.6.4f1 — each naming one format change.
 On save, every name in the writing build's enum is written as a string.
 On load, each name is looked up in the loading build's enum and the matching bit set in `context.format`.
 Source: `src/Game/Game/FormatTags.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/EntitySerializer.cs` (the names written into the header buffer), `src/Colossal.Core/Colossal.Serialization.Entities/EntityDeserializer.cs` (the lookup), `src/Game/Game.Serialization.DataMigration/` (the tag gate on the migrations that use one).
@@ -313,7 +313,7 @@ Your equivalent is your own version int.
 Reading a _game_ tag from inside your own `Deserialize` is legitimate — the tag says something true about the save — but it couples your format to a vanilla one.
 Source: `src/Game/Game.Serialization/SerializerSystem.cs`.
 
-(VOLATILE: the 273 constant names, the 42 tag names, and the count of both — `Game.Version` and `Game.FormatTags`.)
+(VOLATILE: the 273 constant names, the 43 tag names, and the count of both — `Game.Version` and `Game.FormatTags`.)
 
 ## The two phases, and where a mod migration goes
 
@@ -334,7 +334,7 @@ if (!m_BuildingEfficiencyQuery.IsEmptyIgnoreFilter)
 ```
 
 It needs no version and no tag, because the query itself is the test.
-That is the game's usual way of backfilling a component added to an existing archetype — of that system's ~129 backfills, 83 are gated on the query alone and 46 add a version or format test — and it is exactly a mod's problem when its component must appear on entities from a save written before the mod existed.
+That is the game's usual way of backfilling a component added to an existing archetype — most top-level `if` blocks in that system's `OnUpdate` are gated on the query alone, and the rest add a version or format test — and it is exactly a mod's problem when its component must appear on entities from a save written before the mod existed.
 Source: `src/Game/Game.Serialization/RequiredComponentSystem.cs`.
 
 **Why a mod migration sometimes cannot run in the deserialize phase.**

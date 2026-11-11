@@ -1,6 +1,6 @@
 # Utilities and flow networks
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -37,7 +37,7 @@ What carries a utility, per net prefab:
 | The verdict on an edge instance | `Game.Net.ElectricityConnection`, a tag; `Game.Net.WaterPipeConnection`, carrying the three capacities copied per instance from the prefab (`src/Game/Game.Net/`) | presence is what the graph builders query |
 
 `NetInitializeSystem` bakes the requirement arrays into the composition sets, and `GenerateEdgesSystem` re-tests them on every placement or upgrade, adding or removing the runtime tag — empty sets pass unconditionally ([flow-graph.md](flow-graph.md) holds the test).
-Which requirements a net declares is asset data: enumerated live with the `ecs_query` above, 123 prefabs carried `ElectricityConnectionData` — roads, rail, tram and subway tracks, quays, bridges, the power lines and cables, and the voltage markers, highways included — and 60 carried `WaterPipeConnectionData` — roads, quays, pipes and the pipe markers, no rail track and no highway; counts are of one install, DLC included, and the query is the re-check.
+Which requirements a net declares is asset data: enumerated live with the `ecs_query` above over the base game's prefab set, no DLC enabled, the carriers of `ElectricityConnectionData` are roads, rail, tram and subway tracks, quays, bridges, the power lines and cables, and the voltage markers, highways included — and those of `WaterPipeConnectionData` are roads, quays, pipes and the pipe markers, no rail track and no highway; DLC nets were not read, and the query is the re-check.
 The worked example: `Highway Twoway - 3 lanes` declares `m_CompositionAll = { General = Lighting }`, so a highway carries electricity only once upgraded with street lighting.
 
 Buildings — prefab components reached through `PrefabRef` and folded over `InstalledUpgrade` by `UpgradeUtils.CombineStats` (except `PowerPlantData` and `EmergencyGeneratorData`, which their AI systems sum per upgrade so each upgrade keeps its own fuel and activation state), instance components on the building:
@@ -65,7 +65,7 @@ Where the tuning numbers live, all singletons:
 ## Traps
 
 **A field initializer on `ElectricityParametersPrefab` or `WaterPipeParametersPrefab` is a Unity-serialized default, not the value.**
-The shipped asset overwrites the fields before `LateInitialize` copies them into the parameter singletons, and read live at 1.6.2f1 many differ from their initializers; the test is what consumes the value, so a component a mod instantiates in code — with no asset behind it — does keep its initializers.
+The shipped asset overwrites the fields before `LateInitialize` copies them into the parameter singletons, and read live at 1.6.4f1 many differ from their initializers; the test is what consumes the value, so a component a mod instantiates in code — with no asset behind it — does keep its initializers.
 Source: `src/Game/Game.Prefabs/ElectricityParametersPrefab.cs`, `src/Game/Game.Prefabs/WaterPipeParametersPrefab.cs`.
 
 **A game mode rebuilds this topic's parameters on every load.**
@@ -77,7 +77,7 @@ Both water layers run source to sink; outlets emit capacity-to-accept-sewage fro
 Source: `src/Game/Game.Simulation/WaterPipeFlowSystem.cs`, `src/Game/Game.Simulation/SewageOutletAISystem.cs`, `src/Game/Game.Simulation/WaterTradeSystem.cs`.
 
 **No net prefab in this install throttles the fresh or sewage flow it carries: pipe size is cost and footprint, not throughput.**
-`WaterPipeConnectionData` declares a capacity per layer, but an `ecs_query` census of every carrier in one install (DLC included) read `1073741823` — `kMaxEdgeCapacity`, the both-systems constant for unconstrained — on each layer served and `0` on the rest, `Large Water Pipe` identical to `Small Water Pipe`; that census is the re-check, and `WaterPipeEdgeFlags` has no bottleneck member because `WaterPipeFlowJob` runs no bottleneck-labelling pass — its labels know only shortage and connectivity, while `ElectricityFlowJob`'s pass earns electricity edges `Bottleneck`/`BeyondBottleneck`.
+`WaterPipeConnectionData` declares a capacity per layer, but an `ecs_query` census of every base-game carrier read `1073741823` — `kMaxEdgeCapacity`, the both-systems constant for unconstrained — on each layer served and `0` on the rest, `Large Water Pipe` identical to `Small Water Pipe`; that census is the re-check, and `WaterPipeEdgeFlags` has no bottleneck member because `WaterPipeFlowJob` runs no bottleneck-labelling pass — its labels know only shortage and connectivity, while `ElectricityFlowJob`'s pass earns electricity edges `Bottleneck`/`BeyondBottleneck`.
 Source: `src/Game/Game.Prefabs/WaterPipeConnectionData.cs`, `src/Game/Game.Simulation/WaterPipeFlowSystem.cs`, `src/Game/Game.Simulation/ElectricityFlowSystem.cs`.
 
 **Stormwater is declared everywhere and solved nowhere.**

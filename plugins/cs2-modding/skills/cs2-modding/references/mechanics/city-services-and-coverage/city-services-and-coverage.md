@@ -1,6 +1,6 @@
 # City services and coverage
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -103,7 +103,7 @@ The no-match arm logs `"Unknown coverage service type: {0}"`, but the component 
 Source: `src/Game/Game.Prefabs/ServiceCoverage.cs`, `src/Game/Game.Net/CoverageService.cs`.
 
 **Which prefabs carry `CoverageData` at all is asset data, and parks dominate it.**
-Enumerated live, parks outnumber every other coverage family put together in one install with DLC; the re-check is an `ecs_query` on `Game.Prefabs.CoverageData` joined per service data component.
+Enumerated live, parks outnumber every other coverage family put together in the base game's prefab set; the re-check is an `ecs_query` on `Game.Prefabs.CoverageData` joined per service data component.
 Source: `src/Game/Game.Prefabs/CoverageData.cs`.
 
 **District assignment and district policy are unrelated code paths.**

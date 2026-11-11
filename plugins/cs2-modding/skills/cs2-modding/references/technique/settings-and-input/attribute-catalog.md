@@ -1,6 +1,6 @@
 # The settings attribute catalog
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -9,7 +9,7 @@ The technique holds without one, but every game symbol named below is checkable 
 The constructor parameters and field defaults behind the attribute groups in the entry file, and the table the reflection engine dispatches on — what you read once you have chosen an attribute and are writing it.
 Which attribute does which job, and every trap in the set, is the grouped listing in the entry file.
 
-(VOLATILE: the attribute set, its member names and its constructor parameters — the settings namespace, one file per attribute.)
+(VOLATILE: the attribute set, its member names and its constructor parameters — the `Game.Settings` namespace, one file per attribute.)
 
 ## Widget selectors
 
@@ -63,4 +63,4 @@ The reflection pass reads each public instance property's type, its accessors an
 
 Everything else produces no widget, and the three consequences of that which every settings page runs into are stated in the entry file.
 
-(VOLATILE: the property-type-to-widget dispatch above and the widget class names behind it — the automatic settings page builder, and the menu widgets namespace.)
+(VOLATILE: the property-type-to-widget dispatch above and the widget class names behind it — `AutomaticSettings`, and the `Game.UI.Widgets` namespace.)

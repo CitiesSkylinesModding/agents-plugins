@@ -1,6 +1,6 @@
 # Vanilla data providers and their handle protocol
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -72,4 +72,4 @@ Copy that last step: a producer is also a consumer, and it owes the registration
 Copy the shape rather than the list, because the vanilla list is wrong: that system registers with a counting system it took nothing from, and skips the one whose handle it actually combined — the discipline is register with every provider you read, and the anchor is a demonstration of the mechanism, not of the bookkeeping.
 Source: `src/Game/Game.Simulation/CommercialDemandSystem.cs` (the shape, and the mismatch), `src/Game/Game.Simulation/CountCompanyDataSystem.cs` (the provider it reads without registering with).
 
-(VOLATILE: every accessor and registration name on this page — the `SearchSystem` and `UpdateCollectSystem` types in the objects, net, zones, areas, routes and effects namespaces, the simulation namespace's terrain, water, cell-map, demand, counting, budget, service-fee, XP and city-statistics systems, the notifications namespace's icon command system, the prefabs namespace's resource and zone systems, the pathfind namespace's queue system, and the rendering namespace's culling and batch-manager systems.)
+(VOLATILE: every accessor and registration name on this page — the `SearchSystem` and `UpdateCollectSystem` types in `Game.Objects`, `Game.Net`, `Game.Zones`, `Game.Areas`, `Game.Routes` and `Game.Effects`, and each system named beside its accessor above.)

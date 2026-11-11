@@ -1,6 +1,6 @@
 # ECS in this game
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -65,7 +65,7 @@ Neither needs a system.
 
 Archetypes built this way are cached on the prefab-data components and read from inside a job through a `ComponentLookup`, which is how a job spawns a fully-formed instance without touching the `EntityManager`.
 
-(VOLATILE: the two contribution signatures and the seeded components above — `ComponentBase` and `PrefabBase`; the unconditional `Created`/`Updated` pair — the vanilla prefab system; the instance-archetype refresh — the `RefreshArchetype` overrides, `ArchetypePrefab` and `ObjectPrefab` among them.)
+(VOLATILE: the two contribution signatures and the seeded components above — `ComponentBase` and `PrefabBase`; the unconditional `Created`/`Updated` pair — `PrefabSystem`; the instance-archetype refresh — the `RefreshArchetype` overrides, `ArchetypePrefab` and `ObjectPrefab` among them.)
 Source: `src/Game/Game.Prefabs/ComponentBase.cs` and `src/Game/Game.Prefabs/PrefabBase.cs` (the two members and the seeded components), `src/Game/Game.Prefabs/PrefabSystem.cs` (the prefab entity's creation), `src/Game/Game.Prefabs/ArchetypePrefab.cs` (the instance-archetype refresh and where it caches the result).
 
 **`EntityManager.CreateArchetype` called directly** is, in the overwhelming majority of the game's several hundred call sites, a one-shot **event archetype**: two or three types, built in `OnCreate`, stashed in an `EntityArchetype` field, and spawned from inside a job through a command buffer.
@@ -123,7 +123,7 @@ Source: `src/Game/Game.Simulation/BuildingUpkeepSystem.cs` (the filtered query) 
 Read [update-frame-buckets.md](update-frame-buckets.md) before forking a system that partitions on it, or before adding a prefab to a family a gated vanilla system serves — it carries both the read and the gated-bucket failure above.
 What a bucket is worth in simulated time belongs to [`simulation-time-and-units`](../../mechanics/simulation-time-and-units/simulation-time-and-units.md).
 
-(VOLATILE: the 128-entity chunk maximum — the chunk constants. `UpdateFrame`'s field name and the load-balancing assignment — `UpdateGroupSystem` and its group arrays. The authored path — `UpdateFrameData`. The request-creation and save-migration writers — `ServiceRequestSystem` and `RequiredComponentSystem`.)
+(VOLATILE: the 128-entity chunk maximum — `Chunk.kMaximumEntitiesPerChunk` and `TypeManager.MaximumChunkCapacity`. `UpdateFrame`'s field name and the load-balancing assignment — `UpdateGroupSystem` and its group arrays. The authored path — `UpdateFrameData`. The request-creation and save-migration writers — `ServiceRequestSystem` and `RequiredComponentSystem`.)
 
 ## The query APIs, and what decides between them
 
@@ -359,7 +359,7 @@ An event created from the archetype alone carries `Entity.Null` as its prefab, w
 Flipping the bit yourself leaves all of them unnotified, with nothing logged.
 Source: `src/Game/Game.Prefabs/UnlockSystem.cs` (the main-thread flip, the event archetype, and a null prefab skipped without a log line), `src/Game/Game.Common/PrepareCleanUpSystem.cs` (`Event` in the destroy query).
 
-(VOLATILE: what a disabled `PrefabData` and a disabled `Locked` mean — the prefab system and the loader for the first, the unlock system for the second.)
+(VOLATILE: what a disabled `PrefabData` and a disabled `Locked` mean — `PrefabSystem` and `ResolvePrefabsSystem` for the first, `UnlockSystem` for the second.)
 
 ## Command buffers: twelve named barriers, and one contract
 
@@ -438,7 +438,7 @@ So a mod that stores barriers in an `EntityCommandBufferSystem`-typed dictionary
 Hold the concrete barrier type everywhere.
 Source: `src/Game/Game/SafeCommandBufferSystem.cs` (the shadowing `new` method) and `src/Unity.Entities/Unity.Entities/EntityCommandBufferSystem.cs` (the non-virtual base method).
 
-(VOLATILE: the twelve barrier type names and the exception message string — the vanilla system-order class, and the safe command buffer base.)
+(VOLATILE: the twelve barrier type names and the exception message string — `SystemOrder`, and `SafeCommandBufferSystem`.)
 
 ## The universal tags, and the protocol they carry
 
@@ -457,7 +457,7 @@ Source: `src/Game/Game.Tools/Temp.cs`, `src/Game/Game.Simulation/AgingSystem.cs`
 `Deleted` means the entity dies later in the frame, and that gap is the point: every system holding a reference gets a window to query `WithAll<Deleted>()` and unhook. Reserve `DestroyEntity` for entities nothing else can be holding.
 Source: `src/Game/Game.Common/PrepareCleanUpSystem.cs`, `src/Game/Game.Common/CleanUpSystem.cs`.
 
-(VOLATILE: the six frame-scoped tag names, `Deleted` and `Temp` above — each tag's own declaration, and the cleanup system's query for the frame-scoped set.)
+(VOLATILE: the six frame-scoped tag names, `Deleted` and `Temp` above — each tag's own declaration, and `CleanUpSystem`'s query for the frame-scoped set.)
 
 [The universal tags, one by one](universal-tags.md) is the catalogue — reach for it when you need to know what a specific tag asks for, which tags survive a frame and which a save, or why a tag you added took an extra frame to be seen.
 
@@ -522,7 +522,7 @@ Implementing neither and rebuilding the component on load is the cheaper and saf
 The versioning discipline inside `Serialize` and `Deserialize` — writing a version number first and branching on it when reading — belongs to [`save-serialization`](../save-serialization/save-serialization.md), and you want it before the first release, not after.
 Source: `src/Game/Game.Modding/ModManager.cs` (the dirty flag set beside the type registration) and `src/Game/Game.Serialization/SerializerSystem.cs` (the re-initialize it triggers).
 
-(VOLATILE: the serializer selection above — the component serializer library.)
+(VOLATILE: the serializer selection above — `ComponentSerializerLibrary`.)
 
 ## The helper extensions the game already ships
 

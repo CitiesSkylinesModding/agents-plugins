@@ -1,6 +1,6 @@
 # Driving the developer menu from outside
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The routes hold without one, but the binding endpoints named below are checkable only there, and the frontend claims only against the install's shipped UI bundle.

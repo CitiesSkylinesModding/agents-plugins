@@ -1,6 +1,6 @@
 # The universal tags, one by one
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -59,4 +59,4 @@ The tool pipeline works entirely on `Temp` copies, and the apply systems read `m
 `Hidden` is its sibling for the same reason.
 Source: `src/Game/Game.Tools/Temp.cs` (the fields, and the serializer interface it does not declare) and `src/Game/Game.Simulation/AgingSystem.cs` (the canonical `None` pair).
 
-(VOLATILE: the type set the cleanup system strips — that system's own query. The tag type names above and `Temp`'s field names — each tag's own declaration.)
+(VOLATILE: the type set the cleanup system strips — `CleanUpSystem`'s query. The tag type names above and `Temp`'s field names — each tag's own declaration.)

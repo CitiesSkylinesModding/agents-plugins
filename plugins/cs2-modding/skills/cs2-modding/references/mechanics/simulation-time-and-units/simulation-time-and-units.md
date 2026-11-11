@@ -1,6 +1,6 @@
 # Simulation time and units
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Without one you cannot check anything below.
@@ -85,8 +85,8 @@ Each consumer draws the boundary at its own constant, and a mod picking one gets
 Source: `src/Game/Game.Effects/EffectFlagSystem.cs`, `src/Game/Game.Simulation/ClimateSystem.cs`, `src/Game/Game.UI.InGame/TimeUISystem.cs`, `src/Game/Game.Simulation/TransportLineSystem.cs`, `src/Game/Game.Simulation/CitizenBehaviorSystem.cs`, `src/Game/Game.Prefabs/CalendarEventTimes.cs`.
 
 **`TimeSystem.startingYear` is not the city's starting year.**
-It is a settable property `PostDeserialize` reads once on a new game; the city's value is `TimeData.m_StartingYear`, and the property reads `0` on every loaded save.
-Source: `src/Game/Game.Simulation/TimeSystem.cs`.
+It is a settable property `PostDeserialize` reads once on a new game, and only the new-game paths write it, so on a loaded save it holds whatever the process's last new game set, or `0` if there was none; the city's value is `TimeData.m_StartingYear`.
+Source: `src/Game/Game.Simulation/TimeSystem.cs`, `src/Game/Game.SceneFlow/GameManager.cs`, `src/Game/Game.UI.Menu/MenuUISystem.cs`.
 
 ## Mechanisms
 

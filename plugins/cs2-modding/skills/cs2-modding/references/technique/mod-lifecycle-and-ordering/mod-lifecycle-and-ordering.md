@@ -1,6 +1,6 @@
 # Mod lifecycle, loading and system ordering
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -168,7 +168,7 @@ Three rules follow, and they are the ones to act on.
    Nothing runs "before the phase" or "after the phase" despite the names.
    The offsets are far larger than the registration counter ever reaches — vanilla makes on the order of a thousand registrations in total — so the bands never interleave: every `UpdateBefore` in a phase runs before every `UpdateAt`, and every `UpdateAt` before every `UpdateAfter`.
    Choosing among the three chooses a band within one phase, and only that.
-   (VOLATILE: the ±1,000,000 band offset, and the `AllowBarrier` and `ModificationBarrierN` type names below — `UpdateSystem`'s registration methods, and the vanilla system-order class.)
+   (VOLATILE: the ±1,000,000 band offset, and the `AllowBarrier` and `ModificationBarrierN` type names below — `UpdateSystem`'s registration methods, and `SystemOrder`.)
    Source: `src/Game/Game/UpdateSystem.cs`.
 2. **Within a band, registration order is execution order.**
    The index is a plain counter and is the only tiebreak after phase, so two systems a mod registers with `UpdateAt` into the same phase run in the order the `OnLoad` body calls them.
@@ -267,7 +267,7 @@ engine LateUpdate()  →  GameManager.LateUpdate()
   DebugGizmos
 ```
 
-(VOLATILE: the driver system names in this tree — the vanilla system-order class, and the systems that drive a phase from their own `OnUpdate`.)
+(VOLATILE: the driver system names in this tree — `SystemOrder`, and the `OnUpdate` of each driving system the tree names.)
 Source: `src/Game/Game.Common/SystemOrder.cs` (where each driver itself runs), `src/Game/Game.SceneFlow/GameManager.cs` (the four drives nested inside no system's update).
 
 Four consequences a reader needs before choosing a phase:
@@ -503,7 +503,7 @@ updateSystem.UpdateBefore<PreDeserialize<MySystem>>(SystemUpdatePhase.Deserializ
 
 Vanilla registers 57 `PreDeserialize<T>` in the front band of `Deserialize`, and the first nine state the pattern's purpose plainly — the six spatial search systems, the instance counter and two pathfinding systems: **clear a mod's own index, cache or spatial tree before the loader starts writing entities into it.**
 Any mod holding a quadtree or a lookup keyed by entity wants this, and wants it in the front band so it runs before the readers.
-(VOLATILE: the count of vanilla `PreDeserialize<T>` registrations — the vanilla system-order class.)
+(VOLATILE: the count of vanilla `PreDeserialize<T>` registrations — `SystemOrder`.)
 Source: `src/Game/Game.Common/SystemOrder.cs`.
 
 The `Deserialize` phase cannot host everything that looks like it belongs there.

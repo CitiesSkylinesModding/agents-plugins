@@ -1,6 +1,6 @@
 # Placement definitions
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -96,7 +96,7 @@ Source: `src/Game/Game.Tools/ObjectDefinition.cs`, `src/Game/Game.Tools/ObjectTo
 
 `ZoningFlags : uint` — `FloodFill = 1`, `Marquee = 2`, `Zone = 4`, `Dezone = 8`, `Paint = 0x10`, `Overwrite = 0x20`.
 
-(VOLATILE: the `CreationDefinition` field set, the kind component types and their own members, and the phase each consumer is registered at — the tools namespace, and the vanilla system-order class.)
+(VOLATILE: the `CreationDefinition` field set, the kind component types and their own members, and the phase each consumer is registered at — `CreationDefinition` and the kind components in `Game.Tools`, and `SystemOrder`.)
 
 ## `CreationFlags`, and the one flag that changes everything
 
@@ -131,7 +131,7 @@ The consumer writes `new PseudoRandomSeed((ushort)definition.m_RandomSeed)` onto
 Rewriting `m_RandomSeed` therefore changes what the placed thing looks like forever, not just for this frame — and reading it back is how a rewriter that substitutes prefabs keeps its own choice stable across the frames a preview survives.
 Source: `src/Game/Game.Tools/GenerateObjectsSystem.cs`.
 
-(VOLATILE: the `CreationFlags` member set and its mapping onto `TempFlags`, and the component set a consumer stacks onto the entity it creates — the creation-flags enum, and the object generation system.)
+(VOLATILE: the `CreationFlags` member set and its mapping onto `TempFlags`, and the component set a consumer stacks onto the entity it creates — `CreationFlags`, and `GenerateObjectsSystem`.)
 
 ## What the consumer builds, and what becomes of the original
 
@@ -193,7 +193,7 @@ So a rewriter heavy enough to want a job goes here, and `Modification1` stays th
 Source: `src/Game/Game.Tools/CourseSplitSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`.
 (UNVERIFIED: whether a mod system registered at `PostTool` sees the frame's definitions at all — registering one in a running game and watching its query match would settle it, and until somebody has, this window is architecture rather than a walked path.)
 
-(VOLATILE: that the `PostTool` window is still open — the game's own course-splitting system, and the tool-ready barrier's phase registration.)
+(VOLATILE: that the `PostTool` window is still open — `CourseSplitSystem`, and `ToolReadyBarrier`'s registration in `SystemOrder`.)
 
 ## The query that catches a definition in flight
 
@@ -220,7 +220,7 @@ Source: `src/Game/Game.Simulation/ZoneSpawnSystem.cs`, `src/Game/Game.Simulation
 
 The vanilla side keeps the **complement** of this query for a different purpose: `ToolBaseSystem.GetDefinitionQuery()` is `{CreationDefinition}` with `Exclude<Updated>`, matching only the stale definitions of a previous frame, which is what the sweep below consumes.
 
-(VOLATILE: that `Overridden` is still unreachable on a definition entity, and the count of sites that add it, and that the simulation's spawn archetypes still bake `Deleted` into theirs — every writer of `Overridden` across the tools, net, objects and areas namespaces, and the simulation's zone and area spawn systems.)
+(VOLATILE: that `Overridden` is still unreachable on a definition entity, and the count of sites that add it, and that the simulation's spawn archetypes still bake `Deleted` into theirs — the writers `ToolApplySystem`, both `OverrideSystem`s, `Game.Objects.SubObjectSystem`, `LaneSystem` and `AreaConnectionSystem`, and `ZoneSpawnSystem` and `AreaSpawnSystem`.)
 
 ## Rewriting a definition changes what the game builds, without touching the tool
 
@@ -282,7 +282,7 @@ A mod tool that emits a well-formed `NetCourse` definition gets both without wri
 
 The serialization clear pass lists `CreationDefinition` among the component types whose entities are destroyed on load, which is the statement that a definition never survives a save.
 
-(VOLATILE: the flags and the phase each named producer and reader uses — each named system's own declaration.)
+(VOLATILE: the flags and the phase each named producer and reader uses — `BuildingConstructionSystem`, `ZoneSpawnSystem`, `PlaceholderSystem`, `GuideLinesSystem`, `NetCourseTooltipSystem`, and `SystemOrder`.)
 
 ## Who destroys a definition
 
@@ -356,7 +356,7 @@ A generator that needs the vanilla `Temp` entities to exist runs later than `Mod
 **Feed your validation back into the vanilla error protocol rather than replacing it**: add `Game.Tools.Error` plus `BatchesUpdated` to the offending `Temp` entity _and_ to the `Temp`'s `m_Original`, so the vanilla apply gate blocks on your error too — except the bulldoze tool, whose own `GetAllowApply()` ignores `Error`, and the object tool in move mode, whose override blocks only on an `Error` entity that traces back to the object being moved through `Temp.m_Original` and `Owner`.
 Where the mod also wants its own feedback buffer, override `GetAllowApply()` to test that buffer's query alongside the vanilla error query — [`custom-tools`](../custom-tools/custom-tools.md) owns that override from the tool side.
 Source: `src/Game/Game.Tools/ToolBaseSystem.cs` (the apply gate and the error query behind it), `src/Game/Game.Tools/ObjectToolSystem.cs` (`GetAllowApply` and `HasMovedObjectError`), `src/Game/Game.Tools/BulldozeToolSystem.cs` (its `GetAllowApply` override).
-(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — those two tool classes.)
+(VOLATILE: what the bulldoze and object tools' `GetAllowApply()` overrides test — `BulldozeToolSystem` and `ObjectToolSystem`.)
 
 ## Mod-created entities need a prefab reference the load pass can resolve
 
@@ -388,11 +388,11 @@ Source: `src/Game/Game.Serialization/ClearSystem.cs` (the `Any` query and the `D
 
 **Give every entity you create a `PrefabRef`**, and where the entity has no natural prefab, mint the empty one above rather than leaving the component off.
 
-(VOLATILE: that the owner/sub-object rebuild is where this surfaces — the serialization namespace's sub-object system.)
+(VOLATILE: that the owner/sub-object rebuild is where this surfaces — `Game.Serialization.SubObjectSystem`.)
 
 The distinction is worth the extra sentence because what you are deciding is an entity archetype, the most expensive thing to change once a save format depends on it: adding the reference late means a migration, and adding it needlessly means a dead component in every save.
 
-(VOLATILE: the unguarded prefab-data index in the load-time reference remap, and the query that selects entities for it — the serialization namespace's prefab-reference types.)
+(VOLATILE: the unguarded prefab-data index in the load-time reference remap, and the query that selects entities for it — `PrimaryPrefabReferencesSystem` and `PrefabReferences`.)
 
 ## A tool error is a prefab, an enum member and three tag components
 
@@ -427,7 +427,7 @@ The apply dispatcher reads two of them at `ApplyTool`: a chunk carrying `Warning
 That is the position from which a mod adds `Error` tags of its own and expects them to survive the frame.
 Source: `src/Game/Game/UpdateSystem.cs`, `src/Game/Game.Common/SystemOrder.cs`, `src/Game/Game.Tools/ValidationSystem.cs`.
 
-(VOLATILE: the `ErrorType`, `ErrorSeverity` and `ToolErrorFlags` member sets, the error-prefab array sized to the `ErrorType` count, and the `{NotificationIconData, ToolErrorData}` prefab query — the tools and prefabs namespaces, and the validation system.)
+(VOLATILE: the `ErrorType`, `ErrorSeverity` and `ToolErrorFlags` member sets, the error-prefab array sized to the `ErrorType` count, and the `{NotificationIconData, ToolErrorData}` prefab query — `ErrorType`, `ErrorSeverity`, `ToolErrorFlags` and `ValidationSystem`.)
 
 ## Turning a tool error off means editing its prefab, and putting it back afterwards
 

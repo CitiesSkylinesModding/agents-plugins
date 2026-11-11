@@ -1,6 +1,6 @@
 # What the corpus was found patching
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -9,7 +9,7 @@ The technique holds without one, but every game symbol named below is checkable 
 The vanilla surfaces mods were found patching, grouped by the kind of seam that is missing.
 [`patching`](patching.md) owns the discipline; this file is the lookup.
 
-Every target below was read at 1.6.2f1 and carries the signature its patch claims.
+Every target below was read at 1.6.4f1 and carries the signature its patch claims.
 
 **This is a sample rather than a complete list.**
 It was built mostly from patch declarations, with some targets recovered from mods that apply patches through a wrapper of their own instead.
@@ -18,7 +18,7 @@ So the useful reading runs one way only.
 **Your target is here** means somebody has already patched it, and the group tells you what shape their patch took.
 **Your target is absent** means nothing at all, and least of all that the game leaves a seam there.
 
-(VOLATILE: every method name and signature on this page — the tools, UI, simulation and rendering namespaces of the decompiled game.)
+(VOLATILE: every method name and signature on this page — `Game.Tools`, `Game.UI.InGame`, `Game.Simulation` and `Game.Rendering`, plus `PrefabSystem`, `GameModeExtensions` and `AssetImportPipeline`.)
 
 ## A tool's per-frame raycast and snap configuration
 

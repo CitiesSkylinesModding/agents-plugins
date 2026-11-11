@@ -1,6 +1,6 @@
 # Registry paths other references send a reader here for
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the game install open.**
 Every path and export name below is checkable only against its `Cities2_Data/Content/Game/UI/index.js`, read as the reformatted copy `cs2-modding-setup` records; nothing here names game C#.
@@ -15,7 +15,7 @@ Each entry is a module path registered in the bundle, reached through `getModule
 ## The typed renderer
 
 `game-ui/common/typed-renderer/typed-renderer.tsx` exports `TypedRenderer`, `TypedListRenderer`, `renderTyped`, `entityKeyProvider` and `UnknownElement`.
-`UnknownElement` is the failure box — a red `div` with yellow text reading `Unknown element type <typeName>` — and the two renderer components draw it whenever a payload's `__Type` is not a key of the map they were handed; `renderTyped` returns `undefined` silently instead (VOLATILE: the box text — the bundle's typed renderer).
+`UnknownElement` is the failure box — a red `div` with yellow text reading `Unknown element type <typeName>` — and the two renderer components draw it whenever a payload's `__Type` is not a key of the map they were handed; `renderTyped` returns `undefined` silently instead (VOLATILE: the box text — the bundle's `game-ui/common/typed-renderer/typed-renderer.tsx`).
 `game-ui/widgets/components/widget-renderer.tsx` exports `WidgetRenderer`, `WidgetListRenderer` and `WidgetComponentMapContext`, and draws the same box for an unknown widget type; it is what draws a mod's settings page.
 
 ## The `Loc` dictionary

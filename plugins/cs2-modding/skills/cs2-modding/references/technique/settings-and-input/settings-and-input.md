@@ -1,6 +1,6 @@
 # Settings and input
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -41,7 +41,7 @@ Source: `src/Game/Game.Modding/ModSetting.cs`.
 - the **input action map name** for every action the mod declares, so that `GetAction(name)` is a lookup of `(id, name)` in the input manager;
 - the key under which a keybinding-conflict notification is resolved back to the mod's display name and thumbnail.
 
-(VOLATILE: the composition formula for `id` — the mod settings base class's constructor.)
+(VOLATILE: the composition formula for `id` — `ModSetting`'s constructor.)
 
 `ModSetting` seals `builtIn` to false against the base class's true, and that one bool is what sorts every mod page after every vanilla page: the options system orders its pages by `builtIn` descending, then by index.
 
@@ -132,7 +132,7 @@ Evaluated at page build but affecting placement rather than presence: `SettingsU
 `SettingsUIHidden`, `SettingsUIDeveloper` and `SettingsUIPlatform` do **not**: they read the property alone, so `[SettingsUIHidden]` on the settings class has no effect at all even though its `AttributeUsage` permits writing it there.
 Source: `src/Game/Game.UI.Menu/AutomaticSettings.cs`.
 
-(VOLATILE: the attribute set and its member names — the settings namespace, one file per attribute.)
+(VOLATILE: the attribute set and its member names — the `Game.Settings` namespace, one file per attribute.)
 
 Read [the settings attribute catalog](attribute-catalog.md) for every attribute's constructors, parameters and defaults, and for the property-type-to-widget table the engine below dispatches on.
 
@@ -279,7 +279,7 @@ The three key enums: `BindingKeyboard` has 96 members from `None = 0` to `OEM5 =
 **There is no scroll-wheel member**, which is the boundary of what the binding attributes can express and the reason a scroll action has to be built by hand.
 Source: `src/Game/Game.Input/BindingKeyboard.cs`, `src/Game/Game.Input/BindingMouse.cs`, `src/Game/Game.Input/BindingGamepad.cs`.
 
-(VOLATILE: the three binding enums and the control-path strings they resolve to — the input namespace's binding enums, and the keyboard binding attribute's path switch.)
+(VOLATILE: the three binding enums and the control-path strings they resolve to — `BindingKeyboard`, `BindingMouse` and `BindingGamepad`, and `SettingsUIKeyboardBindingAttribute`'s path switch.)
 
 **The class level declares the action** those bindings feed, and is the only place its behaviour can be set: `[SettingsUIKeyboardAction]`, `[SettingsUIMouseAction]` and `[SettingsUIGamepadAction]`, all repeatable on the class.
 Their fields are `name`, `device`, `type`, `rebindOptions`, `modifierOptions`, `canBeEmpty`, `developerOnly`, `mode`, `interactions`, `processors` and a `usages` list, with these defaults:
@@ -332,7 +332,7 @@ Custom strings are free-form, and a mod naming its own — one per tool, say —
 **Naming any usage replaces the default set rather than adding to it**, which is why an action that wants its own scope _and_ the ordinary tool scope lists the built-in constants beside its own string.
 Source: `src/Game/Game.Settings/SettingsUIInputActionAttribute.cs`, `src/Game/Game.Input/Usages.cs`, `src/Game/Game.Input/BuiltInUsages.cs`.
 
-(VOLATILE: the eleven built-in usage constants and the membership of the default set — the input namespace's usages type and its built-in usage flags.)
+(VOLATILE: the eleven built-in usage constants and the membership of the default set — `Usages` and `BuiltInUsages`.)
 
 **Two mechanisms share the word "conflict", and they behave differently.**
 Teaching one without the other leaves a reader either debugging a dead hotkey against a mechanism that never touched it, or convinced the usage strings they wrote do nothing.
@@ -347,7 +347,7 @@ Source: `src/Game/Game.Input/ProxyBinding.cs` (the usage-aware comparison), `src
 It goes through a comparison called with usage checking switched off, so it pairs any two currently-enabled actions the same path comparison matches, whatever usages either carries.
 Source: `src/Game/Game.Input/InputManager.cs`, `src/Game/Game.Input/InputConflictResolution.cs`.
 
-(VOLATILE: that the disabling pass compares bindings with usage checking off — the input manager's conflict test, at its single call site from conflict resolution.)
+(VOLATILE: that the disabling pass compares bindings with usage checking off — `InputManager.HasConflicts`, at its single call site in `InputConflictResolution`.)
 
 **A mod action always loses that pass.**
 Resolution partitions every action in the manager into three tiers.
@@ -357,7 +357,7 @@ Resolution then runs system against UI, system against mod, and UI against mod �
 A losing action is marked conflicted, which forces its enabled state false and disables the underlying input action outright.
 Source: `src/Game/Game.Input/InputConflictResolution.cs` (the three tiers and the pairings), `src/Game/Game.Input/ProxyAction.cs` (the built-in and system-action tests), `src/Game/Game.Modding/ModSetting.cs` (the not-built-in stamp).
 
-(VOLATILE: the six map names whose actions are system actions, and the eleven map-name constants — the proxy action type's system-action test, and the input manager's map constants.)
+(VOLATILE: the six map names whose actions are system actions, and the eleven map-name constants — `ProxyAction.isSystemAction`, and `InputManager`'s map constants.)
 
 **What scopes the disable is enablement, not usages.**
 Resolution only ever considers actions whose enabled state is currently true, and that state is decided by the action's map, its activators and its input barriers.

@@ -1,6 +1,6 @@
 # The assembly and namespace map
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The map below is of that tree's own directories, so without one there is nothing here to navigate.

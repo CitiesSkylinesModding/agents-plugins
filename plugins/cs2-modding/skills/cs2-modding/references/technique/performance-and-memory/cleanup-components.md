@@ -1,6 +1,6 @@
 # The cleanup-component pattern, for a component owning a managed resource
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -89,4 +89,4 @@ So keep the cleanup component out of the save entirely: declare neither `ISerial
 `IEmptySerializable` is the one to watch — it looks like a tag marker rather than a serialization interface, and it is what [`ecs-in-this-game`](../ecs-in-this-game/ecs-in-this-game.md) teaches for a tag that must survive a save.
 [`save-serialization`](../save-serialization/save-serialization.md) owns both queries and the asymmetry between them.
 Source: `src/Game/Game.Serialization/ClearSystem.cs` (the clear's fixed list), `src/Game/Game.Serialization/SerializerSystem.cs`, `src/Colossal.Core/Colossal.Serialization.Entities/ComponentSerializerLibrary.cs` (the save query's union over components declared outside the game assembly).
-(VOLATILE: the interface name and the cleanup-flag logic — `ICleanupComponentData` is the renamed form of `ISystemStateComponentData` and the obsolete spelling survives as an upgrade alias; both live in the entities package's component-type and entity-component-store types.)
+(VOLATILE: the interface name and the cleanup-flag logic — `ICleanupComponentData` is the renamed form of `ISystemStateComponentData` and the obsolete spelling survives as an upgrade alias; both live in `ComponentType` and `EntityComponentStore` in the entities package.)

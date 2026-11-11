@@ -1,6 +1,6 @@
 # Patching
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -28,8 +28,6 @@ So about a fifth of code mods carry the runtime, and fewer than that use it.
 
 **The published modding wiki ranks it third.** Its guidance for refreshing runtime values after a prefab edit gives three remedies in order — trigger the player action that makes the game's own job run, then copy that job and run it yourself, then patch — and attaches the tradeoff to the third: patching may be easier than finding the hook, and is brittle on game patch days.
 Its tool guidance mentions patching once more, for suppressing a vanilla tool's UI activation, with the same caution attached: only while your own tool is active.
-
-(VOLATILE: every count in this section — the mod corpus, at the root the record `cs2-modding-setup` owns, and the installed-mods cache under the user-data path the toolchain names.)
 
 One sample is small and hand-picked, the other is unselected but only counts files, and they agree — which is the strongest thing that can be said at this size.
 What survives is the ordering, not the ratio: reach for a patch after the four alternatives below, not before.
@@ -329,7 +327,7 @@ It also survives a vanilla change — if a future build sets that flag itself, t
 
 The same guard is what makes the unguarded-postfix rule harmless: when another mod's prefix suppresses the original, your postfix still runs, and an ownership flag is the thing that stops it acting on a frame that was never yours.
 
-The `[ThreadStatic]` costs nothing at 1.6.2f1 because both ends of that pair run on the main thread, and it is not free to copy: it makes same-thread execution a _requirement_, so the same shape around a pairing whose halves are not on one thread reads back the per-thread default and silently never filters.
+The `[ThreadStatic]` costs nothing at 1.6.4f1 because both ends of that pair run on the main thread, and it is not free to copy: it makes same-thread execution a _requirement_, so the same shape around a pairing whose halves are not on one thread reads back the per-thread default and silently never filters.
 What the pairing does require is that the set and the read happen in the same frame on the same call chain.
 Source: `src/Game/Game.Tools/ToolRaycastSystem.cs`, `src/Game/Game.Tools/ToolBaseSystem.cs`.
 

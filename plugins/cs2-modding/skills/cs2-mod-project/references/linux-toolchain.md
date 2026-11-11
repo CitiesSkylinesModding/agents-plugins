@@ -1,6 +1,6 @@
 # The toolchain on Linux
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 The game has no Linux build and runs under Proton, and its Options → Modding page cannot install the toolchain there: that installer downloads Windows programs and stores its settings as Windows user environment variables.
 This file sets the same toolchain up by hand.
@@ -263,6 +263,7 @@ Pointing `MONO_PATH` at the game's managed folder makes Mono load the game's own
 ## After a game update
 
 - Redo the toolchain files.
+- Reinstall the mod template: `dotnet new uninstall ColossalOrder.ModTemplate`, then the install above. The 1.6.4f1 package kept the id and version of the one before it, so a plain install fails on the copy already there, and `--force` registers it twice, after which `dotnet new csiimod` throws; run the uninstall once per registration before the install.
 - When `UnityModsProject.zip` changed, redo the Windows Unity editor and the Unity mod project for its Unity version, and update both versions in the environment file.
 - Re-apply the debug patch, if the user has it.
 

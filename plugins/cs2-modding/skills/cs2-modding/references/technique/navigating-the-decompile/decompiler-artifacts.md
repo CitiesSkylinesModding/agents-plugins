@@ -1,6 +1,6 @@
 # Decompiler artifacts
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Every artifact below is a property of that tree, so without one there is nothing here to tell apart.
@@ -43,18 +43,18 @@ Source: `src/Game/Game/UpdateSystem.cs`.
 
 ## The version, which is one line above the `AssemblyVersion` decoy
 
-`src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]` — game version, changelist and build, from the decompile alone.
+`src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.4f1 (1097.158a) [6360.18886]")]` — game version, changelist and build, from the decompile alone.
 
 Only four assemblies carry a `VersionInternal` attribute at all, and only one of them is the game's:
 
 | Assembly | `VersionInternal` |
 | --- | --- |
-| `Game` | `1.6.2f1 (767.21d1) [6300.26419]` |
-| `Colossal.UI` | `1.0.0f1 (767.21d1) [6300.26396]` |
-| `Colossal.Localization` | `1.0.0a1 (767.21d1) [6300.26396]` |
+| `Game` | `1.6.4f1 (1097.158a) [6360.18886]` |
+| `Colossal.UI` | `1.0.0f1 (1097.158a) [6360.18867]` |
+| `Colossal.Localization` | `1.0.0a1 (1097.158a) [6360.18867]` |
 | `Colossal.Core` | `1.0.0f1`, no build stamp |
 
-Three of the four share the changelist `767.21d1`, which is what corroborates that they came off one build; `Colossal.Core` carries a bare version and settles nothing.
+Three of the four share the changelist `1097.158a`, which is what corroborates that they came off one build; `Colossal.Core` carries a bare version and settles nothing.
 The trap is pure adjacency: `AssemblyVersion("0.0.0.0")` sits one line under the real answer in the same file, so a reader who greps `AssemblyVersion` concludes the checkout is version-blind.
 Source: `src/Game/Properties/AssemblyInfo.cs`, `src/Colossal.UI/Properties/AssemblyInfo.cs`, `src/Colossal.Localization/Properties/AssemblyInfo.cs`, `src/Colossal.Core/Properties/AssemblyInfo.cs`.
 
@@ -68,12 +68,12 @@ Source: `src/Game/Game/Version.cs`.
 
 ## Burst mangled names read as noise and are the better search key
 
-`src/Game/Properties/AssemblyInfo.cs` carries `BurstCompiler.StaticTypeReinit` attributes naming types like `Game_002ERendering_002EDequeueAndSort_00004CA2_0024BurstDirectCall`.
+`src/Game/Properties/AssemblyInfo.cs` carries `BurstCompiler.StaticTypeReinit` attributes naming types like `Game_002ERendering_002EDequeueAndSort_00004CCB_0024BurstDirectCall`.
 
 `_002E` is `.`, `_0024` is `$`, and the eight-hex block between the method name and `_0024BurstDirectCall` is the RID of the method's metadata token — its row in the method table, zero-padded, without the token's own `06` table byte — so it changes whenever that table shifts.
-**Grep the mangled name rather than the decoded one, and grep it from the method name onward.** The full attribute string, namespace segments and all, appears only in `AssemblyInfo.cs`; drop the `<Namespace>_002E…` prefix and the remainder resolves to the declaring source file as well as to the generated tables — `DequeueAndSort_00004CA2_0024BurstDirectCall` lands on `src/Game/Game.Rendering/WaterRenderSystem.cs`, where it is the generated class's own declaration.
+**Grep the mangled name rather than the decoded one, and grep it from the method name onward.** The full attribute string, namespace segments and all, appears only in `AssemblyInfo.cs`; drop the `<Namespace>_002E…` prefix and the remainder resolves to the declaring source file as well as to the generated tables — `DequeueAndSort_00004CCB_0024BurstDirectCall` lands on `src/Game/Game.Rendering/WaterRenderSystem.cs`, where it is the generated class's own declaration.
 The decode is what dead-ends: the encoded segments name the namespace and the method and omit the declaring type, so `Game.Rendering.DequeueAndSort` matches nothing and two different types can encode to one identical decoded name.
-`-BurstDirectCallInitializer.cs` is where that pays off: it writes `WaterRenderSystem.DequeueAndSort_00004CA2_0024BurstDirectCall.Initialize();`, naming the declaring type the encoded form leaves out.
+`-BurstDirectCallInitializer.cs` is where that pays off: it writes `WaterRenderSystem.DequeueAndSort_00004CCB_0024BurstDirectCall.Initialize();`, naming the declaring type the encoded form leaves out.
 Grep it for the method name and the `_0024BurstDirectCall` suffix — it carries no `_002E` segment to match.
 Source: `src/Game/Properties/AssemblyInfo.cs`, `src/Game/-BurstDirectCallInitializer.cs`, `src/Game/Game.Rendering/WaterRenderSystem.cs`, and `Unity.Burst.CodeGen/ILPostProcessing.cs` in the Burst package (the mangling itself — the width, the row id, and the namespace-without-declaring-type).
 [`performance-and-memory`](../performance-and-memory/performance-and-memory.md) owns what Burst compilation costs a reader chasing one of these at runtime.

@@ -1,6 +1,6 @@
 # Performance and memory
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -294,7 +294,7 @@ What a mod-owned index needs, beyond the container:
 - **The three-method protocol above**, with the writer combining rather than assigning.
 - **A `Dispose()` in `OnDestroy`, which may be bare** once every job that touched the tree published through `base.Dependency` — the disposal section owns the gaps.
 
-(VOLATILE: the vanilla accessor names — `GetStaticSearchTree`, `AddStaticSearchTreeReader` and their siblings across the search systems in the objects, net, zones, areas, routes and effects namespaces.)
+(VOLATILE: the vanilla accessor names — `GetStaticSearchTree`, `AddStaticSearchTreeReader` and their siblings on `SearchSystem` in the objects, net, zones, areas, routes and effects namespaces.)
 
 ## Throttling: run less often, and enter `OnUpdate` less often
 
@@ -364,7 +364,7 @@ The rest follow, in the order to reach for them.
   So the symbol goes in the project holding the call sites: a logging helper living in a shared assembly is stripped or kept by the _calling_ mod's configuration, never by the shared assembly's.
 - **Where the line must survive into a shipped build, throttle it like any other periodic work** — the update-interval and change-detection mechanisms above apply unchanged to a logging system.
 
-(VOLATILE: the `keepStreamOpen` and `effectivenessLevel` property names and the `*Format` overload family — the logging library's logger type.)
+(VOLATILE: the `keepStreamOpen` and `effectivenessLevel` property names and the `*Format` overload family — `ILog` in the logging library.)
 
 ## Main-thread scans that look harmless
 

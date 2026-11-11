@@ -1,6 +1,6 @@
 # Mimicking a vanilla binding, and building input by hand
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 The technique holds without one, but every game symbol named below is checkable only there.
@@ -20,7 +20,7 @@ Source: `src/Game/Game.Settings/SettingsUIBindingMimicAttribute.cs`, `src/Game/G
 That watcher is the whole value of the technique: a plain default key goes stale the moment the player rebinds.
 The map name comes from the input manager's constants, of which the tool map and the shortcuts map are the two a mod normally wants.
 
-(VOLATILE: the vanilla map names a mimic can name — the input manager's map constants.)
+(VOLATILE: the vanilla map names a mimic can name — `InputManager`'s map constants.)
 
 **Pair every mimic with `[SettingsUIHidden]`.**
 A mimicked binding must not be offered for rebinding, because the next watcher callback overwrites whatever the player set.

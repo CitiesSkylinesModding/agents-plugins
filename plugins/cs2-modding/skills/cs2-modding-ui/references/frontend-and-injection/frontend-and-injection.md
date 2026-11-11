@@ -1,6 +1,6 @@
 # The frontend as source
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Nearly everything here rests on the frontend bundle, so the module paths, export names and class shapes below are checkable only against the install's `index.js` and `index.css` — the script reads only as the reformatted copy `cs2-modding-setup` records, and the stylesheet only once reformatted the same way beside it, a copy that record does not yet track — and the tree itself answers for the few C# handlers and types named and for nothing else in this file.

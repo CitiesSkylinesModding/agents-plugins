@@ -1,6 +1,6 @@
 # Navigating the decompile
 
-Verified against game version 1.6.2f1.
+Verified against game version 1.6.4f1.
 
 **Read this with the decompile open.**
 Every route below is a search over that tree, so without one there is nothing here to run.
@@ -174,7 +174,7 @@ These three are not.
    Source: `src/Game/Game.Simulation/AgingSystem.cs`.
 2. **Local names carry no meaning.** `num`, `num2`, `flag`, and worse, locals named after their own type with a numeric suffix — `int2 int5 = m_UpdateRanges[(int)phase];`. Never infer intent from a local identifier, and note the second-order cost: this is exactly why a call site with an inferred generic type argument is unsearchable by type name.
    Source: `src/Game/Game/UpdateSystem.cs`.
-3. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy**, repeated by most assemblies in the tree. **The decompile does state its own version**, one line above it: `src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.2f1 (767.21d1) [6300.26419]")]` — game version, changelist and build.
+3. **`[assembly: AssemblyVersion("0.0.0.0")]` is a decoy**, repeated by most assemblies in the tree. **The decompile does state its own version**, one line above it: `src/Game/Properties/AssemblyInfo.cs` carries `[assembly: VersionInternal("1.6.4f1 (1097.158a) [6360.18886]")]` — game version, changelist and build.
    Source: `src/Game/Properties/AssemblyInfo.cs`.
 
 Against that: closure and iterator classes are essentially absent from `src/Game`, generic type arguments survive intact, and lambdas and LINQ read as ordinary C# — which is why a reader can trust what they read.
