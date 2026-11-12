@@ -548,7 +548,8 @@ subtraction. An `any` and a `none` list beside `components` makes both one call.
 elements back but renders each one truncated (`float3 {...}`), so a call returning an array is
 unusable at its natural type. Every `EntityManager.Debug` route that boxes a buffer hands back
 `object` over a `T[]`, and so does any game method returning an array, so accepting `T[]` in the
-cast grammar — and in `typeof` with it — closes a class of read rather than one call.
+cast grammar — and in `typeof` and `default` with it — closes a class of read rather than one call.
+`default(string[])` fails the same way, though `unity-driving` says `default(T)` builds any type's zero value or null; a plain `null` assigns where it would (2026-11-12, session `e386823e-50c5-4015-819a-9005bd7c779a`).
 
 ### A cast to `object` does not steer overload choice
 
@@ -1494,3 +1495,12 @@ Not re-run in the game's Mono.
 A `const`, an enum member's value and an optional parameter's default are copied into the calling mod at compile time, so after a game update or another mod changes one, the mod keeps running with the old value, with no exception and no log line.
 The right move: rebuild against the current assemblies after a game update, and read a value that must track its source through a `static readonly` field or a property.
 It rests on the compiler rather than game code, so the trap would carry `[symbol: none]`.
+
+### The game's assemblies carry no nullable annotations
+
+**Priority:** medium · **Cost:** trivial
+
+No decompiled game assembly has a nullable context (no `#nullable enable` in `Game`, `Colossal.Core` or `Colossal.PSI.Common`), so a mod built with `Nullable` and `TreatWarningsAsErrors` gets no warning on a null a game type hands back.
+`Colossal.PSI.Common.Mod.tags` is null for a playset's mods in a game not signed in to a Paradox account, and `mod.tags.Contains(…)` compiled cleanly, then threw `ArgumentNullException` on every screenshot capture of the session.
+The right move: treat each reference read from a game type as possibly null unless the decompile or the running game proves it set.
+Hit on 2026-11-12 (session `e386823e-50c5-4015-819a-9005bd7c779a`), Hall of Fame's asset mods list.
