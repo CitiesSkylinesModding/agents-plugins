@@ -1027,6 +1027,15 @@ In Cities: Skylines II, the PDX SDK's playset calls (`EnableModInActivePlayset`)
 Add the rule to `unity-driving`: start the task in one `eval`, poll its `IsCompleted` in later ones, and read `Result` once it holds true.
 Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), re-enabling mods in a playset.
 
+### A class result shows its type and address only
+
+**Priority:** medium · **Cost:** cheap
+
+`eval` renders a struct with its fields, and an instance of a class as `Type#address` (`Invoker.Format`, `ObjectMirror`), so a C# record, a report object or any class value reads as nothing useful.
+String interpolation goes through the same formatter, so `$"{obj}"` gives `Type#address` where C# calls `ToString()`, and the agent learns the value only by ending on `obj.ToString()`, which nothing in the schema or `unity-driving` tells it.
+Render a class instance's fields to the same depth as a struct's, or call its `ToString()` when the type overrides it, the record case; interpolation should call `ToString()` as C# does.
+Hit on 2026-11-12 (session `e23153a2-abdb-40f0-9617-1f18776877c1`), reading a capture report record from a Cities: Skylines II mod.
+
 ## cs2-modding
 
 Skills teaching an agent to write Cities: Skylines II code mods, a working loop and the traps the
