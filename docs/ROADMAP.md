@@ -1027,6 +1027,15 @@ In Cities: Skylines II, the PDX SDK's playset calls (`EnableModInActivePlayset`)
 Add the rule to `unity-driving`: start the task in one `eval`, poll its `IsCompleted` in later ones, and read `Result` once it holds true.
 Hit on 2026-11-06 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), re-enabling mods in a playset.
 
+### An `eval` that renders can land inside the render loop
+
+**Priority:** medium · **Cost:** trivial
+
+A suspend can catch the main thread inside a scriptable render pipeline's `Render`, and an `eval` run there that calls `Camera.Render()` renders recursively: Unity logs `Recursive rendering is not supported in SRP` and the game can crash with nothing else in its logs.
+The heavier the frame, the likelier the catch, so it shows as an intermittent crash.
+Add the rule to `unity-driving`: run code that renders (or that changes render pipeline state) from a `debug_evaluate` at a breakpoint on a per-frame `Update` entry, which sits outside rendering.
+Hit on 2026-11-12 (session `0e26505e-5306-47e9-96d7-1dd34f253ae5`), capturing 4K renders of an HDRP camera.
+
 ### A class result shows its type and address only
 
 **Priority:** medium · **Cost:** cheap
@@ -1504,6 +1513,30 @@ Not re-run in the game's Mono.
 A `const`, an enum member's value and an optional parameter's default are copied into the calling mod at compile time, so after a game update or another mod changes one, the mod keeps running with the old value, with no exception and no log line.
 The right move: rebuild against the current assemblies after a game update, and read a value that must track its source through a `static readonly` field or a property.
 It rests on the compiler rather than game code, so the trap would carry `[symbol: none]`.
+
+### `ResetProjectionMatrix()` on the game camera returns another lens
+
+**Priority:** low · **Cost:** trivial
+
+The game camera is a physical camera whose lens the camera controller sets each frame. After `Camera.ResetProjectionMatrix()`, `projectionMatrix` reads a different field of view than the frame renders with until the next frame sets it again, so a render or tile derived from it within the same frame comes out mis-framed, silently.
+The right move: read `projectionMatrix` before any reset and reuse that value; reset only once done.
+Hit on 2026-11-12 (session `0e26505e-5306-47e9-96d7-1dd34f253ae5`), tiling a supersampled reference render.
+
+### The dynamic resolution setting reaches the render a frame late
+
+**Priority:** medium · **Cost:** trivial
+
+`DynamicResolutionScaleSettings.Apply()` only flips `AdaptiveDynamicResolutionScale`'s enabled flag; the scale HDRP renders at changes in the next frame's `UpdateDRS`, run from `AppBindings.Update`. Code that applies the setting and renders in the same frame (a screenshot at full size) still renders at the old scale, into a target of the full size, with no error.
+The right move: switch `HDAdditionalCameraData.allowDynamicResolution` on the camera around the render, which HDRP reads at every camera render, and leave the setting alone.
+Hit on 2026-11-12 (session `2a6dbe51-0dce-4207-943f-68e9507998d2`): a Constant 0.5 scale rendered 1920x1080 into a 3840x2160 capture. [symbol: Game.Settings.DynamicResolutionScaleSettings]
+
+### `DynamicResolutionHandler.instance` outside a render is the default handler
+
+**Priority:** low · **Cost:** trivial
+
+HDRP ends every camera render with `DynamicResolutionHandler.ClearSelectedCamera()`, which points `instance` back at the default handler, so `DynamicResolutionHandler.instance.GetCurrentScale()` read from a system update, an eval or after `camera.Render()` returns never reads the camera's own handler, and reports its scale with no error.
+The right move: read the size the camera last rendered at, `HDCamera.GetOrCreate(camera).actualWidth` and `actualHeight`, or the camera's handler in `DynamicResolutionHandler`'s per-camera dictionary.
+Hit on 2026-11-12 (session `2a6dbe51-0dce-4207-943f-68e9507998d2`): a capture probe printed the scale beside each render state; `ReferenceEquals(s_DefaultInstance, instance)` was true outside a render while per-camera handlers existed. [symbol: UnityEngine.Rendering.DynamicResolutionHandler]
 
 ### The game's assemblies carry no nullable annotations
 
