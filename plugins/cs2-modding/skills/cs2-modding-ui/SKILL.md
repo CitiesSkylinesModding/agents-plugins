@@ -6,7 +6,7 @@ description: 'The Cities: Skylines II mod UI discipline: the C#-to-JavaScript bi
 # Modding the Cities: Skylines II UI
 
 The game's interface is a web page: React components rendered by Coherent Gameface, shipped on disk as one JavaScript bundle beside one stylesheet.
-A UI mod is a second ES module the page loads at startup and hands the module registry, through which it overrides, extends or appends to the game's own components.
+A UI mod is an ES module the page imports once the active mod list arrives, after the first render, and hands the module registry, through which it overrides, extends or appends to the game's own components.
 Its C# half publishes state and receives calls over the binding layer, where every binding is a `group.name` path.
 
 Work by the `cs2-modding` skill's working loop: find how the game's own UI does the thing, in the bundle, before writing.
@@ -25,7 +25,7 @@ It is optional; everything here works without it.
 
 ## Traps
 
-- A throw in a mod's registrar stops the game's whole UI from rendering, every other mod's included: wrap the registrar's body in `try`/`catch`. [symbol: none]
+- A throw in a mod's registrar skips every registrar after it, other mods' included, and after a UI reload leaves the whole UI unrendered: wrap the registrar's body in `try`/`catch`. [symbol: none]
 - A C# answer to a frontend request comes back on the promise of `call`, from a `CallBinding` with a result type, rather than through a trigger and a separate value binding. [symbol: Colossal.UI.Binding.CallBinding]
 - A literal `font-size` ignores the player's text-scale setting: use the game's `--fontSize*` tokens, or `calc(<n>rem * var(--fontScale))`. [symbol: none]
 

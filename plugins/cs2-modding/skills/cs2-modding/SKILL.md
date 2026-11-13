@@ -113,7 +113,7 @@ The `cs2-dev` tools own it:
 
 - Read the logs before reaching for the live game: the `cs2-dev` `logs` tool, or else `Logs/Modding.log` and `Logs/SceneFlow.log` under the user data path, and `Player.log` at its root, which carries every logger's `Warn` and above.
 - A launch truncates `Player.log`, and a `Logs/` file only on its logger's first write; a crash's candidate line is its cause only if it is rare in that log, so count it. [symbol: Colossal.Logging.UnityLogger]
-- In `Modding.log`, `Loaded <assembly> in <n>ms` is written from a `finally` and proves nothing; `Error initializing mod` with a stack is a throw from `OnLoad` or any system's `OnCreate`, and ends the mod's load there. [symbol: Game.Modding.ModManager]
+- In `Modding.log`, `Loaded <assembly> in <n>ms` is written from a `finally` and proves nothing; `Error initializing mod` with a stack is a throw from `OnLoad` or any system's `OnCreate`, or a failed Burst library or ECS type registration, and ends the mod's load there. [symbol: Game.Modding.ModManager]
 - A throw from a system's hooks or update logs to `SceneFlow.log`, not the mod's log, and `Error on state change, disabling system` leaves the system running. [symbol: Game.GameSystemBase]
 - A new logger's `showsErrorsInUI` is true, so a mod's first `Error` pops a modal dialog and pauses the game: chain `SetShowsErrorsInUI(false)` on a logger whose errors the player need not see. [symbol: Colossal.Logging.UnityLogger]
 - A logger name is shared by everyone who asks for it, the game included: name the mod's logger after its assembly. [symbol: Colossal.Logging.LogManager]

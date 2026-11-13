@@ -12,7 +12,7 @@ Linux has no user scope, so there both sides read the process environment, the C
 
 | Variable | Points at | Why it matters |
 | --- | --- | --- |
-| `CSII_INSTALLATIONPATH` | the game folder | the root the managed and mscorlib paths are derived from |
+| `CSII_INSTALLATIONPATH` | the game folder | written from the same root as the managed and mscorlib paths, but read by no build file, so editing it changes nothing |
 | `CSII_MANAGEDPATH` | the game's managed assemblies | every `Game`, `Colossal.*` and `Unity.*` reference resolves from here |
 | `CSII_MSCORLIBPATH` | the game's `mscorlib.dll` | referenced explicitly so the mod compiles against the game's runtime, not the SDK's |
 | `CSII_USERDATAPATH` | the user data folder | holds `Player.log`, the settings, and the local mods folder |
@@ -33,7 +33,7 @@ Each is an MSBuild target, so a failure attributes to exactly one.
 
 **1. Path checks.**
 Six paths are verified to exist before anything is compiled, in this order: the managed assemblies, mscorlib, the user data folder, the Unity mod project, the post-processor, and the Entities source-generator folder.
-A failure names the variable behind the path: `User environment variable 'CSII_MANAGEDPATH' has incorrect path(s) '...' set. Please update the Modding toolchain in-game to reset its value or modify its value to a suitable path`.
+A failure names the variable behind the path, except an empty managed path, which reports `The Game Installation path is not set`, and a wrong one, which silently falls back to the default Steam or Xbox install: `User environment variable 'CSII_MANAGEDPATH' has incorrect path(s) '...' set. Please update the Modding toolchain in-game to reset its value or modify its value to a suitable path`.
 The mscorlib check is the one to read twice, because it names `CSII_MSCORLIB` while the variable it read is `CSII_MSCORLIBPATH` — setting the name the message gives fixes nothing.
 The publisher path is checked too, but only when publishing.
 

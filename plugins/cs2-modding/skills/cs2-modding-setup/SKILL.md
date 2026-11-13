@@ -80,7 +80,8 @@ grep '^Game version:' "$CSII_USERDATAPATH/Player.log"
 ```
 
 That needs the game to have been run at least once; when there is no log, the main menu shows the version and the user can read it off.
-`Game.dll` carries no version of its own, so it is not a fallback.
+`Player.log` names the last launch, so it lags an update until the game runs once; the installed version is the `VersionInternal` string inside `Game.dll`, whose file version reads 0.0.0.0.
+Read it with `([regex]'\d+\.\d+\.\d+f\d+ \([0-9a-f.]+\) \[\d+\.\d+\]').Match([IO.File]::ReadAllText("$env:CSII_MANAGEDPATH\Game.dll", [Text.Encoding]::ASCII)).Value`, or `strings -n6 "$CSII_MANAGEDPATH/Game.dll" | grep -E '\) \[[0-9]+\.[0-9]+\]'`.
 
 Done when both versions are in hand.
 
