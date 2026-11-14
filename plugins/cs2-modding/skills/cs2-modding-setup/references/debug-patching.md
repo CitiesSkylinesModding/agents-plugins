@@ -5,7 +5,7 @@ On Linux, where the game runs under Proton, the edits are the same and only gett
 
 A retail build ships the player library with managed debugging compiled out, so a debugger has nothing to attach to.
 Swapping that library for the development variant from the matching Unity editor, and turning the debug connection on in the boot configuration, turns the user's installed game into a development build.
-Both edits live in the game folder, both survive until the next game update, and both are reversible.
+Both edits live in the game folder, both survive until a game update rewrites them, and both are reversible.
 
 ## The version that has to match
 
@@ -41,7 +41,7 @@ An unpatched build refuses the connection in a way that reads as "the debugger c
 
 ## After a game update
 
-An update restores the retail player library and can reset the boot configuration, so both steps are re-applied — and the editor version to copy from may have moved with it, so re-read it rather than reusing the last one.
+An update that moves the Unity version restores the retail player library, and any update can reset the boot configuration, so check both and re-apply what was undone — and the editor version to copy from may have moved with it, so re-read it rather than reusing the last one.
 This is the debug-patch half of the refresh branch in the parent skill.
 
 ## What the patch unlocks

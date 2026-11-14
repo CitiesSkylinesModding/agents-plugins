@@ -36,7 +36,7 @@ For a predicate no selector can express here (computed state, or picking a paren
 There is no XPath, no TreeWalker, and no `innerText` to lean on (engine gaps; details in the `gameface` skill).
 (VOLATILE: whether each of the three is still absent — a `game_eval` presence probe of each member against the running target.)
 The JS query APIs answer a short set of pseudo-classes and throw "Invalid CSS selector" on the rest: combinators, `[attr*=]`, `[attr~=]`, `:first-child`, `:last-child`, `:only-child`, `:nth-child()`, `:root`, `:hover`, `:focus`, `:active`, `::before`, `::after` and `:host` are what is verified to work on the reference target, and `:not()`, `:has()`, `:is()`, `:where()`, the of-type family, `:nth-last-child()`, `:empty`, `:checked`, `:disabled`, `:focus-within`, `:focus-visible`, `:target`, `:lang()`, `:link`, `:visited` and `::placeholder` are verified to throw; treat anything in neither list as untested rather than as supported.
-`::slotted()`, `::part()` and `::selection` do neither — the engine answers them wrongly rather than throwing, so nothing surfaces to tell you — and a slotted or exposed node is reached by its own class or attribute instead (`::selection` styles selected text and has no query use at all).
+`::slotted(x)`, `::part(x)` and `::selection` do neither — the engine answers them wrongly rather than throwing, so nothing surfaces to tell you — and a slotted or exposed node is reached by its own class or attribute instead (`::selection` styles selected text and has no query use at all).
 `:host` answers off the element rather than off the shadow root's scope, so `hostEl.matches(':host')` is what identifies a shadow host, while the standard `root.querySelectorAll(':host')` returns nothing and reads exactly like an absent host.
 `:nth-child()` itself takes an integer (`2`), `even`, `odd`, or a bare `an` step (`2n`, `n`); an `an+b` offset (`n+2`, `-n+3`) throws like an unsupported pseudo-class.
 (VOLATILE: which side of those two lists each construct falls on, and the `:nth-child()` argument forms — a `game_eval` `document.querySelector` probe of each construct against the running target.)
@@ -61,7 +61,7 @@ The `game_key` schema covers the mechanics (`keydown`+`keyup` only, no default a
 A dispatched key reaches the UI's JS `onKeyDown` handlers, but not any input the application consumes at the native/engine level, and the two are easy to confuse.
 Games commonly route global navigation and hotkeys (Escape/back, closing a menu or settings screen, tool cancel) through the host's own input system rather than the DOM, so a dispatched key such as `Escape` fires page listeners yet has no effect on that native handling; test per application before relying on a key doing more than reaching a DOM handler.
 The result's `preventDefault` flag is a hint, not proof: confirm the observable effect you care about, not the dispatch.
-Do not hand-roll a `KeyboardEvent` in `game_eval` and expect `.key` to read back: Cohtml derives `key` from the event's `keyCode` and ignores the constructor's `key`, so a handler sees the wrong key unless you `Object.defineProperty` it; `game_key` already forces `key`/`code`/`keyCode`/`which` on every event, so reach for it instead of rolling your own.
+Do not hand-roll a `KeyboardEvent` in `game_eval` and expect `.key` to read back: Cohtml derives `key` from the event's `keyCode` and ignores the constructor's `key`, so a handler sees the wrong key unless you `Object.defineProperty` it; `game_key` forces `code`/`keyCode`/`which` for the keys it maps (named keys, F1–F12, a single letter or digit), so reach for it instead of rolling your own, and expect any other key to arrive with `key` alone.
 A hand-rolled `MouseEvent` has the matching trap, which bites when you need a point rather than an element's centre (a slider track, a canvas, a drag): the constructor ignores `clientX`/`clientY` and fills all four coordinates from `screenX`/`screenY`, so carry the point in the screen pair or the handler reads `0, 0` and nothing errors.
 When a key is handled natively and has no DOM path, do not try to fake it: invoke the action the UI's own JS runs for that key instead.
 If the application drives its UI through Gameface's data-binding bridge, that action is usually a binding you can call from `game_eval` (`engine.trigger('<group>.<name>', ...)` or `engine.call`), for example the binding a screen uses to close or navigate.
@@ -86,7 +86,7 @@ Reloads can still queue or coalesce outside your control; when exactness matters
 ## Debugging without freezing the session away
 
 The debugger only sees scripts parsed since it attached; Gameface does not replay `scriptParsed` for already-loaded code (Chrome does), so a fresh session lists no game scripts at all.
-Attach first (any `game_debug_*` call), then get the code re-parsed by triggering a UI reload (see the dev loop above); every bundle then appears under its real `coui://` or `assetdb://` URL.
+The server attaches on its first connection, whichever `game_*` tool opens it; then get the code re-parsed by triggering a UI reload (see the dev loop above); every bundle then appears under its real `coui://` or `assetdb://` URL.
 A pause freezes the UI thread until resume; while frozen:
 
 - `game_debug_evaluate` reads frame locals, and `game_eval` still works too (global scope, DOM reads included).

@@ -10,7 +10,7 @@ An update costs one trap-check run and one read per trap it names.
 
 ## 1. Refresh the decompile
 
-Read the installed version off the install, since `~/.cs2-modding/setup.md` holds only what was last seen: `strings -n6 "<Game install>/Cities2_Data/Managed/Game.dll" | grep -E '\) \[[0-9]+\.[0-9]+\]'` prints its `VersionInternal` string with no launch.
+Read the installed version as `cs2-modding-setup`'s step 1 does, since `~/.cs2-modding/setup.md` holds only what was last seen.
 Where it is newer than the decompile's newest game-version commit, run `cs2-modding-setup`'s refresh branch, which commits the new version.
 Where the baseline already is the newest game-version commit, say there is nothing to re-verify and stop.
 

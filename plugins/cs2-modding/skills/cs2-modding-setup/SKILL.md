@@ -69,18 +69,15 @@ strings -el "$CSII_INSTALLATIONPATH/Cities2.exe" | grep -A1 '^ProductVersion$'
 Take it from the executable and nowhere else.
 The toolchain exports a `CSII_UNITYVERSION` too, but that is the editor version it installed for compiling mods, which drifts from the game's own — and debug patching against the drifted one breaks the game at launch. [symbol: none]
 
-The game version is the `Game version:` line that every launch writes to `Player.log`, at the root of the user data path:
+The game version is the `VersionInternal` string inside `Game.dll`; `Player.log`'s `Game version:` line lags an update until the next launch:
 
 ```powershell
-Select-String -Path "$env:CSII_USERDATAPATH\Player.log" -Pattern "^Game version:"
+(Select-String -Path "$env:CSII_MANAGEDPATH\Game.dll" -Pattern '\d+\.\d+\.\d+f\d+ \([0-9a-f.]+\) \[\d+\.\d+\]' -Encoding ascii).Matches.Value
 ```
 
 ```bash
-grep '^Game version:' "$CSII_USERDATAPATH/Player.log"
+grep -aoE '[0-9]+\.[0-9]+\.[0-9]+f[0-9]+ \([0-9a-f.]+\) \[[0-9]+\.[0-9]+\]' "$CSII_MANAGEDPATH/Game.dll"
 ```
-
-That needs the game to have been run at least once; when there is no log, the main menu shows the version and the user can read it off.
-`Game.dll` carries no version of its own, so it is not a fallback.
 
 Done when both versions are in hand.
 
@@ -180,7 +177,7 @@ A moved game version stales three things, each guarded by its own key in the rec
 - `Decompile root` is set → delete `src/` so types the update removed do not survive as stale files, then re-run step 2's `managed` and `dotnet ilspycmd` lines from the root.
   A root that is not a git repository yet takes step 2's setup before that deletion, installing the version `ilspycmd --version` reports, and commits the tree it already holds under the recorded game version.
   Its first version commit still rewrites every project file, since the old per-assembly runs pointed each one into the install.
-- `Debug patch` reads applied → re-apply [debug-patching.md](references/debug-patching.md), which carries why an update undoes it and what changes when the Unity version moved too.
+- `Debug patch` reads applied → check it and re-apply what the update undid, as [debug-patching.md](references/debug-patching.md) says.
 - `UI bundle copy` is set → remake it from the updated `index.js` as in step 5.
   The frontend is rebuilt every patch, so a stale copy is worse than none: its module paths all still look plausible.
 

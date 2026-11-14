@@ -7,7 +7,7 @@ description: 'Driving a live Unity Mono development build with the unity MCP too
 
 The `unity` tools drive a running Unity Mono development build over the Mono Soft Debugger protocol (SDB); this skill is the procedure the tool schemas cannot carry.
 Everything holds for any dev-Mono Unity game; the type names in examples are placeholders (`MyGame.…`), so substitute the target's own.
-A retail build exposes no SDB port; only a development Mono build is drivable.
+A retail build exposes no SDB port of its own: drive a development Mono build, or `attach` to the port an external loader opened.
 
 ## Session lifecycle
 
@@ -35,8 +35,8 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 
 Every type parameter wants a fully qualified name (`MyGame.Movement.Speed`, not `Speed`).
 `find_types` answers naming from either end: `search` turns a concept you can only describe (a mechanic, a system's job) into names harvested from the running process, and `fullName` resolves one you already hold.
-Start broad and narrow on `count`: only the first search pays the harvest, which is the longest single freeze these tools cause, so iterating on a pattern afterwards costs only your reading.
-The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signatureContains` on the debug tools).
+Start broad and narrow on `count`: only the first search pays the harvest, so iterating on a pattern afterwards costs only your reading.
+The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signature` on the debug tools).
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
 `members` lists statics too, prefixed `static`: look there for a singleton rather than guessing its name.
 
