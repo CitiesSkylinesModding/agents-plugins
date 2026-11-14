@@ -26,7 +26,12 @@ It is optional; everything here works without it.
 ## Traps
 
 - A throw in a mod's registrar skips every registrar after it, other mods' included, and after a UI reload leaves the whole UI unrendered: wrap the registrar's body in `try`/`catch`. [symbol: none]
+- `getModule` throws on an export it cannot resolve, and a throw at a module's top level drops that mod's whole UI with nothing logged: call it inside a `try`. [symbol: none]
+- A value the scaffold's `cs2/*` typings declare with a single `export` compiles and is `undefined` at runtime: import only the values they declare `export export` or name in an `export { … }` list, by its alias there and through the namespace wrapping the list. [symbol: none]
 - A C# answer to a frontend request comes back on the promise of `call`, from a `CallBinding` with a result type, rather than through a trigger and a separate value binding. [symbol: Colossal.UI.Binding.CallBinding]
+- A `CallBinding` result skips the binding writers, so an `Entity` arrives as `{Index, Version}`: return a primitive, or a type whose public members are named as the frontend reads them. [symbol: Colossal.UI.Binding.RawCallBindingBase]
+- A `GetterValueBinding` added with `AddBinding` keeps its first value until you call its `Update()`: add it with `AddUpdateBinding`, and call `base.OnUpdate()` in any `UISystemBase.OnUpdate` override. [symbol: Game.UI.UISystemBase]
+- Every UI mod's images share the one `coui://ui-mods/` host, so another mod's image at the same path can show in place of yours: give image files names unique to the mod. [symbol: Colossal.UI.DefaultResourceHandler] [symbol: Game.Modding.ModManager]
 - A literal `font-size` ignores the player's text-scale setting: use the game's `--fontSize*` tokens, or `calc(<n>rem * var(--fontScale))`. [symbol: none]
 
 ## Building and iterating

@@ -1099,16 +1099,6 @@ them into a machine-local directory recorded in `~/.cs2-modding/setup.md`, besid
 a local copy commits nothing, so it stays on the right side of the copyright line: the
 translations are the publisher's copyrighted text.
 
-### What serializes a `CallBinding`'s result
-
-**Priority:** medium · **Cost:** cheap
-
-A `CallBinding` hands its callback to `view.BindCall` (`RawCallBindingBase.Attach`), so its return
-value reaches JavaScript through cohtml's own reflection `Exporter`, never through the
-`IWriter`/`IJsonWritable` path a `ValueBinding` takes, so a returned type's own `Write` never runs.
-No skill says which serializer a call result meets (`Colossal.UI.Binding.RawCallBindingBase`,
-cohtml's `Exporter`).
-
 ### `SystemAPI` needs the Entities source generator
 
 **Priority:** medium · **Cost:** cheap
@@ -1487,15 +1477,6 @@ A `.coc` file holds one named block per settings class, and the `ModsSettings/<M
 The quit's settings save then fails with "An item with the same key has already been added", then a sharing violation on the `.coc`, and the game appends a second block to the file `FileLocation` names.
 The rule: a settings name lives in one file, so a mod that moves its `FileLocation` deletes the file it left. (Unverified: the move case; a mod update that moves its `FileLocation` would settle it.)
 Seen on 2026-11-09 (session `cc528b48-bcdf-4841-b0eb-25d5950058f8`), in ExtraAssetsImporter: a bench script wrote the mod's settings to `ModsSettings/ExtraAssetsImporter/ExtraAssetsImporter.coc` beside the root `ExtraAssetsImporter.coc` that its `[FileLocation("ExtraAssetsImporter")]` names, and the quit of each of four runs logged the error.
-
-### Two mods' same-named images answer each other's requests
-
-**Priority:** unsure · **Cost:** cheap
-
-The scaffold emits images as `images/[name][ext][query]` under `publicPath: "coui://ui-mods/"`, and every mod's folder is a location of that one host, tried in an order no mod controls, so two mods each shipping `images/icon.svg` request one URL and one of them gets the other's file.
-The right move: give the images output a mod-prefixed directory through the asset rule's `generator.filename`.
-A raster base name the game also ships in its `UI/SharedImages` resources is shadowed whatever the directory.
-The symbol would be `Colossal.UI.DefaultResourceHandler`, the base of the `GameUIResourceHandler` the game's UI runs on, rather than the engine's stock `cohtml` handler of the same name.
 
 ### A `try`/`catch` around a call to a missing member never runs
 
