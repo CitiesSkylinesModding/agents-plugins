@@ -274,6 +274,8 @@ async function main(): Promise<void> {
         Press a named key by dispatching a real bubbling keydown+keyup (no keypress) in the page
         (KeyboardEvent.key, e.g. Escape, Enter, ArrowDown, a, F5), optionally with
         ctrl/shift/alt/meta and a repeat count.
+        Punctuation and other keys outside the navigation keys, F1-F12, letters and digits arrive
+        with key alone, without code/keyCode/which.
         It performs NO default action: no character insertion, no Backspace delete, no Tab focus
         move, no scrolling; use game_type to enter text.
         It reaches the UI's JS keydown handlers, but keys the game routes through its own native
