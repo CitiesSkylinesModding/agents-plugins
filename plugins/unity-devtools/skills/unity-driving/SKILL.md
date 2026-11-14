@@ -35,7 +35,7 @@ Suspensions are counted: one `resume` per `suspend`; `status` shows the held cou
 
 Every type parameter wants a fully qualified name (`MyGame.Movement.Speed`, not `Speed`).
 `find_types` answers naming from either end: `search` turns a concept you can only describe (a mechanic, a system's job) into names harvested from the running process, and `fullName` resolves one you already hold.
-Start broad and narrow on `count`: only the first search pays the harvest, a freeze of a second or two, so iterating on a pattern afterwards costs only your reading.
+Start broad and narrow on `count`: only the first search pays the harvest, so iterating on a pattern afterwards costs only your reading.
 The convention across the toolset: a pattern you author is a regex (`search`), a fragment you paste is a substring (`signature` on the debug tools).
 Before writing, run `find_types` with `members`: live field names and types are the ground truth for `ecs_set_component` and buffer edits.
 `members` lists statics too, prefixed `static`: look there for a singleton rather than guessing its name.

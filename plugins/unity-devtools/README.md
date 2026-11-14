@@ -131,7 +131,7 @@ the next call. The `attach` tool is there for the cases the beacon cannot cover.
 ## Requirements
 
 - **A Unity game running as a development Mono build**, launched with `player-connection-debug=1`
-  so its SDB agent is live; a retail build exposes no SDB port and cannot be driven.
+  so its SDB agent is live; a retail build exposes no SDB port of its own.
 - **Windows or Linux.** Discovery is platform-agnostic, and a live attach is verified on both, on
   Linux to a game running under Proton. The server-lifetime watchdogs work on both too, so a
   reconnect does not leave the old server holding the debugger slot.
