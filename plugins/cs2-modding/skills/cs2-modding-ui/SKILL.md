@@ -6,7 +6,7 @@ description: 'The Cities: Skylines II mod UI discipline: the C#-to-JavaScript bi
 # Modding the Cities: Skylines II UI
 
 The game's interface is a web page: React components rendered by Coherent Gameface, shipped on disk as one JavaScript bundle beside one stylesheet.
-A UI mod is an ES module the page imports once the active mod list arrives, after the first render, and hands the module registry, through which it overrides, extends or appends to the game's own components.
+A UI mod is a second ES module the page loads and hands the module registry, through which it overrides, extends or appends to the game's own components.
 Its C# half publishes state and receives calls over the binding layer, where every binding is a `group.name` path.
 
 Work by the `cs2-modding` skill's working loop: find how the game's own UI does the thing, in the bundle, before writing.
