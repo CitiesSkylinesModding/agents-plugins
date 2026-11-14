@@ -35,7 +35,7 @@ I hit {one trap / N traps} this plugin's skills miss or misstate: {what they tou
 To stop these reports, ask me to turn them off.
 ```
 
-Ask once per report, and post only on a yes, each trap on its own: search the open and closed issues of `CitiesSkylinesModding/agents-plugins` for it, and where one covers it, add a 👍 reaction and comment your story and game version there; otherwise open an issue for that trap alone.
+Ask once per report, and post only on a yes, each trap on its own: search the open and closed issues of `CitiesSkylinesModding/agents-plugins` for it, and where an open one covers it, add a 👍 reaction and comment your story and game version there; where a closed one does, unless it is the issue that admitted a trap you proved wrong, post nothing and tell the user it was already judged; otherwise open an issue for that trap alone.
 An issue gives the trap's wrong default, its right move, the fully qualified type whose code carries it where one does, the game version, and your story: the kind of task and the turns it cost.
 Issue and comment hold nothing of the user's project: no mod name, no code, no paths.
 Asked to turn reports off, write `Trap reports: off` into the setup record.
