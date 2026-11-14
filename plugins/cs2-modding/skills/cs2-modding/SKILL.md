@@ -22,21 +22,22 @@ Before keeping one, confirm the game's real behaviour in the decompile or the ru
 A stated trap the game proves wrong is a candidate too.
 
 Say nothing of candidates until the user's task is done.
-Then, unless the setup record reads `Trap reports: off`, end the closing message with this report:
+Then hold a high bar on every candidate, most sessions ending with none: keep a stated trap you proved wrong only where following it as written sends an agent wrong, and of the rest only those that cost you several turns between the wrong move and its cause; drop one the next build, log or check caught, and any you doubt.
+For the ones kept, unless the setup record reads `Trap reports: off`, end the closing message with this report, one bullet per trap:
 
 ```markdown
 I hit {one trap / N traps} this plugin's skills miss or misstate: {what they touch, in one clause}.
 
 - {The wrong default, then the right move, in one short sentence.}
 
-{With `gh` installed:} Want me to open an issue for it on the plugin's tracker?
-{Without `gh`:} Want the issue text to post yourself? With `gh` installed I can post it for you next time.
+{With `gh` installed:} Want me to report {it / them} on the plugin's tracker?
+{Without `gh`:} Want the issue text, one per trap, to post yourself? With `gh` installed I can post for you next time.
 To stop these reports, ask me to turn them off.
 ```
 
-Ask once per report, and post only on a yes: `gh issue create --repo CitiesSkylinesModding/agents-plugins`.
-The issue gives each trap's wrong default, its right move, the fully qualified type whose code carries it where one does, and the game version.
-It holds nothing of the user's project: no mod name, no code, no paths.
+Ask once per report, and post only on a yes, each trap on its own: search the open and closed issues of `CitiesSkylinesModding/agents-plugins` for it, and where one covers it, add a 👍 reaction and comment your story and game version there; otherwise open an issue for that trap alone.
+An issue gives the trap's wrong default, its right move, the fully qualified type whose code carries it where one does, the game version, and your story: the kind of task and the turns it cost.
+Issue and comment hold nothing of the user's project: no mod name, no code, no paths.
 Asked to turn reports off, write `Trap reports: off` into the setup record.
 
 ## The working loop
