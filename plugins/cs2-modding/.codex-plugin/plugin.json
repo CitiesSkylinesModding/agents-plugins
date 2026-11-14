@@ -1,6 +1,6 @@
 {
   "name": "cs2-modding",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Teach your coding agent to write Cities: Skylines II code mods (Claude Code, Codex CLI): a working loop that checks the result in the running game, and the traps an agent with the decompiled game open still falls into. Ships the cs2-dev MCP server, which restarts, stops and awaits the game, reports its errors, and runs a mod's in-game scenarios.",
   "author": {
     "name": "Morgan Touverey Quilling"

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.4.2...unity-devtools-v1.4.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* correct skill claims that game 1.6.4f1 and the servers contradict ([#27](https://github.com/CitiesSkylinesModding/agents-plugins/issues/27)) ([2ec500c](https://github.com/CitiesSkylinesModding/agents-plugins/commit/2ec500c3fde715d4d1fa979cb19aa9f286aa716a))
+
 ## [1.4.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-v1.4.1...unity-devtools-v1.4.2) (2026-11-11)
 
 

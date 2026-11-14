@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.4.2...unity-devtools-mcp-v1.4.3) (2026-11-14)
+
+
+### Miscellaneous Chores
+
+* **unity-devtools-mcp:** Synchronize unity-devtools versions
+
 ## [1.4.2](https://github.com/CitiesSkylinesModding/agents-plugins/compare/unity-devtools-mcp-v1.4.1...unity-devtools-mcp-v1.4.2) (2026-11-11)
 
 
