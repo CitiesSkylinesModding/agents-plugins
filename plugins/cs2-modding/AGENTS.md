@@ -39,7 +39,7 @@ Procedure — how to search, build, restart, verify and diagnose — is admitted
 - It names a symbol at most: no line cite, count, type listing, closed list, or account of what the code does or why.
 - A player-facing word that names nothing searchable in the code enters as a trap.
 - Each body has a line ceiling, `bodyCeilings` in `scripts/check-skill-content.ts`. Raise one in a commit of its own; a new trap past it displaces a weaker one.
-- Candidates arrive through the trunk skill's trap reports, and the maintainer admits them.
+- Candidates arrive through the trunk skill's trap reports, and the maintainer admits them through the `cs2-trap-triage` repo skill.
 - No maintained file carries a line number into the decompile; the content lint fails a source file name followed by one.
 
 ## Symbol markers
