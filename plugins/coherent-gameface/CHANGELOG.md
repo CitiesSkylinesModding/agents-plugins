@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.3.0...coherent-gameface-v1.3.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** say in the game_key schema which keys arrive with key alone ([1d5415f](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1d5415f828e566eea3c82f2f48aeae1f9bd5a9cf))
+* correct skill claims that game 1.6.4f1 and the servers contradict ([#27](https://github.com/CitiesSkylinesModding/agents-plugins/issues/27)) ([2ec500c](https://github.com/CitiesSkylinesModding/agents-plugins/commit/2ec500c3fde715d4d1fa979cb19aa9f286aa716a))
+
 ## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/coherent-gameface-v1.2.3...coherent-gameface-v1.3.0) (2026-11-11)
 
 

@@ -6,7 +6,7 @@
         "dnx",
         "UnityDevtools.Mcp",
         "--version",
-        "1.4.2",
+        "1.4.3",
         "--yes"
       ]
     }

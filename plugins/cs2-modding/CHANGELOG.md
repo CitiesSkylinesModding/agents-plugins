@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.5.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.5.0...cs2-modding-v1.5.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* correct skill claims that game 1.6.4f1 and the servers contradict ([#27](https://github.com/CitiesSkylinesModding/agents-plugins/issues/27)) ([2ec500c](https://github.com/CitiesSkylinesModding/agents-plugins/commit/2ec500c3fde715d4d1fa979cb19aa9f286aa716a))
+* **cs2-modding:** post nothing when a closed issue already judged the trap ([58a92b6](https://github.com/CitiesSkylinesModding/agents-plugins/commit/58a92b649da7ccfbf6768ceb4a8eacbf2d672eeb))
+* **cs2-modding:** report one trap per issue, and only the traps that cost real work ([fad68e2](https://github.com/CitiesSkylinesModding/agents-plugins/commit/fad68e2d2203fc3ab1c535cedf088a80504aa4db))
+* **cs2-modding:** warn of five UI traps that fail without a word in any log ([e3aecd7](https://github.com/CitiesSkylinesModding/agents-plugins/commit/e3aecd74c72ef70ab5431b2f6a562e4952c88c6a)), closes [#28](https://github.com/CitiesSkylinesModding/agents-plugins/issues/28)
+
 ## [1.5.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/cs2-modding-v1.4.0...cs2-modding-v1.5.0) (2026-11-11)
 
 

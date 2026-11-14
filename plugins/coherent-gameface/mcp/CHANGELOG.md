@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.3.0...gameface-devtools-mcp-v1.3.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **coherent-gameface:** say in the game_key schema which keys arrive with key alone ([1d5415f](https://github.com/CitiesSkylinesModding/agents-plugins/commit/1d5415f828e566eea3c82f2f48aeae1f9bd5a9cf))
+
 ## [1.3.0](https://github.com/CitiesSkylinesModding/agents-plugins/compare/gameface-devtools-mcp-v1.2.3...gameface-devtools-mcp-v1.3.0) (2026-11-11)
 
 
