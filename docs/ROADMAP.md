@@ -550,6 +550,7 @@ unusable at its natural type. Every `EntityManager.Debug` route that boxes a buf
 `object` over a `T[]`, and so does any game method returning an array, so accepting `T[]` in the
 cast grammar — and in `typeof` and `default` with it — closes a class of read rather than one call.
 `default(string[])` fails the same way, though `unity-driving` says `default(T)` builds any type's zero value or null; a plain `null` assigns where it would (2026-11-12, session `e386823e-50c5-4015-819a-9005bd7c779a`).
+`new object[]` fails too: an `object[]` argument (a reflection `Invoke`'s) passes as a `System.Collections.ArrayList`'s `.ToArray()` (2026-11-12).
 
 ### A cast to `object` does not steer overload choice
 
@@ -688,6 +689,10 @@ parameter and an indexer accept as `object`. An explicit method type argument fa
 qualifying. And a predefined type keyword fails as a receiver:
 `object.ReferenceEquals(a, b)` gives `unsupported: predefined type`, where
 `System.Object.ReferenceEquals(a, b)` works.
+A `NativeArray` is created through `Unity.Collections.CollectionHelper.CreateNativeArray<byte>(n,
+Unity.Collections.AllocatorManager.Persistent, NativeArrayOptions.UninitializedMemory)` and disposed
+by reflection; a generic delegate type over an array (``System.Func`6[[System.Byte[], mscorlib], ...]``)
+is reachable only as a `System.Type.GetType` string, then `Delegate.CreateDelegate` (2026-11-12).
 
 ### `params` expansion in `eval`
 
@@ -734,6 +739,7 @@ plugin's own invokes (`InvokeOptions.DisableBreakpoints`) is the likely fix, unt
 breakpoint does the same in the field: an `eval` of `world.CreateSystemManaged(...)` hit one armed
 on a constructor it ran, and the session dropped after 60 s (Do It, 2026-11-10, session `94247bc1-3c7c-4c2c-89a4-ca5a5e6a0892`).
 Until the fix lands, `unity-driving` should warn against arming a breakpoint on code an `eval` runs.
+Source-line breakpoints passed inside a `debug_evaluate` at a breakpoint did neither, on 2026-11-12: the eval returned and the hits were never reported.
 
 ### An invoke releases a thread paused at a breakpoint
 
@@ -838,6 +844,10 @@ still never caught the write; a state that passes faster cannot be observed at a
 — advance until a snippet returns true, bounded by a timeout and reporting how long it took —
 collapses the loop into the one place that can run it without a round trip per turn, and is the
 shape `debug_wait` already has for pauses.
+A route that works today, for timings: a conditional breakpoint whose condition appends
+`label + Stopwatch.GetTimestamp() + "@" + Time.frameCount` to an `ArrayList` kept in
+`AppDomain.CurrentDomain.SetData`, and ends `< 0` (always false), records every pass without ever
+stopping the game (2026-11-12, HDRP capture timings).
 
 ### Fault injection at a paused call
 
@@ -1044,6 +1054,19 @@ Hit on 2026-11-12 (session `0e26505e-5306-47e9-96d7-1dd34f253ae5`), capturing 4K
 String interpolation goes through the same formatter, so `$"{obj}"` gives `Type#address` where C# calls `ToString()`, and the agent learns the value only by ending on `obj.ToString()`, which nothing in the schema or `unity-driving` tells it.
 Render a class instance's fields to the same depth as a struct's, or call its `ToString()` when the type overrides it, the record case; interpolation should call `ToString()` as C# does.
 Hit on 2026-11-12 (session `e23153a2-abdb-40f0-9617-1f18776877c1`), reading a capture report record from a Cities: Skylines II mod.
+
+### Evaluator behaviours `unity-driving` does not state
+
+**Priority:** medium · **Cost:** trivial
+
+Each cost a round trip to learn while measuring HDRP captures in Cities: Skylines II (2026-11-12); add them to `unity-driving`'s evaluation and breakpoint sections:
+
+- An object created mid-eval and held only by the debugger (a `Stopwatch`, a `RenderTexture`) can be collected across heavy calls: keep what a later eval reads in `AppDomain.CurrentDomain.SetData`.
+- A runtime error stops a statement sequence with the earlier statements applied, where a parse error runs nothing: run the risky call alone first, or put the state changes to undo after it.
+- A `ref` argument is refused (`eval cannot send`): call the method through reflection (`MakeGenericMethod`, `Invoke(null, args)`).
+- A delegate's `BeginInvoke`, reached by reflection, runs a call on a thread-pool thread; `EndInvoke` collects it.
+- A breakpoint with `hitCount` N breaks on every hit after the Nth: remove it once hit.
+- An `AsyncGPUReadbackRequest` holds its data only in the frame it completes: poll with a breakpoint on a per-frame entry and read in that frame.
 
 ## cs2-modding
 
