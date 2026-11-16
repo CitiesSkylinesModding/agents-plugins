@@ -994,13 +994,14 @@ On this machine that cache holds a 1.3.0 server built on 2026-10-10, while plugi
 So the skill promises what the server refuses: in the mod template on 2026-10-23, `var s = default(UnityEngine.InputSystem.LowLevel.KeyboardState);` failed with `unsupported: default expression`, and the agent fell back to `new KeyboardState { }`.
 Bumping `<Version>` in `UnityDevtools.Mcp.csproj` and the `.mcp.json` pin with every server change, and a check that fails a server change landing without the bump, keeps the two in step.
 
-### A mutating call on a struct with a fixed buffer fails
+### A struct with a filled fixed buffer fails
 
 **Priority:** medium · **Cost:** unsure
 
 In the mod template on 2026-10-23, on the 2026-10-10 server build above: `var s = new UnityEngine.InputSystem.LowLevel.KeyboardState { }; s.Set(UnityEngine.InputSystem.Key.LeftCtrl, true);` passed, and the next `s.Set(UnityEngine.InputSystem.Key.K, true);` failed with `Unable to cast object of type 'System.Byte[]' to type 'System.Byte'`.
 `KeyboardState` holds its keys in a `fixed byte` buffer, which the wire carries as the compiler's `<keys>e__FixedBuffer` struct, so writing the local back after the call seems to assign the buffer's bytes where one byte is expected.
 Unverified against the current source: reproduce with a fixture struct holding a fixed buffer and a method writing to it.
+A mutating call is not needed: in Hall of Fame on 2026-11-16 (session `5a44a0a8-087d-4e96-a21c-c85f361b7869`), `var st = new UnityEngine.InputSystem.LowLevel.KeyboardState(arr);`, `arr` a `Key[]` built through `System.Array.CreateInstance` and `SetValue`, passed, and the next `UnityEngine.InputSystem.InputSystem.QueueStateEvent(UnityEngine.InputSystem.Keyboard.current, st);` failed with the same cast error. The same call with `new KeyboardState()`, its buffer all zeroes, passed. So sending any struct whose fixed buffer holds non-default bytes as an argument fails, not only writing one back after a call, and no key press can be queued from the eval.
 The workaround was to build the input from the device's own layout instead (next entry).
 
 ### Pressing a key the game reads natively
