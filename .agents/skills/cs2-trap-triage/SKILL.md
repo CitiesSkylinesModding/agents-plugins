@@ -33,7 +33,7 @@ A candidate passing all six is `admit`.
 ## 3. Port
 
 - `admit`: write the trap from the code you read, never from the issue's wording, under the topic heading of the body whose domain it is, and remove the trap it displaces. A correction rewrites or retires the stated line instead.
-- `reroute`: a tool fault becomes a `docs/ROADMAP.md` entry by its legend; an engine fact goes to the owning plugin's skill by that plugin's `AGENTS.md`.
+- `reroute`: a tool fault becomes a roadmap item through `/roadmap`; an engine fact goes to the owning plugin's skill by that plugin's `AGENTS.md`.
 
 Then verify each line you wrote, read as an agent meeting it cold: every clause holds in the code, the right move works in the running game where the game can show it, and the marker names the type whose code carries the behaviour.
 A line that fails is fixed and verified again, or its port reverted and its candidate rejected.

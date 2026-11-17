@@ -38,7 +38,7 @@ interaction layer resting on CDP input.
 | **JS debugger** | **Yes.** Breakpoints, conditionals, stepping, frame locals, source search | No |
 | **Waits for the UI to settle** | **Yes.** `game_wait` on a selector, a predicate, or a view reload | Navigation only |
 | **Survives a UI reload** | **Yes.** Reload tracking, race-free `sinceReloads` | Not tracked |
-| **Layout assertions** | Not yet, but [planned](https://github.com/CitiesSkylinesModding/agents-plugins/blob/main/docs/ROADMAP.md#layout-assertions) | **Yes**, three of them |
+| **Layout assertions** | Not yet, but [planned](https://github.com/CitiesSkylinesModding/agents-plugins/issues/52) | **Yes**, three of them |
 | **Performance tooling** | Knowledge only, in the `gameface` skill | **Yes.** A static lint and a calibrated frame-timing baseline |
 | **Install** | **One command.** Plugin install, or `npx`. No build step | `git clone`, `npm install`, `npm run build`, then hand-write a client config |
 | **Skills included** | **Two**, installed with the plugin into any project you work in | One, living in their repository |
@@ -148,7 +148,7 @@ Credit where it's due. Four things their server has that ours doesn't:
 
 - **Layout assertions.** `assert_text_fits`, `assert_no_overlap` and `assert_within_parent` turn
   "does this look right?" into a machine-checkable result. A genuinely good idea, and
-  [on our roadmap](https://github.com/CitiesSkylinesModding/agents-plugins/blob/main/docs/ROADMAP.md#layout-assertions).
+  [on our roadmap](https://github.com/CitiesSkylinesModding/agents-plugins/issues/52).
 - **Performance tooling.** A static lint for expensive layout shapes, plus a frame-timing tool
   measured against a calibrated, committed noise floor. Our
   [`performance` reference](skills/gameface/references/performance.md) carries the cost model behind

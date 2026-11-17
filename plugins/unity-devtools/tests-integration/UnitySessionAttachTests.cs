@@ -144,8 +144,8 @@ public sealed class UnitySessionAttachTests : IDisposable {
     // without waiting a threshold out: a connection with nothing left to spend is not rationed.
     // What this pins is the ANSWER, not the sever -- a dead peer's transport is already gone, so
     // closing it again changes nothing observable, and this case cannot hold that line. Only a
-    // LIVE holder older than the sever threshold can, which no test waits out; the roadmap's
-    // wire-progress entry carries that gap.
+    // LIVE holder older than the sever threshold can, which no test waits out; roadmap issue
+    // #66 (wire progress) carries that gap.
     MonoDebuggee.Kill(debuggee);
 
     for (var deadline = DateTime.UtcNow.AddSeconds(10);

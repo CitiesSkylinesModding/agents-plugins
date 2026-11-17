@@ -150,4 +150,4 @@ Install a full-viewport overlay through `Runtime.evaluate` on that socket, recor
 
 Expected: every command answers with an empty result and no error, and the record stays EMPTY. Two controls make that mean something — a `Runtime.evaluate` over the same socket must succeed (the session is live), and a DOM-dispatched sequence on the overlay, a `TouchEvent` among it, must land in the record (the listeners work). Without both, an empty record is just a broken probe.
 
-Settles the CDP-input finding, which is stated on six carriers: `mcp/src/tools.ts` (`clickFn`'s docblock and `gameClick`'s), `mcp/src/server.ts` (the `game_click` tool description), `mcp/README.md`, `plugins/coherent-gameface/README.md`, `WHY.md` and `docs/ROADMAP.md` "The CDP surface across engine versions".
+Settles the CDP-input finding, which is stated on six carriers: `mcp/src/tools.ts` (`clickFn`'s docblock and `gameClick`'s), `mcp/src/server.ts` (the `game_click` tool description), `mcp/README.md`, `plugins/coherent-gameface/README.md`, `WHY.md` and roadmap issue #48 "The CDP surface across engine versions".

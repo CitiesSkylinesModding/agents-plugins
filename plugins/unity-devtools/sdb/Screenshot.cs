@@ -60,8 +60,8 @@ public sealed class Screenshot(IScreenshotDebuggee debuggee) {
   /// the call. A cause that needs a third window needs a retry from the caller instead, which is
   /// what the failure message asks for.
   /// Together with <see cref="Window"/> this bounds how long a capture runs the game, a figure
-  /// quoted by the screenshot tool's description, the unity-driving skill, and the roadmap's
-  /// native-capture entry: retuning either constant makes all three wrong.
+  /// quoted by the screenshot tool's description, the unity-driving skill, and roadmap issue
+  /// #107 (native capture): retuning either constant makes all three wrong.
   /// </summary>
   private const int WindowBudget = 2;
 

@@ -281,7 +281,7 @@ public sealed class BeaconListener : IDisposable {
         // unreachable, which the next receive recovers from; anything else ends this port's listen,
         // leaving the last beacon readable rather than spinning on a socket that will not answer.
         // A SocketException that keeps coming back rather than clearing is the case this does not
-        // cover, and docs/ROADMAP.md carries it.
+        // cover, and roadmap issue #65 carries it.
         if (ex is not SocketException) {
           this.EndLoop(port, ex.Message);
 
