@@ -1,6 +1,6 @@
 # The cantrips loop in this repo
 
-What the six storage verbs translate to here, and which knowledge stores are enabled.
+What the six storage verbs translate to here, which knowledge stores are enabled, and where the roadmap lives.
 Storage-touching skills read this doc instead of the plugin defaults.
 `/setup-cantrips-loop` wrote it; re-run that skill to change it.
 
@@ -8,7 +8,13 @@ Storage-touching skills read this doc instead of the plugin defaults.
 
 Local markdown under `.scratch/<feature>/`, a kebab-case feature slug per folder. `.scratch/` is already listed in `.gitignore`, so a write there needs no setup.
 
-A spec and its tickets are working material, not a record: they live in `.scratch/` only while the feature is in flight, and the durable outcome lands in code, git history, and the knowledge stores below. Closing a finished feature is the human's act — they delete `.scratch/<feature>/` once it no longer serves.
+A spec and its tickets are working material, not a record: they live in `.scratch/` only while the feature is in flight, and the durable outcome lands in code, git history, and the knowledge stores below. Each feature is copied one way to GitHub issues by `/storage`'s script, the local files ruling.
+After publish-spec, and outside Claude Code after any write verb, sync the feature through `/storage` without asking, since its script publishes only in a clone the user marked; a spec opens with a one-line title, a level-one heading on its first line.
+A spec or a ticket delivering roadmap items names them on a `Roadmap items:` line, and publishing a spec marks its items in flight through `/roadmap`.
+Closing a finished feature is the human's act: close it through `/storage`, with `--done` or `--not-planned` where its tickets are not all resolved, and through `/roadmap`, then delete its folder.
+
+- Mirror: `CitiesSkylinesModding/agents-plugins`
+- Features: `.scratch/`
 
 - **Publish the spec** (`publish-spec`) — write the spec to `.scratch/<feature>/spec.md`.
 - **Fetch the spec** (`fetch-spec`) — read `.scratch/<feature>/spec.md`.
@@ -23,6 +29,14 @@ Three invariants hold whatever the backend: an annotation appends without touchi
 
 - `docs/adr/` — **enabled**. Durable decisions with supersession chains: an outdated record names the record that replaced it. The root `AGENTS.md` section "Where knowledge goes" holds the boundary against the other stores.
 - `docs/solutions/` — **enabled**. One file per hard-won problem, reached through a pointer placed where the problem bites.
+
+## Roadmap
+
+Read and write this repo's roadmap through `/roadmap`.
+
+- Backend: `GitHub issues`
+- Tracker: `CitiesSkylinesModding/agents-plugins`
+- Labels: `gameface`, `unity-devtools`, `cs2-modding`
 
 ## Deputy/Arbiter instructions
 
