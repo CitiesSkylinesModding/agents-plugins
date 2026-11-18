@@ -52,6 +52,7 @@ its server from NuGet the first time it launches, then caches it.
 
 ### Claude Code
 
+Quickest setup:
 ```
 /plugin marketplace add CitiesSkylinesModding/agents-plugins
 /plugin install coherent-gameface@csmodding
@@ -62,8 +63,33 @@ its server from NuGet the first time it launches, then caches it.
 Or from your terminal, `claude plugin marketplace add …` / `claude plugin install …` with the same
 arguments.
 
+> [!IMPORTANT]
+> Third-party marketplaces are always left on manual updates by default. We recommend turning on
+> auto updates: run `/plugin`, open the **Marketplaces** tab, select `csmodding`, then **Enable
+> auto-update**.
+
+> [!TIP]
+> **Recommended setup:** \
+> To install the plugin for a single project, run the terminal commands from its folder with `--scope project`:
+> ```sh
+> claude plugin marketplace add CitiesSkylinesModding/agents-plugins --scope project
+> claude plugin install cs2-modding@csmodding --scope project
+> ```
+> This writes `.claude/settings.json`, which you can commit. Collaborators still need to run the
+> install command once per clone.
+> - Add `"autoUpdate": true` next to `source` in its `csmodding` entry to turn on auto-update for
+> everyone.
+> - Use `--scope local` instead to write `.claude/settings.local.json`, out of git.
+
+> [!WARNING]
+> Claude Code has a bug on some marketplaces where it sometimes won't load some plugins when you
+> start a session. \
+> Check that by verifying the three `/mcp`s are loaded at session start. If they're not, a simple
+> `/reload-plugins` is enough.
+
 ### Codex CLI
 
+Quickest setup:
 ```sh
 codex plugin marketplace add CitiesSkylinesModding/agents-plugins
 codex plugin add coherent-gameface@csmodding
@@ -71,8 +97,19 @@ codex plugin add unity-devtools@csmodding
 codex plugin add cs2-modding@csmodding
 ```
 
-Then run `/mcp` to confirm the servers connected. Each plugin's README covers its requirements,
-configuration and troubleshooting.
+> [!TIP]
+> **Recommended setup:** \
+> `codex plugin add` has no project scope. To install for a single project, declare the marketplace
+and plugins in the project's `.codex/config.toml` instead:
+> ```toml
+> [marketplaces.csmodding]
+> source_type = "git"
+> source = "https://github.com/CitiesSkylinesModding/agents-plugins.git"
+>
+> [plugins."cs2-modding@csmodding"]
+> enabled = true
+> ```
+> Then run `/mcp` to confirm the servers connected.
 
 ## Development
 
